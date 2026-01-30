@@ -1,0 +1,46 @@
+.transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: calc(var(--bento-unit-height) - 60px);
+  overflow-y: auto;
+}
+
+.transfer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.transfer-player-out {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.transfer-player-in {
+  color: #10b981;
+  font-weight: 500;
+}
+
+.transfer-arrow {
+  color: var(--text-secondary);
+  margin: 0 2px;
+}
+
+.transfer-net-value {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.transfer-net-value.positive {
+  color: #10b981;
+}
+
+.transfer-net-value.negative {
+  color: #ef4444;
+}

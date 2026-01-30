@@ -1,0 +1,730 @@
+"""
+Manager data refresh module.
+
+Handles refreshing manager picks, transfers, and calculating points.
+"""
+
+import asyncio
+import logging
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set
+
+from database.supabase_client import SupabaseClient
+from fpl_api.client import FPLAPIClient
+from utils.points_calculator import PointsCalculator
+
+logger = logging.getLogger(__name__)
+
+
+class ManagerDataRefresher:
+    """Handles manager data refresh operations."""
+    
+    def __init__(
+        self,
+        fpl_client: FPLAPIClient,
+        db_client: SupabaseClient
+    ):
+        self.fpl_client = fpl_client
+        self.db_client = db_client
+        self.points_calculator = PointsCalculator(db_client, fpl_client)
+        # Track last count of players with confirmed bonuses per gameweek
+        # Used to detect when new bonuses are confirmed (works for any day of week)
+        # e.g., Saturday → Sunday → Monday games
+        self._last_confirmed_bonus_count: Dict[int, int] = {}
+    
+    async def wait_for_api_after_deadline(
+        self,
+        deadline_time: datetime,
+        current_time: datetime
+    ) -> bool:
+        """
+        Wait for FPL API to return after maintenance window.
+        
+        Args:
+            deadline_time: Transfer deadline time
+            current_time: Current time
+            
+        Returns:
+            True if API is available
+        """
+        time_since_deadline = (current_time - deadline_time).total_seconds() / 60
+        
+        # Only wait if we're in the post-deadline window (0-60 minutes)
+        if time_since_deadline < 0 or time_since_deadline > 60:
+            return True
+        
+        # Poll with exponential backoff: 2min → 3min → 5min → 5min (max)
+        base_delay = 120  # 2 minutes
+        max_delay = 300   # 5 minutes
+        max_attempts = 20  # Up to ~60 minutes total wait time
+        
+        for attempt in range(max_attempts):
+            try:
+                # Try a lightweight endpoint to check API availability
+                await self.fpl_client.get_bootstrap_static()
+                
+                logger.info("FPL API is back online after maintenance", extra={
+                    "time_since_deadline_min": time_since_deadline,
+                    "attempt": attempt + 1
+                })
+                return True
+                
+            except Exception as e:
+                if attempt < max_attempts - 1:
+                    delay = min(base_delay + (attempt * 60), max_delay)
+                    logger.info(
+                        "FPL API still in maintenance, waiting",
+                        extra={
+                            "time_since_deadline_min": time_since_deadline,
+                            "attempt": attempt + 1,
+                            "wait_time": delay
+                        }
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                else:
+                    logger.warning(
+                        "FPL API still in maintenance after max attempts",
+                        extra={"time_since_deadline_min": time_since_deadline}
+                    )
+                    raise
+        
+        return False
+    
+    async def refresh_manager_picks(
+        self,
+        manager_id: int,
+        gameweek: int,
+        deadline_time: Optional[datetime] = None,
+        use_cache: bool = True
+    ):
+        """
+        Refresh manager picks for a gameweek.
+        
+        OPTIMIZATION: Checks database first before calling API (picks locked at deadline).
+        
+        Args:
+            manager_id: Manager ID
+            gameweek: Gameweek number
+            deadline_time: Optional deadline time for maintenance window handling
+            use_cache: If True, check database first before API call
+        """
+        try:
+            # OPTIMIZATION: Check database first if use_cache is True
+            if use_cache:
+                existing_picks = self.db_client.client.table("manager_picks").select(
+                    "player_id, position, is_captain, is_vice_captain, multiplier, was_auto_subbed_out, was_auto_subbed_in, auto_sub_replaced_player_id"
+                ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+                
+                # If picks exist in database, still need to fetch from API for auto-subs updates
+                # But we can skip if picks are already stored and we're not in live matches
+                # For now, always fetch to get latest auto-subs, but this reduces API calls
+                # when picks don't exist yet (initial load)
+                if existing_picks:
+                    logger.debug("Found cached manager picks in database", extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "picks_count": len(existing_picks)
+                    })
+                    # Still fetch from API to get latest auto-subs, but log that we found cached picks
+            
+            # Wait for API if after deadline
+            if deadline_time:
+                current_time = datetime.now(timezone.utc)
+                await self.wait_for_api_after_deadline(deadline_time, current_time)
+            
+            picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
+            
+            # Upsert manager if needed (team/squad name for display, manager_name for legacy/fallback)
+            entry_data = await self.fpl_client.get_entry(manager_id)
+            team_name = (
+                entry_data.get("name")
+                or entry_data.get("entry_name")
+                or (entry_data.get("player_first_name", "") + " " + entry_data.get("player_last_name", "")).strip()
+                or f"Manager {manager_id}"
+            )
+            manager_data = {
+                "manager_id": manager_id,
+                "manager_name": team_name,
+                "manager_team_name": team_name,
+                "favourite_team_id": entry_data.get("favourite_team"),
+                "joined_time": entry_data.get("joined_time"),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            self.db_client.upsert_manager(manager_data)
+            
+            # Store picks
+            picks = picks_data.get("picks", [])
+            automatic_subs = picks_data.get("automatic_subs", [])
+            active_chip = picks_data.get("active_chip")
+            
+            for pick in picks:
+                pick_data = {
+                    "manager_id": manager_id,
+                    "gameweek": gameweek,
+                    "player_id": pick["element"],
+                    "position": pick["position"],
+                    "is_captain": pick.get("is_captain", False),
+                    "is_vice_captain": pick.get("is_vice_captain", False),
+                    "multiplier": pick.get("multiplier", 1),
+                    "was_auto_subbed_out": False,
+                    "was_auto_subbed_in": False,
+                    "auto_sub_replaced_player_id": None,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                # Check if this pick was auto-subbed
+                for auto_sub in automatic_subs:
+                    if auto_sub.get("element_out") == pick["element"]:
+                        pick_data["was_auto_subbed_out"] = True
+                    if auto_sub.get("element_in") == pick["element"]:
+                        pick_data["was_auto_subbed_in"] = True
+                        pick_data["auto_sub_replaced_player_id"] = auto_sub.get("element_out")
+                
+                self.db_client.upsert_manager_pick(pick_data)
+            
+            logger.debug("Refreshed manager picks", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "picks_count": len(picks)
+            })
+            
+        except Exception as e:
+            logger.error("Error refreshing manager picks", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            }, exc_info=True)
+    
+    async def refresh_manager_transfers(
+        self,
+        manager_id: int,
+        gameweek: int
+    ):
+        """
+        Refresh manager transfers for a gameweek.
+        
+        Args:
+            manager_id: Manager ID
+            gameweek: Gameweek number
+        """
+        try:
+            transfers = await self.fpl_client.get_entry_transfers(manager_id)
+            
+            # Filter to current gameweek
+            gw_transfers = [
+                t for t in transfers
+                if t.get("event") == gameweek
+            ]
+            
+            # Get bootstrap for prices
+            bootstrap = await self.fpl_client.get_bootstrap_static()
+            players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
+            
+            for transfer in gw_transfers:
+                player_in_id = transfer.get("element_in")
+                player_out_id = transfer.get("element_out")
+                
+                # Get prices at time of transfer
+                player_in = players_map.get(player_in_id, {})
+                player_out = players_map.get(player_out_id, {})
+                
+                price_in = player_in.get("now_cost", 0)
+                price_out = player_out.get("now_cost", 0)
+                net_change = price_in - price_out
+                
+                transfer_data = {
+                    "manager_id": manager_id,
+                    "gameweek": gameweek,
+                    "player_in_id": player_in_id,
+                    "player_out_id": player_out_id,
+                    "transfer_time": transfer.get("time"),
+                    "price_in_tenths": price_in,
+                    "price_out_tenths": price_out,
+                    "net_price_change_tenths": net_change,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                self.db_client.upsert_manager_transfer(transfer_data)
+            
+            logger.debug("Refreshed manager transfers", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "transfers_count": len(gw_transfers)
+            })
+            
+        except Exception as e:
+            logger.error("Error refreshing manager transfers", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            }, exc_info=True)
+    
+    async def build_player_whitelist(
+        self,
+        league_id: int,
+        gameweek: int
+    ):
+        """
+        Build player whitelist for a league and gameweek.
+        
+        Args:
+            league_id: League ID
+            gameweek: Gameweek number
+        """
+        try:
+            # Get all managers in league
+            managers = self.db_client.client.table("mini_league_managers").select(
+                "manager_id"
+            ).eq("league_id", league_id).execute().data
+            
+            manager_ids = [m["manager_id"] for m in managers]
+            
+            # Get all picks for these managers in this gameweek
+            owned_players = set()
+            
+            for manager_id in manager_ids:
+                picks = self.db_client.client.table("manager_picks").select(
+                    "player_id"
+                ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+                
+                for pick in picks:
+                    owned_players.add(pick["player_id"])
+            
+            # Store whitelist
+            for player_id in owned_players:
+                whitelist_data = {
+                    "league_id": league_id,
+                    "gameweek": gameweek,
+                    "player_id": player_id
+                }
+                # Note: Would need a method in db_client for whitelist
+                # For now, use direct table access
+                self.db_client.client.table("player_whitelist").upsert(
+                    whitelist_data,
+                    on_conflict="league_id,gameweek,player_id"
+                ).execute()
+            
+            logger.info("Built player whitelist", extra={
+                "league_id": league_id,
+                "gameweek": gameweek,
+                "players_count": len(owned_players),
+                "managers_count": len(manager_ids)
+            })
+            
+        except Exception as e:
+            logger.error("Error building player whitelist", extra={
+                "league_id": league_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            }, exc_info=True)
+    
+    async def calculate_manager_points(
+        self,
+        manager_id: int,
+        gameweek: int
+    ) -> Dict:
+        """
+        Calculate manager points for a gameweek.
+        
+        Args:
+            manager_id: Manager ID
+            gameweek: Gameweek number
+            
+        Returns:
+            Dictionary with calculated points data
+        """
+        return await self.points_calculator.calculate_manager_gameweek_points(
+            manager_id,
+            gameweek
+        )
+    
+    def _check_new_bonuses_confirmed(self, gameweek: int) -> bool:
+        """
+        Check if new bonuses were confirmed since last check.
+        
+        Tracks the count of players with confirmed bonuses per gameweek.
+        When the count increases, it means new bonuses were just confirmed
+        (e.g., after Saturday games, Sunday games, Monday games, etc.).
+        Works for any day of the week.
+        
+        FPL API only updates gameweek_rank and overall_rank after bonuses are confirmed
+        (~1 hour after each game day's final match). We need to detect when NEW bonuses
+        are confirmed to refresh ranks after each game day, not just when all bonuses are confirmed.
+        
+        Args:
+            gameweek: Gameweek number
+            
+        Returns:
+            True if new bonuses were confirmed (count increased), False otherwise
+        """
+        try:
+            # Get all finished fixtures for this gameweek
+            fixtures = self.db_client.client.table("fixtures").select(
+                "fpl_fixture_id, finished"
+            ).eq("gameweek", gameweek).execute().data
+            
+            finished_fixture_ids = {f["fpl_fixture_id"] for f in fixtures if f.get("finished", False)}
+            
+            if not finished_fixture_ids:
+                # No finished fixtures yet
+                return False
+            
+            # Count players with confirmed bonuses in finished fixtures
+            # A player has confirmed bonus if:
+            # - They're in a finished fixture AND
+            # - (bonus > 0 OR bonus_status = 'confirmed')
+            # bonus > 0 means official bonus field is populated (FPL confirmed it)
+            # Note: bonus = 0 with bonus_status = 'confirmed' means player got 0 bonus but it's been confirmed
+            stats = self.db_client.client.table("player_gameweek_stats").select(
+                "bonus, bonus_status, fixture_id"
+            ).eq("gameweek", gameweek).in_("fixture_id", list(finished_fixture_ids)).execute().data
+            
+            # Count players with confirmed bonuses
+            # Bonus is confirmed if bonus > 0 (official bonus populated) OR bonus_status = 'confirmed'
+            current_count = 0
+            for stat in stats:
+                bonus = stat.get("bonus", 0)
+                bonus_status = stat.get("bonus_status")
+                fixture_id = stat.get("fixture_id")
+                
+                # Skip if fixture_id is None (shouldn't happen due to filter, but be safe)
+                if fixture_id is None:
+                    continue
+                
+                # Bonus is confirmed if official bonus is populated (bonus > 0) 
+                # OR bonus_status is explicitly 'confirmed'
+                # Note: bonus = 0 with bonus_status = 'confirmed' is still confirmed (just 0 points)
+                if bonus > 0 or bonus_status == "confirmed":
+                    current_count += 1
+            
+            # Get last count for this gameweek
+            last_count = self._last_confirmed_bonus_count.get(gameweek, 0)
+            
+            # If current count > last count, new bonuses were confirmed
+            if current_count > last_count:
+                logger.info("New bonuses confirmed detected", extra={
+                    "gameweek": gameweek,
+                    "last_count": last_count,
+                    "current_count": current_count,
+                    "new_bonuses": current_count - last_count
+                })
+                # Update stored count
+                self._last_confirmed_bonus_count[gameweek] = current_count
+                return True
+            
+            # Update stored count even if no new bonuses (for tracking)
+            self._last_confirmed_bonus_count[gameweek] = current_count
+            return False
+            
+        except Exception as e:
+            logger.warning("Error checking for new bonus confirmations", extra={
+                "gameweek": gameweek,
+                "error": str(e)
+            })
+            return False
+    
+    async def refresh_manager_gameweek_history(
+        self,
+        manager_id: int,
+        gameweek: int,
+        pre_fetched_history: Optional[Dict[str, Any]] = None,
+        is_finished: Optional[bool] = None
+    ):
+        """
+        Refresh manager gameweek history.
+        
+        OPTIMIZATION: For finished gameweeks, uses FPL API data directly
+        instead of calculating points (much faster for backfills).
+        
+        Args:
+            manager_id: Manager ID
+            gameweek: Gameweek number
+            pre_fetched_history: Optional pre-fetched history dict (avoids redundant API call)
+            is_finished: Optional pre-fetched finished status (avoids redundant DB query)
+        """
+        try:
+            # Check if gameweek is finished (use pre-fetched if available)
+            if is_finished is None:
+                gameweek_data = self.db_client.client.table("gameweeks").select(
+                    "finished"
+                ).eq("id", gameweek).execute().data
+                is_finished = gameweek_data[0]["finished"] if gameweek_data else False
+            
+            # Get entry history (use pre-fetched if available, otherwise fetch)
+            if pre_fetched_history:
+                history = pre_fetched_history
+            else:
+                history = await self.fpl_client.get_entry_history(manager_id)
+            gw_history = next(
+                (h for h in history.get("current", []) if h.get("event") == gameweek),
+                {}
+            )
+            
+            # Get existing history with baseline data (preserve baselines)
+            existing_history = self.db_client.client.table("manager_gameweek_history").select(
+                "baseline_total_points, total_points, previous_mini_league_rank, previous_overall_rank, mini_league_rank"
+            ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+            
+            existing = existing_history[0] if existing_history else {}
+            baseline_total = existing.get("baseline_total_points")
+            existing_mini_league_rank = existing.get("mini_league_rank")
+            
+            # For finished gameweeks: Use FPL API data directly (OPTIMIZATION - no calculation needed!)
+            # For live gameweeks: Calculate points (needed for real-time updates)
+            if is_finished:
+                # OPTIMIZATION: Use FPL API data directly - no expensive calculation needed
+                # FPL API provides: points, event_transfers_cost, total_points, value, bank, event_transfers
+                gameweek_points = gw_history.get("points", 0)  # Already includes transfer costs
+                transfer_cost = gw_history.get("event_transfers_cost", 0)
+                total_points = gw_history.get("total_points")
+                active_chip = None  # Will get from picks endpoint
+                
+                # Get picks for gameweek_rank and active_chip
+                try:
+                    picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
+                    entry_history = picks_data.get("entry_history", {})
+                    gameweek_rank = entry_history.get("rank")
+                    active_chip = picks_data.get("active_chip")
+                    overall_rank = gw_history.get("overall_rank")
+                    logger.debug("Using FPL API data directly for finished gameweek", extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "gameweek_points": gameweek_points,
+                        "total_points": total_points
+                    })
+                except Exception as e:
+                    logger.warning("Failed to fetch picks for finished gameweek", extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "error": str(e)
+                    })
+                    gameweek_rank = None
+                    overall_rank = gw_history.get("overall_rank")
+                    # Fallback: try to get from existing data
+                    existing_ranks = self.db_client.client.table("manager_gameweek_history").select(
+                        "gameweek_rank, overall_rank, active_chip"
+                    ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+                    if existing_ranks:
+                        existing_rank_data = existing_ranks[0]
+                        gameweek_rank = existing_rank_data.get("gameweek_rank")
+                        overall_rank = existing_rank_data.get("overall_rank") or overall_rank
+                        active_chip = existing_rank_data.get("active_chip")
+                
+                # Use FPL API total_points (authoritative for finished gameweeks)
+                current_total = total_points if total_points is not None else 0
+                
+            else:
+                # Live gameweek: Calculate points (needed for real-time updates)
+                points_data = await self.calculate_manager_points(manager_id, gameweek)
+                gameweek_points = points_data["gameweek_points"]
+                transfer_cost = points_data.get("transfer_cost", 0)
+                active_chip = points_data.get("active_chip")
+                
+                # Get ranks (only if bonuses confirmed for live gameweeks)
+                new_bonuses_confirmed = self._check_new_bonuses_confirmed(gameweek)
+                gameweek_rank = None
+                overall_rank = None
+                
+                if new_bonuses_confirmed:
+                    try:
+                        picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
+                        entry_history = picks_data.get("entry_history", {})
+                        gameweek_rank = entry_history.get("rank")
+                        overall_rank = gw_history.get("overall_rank")
+                        logger.info("Fetched ranks after new bonus confirmation", extra={
+                            "manager_id": manager_id,
+                            "gameweek": gameweek,
+                            "gameweek_rank": gameweek_rank,
+                            "overall_rank": overall_rank
+                        })
+                    except Exception as e:
+                        logger.warning("Failed to fetch ranks", extra={
+                            "manager_id": manager_id,
+                            "gameweek": gameweek,
+                            "error": str(e)
+                        })
+                else:
+                    # Preserve existing ranks
+                    existing_ranks = self.db_client.client.table("manager_gameweek_history").select(
+                        "gameweek_rank, overall_rank"
+                    ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+                    if existing_ranks:
+                        gameweek_rank = existing_ranks[0].get("gameweek_rank")
+                        overall_rank = existing_ranks[0].get("overall_rank")
+                
+                # For live gameweeks, determine total_points from baseline + gameweek_points
+                if baseline_total is not None:
+                    # Baseline exists - use it as foundation
+                    current_total = baseline_total + gameweek_points
+                else:
+                    # No baseline - try to establish from previous gameweek
+                    previous_gw = gameweek - 1
+                    previous_history = self.db_client.client.table("manager_gameweek_history").select(
+                        "total_points"
+                    ).eq("manager_id", manager_id).eq("gameweek", previous_gw).execute().data
+                    
+                    previous_total = previous_history[0]["total_points"] if previous_history else None
+                    if previous_total is not None:
+                        current_total = previous_total + gameweek_points
+                    else:
+                        # Last resort: use FPL API or calculated
+                        fpl_total = gw_history.get("total_points")
+                        current_total = fpl_total if fpl_total is not None else gameweek_points
+            
+            # Calculate overall rank change from baseline
+            overall_rank_change = None
+            if existing.get("previous_overall_rank") is not None and overall_rank is not None:
+                overall_rank_change = existing["previous_overall_rank"] - overall_rank
+            
+            # Build history data - preserve baseline columns and mini_league_rank if they exist
+            history_data = {
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "gameweek_points": gameweek_points,
+                "transfer_cost": transfer_cost,
+                "total_points": current_total,
+                "team_value_tenths": gw_history.get("value"),
+                "bank_tenths": gw_history.get("bank"),
+                "overall_rank": overall_rank,
+                "overall_rank_change": overall_rank_change,
+                "gameweek_rank": gameweek_rank,
+                "transfers_made": gw_history.get("event_transfers", 0),
+                "active_chip": active_chip,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Preserve baseline columns if they exist (don't overwrite with None)
+            if baseline_total is not None:
+                history_data["baseline_total_points"] = baseline_total
+            if existing.get("previous_mini_league_rank") is not None:
+                history_data["previous_mini_league_rank"] = existing["previous_mini_league_rank"]
+            if existing.get("previous_overall_rank") is not None:
+                history_data["previous_overall_rank"] = existing["previous_overall_rank"]
+            
+            # Preserve mini_league_rank if it exists (calculated separately)
+            if existing_mini_league_rank is not None:
+                history_data["mini_league_rank"] = existing_mini_league_rank
+            
+            self.db_client.upsert_manager_gameweek_history(history_data)
+            
+            logger.debug("Refreshed manager gameweek history", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "is_finished": is_finished,
+                "gameweek_points": gameweek_points,
+                "total_points": current_total,
+                "method": "FPL_API" if is_finished else "CALCULATED"
+            })
+            
+        except Exception as e:
+            logger.error("Error refreshing manager gameweek history", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            }, exc_info=True)
+    
+    async def calculate_mini_league_ranks(
+        self,
+        league_id: int,
+        gameweek: int
+    ):
+        """
+        Calculate mini league ranks for a gameweek.
+        
+        Args:
+            league_id: League ID
+            gameweek: Gameweek number
+        """
+        try:
+            # Get all managers in league with their totals
+            managers = self.db_client.client.table("mini_league_managers").select(
+                "manager_id"
+            ).eq("league_id", league_id).execute().data
+            
+            # Get previous gameweek for rank change calculation
+            previous_gw = gameweek - 1
+            
+            manager_totals = []
+            for manager in managers:
+                manager_id = manager["manager_id"]
+                
+                # Get current gameweek data
+                history = self.db_client.client.table("manager_gameweek_history").select(
+                    "total_points, mini_league_rank"
+                ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+                
+                if not history:
+                    continue
+                
+                # Get previous rank from baseline column (preserved at deadline)
+                previous_rank = history[0].get("previous_mini_league_rank")
+                
+                # Fallback: if baseline not set, try to get from previous gameweek
+                if previous_rank is None:
+                    previous_history = self.db_client.client.table("manager_gameweek_history").select(
+                        "mini_league_rank"
+                    ).eq("manager_id", manager_id).eq("gameweek", previous_gw).execute().data
+                    previous_rank = previous_history[0]["mini_league_rank"] if previous_history else None
+                
+                manager_totals.append({
+                    "manager_id": manager_id,
+                    "total_points": history[0]["total_points"],
+                    "previous_rank": previous_rank,
+                    "existing_rank": history[0].get("mini_league_rank")  # Current stored rank
+                })
+            
+            # Sort by total points descending, then by manager_id ascending for consistent tie-breaking
+            manager_totals.sort(key=lambda x: (x["total_points"], -x["manager_id"]), reverse=True)
+            
+            # Update ranks with proper tie handling
+            # When managers have the same total_points, they get the same rank
+            # The next rank after a tie skips accordingly (e.g., if 2 managers tied for rank 1, next is rank 3)
+            current_rank = 1
+            previous_points = None
+            
+            for i, manager_data in enumerate(manager_totals):
+                total_points = manager_data["total_points"]
+                
+                # If this manager has different points than previous, assign rank based on position
+                # If same points as previous, they get the same rank (tied)
+                if previous_points is not None and total_points != previous_points:
+                    # Points changed - use position in list (1-indexed)
+                    current_rank = i + 1
+                elif previous_points is None:
+                    # First manager - rank 1
+                    current_rank = 1
+                # else: same points as previous - keep same rank (tied)
+                
+                # Calculate rank change: previous_rank - current_rank
+                # Positive = moved up (better rank, lower number)
+                # Negative = moved down (worse rank, higher number)
+                rank_change = None
+                if manager_data["previous_rank"] is not None:
+                    rank_change = manager_data["previous_rank"] - current_rank
+                
+                # Calculate rank change from baseline (previous_rank is from baseline column)
+                # Only update if we have a valid previous_rank to calculate from
+                # CRITICAL: previous_mini_league_rank is preserved at deadline, never overwritten
+                
+                self.db_client.client.table("manager_gameweek_history").update({
+                    "mini_league_rank": current_rank,
+                    "mini_league_rank_change": rank_change  # Calculated from baseline
+                }).eq("manager_id", manager_data["manager_id"]).eq(
+                    "gameweek", gameweek
+                ).execute()
+                
+                previous_points = total_points
+            
+            logger.info("Calculated mini league ranks", extra={
+                "league_id": league_id,
+                "gameweek": gameweek,
+                "managers_count": len(manager_totals)
+            })
+            
+        except Exception as e:
+            logger.error("Error calculating mini league ranks", extra={
+                "league_id": league_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            }, exc_info=True)

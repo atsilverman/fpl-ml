@@ -1,0 +1,38 @@
+{
+  "gameweek": 23,
+  "initial_state": {
+    "gameweek": {
+      "id": 23,
+      "name": "Gameweek 23",
+      "finished": true,
+      "data_checked": true,
+      "is_current": true,
+      "is_previous": false,
+      "is_next": false,
+      "average_entry_score": 44,
+      "highest_score": 115,
+      "deadline_time": "2026-01-24T11:00:00Z"
+    },
+    "fixtures": {
+      "total": 10,
+      "started": 10,
+      "finished": 10,
+      "finished_provisional": 10,
+      "all_started": true,
+      "all_finished": true,
+      "all_finished_provisional": true
+    },
+    "timestamp": "2026-01-27T15:58:53.228633+00:00"
+  },
+  "reference_times": {
+    "first_check": "2026-01-27T15:58:53.228633+00:00",
+    "all_fixtures_finished": null,
+    "all_fixtures_finished_provisional": null,
+    "gameweek_finished": null,
+    "data_checked_true": null,
+    "average_score_first_change": null
+  },
+  "durations": {},
+  "timeline": [],
+  "final_check": "2026-01-27T15:58:53.230269+00:00"
+}

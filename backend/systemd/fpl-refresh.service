@@ -1,0 +1,27 @@
+[Unit]
+Description=FPL Data Refresh Service
+After=network.target
+
+[Service]
+Type=simple
+User=fpl
+Group=fpl
+WorkingDirectory=/opt/fpl-refresh/backend
+Environment="PATH=/opt/fpl-refresh/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/opt/fpl-refresh/.env
+ExecStart=/opt/fpl-refresh/venv/bin/python3 /opt/fpl-refresh/backend/src/main.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fpl-refresh
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/fpl-refresh
+
+[Install]
+WantedBy=multi-user.target

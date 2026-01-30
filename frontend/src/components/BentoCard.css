@@ -1,0 +1,1132 @@
+.skeleton-text {
+  width: 100%;
+  height: 28px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-secondary) 0%,
+    var(--bg-primary) 50%,
+    var(--bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.chips-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  flex: 1;
+  margin-top: 4px;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.chips-grid.chips-grid-collapsed {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.chip-item {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 3px 2px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  min-height: 32px;
+  overflow: hidden;
+}
+
+.chip-item.chip-used {
+  background: transparent;
+  border-width: 2px;
+}
+
+.chip-item.chip-used {
+  /* Colors applied via inline style for chip-specific colors */
+}
+
+.chip-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.chip-gameweek {
+  font-size: 8px;
+  font-weight: 600;
+  margin-top: 1px;
+  opacity: 0.9;
+  line-height: 1;
+}
+
+/* Chips two-page swipe (first half / second half) */
+.chips-pages-wrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.chips-pages-wrapper--expanded {
+  margin-top: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chips-pages-track {
+  display: flex;
+  width: 200%;
+  flex: 1 1 0;
+  min-height: 0;
+  transition: transform 0.25s ease-out;
+}
+
+.chips-page {
+  width: 50%;
+  flex-shrink: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 43px;
+}
+
+.chips-pages-wrapper .chips-grid {
+  flex: 1;
+}
+
+.chips-page-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px;
+  margin-top: -4px;
+  margin-bottom: -4px;
+  flex-shrink: 0;
+}
+
+.chips-page-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  padding: 0;
+  border: 1px solid var(--text-tertiary, rgba(128, 128, 128, 0.5));
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.chips-page-dot:hover {
+  border-color: var(--text-secondary, rgba(128, 128, 128, 0.7));
+}
+
+.chips-page-dot--active {
+  background: var(--text-secondary, rgba(128, 128, 128, 0.6));
+  border-color: var(--text-secondary, rgba(128, 128, 128, 0.6));
+}
+
+html[data-theme="dark"] .chips-page-dot--active {
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.chips-pages-wrapper--expanded .chips-page-dots {
+  padding: 8px 0 4px;
+}
+
+.settings-bento-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  justify-content: center;
+}
+
+.settings-bento-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+  text-align: center;
+  gap: 6px;
+}
+
+.settings-bento-button .settings-icon {
+  flex-shrink: 0;
+  opacity: 0.65;
+  transition: opacity 0.2s ease;
+}
+
+.settings-bento-button:hover .settings-icon {
+  opacity: 0.85;
+}
+
+.settings-bento-button:hover {
+  background: var(--bg-card);
+  border-color: var(--accent-blue);
+}
+
+.stale-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-yellow, #fbbf24);
+  color: var(--bg-primary, #000);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.bento-card-chart {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-top: 8px;
+  width: 100%;
+  align-items: flex-start; /* Left align chart content */
+}
+
+/* Wrapper when GW points expanded: info (i) left of collapse (x) */
+.bento-card-expand-icons {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 10;
+}
+
+.bento-card-info-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.bento-card-info-icon:hover {
+  opacity: 1;
+  background-color: var(--bg-card);
+  border-color: var(--text-secondary);
+}
+
+.bento-card-info-icon .bento-card-expand-icon-svg {
+  color: var(--text-secondary);
+}
+
+.bento-card-expand-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+  opacity: 0.5;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.bento-card-expand-icons .bento-card-expand-icon {
+  position: static;
+}
+
+.bento-card-expand-icon-svg {
+  width: 10px;
+  height: 10px;
+}
+
+.bento-card-expand-icon--collapse .bento-card-collapse-x {
+  color: var(--collapse-icon-color);
+}
+
+/* Subtle badge around close (X) button so users see it's clickable */
+.bento-card-expand-icon--collapse {
+  background: var(--collapse-badge-bg);
+  border: 1px solid var(--collapse-badge-border);
+  border-radius: 6px;
+  opacity: 0.85;
+}
+
+.bento-card-expand-icon--collapse:hover {
+  background: var(--collapse-badge-bg);
+  border-color: var(--collapse-icon-color);
+  opacity: 1;
+}
+
+/* When GW legend popup is open: grey out collapse (X) so users close via (i) or tap outside, not X */
+.bento-card-expand-icon--legend-open {
+  pointer-events: none;
+  opacity: 0.4;
+  cursor: default;
+}
+.bento-card-expand-icon--legend-open:hover {
+  opacity: 0.4;
+}
+
+.bento-card:hover .bento-card-expand-icon {
+  opacity: 0.7;
+}
+
+.bento-card-expand-icon:hover {
+  opacity: 1;
+  background-color: var(--bg-secondary);
+}
+
+/* GW points legend popup (i button): opens down and to the left of the upper-right badge */
+.gw-legend-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 20;
+  min-width: 180px;
+}
+
+.gw-legend-popup-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.gw-legend-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.gw-legend-popup-row:last-child {
+  margin-bottom: 0;
+}
+
+/* Fixed-width badge column so text aligns across rows */
+.gw-legend-popup-row > span:first-child {
+  width: 28px;
+  min-width: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gw-legend-popup-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.gw-legend-popup-badge-c,
+.gw-legend-popup-badge-v {
+  flex-shrink: 0;
+}
+
+.gw-legend-popup-dnp {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  padding: 0 4px;
+}
+
+/* Reduce padding for chips card */
+.bento-card-chips {
+  padding: 12px 16px;
+}
+
+
+/* Mobile-specific chip styles */
+@media (max-width: 768px) {
+  .bento-card-chips {
+    padding: 8px 10px;
+  }
+
+  .bento-card-chips .bento-card-label {
+    margin-bottom: 2px;
+  }
+
+  .chips-grid {
+    gap: 3px;
+    margin-top: 2px;
+  }
+
+  .chip-item {
+    padding: 2px 1px;
+    min-height: 24px;
+    border-radius: 3px;
+  }
+
+  .chip-item.chip-used {
+    border-width: 1.5px;
+  }
+
+  .chip-label {
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .chip-gameweek {
+    font-size: 6px;
+    margin-top: 0.5px;
+    line-height: 1;
+  }
+}
+
+/* Transfers bento: value and list in a row so list starts at right edge of "X of Y" */
+.bento-card-transfers-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 40px;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+}
+
+.bento-card-transfers-value {
+  flex-shrink: 0;
+}
+
+.bento-card-transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.bento-card-transfers-list::-webkit-scrollbar {
+  display: none;
+}
+
+.bento-card-transfer-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.bento-card-transfer-out {
+  color: var(--accent-red, #ef4444);
+  font-weight: 500;
+}
+
+.bento-card-transfer-arrow {
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin: 0 2px;
+}
+
+.bento-card-transfer-in {
+  color: var(--accent-green, #10b981);
+  font-weight: 500;
+}
+
+.bento-card-transfer-delta {
+  margin-left: auto;
+  font-weight: 600;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 1.5em;
+  text-align: center;
+}
+
+.bento-card-transfer-delta.positive {
+  color: #fff;
+  background: var(--accent-green, #10b981);
+}
+
+.bento-card-transfer-delta.negative {
+  color: #000;
+  background: var(--accent-red, #ef4444);
+}
+
+html[data-theme="dark"] .bento-card-transfer-delta.positive {
+  color: #fff;
+  background: var(--accent-green, #059669);
+}
+
+html[data-theme="dark"] .bento-card-transfer-delta.negative {
+  color: #fff;
+  background: var(--accent-red, #dc2626);
+}
+
+/* Transfers expanded: TOP TRANSFERS summary card */
+.transfers-summary-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.transfers-summary-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.transfers-summary-content::-webkit-scrollbar {
+  display: none;
+}
+
+.transfers-summary-columns-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
+  min-height: min-content;
+}
+
+.transfers-summary-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 4px;
+}
+
+
+.transfers-summary-column-header {
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.transfers-summary-column-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.transfers-summary-column-title-out {
+  color: var(--accent-red, #ef4444);
+}
+
+.transfers-summary-column-title-in {
+  color: var(--accent-green, #10b981);
+}
+
+.transfers-summary-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.transfers-summary-column-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  min-height: 36px;
+  box-sizing: border-box;
+  border-radius: 6px;
+}
+
+.transfers-summary-column-out .transfers-summary-column-item {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.transfers-summary-column-in .transfers-summary-column-item {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.transfers-summary-badge-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.transfers-summary-badge {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.transfers-summary-badge-placeholder {
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.transfers-summary-column-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 21px;
+  display: flex;
+  align-items: center;
+}
+
+.transfers-summary-column-out .transfers-summary-column-name {
+  color: var(--accent-red, #b91c1c);
+}
+
+.transfers-summary-column-in .transfers-summary-column-name {
+  color: var(--accent-green, #047857);
+}
+
+.transfers-summary-column-count {
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  background: var(--transfers-count-bg, #fff);
+  padding: 3px 8px;
+  border-radius: 4px;
+  min-width: 24px;
+  text-align: center;
+  margin-left: auto;
+}
+
+html[data-theme="dark"] .transfers-summary-column-count {
+  background: var(--transfers-count-bg, var(--bg-primary));
+}
+
+/* Chips expansion: same structure/style as captain/league standings bento */
+.chips-standings-bento .league-standings-bento-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Chips header: match league-standings-bento-table thead th; fr so gap fits and TC/TC2 column visible */
+.chips-status-header {
+  display: grid;
+  grid-template-columns: 14fr 26fr 15fr 15fr 15fr 15fr;
+  gap: 0 10px;
+  align-items: center;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.chips-status-header .chips-status-cell {
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.chips-status-header .chips-status-cell.chips-status-rank,
+.chips-status-header .chips-status-cell.chips-status-manager {
+  text-align: left;
+}
+.chips-status-header .chips-status-cell.chips-status-chip-col {
+  text-align: center;
+}
+
+.chips-status-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.chips-status-cell.chips-status-rank {
+  min-width: 0;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+.chips-status-cell.chips-status-manager {
+  min-width: 0;
+}
+
+.chips-status-cell.chips-status-chip-col {
+  text-align: center;
+  min-width: 0;
+}
+
+.chips-status-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none;
+}
+
+.chips-status-list::-webkit-scrollbar {
+  display: none;
+}
+
+.chips-status-row {
+  display: grid;
+  grid-template-columns: 14fr 26fr 15fr 15fr 15fr 15fr;
+  gap: 0 10px;
+  align-items: center;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.chips-status-row:last-child {
+  border-bottom: none;
+}
+
+.chips-status-row .chips-status-rank {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.chips-status-row .chips-status-manager {
+  color: var(--text-primary);
+}
+
+.chips-status-row.chips-status-row-you {
+  position: relative;
+  z-index: 1;
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+  font-weight: 600;
+}
+
+.chips-status-row.chips-status-row-you .chips-status-cell {
+  background: transparent;
+}
+
+.chips-status-played {
+  font-weight: 600;
+  font-size: 8px;
+  color: var(--text-secondary);
+}
+
+.chips-status-left {
+  font-size: 8px;
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.7));
+}
+
+.transfers-summary-loading,
+.transfers-summary-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-height: 60px;
+}
+
+/* League rank expanded: simplified standings table (2x3 bento) */
+.league-standings-bento {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.league-standings-bento-table-wrapper {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  scrollbar-width: none;
+}
+
+.league-standings-bento-table-wrapper::-webkit-scrollbar {
+  display: none;
+}
+
+.league-standings-bento-loading,
+.league-standings-bento-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 24px;
+  min-height: 120px;
+}
+
+.league-standings-bento-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.league-standings-bento-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1;
+}
+
+.league-standings-bento-table th {
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  background: var(--bg-secondary);
+}
+
+.league-standings-bento-table th.league-standings-bento-total,
+.league-standings-bento-table th.league-standings-bento-gw {
+  text-align: center;
+}
+
+.league-standings-bento-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-weight: 400;
+  font-size: 10px;
+}
+
+.league-standings-bento-table tbody tr {
+  min-height: 36px; /* match height when rank change badge is present so all rows are consistent */
+}
+.league-standings-bento-table tbody td {
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+}
+.league-standings-bento-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Manager ownership: full row subtle blue fill, bold name and values */
+.league-standings-bento-row-you {
+  font-weight: 600;
+}
+.league-standings-bento-row-you td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+}
+.league-standings-bento-row-you .league-standings-bento-change-badge {
+  font-weight: 500;
+}
+
+.league-standings-bento-rank {
+  width: 64px;
+  min-width: 64px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.league-standings-bento-rank-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+
+.league-standings-bento-rank-value {
+  flex-shrink: 0;
+  font-size: inherit;
+}
+
+.league-standings-bento-rank .league-standings-bento-change-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.league-standings-bento-rank .league-standings-bento-change-badge svg {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+/* Rank change badge: green/red pill around arrow + number (same as league page) */
+.league-standings-bento-change-badge.positive {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--accent-green, #10b981);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.league-standings-bento-change-badge.negative {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--accent-red, #ef4444);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.league-standings-bento-team {
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-standings-bento-total,
+.league-standings-bento-gw {
+  width: 48px;
+  text-align: center;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Muted 0 values (same subtle look as gameweek points table) */
+.league-standings-bento-table td.league-standings-bento-cell-muted {
+  color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+}
+
+/* Captain bento: collapsed 1x1 */
+.bento-card-captain-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bento-card-captain-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+/* Captain name inherits from .bento-card-value (same as transfers value) */
+.bento-card-captain-name {
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bento-card-captain-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--gw-badge-captain-bg, #ea580c);
+  border-radius: 4px;
+}
+
+.bento-card-captain-vice-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.bento-card-captain-vice-name {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bento-card-captain-vice-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--gw-badge-assistant-color, #374151);
+  background: var(--gw-badge-assistant-bg, #e5e7eb);
+  border-radius: 3px;
+}
+
+html[data-theme="dark"] .bento-card-captain-vice-badge {
+  color: #d1d5db;
+  background: #4b5563;
+}
+
+/* Captain bento: expanded 2x3 table – no scroll, abbreviate team first then player names */
+.captain-standings-bento .league-standings-bento-table-wrapper {
+  overflow: hidden;
+}
+
+.captain-standings-bento-table {
+  table-layout: fixed;
+}
+
+/* Team column truncates first (smallest share); then captain/vice truncate if needed */
+.captain-standings-bento-table .league-standings-bento-rank {
+  width: 14%;
+}
+
+.captain-standings-bento-table .league-standings-bento-team {
+  width: 26%;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  font-weight: 600;
+}
+
+.captain-standings-bento-table .captain-standings-bento-captain,
+.captain-standings-bento-table .captain-standings-bento-vice {
+  width: 30%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.captain-standings-bento-header-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.captain-standings-bento-header-cell .captain-standings-bento-badge-c,
+.captain-standings-bento-header-cell .captain-standings-bento-badge-v {
+  flex-shrink: 0;
+}
+
+.captain-standings-bento-badge-c {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--gw-badge-captain-bg, #ea580c);
+  border-radius: 3px;
+}
+
+.captain-standings-bento-badge-v {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  min-width: 16px;
+  height: 14px;
+  padding: 0 2px;
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--gw-badge-assistant-color, #374151);
+  background: var(--gw-badge-assistant-bg, #e5e7eb);
+  border-radius: 2px;
+}
+
+html[data-theme="dark"] .captain-standings-bento-badge-v {
+  color: #d1d5db;
+  background: #4b5563;
+}
+

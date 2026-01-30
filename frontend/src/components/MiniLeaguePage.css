@@ -1,0 +1,510 @@
+.mini-league-page {
+  padding: 0;
+  padding-top: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* League ownership search: bar above table */
+.league-ownership-search-container {
+  position: relative;
+  margin-bottom: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.league-ownership-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 5px;
+  min-height: 28px;
+  box-sizing: border-box;
+}
+
+.league-ownership-search-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.league-ownership-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.league-ownership-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.league-ownership-selected {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.league-ownership-player-badge {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.league-ownership-player-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.league-ownership-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.league-ownership-clear:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.league-ownership-autocomplete {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 3px 0 0;
+  padding: 2px 0;
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+}
+
+.league-ownership-autocomplete-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.league-ownership-autocomplete-item:hover,
+.league-ownership-autocomplete-item:focus {
+  background: var(--bg-secondary);
+  outline: none;
+}
+
+.league-ownership-autocomplete-item.league-ownership-autocomplete-loading,
+.league-ownership-autocomplete-item.league-ownership-autocomplete-empty {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.league-ownership-filter-hint {
+  margin: 4px 0 0;
+  font-size: 10px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.league-ownership-filter-hint strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.standings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.standings-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.refresh-button {
+  padding: 8px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--text-secondary);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.standings-table {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.standings-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.standings-table thead {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.standings-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.standings-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.standings-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.standings-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+.standings-table .positive {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.standings-table .negative {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  color: var(--text-secondary);
+}
+
+.error-state {
+  color: #ef4444;
+}
+
+/* League page table: fill container; allow horizontal scroll when table is wider than viewport */
+.league-standings-page .league-standings-bento-table-wrapper {
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: visible;
+  width: 100%;
+  background: var(--bg-primary); /* match row bg so no fill strip shows in manager column */
+}
+
+/* Table: auto layout so columns size to content; min-widths prevent overlap; horizontal scroll when narrow */
+.league-standings-page .league-standings-bento-table {
+  table-layout: auto;
+  width: 100%;
+  min-width: 420px;
+  border-collapse: collapse;
+}
+.league-standings-page .league-standings-bento-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+.league-standings-page .league-standings-bento-table th {
+  background: var(--bg-secondary);
+}
+.league-standings-page .league-standings-bento-table td {
+  border-bottom: none; /* only use tr border so one flush line per row; overrides shared BentoCard rule */
+  box-sizing: border-box;
+  font-size: 10px;
+  overflow: hidden;
+  vertical-align: middle;
+  background: var(--bg-primary);
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-row-you td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+}
+/* Ensure "you" row blue wins over td.league-standings-bento-team (which sets bg-primary and comes later) */
+.league-standings-page .league-standings-bento-table .league-standings-bento-row-you td.league-standings-bento-team {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+}
+/* Single border per row so the line is flush across all columns (avoids manager flex cell misalignment) */
+.league-standings-page .league-standings-bento-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  min-height: 36px; /* match height when rank change badge is present so all rows are consistent */
+}
+.league-standings-page .league-standings-bento-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* When ownership filter is active: blue line below configured manager row to show "above you / you / below you" */
+.league-standings-ownership-filtered.league-standings-bento-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row-you {
+  border-bottom: 2px solid var(--accent-blue, #3b82f6);
+}
+.league-standings-page .league-standings-bento-table tbody td {
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+/* Auto layout: min-widths prevent overlapping; no fixed % so columns size to content + available space */
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank,
+.league-standings-page .league-standings-bento-table .league-standings-bento-team,
+.league-standings-page .league-standings-bento-table .league-standings-bento-total,
+.league-standings-page .league-standings-bento-table .league-standings-bento-gw,
+.league-standings-page .league-standings-bento-table .league-standings-bento-left-to-play,
+.league-standings-page .league-standings-bento-table .league-standings-bento-in-play {
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+/* Rank: room for number + arrow + change badge so they never overlap */
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank {
+  min-width: 72px;
+  width: 1%;
+  padding-left: 10px;
+  white-space: nowrap;
+}
+/* Manager: takes remaining space (width: 100%), min so name + chip don't overlap */
+.league-standings-page .league-standings-bento-table .league-standings-bento-team {
+  min-width: 100px;
+  width: 100%;
+  overflow: hidden;
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-total {
+  min-width: 48px;
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-gw {
+  min-width: 44px;
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-left-to-play,
+.league-standings-page .league-standings-bento-table .league-standings-bento-in-play {
+  min-width: 44px;
+  width: 1%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Rank cell inner: flex so rank value + arrow/badge stay on one line, no overlap */
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-rank-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-change-badge {
+  flex-shrink: 0;
+}
+
+/* Rank change badge: subtle green/red fill */
+.league-standings-page .league-standings-bento-change-badge.positive {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--accent-green, #10b981);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.league-standings-page .league-standings-bento-change-badge.negative {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--accent-red, #ef4444);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Manager cell (td only): truncate long names; content stays inside column (no overrun).
+   Use flex (not inline-flex) so the cell stays block-level and row borders align across all columns.
+   Scoped to td so the manager header (th) keeps var(--bg-secondary) like other header cells. */
+.league-standings-page .league-standings-bento-table td.league-standings-bento-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0; /* allow inner name to shrink for ellipsis */
+  overflow: hidden;
+  box-shadow: none; /* no shadow/fill leftover from old border */
+  background: var(--bg-primary); /* solid fill to cover any strip from removed border */
+}
+.league-standings-page .league-standings-bento-team .league-standings-bento-team-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-standings-bento-team-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-standings-bento-chip-badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Header: same auto layout as body (min-widths, width 1% / 100%) so columns align */
+.league-standings-page .league-standings-bento-table th {
+  vertical-align: middle;
+  line-height: 1.2;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-rank {
+  min-width: 72px;
+  width: 1%;
+  text-align: left;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-team {
+  min-width: 100px;
+  width: 100%;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total {
+  min-width: 48px;
+  width: 1%;
+  text-align: center;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw {
+  min-width: 44px;
+  width: 1%;
+  text-align: center;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-in-play {
+  min-width: 44px;
+  width: 1%;
+  text-align: center;
+}
+
+/* Sortable column headers: button reset, tap target, triangle indicator */
+.league-standings-page .league-standings-sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  text-align: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.league-standings-page .league-standings-sort-header:hover {
+  color: var(--text-primary);
+}
+.league-standings-page .league-standings-sort-header:focus-visible {
+  outline: 2px solid var(--border-color, #ccc);
+  outline-offset: 2px;
+}
+/* Reserve space for sort triangle so column width doesn't jump when sorting */
+.league-standings-page .league-standings-sort-triangle-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 8px;
+  width: 8px;
+  flex-shrink: 0;
+}
+.league-standings-page .league-standings-sort-triangle {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.league-standings-page .league-standings-sort-header:hover .league-standings-sort-triangle,
+.league-standings-page .league-standings-sort-header:focus-visible .league-standings-sort-triangle {
+  color: var(--text-primary);
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-in-play .league-standings-sort-header {
+  justify-content: center;
+}
+
+.league-standings-bento-left-to-play,
+.league-standings-bento-in-play {
+  text-align: center;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,99 @@
+.auth-button-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.auth-user-name {
+  font-size: 14px;
+  color: var(--text-primary, #333);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.auth-button-signin {
+  background: white;
+  color: #333;
+  border: 1px solid #dadce0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.auth-button-signin:hover {
+  background: #f8f9fa;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.auth-button-signout {
+  background: #f1f3f4;
+  color: #5f6368;
+}
+
+.auth-button-signout:hover {
+  background: #e8eaed;
+}
+
+.auth-google-icon {
+  flex-shrink: 0;
+}
+
+.auth-button-loading {
+  padding: 10px 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .auth-user-name {
+    color: var(--text-primary, #e0e0e0);
+  }
+
+  .auth-button-signin {
+    background: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+  }
+
+  .auth-button-signin:hover {
+    background: #3d3d3d;
+  }
+
+  .auth-button-signout {
+    background: #3d3d3d;
+    color: #b0b0b0;
+  }
+
+  .auth-button-signout:hover {
+    background: #4d4d4d;
+  }
+}
