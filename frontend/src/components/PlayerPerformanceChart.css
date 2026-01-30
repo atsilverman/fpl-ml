@@ -1,76 +1,50 @@
-.player-performance-chart-container {
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-  flex: 1 1 auto;
-  position: relative;
+/* Total points bar chart – fills bento, points per GW range (All / Last 12 / Last 6) */
+.total-points-chart {
   display: flex;
   flex-direction: column;
-  align-items: flex-start; /* Left align */
-}
-
-.chart-controls-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 12px;
-  z-index: 2;
-  flex-shrink: 0;
-  gap: 12px;
-}
-
-.player-performance-chart-scrollable {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  overflow-x: clip; /* Prevent horizontal overflow */
+  width: calc(100% + 12px);
+  margin-left: -12px;
+  height: 100%;
   min-height: 0;
-  width: 100%;
-  align-self: stretch; /* Fill full width */
-  /* Constrain to bento height - this creates the cutoff edge for scrolling */
-  max-height: 100%;
-  /* Ensure proper scrolling behavior */
-  position: relative;
+  overflow: hidden;
 }
 
-.player-performance-chart {
-  width: 100%;
-  /* Don't constrain height - let it be based on calculated barChartHeight */
-  height: auto;
-  min-height: 100%;
-  overflow: visible;
-  display: block;
-  min-width: 100%; /* Ensure full width */
-}
-
-/* Improve SVG text rendering */
-.player-performance-chart text {
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-.chart-filter-controls {
-  display: flex;
-  gap: 8px;
-  z-index: 2;
-  flex-shrink: 0;
+.total-points-chart--loading {
+  justify-content: center;
   align-items: center;
 }
 
-.chart-filter-separator {
-  width: 1px;
+.total-points-chart__skeleton {
+  width: 80%;
+  max-width: 200px;
   height: 20px;
-  background: var(--border-color);
-  opacity: 0.3;
-  margin: 0;
-  flex-shrink: 0;
+  border-radius: 6px;
+  background: var(--bg-secondary, #e5e7eb);
+  animation: total-points-chart-pulse 1.2s ease-in-out infinite;
 }
 
-.chart-filter-btn {
+@keyframes total-points-chart-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.total-points-chart__empty {
+  padding: 1rem;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.total-points-chart__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.total-points-chart__btn {
   padding: 6px 12px;
   font-size: 11px;
   font-weight: 500;
@@ -79,272 +53,315 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  vertical-align: middle;
 }
 
-.chart-filter-btn:hover {
+.total-points-chart__btn:hover {
   background: var(--bg-card);
   border-color: var(--accent-blue);
   color: var(--text-primary);
 }
 
-.chart-filter-btn.active {
+.total-points-chart__btn.active {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
   color: white;
 }
 
-.chart-filter-btn-exclude {
+.total-points-chart__btn--gantt {
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.total-points-chart__btn--gantt.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.total-points-chart__btn--exclude {
   text-transform: none;
   letter-spacing: 0.3px;
   border-style: dashed;
-  border-width: 1.5px;
-  opacity: 0.85;
-  font-weight: 400;
   font-size: 10.5px;
   padding: 5px 10px;
-  margin-left: 0;
 }
 
-.chart-filter-btn-exclude:hover {
-  opacity: 1;
-  border-style: solid;
-  background: var(--bg-card);
-  border-color: var(--text-secondary);
-}
-
-.chart-filter-btn-exclude.active {
-  opacity: 1;
+.total-points-chart__btn--exclude.active {
   border-style: solid;
   background: var(--accent-orange, #f97316);
   border-color: var(--accent-orange, #f97316);
   color: white;
 }
 
-.chart-view-controls {
+.total-points-chart__separator {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  opacity: 0.4;
+}
+
+.total-points-chart__bars {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
-  gap: 8px;
-  z-index: 2;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Gantt view: ownership by gameweek, x-axis = GW range from filter */
+.total-points-chart__gantt {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.total-points-chart__gantt-x-labels {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex-shrink: 0;
-  align-items: center;
+  margin-bottom: 4px;
 }
 
-.chart-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-  padding: 0;
-  line-height: 1;
+.total-points-chart__gantt-x-label-spacer {
+  flex-shrink: 0;
+  width: 120px;
 }
 
-.chart-checkbox {
-  width: 16px;
+.total-points-chart__gantt-x-label-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
   height: 16px;
-  cursor: pointer;
-  accent-color: var(--accent-blue);
-  flex-shrink: 0;
-  margin: 0;
-  vertical-align: middle;
 }
 
-.chart-checkbox-text {
-  font-size: 11px;
+.total-points-chart__gantt-x-label {
+  position: absolute;
+  top: 0;
+  font-size: 9px;
   font-weight: 500;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: color 0.2s ease;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-}
-
-.chart-checkbox-label:hover .chart-checkbox-text {
-  color: var(--text-primary);
-}
-
-.chart-checkbox:checked + .chart-checkbox-text {
-  color: var(--accent-blue);
-}
-
-.chart-gradient-legend {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  width: 100%;
-  justify-content: center;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border-color);
-}
-
-.legend-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   white-space: nowrap;
 }
 
-.legend-gradient-container {
+.total-points-chart__gantt-rows {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+
+.total-points-chart__gantt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.total-points-chart__gantt-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 18px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.total-points-chart__gantt-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: 3px;
+  background: var(--total-points-gantt-segment, #22c55e);
+  opacity: 0.9;
+}
+
+/* Gantt legend: (i) icon + popup (like GW points legend) */
+.total-points-chart__legend-wrap {
+  position: relative;
+  display: inline-flex;
   align-items: center;
 }
 
-.legend-gradient-bar {
-  width: 80px;
-  height: 8px;
+.total-points-chart__gantt-legend-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 4px;
-  border: 1px solid var(--border-color);
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s;
 }
 
-.legend-labels {
+.total-points-chart__gantt-legend-icon:hover {
+  opacity: 1;
+}
+
+.total-points-chart__gantt-legend {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  z-index: 20;
+}
+
+.total-points-chart__gantt-legend-row {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.total-points-chart__gantt-legend-gradient-row {
   display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-size: 9px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.legend-label-min,
-.legend-label-max {
-  font-size: 9px;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
   color: var(--text-secondary);
 }
 
-.chart-view-btn {
-  padding: 6px 10px;
+.total-points-chart__gantt-legend-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(to right, rgb(91, 141, 239), rgb(34, 197, 94));
+  min-width: 60px;
+}
+
+.total-points-chart__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+}
+
+.total-points-chart__label {
+  flex: 0 0 120px;
+  width: 120px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.total-points-chart__name {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 11px;
   font-weight: 500;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.total-points-chart__badge {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.total-points-chart__track {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 18px;
   background: var(--bg-secondary);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  overflow: visible;
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
 }
 
-.chart-view-btn:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
+.total-points-chart__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: 4px;
+  transition: width 0.35s ease-out;
+}
+
+.total-points-chart__value {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-primary);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-.chart-view-btn.active {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
+/* Value placed after the bar (short bars): left position set inline */
+.total-points-chart__value--after-bar {
+  text-align: left;
+}
+
+/* Value inside the bar (long bars): right-aligned, white in light mode */
+.total-points-chart__value--on-bar {
+  text-align: right;
+}
+
+/* Light mode: value on bar → white for contrast */
+html[data-theme="light"] .total-points-chart__value--on-bar {
   color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
-.chart-loading {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-}
-
-.chart-tooltip {
-  font-family: inherit;
-  color: var(--text-primary);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Bar hover effects */
-.bar-starting {
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-}
-
-.bar-starting:hover {
-  opacity: 0.8 !important;
-}
-
-/* Team badge styling */
-.team-badge {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
-  image-rendering: pixelated;
-}
-
-/* Bar label text styling for legibility */
-.bar-label {
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-}
-
-/* Responsive adjustments */
 @media (max-width: 768px) {
-  .player-performance-chart-container {
-    min-height: 300px;
+  .total-points-chart {
+    margin-left: 0;
+    width: 100%;
   }
 
-  .chart-controls-wrapper {
-    margin-bottom: 10px;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .chart-filter-controls {
+  .total-points-chart__controls {
     gap: 6px;
+    margin-bottom: 10px;
   }
 
-  .chart-filter-btn {
+  .total-points-chart__btn {
     padding: 5px 10px;
     font-size: 10px;
   }
 
-  .chart-view-controls {
-    gap: 6px;
+  .total-points-chart__label {
+    flex: 0 0 100px;
+    width: 100px;
   }
 
-  .chart-checkbox-label {
-    padding: 5px 0;
+  .total-points-chart__gantt-x-label-spacer {
+    width: 100px;
   }
 
-  .chart-checkbox {
-    width: 14px;
-    height: 14px;
-  }
-
-  .chart-checkbox-text {
+  .total-points-chart__name {
     font-size: 10px;
   }
 
-  .chart-gradient-legend {
-    margin-top: 10px;
-    padding-top: 10px;
-    gap: 6px;
+  .total-points-chart__track {
+    height: 16px;
   }
 
-  .legend-label {
-    font-size: 9px;
-  }
-
-  .legend-gradient-bar {
-    width: 60px;
-    height: 6px;
-  }
-
-  .legend-labels {
-    font-size: 8px;
+  .total-points-chart__value {
+    font-size: 10px;
   }
 }

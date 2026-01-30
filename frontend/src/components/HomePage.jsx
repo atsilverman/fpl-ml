@@ -16,15 +16,15 @@ import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useConfiguration } from '../contexts/ConfigurationContext'
+import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
-import ConfigurationModal from './ConfigurationModal'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
 export default function HomePage() {
-  const { config, updateConfig } = useConfiguration()
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false)
+  const { config, openConfigModal } = useConfiguration()
+  const { cardOrder, openCustomizeModal } = useBentoOrder()
   
   // State declarations (must be before hooks that use them)
   const [chartFilter, setChartFilter] = useState('last12') // 'all', 'last12', 'last6'
@@ -50,7 +50,7 @@ export default function HomePage() {
   const { leagueData: leagueTeamValueData, loading: leagueTeamValueLoading } = useLeagueTeamValueHistory()
   const { chipUsage, loading: chipLoading } = useChipUsage()
   const { hasLiveGames } = useLiveGameweekStatus(gameweek)
-  const { playerData, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter)
+  const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter)
   const { data: currentGameweekPlayers, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
   const { top10ByStat, isLoading: top10ByStatLoading } = useGameweekTop10ByStat()
   const { transfers: transferImpacts, loading: transferImpactsLoading } = useTransferImpacts(gameweek)
@@ -76,22 +76,6 @@ export default function HomePage() {
     enabled: !!LEAGUE_ID,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes (league names don't change often)
   })
-  const [cardOrder, setCardOrder] = useState(() => {
-    const saved = localStorage.getItem('bento_card_order')
-    return saved ? JSON.parse(saved) : [
-      'overall-rank',
-      'gw-points',
-      'total-points',
-      'gw-rank',
-      'team-value',
-      'chips',
-      'transfers',
-      'league-rank',
-      'captain',
-      'settings'
-    ]
-  })
-
   // Detect mobile viewport
   useEffect(() => {
     const checkMobile = () => {
@@ -174,7 +158,7 @@ export default function HomePage() {
     {
       id: 'chips',
       label: 'Chips',
-      size: '2x1',
+      size: '1x1',
       isChips: true
     },
     {
@@ -253,21 +237,13 @@ export default function HomePage() {
     }
     
     if (card.size === '2x3') return 'bento-card-chart-large'
-    if (card.size === '2x1') return card.isChips ? 'bento-card-chips' : 'bento-card-large'
+    if (card.size === '2x1') return 'bento-card-large'
+    if (id === 'chips') return 'bento-card-chips'
     return 'bento-card'
   }
 
   const handleConfigureClick = () => {
-    setIsConfigModalOpen(true)
-  }
-
-  const handleConfigSave = ({ leagueId, managerId }) => {
-    updateConfig({
-      leagueId: parseInt(leagueId),
-      managerId: parseInt(managerId)
-    })
-    // Queries will be automatically invalidated and refetched by ConfigurationContext
-    // No need to reload the page
+    openCustomizeModal()
   }
 
   const handleChartFilterChange = (newFilter) => {
@@ -445,7 +421,7 @@ export default function HomePage() {
           if (cardId === 'transfers' && isTransfersExpanded) {
             labelToUse = (
               <>
-                TRANSFERS <span className="bento-card-label-suffix">| League Top Transfers</span>
+                TRANSFERS <span className="bento-card-label-suffix">ML Top Transfers</span>
               </>
             )
           }
@@ -511,6 +487,7 @@ export default function HomePage() {
               playerChartData={playerChartDataToUse}
               playerChartFilter={playerChartFilterToUse}
               onPlayerChartFilterChange={onPlayerChartFilterChangeToUse}
+              playerPointsByGameweek={cardId === 'total-points' ? playerPointsByGameweek : undefined}
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
               leagueStandings={cardId === 'league-rank' ? leagueStandings : undefined}
@@ -524,12 +501,6 @@ export default function HomePage() {
           )
         })}
       </div>
-      
-      <ConfigurationModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-        onSave={handleConfigSave}
-      />
     </div>
   )
 }

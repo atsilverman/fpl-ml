@@ -3,6 +3,30 @@ import { supabase } from '../lib/supabase'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useGameweekData } from './useGameweekData'
 
+/** Convert sorted gameweeks array to contiguous streaks [[start, end], ...] */
+function gameweeksToStreaks(gameweeks) {
+  if (!gameweeks || gameweeks.length === 0) return []
+  const sorted = [...gameweeks].sort((a, b) => a - b)
+  const streaks = []
+  let start = sorted[0]
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] !== sorted[i - 1] + 1) {
+      streaks.push([start, sorted[i - 1]])
+      start = sorted[i]
+    }
+  }
+  streaks.push([start, sorted[sorted.length - 1]])
+  return streaks
+}
+
+/** Format streaks as "1-5, 8-10" string */
+function formatOwnershipPeriods(streaks) {
+  if (!streaks || streaks.length === 0) return ''
+  return streaks
+    .map(([a, b]) => (a === b ? `${a}` : `${a}-${b}`))
+    .join(', ')
+}
+
 /**
  * Hook to fetch player owned performance data (starting position points only)
  * Used for player performance chart visualization
@@ -13,7 +37,7 @@ export function usePlayerOwnedPerformance(filter = 'all') {
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
   const { gameweek } = useGameweekData()
 
-  const { data: playerData, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['player-owned-performance', MANAGER_ID, filter, gameweek],
     queryFn: async () => {
       if (!MANAGER_ID) {
@@ -106,8 +130,9 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           }
         })
 
-        // Aggregate points by player
+        // Aggregate points by player and build pointsByGameweek (player_id -> gameweek -> points) for Gantt gradient
         const playerPointsMap = {}
+        const pointsByGameweek = {}
         for (const pick of picksWithAutoSubs) {
           const playerId = pick.effective_player_id
           if (!playerPointsMap[playerId]) {
@@ -122,6 +147,8 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           if (pick.is_captain) {
             playerPointsMap[playerId].captain_weeks += 1
           }
+          if (!pointsByGameweek[playerId]) pointsByGameweek[playerId] = {}
+          pointsByGameweek[playerId][pick.gameweek] = (pointsByGameweek[playerId][pick.gameweek] || 0) + pick.points
         }
 
         // Get player and team information
@@ -153,17 +180,14 @@ export function usePlayerOwnedPerformance(filter = 'all') {
             if (!playerStats) return null
 
             const gameweeksArray = Array.from(playerStats.gameweeks).sort((a, b) => a - b)
-            
+            const streaks = gameweeksToStreaks(gameweeksArray)
             return {
               player_id: player.fpl_player_id,
               player_name: player.web_name,
               total_points: playerStats.total_points,
               gameweeks_owned: playerStats.gameweeks.size,
-              ownership_periods: gameweeksArray.length > 0 
-                ? gameweeksArray.length === 1 
-                  ? `${gameweeksArray[0]}`
-                  : `${gameweeksArray[0]}-${gameweeksArray[gameweeksArray.length - 1]}`
-                : '',
+              gameweeks_array: gameweeksArray,
+              ownership_periods: formatOwnershipPeriods(streaks),
               player_position: player.position,
               team_id: player.team_id,
               team_short_name: player.teams?.short_name,
@@ -176,7 +200,7 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           .sort((a, b) => (b.total_points || 0) - (a.total_points || 0))
 
         console.log('Filtered player performance data:', chartData, 'Count:', chartData?.length)
-        return chartData
+        return { chartData, pointsByGameweek }
       }
 
       // For 'all' filter, use the existing view
@@ -252,24 +276,53 @@ export function usePlayerOwnedPerformance(filter = 'all') {
       }
 
       // Transform to chart-friendly format (only starting position points)
-      const chartData = (data || []).map(row => ({
-        player_id: row.player_id,
-        player_name: row.player_name,
-        total_points: row.total_points || 0,  // Starting position points only
-        gameweeks_owned: row.gameweeks_owned || 0,
-        ownership_periods: row.ownership_periods || '',
-        player_position: row.player_position,
-        team_id: row.team_id,
-        team_short_name: row.team_short_name,
-        percentage_of_total_points: row.percentage_of_total_points || 0
-      }))
+      // gameweeks_array from Supabase may be array or need parsing
+      const chartData = (data || []).map(row => {
+        let gameweeksArray = row.gameweeks_array
+        if (Array.isArray(gameweeksArray)) {
+          gameweeksArray = gameweeksArray.slice().sort((a, b) => a - b)
+        } else {
+          gameweeksArray = []
+        }
+        return {
+          player_id: row.player_id,
+          player_name: row.player_name,
+          total_points: row.total_points || 0,
+          gameweeks_owned: row.gameweeks_owned || 0,
+          gameweeks_array: gameweeksArray,
+          ownership_periods: row.ownership_periods || '',
+          player_position: row.player_position,
+          team_id: row.team_id,
+          team_short_name: row.team_short_name,
+          percentage_of_total_points: row.percentage_of_total_points || 0
+        }
+      })
+
+      // Build pointsByGameweek for "All" view from materialized view (single cheap query)
+      let pointsByGameweek = {}
+      if (chartData.length > 0) {
+        const mvResult = await supabase
+          .from('mv_manager_player_gameweek_points')
+          .select('player_id, gameweek, points')
+          .eq('manager_id', MANAGER_ID)
+
+        if (!mvResult.error && mvResult.data?.length) {
+          mvResult.data.forEach((row) => {
+            const pid = row.player_id
+            if (!pointsByGameweek[pid]) pointsByGameweek[pid] = {}
+            pointsByGameweek[pid][row.gameweek] = (pointsByGameweek[pid][row.gameweek] || 0) + (row.points || 0)
+          })
+        }
+      }
       
-      return chartData
+      return { chartData, pointsByGameweek }
     },
     enabled: !!MANAGER_ID && (filter === 'all' || !!gameweek),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchInterval: 5 * 60 * 1000, // Poll every 5 minutes
   })
 
-  return { playerData, loading: isLoading, error }
+  const playerData = Array.isArray(data) ? data : (data?.chartData ?? [])
+  const pointsByGameweek = data && !Array.isArray(data) ? (data.pointsByGameweek ?? {}) : {}
+  return { playerData, pointsByGameweek, loading: isLoading, error }
 }

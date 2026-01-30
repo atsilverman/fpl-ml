@@ -34,10 +34,11 @@
   padding: 20px;
   transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
               transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-column 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-row 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              grid-column 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              grid-row 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              height 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              min-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -73,6 +74,10 @@
   min-height: var(--bento-unit-height);
 }
 
+.bento-card-id-transfers.bento-card-large {
+  grid-row: span 1;
+}
+
 .bento-card-chart-large {
   grid-column: span 2;
   grid-row: span 3;
@@ -83,12 +88,29 @@
   overflow: hidden;
   transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
               transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-column 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-row 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              grid-column 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              grid-row 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              height 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              min-height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              max-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: grid-column, grid-row, height, min-height;
   contain: layout style;
+}
+
+/* Transfers expanded: compact (top 3 only) – fill 2 rows so no gap to next bento */
+.bento-card-chart-large.bento-card-transfers-compact {
+  grid-row: span 2;
+  height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  max-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+}
+
+/* Transfers expanded: show more – explicit height so it animates in sync with content */
+.bento-card-chart-large.bento-card-transfers-show-more {
+  grid-row: span 4;
+  height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
+  min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  max-height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
 }
 
 .bento-card-chart-2x4 {
@@ -101,16 +123,16 @@
   overflow: hidden;
   transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
               transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-column 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-row 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-              min-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              grid-column 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              grid-row 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              height 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+              min-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: grid-column, grid-row, height, min-height;
   contain: layout style;
 }
 
 .bento-card-chips {
-  grid-column: span 2;
+  grid-column: span 1;
   grid-row: span 1;
   height: var(--bento-unit-height);
   min-height: var(--bento-unit-height);
@@ -265,8 +287,27 @@
     min-height: var(--bento-unit-height);
   }
 
+  .bento-card-id-transfers.bento-card-large {
+    grid-row: span 1;
+  }
+
   .bento-card-chart-large {
     grid-column: span 2;
+    grid-row: span 3;
+    height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
+    min-height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
+    max-height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
+  }
+
+  .bento-card-chart-large.bento-card-transfers-compact {
+    grid-row: span 2;
+    height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+    min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+    max-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  }
+
+  /* Transfers show-more: 3 rows on mobile so next card isn’t pushed down; list scrolls inside */
+  .bento-card-chart-large.bento-card-transfers-show-more {
     grid-row: span 3;
     height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
     min-height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
@@ -282,7 +323,7 @@
   }
 
   .bento-card-chips {
-    grid-column: span 2;
+    grid-column: span 1;
     height: var(--bento-unit-height);
     min-height: var(--bento-unit-height);
   }

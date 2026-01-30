@@ -54,37 +54,45 @@
 }
 
 .chip-item.chip-used {
-  background: transparent;
-  border-width: 2px;
+  background: var(--bg-card);
+  border: 1px solid #10b981;
+  color: #0F172A;
 }
 
-.chip-item.chip-used {
-  /* Colors applied via inline style for chip-specific colors */
+.chip-item.chip-used .chip-label {
+  color: #0F172A;
+}
+
+.chip-item.chip-used .chip-gameweek {
+  color: #808080;
 }
 
 .chip-label {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .chip-gameweek {
-  font-size: 8px;
+  font-size: 10px;
   font-weight: 600;
-  margin-top: 1px;
+  margin-top: 2px;
   opacity: 0.9;
   line-height: 1;
 }
 
-/* Chips two-page swipe (first half / second half) */
+.chip-gameweek--dash {
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.6));
+  opacity: 0.8;
+}
+
+/* Chips: single grid (first or second half by gameweek) */
 .chips-pages-wrapper {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   margin-top: 4px;
-  overflow: hidden;
-  touch-action: pan-y;
 }
 
 .chips-pages-wrapper--expanded {
@@ -95,65 +103,16 @@
   flex-direction: column;
 }
 
-.chips-pages-track {
-  display: flex;
-  width: 200%;
-  flex: 1 1 0;
-  min-height: 0;
-  transition: transform 0.25s ease-out;
-}
-
-.chips-page {
-  width: 50%;
-  flex-shrink: 0;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  height: 43px;
-}
-
 .chips-pages-wrapper .chips-grid {
   flex: 1;
 }
 
-.chips-page-dots {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 4px;
-  margin-top: -4px;
-  margin-bottom: -4px;
-  flex-shrink: 0;
+html[data-theme="dark"] .chip-item.chip-used .chip-label {
+  color: #fff;
 }
 
-.chips-page-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  padding: 0;
-  border: 1px solid var(--text-tertiary, rgba(128, 128, 128, 0.5));
-  background: transparent;
-  cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.chips-page-dot:hover {
-  border-color: var(--text-secondary, rgba(128, 128, 128, 0.7));
-}
-
-.chips-page-dot--active {
-  background: var(--text-secondary, rgba(128, 128, 128, 0.6));
-  border-color: var(--text-secondary, rgba(128, 128, 128, 0.6));
-}
-
-html[data-theme="dark"] .chips-page-dot--active {
-  background: rgba(255, 255, 255, 0.5);
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.chips-pages-wrapper--expanded .chips-page-dots {
-  padding: 8px 0 4px;
+html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .settings-bento-content {
@@ -267,7 +226,9 @@ html[data-theme="dark"] .chips-page-dot--active {
   height: 20px;
   color: var(--text-secondary);
   opacity: 0.5;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
+  transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.2s ease,
+              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   z-index: 10;
   display: flex;
@@ -393,9 +354,68 @@ html[data-theme="dark"] .chips-page-dot--active {
   padding: 0 4px;
 }
 
-/* Reduce padding for chips card */
+/* Total points Gantt legend (same layout as GW legend, (i) next to X) */
+.total-points-gantt-legend .total-points-chart__gantt-legend-row {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+
+.total-points-gantt-legend .total-points-chart__gantt-legend-gradient-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.total-points-gantt-legend .total-points-chart__gantt-legend-bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(to right, rgb(91, 141, 239), rgb(34, 197, 94));
+  min-width: 60px;
+}
+
+/* Chips card: 1x1 with 2x2 grid, scaled-down text and chips */
 .bento-card-chips {
-  padding: 12px 16px;
+  padding: 8px 10px;
+}
+
+.bento-card-chips .bento-card-label {
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+.bento-card-chips .chips-pages-wrapper {
+  margin-top: 2px;
+}
+
+.bento-card-chips .chips-grid.chips-grid-collapsed {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  margin-top: 0;
+  min-height: 0;
+  flex: 1 1 0;
+}
+
+.bento-card-chips .chip-item {
+  padding: 4px 2px;
+  min-height: 26px;
+  border-radius: 4px;
+  font-size: 9px;
+}
+
+.bento-card-chips .chip-label {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.bento-card-chips .chip-gameweek {
+  font-size: 8px;
+  margin-top: 1px;
+  line-height: 1;
 }
 
 
@@ -425,13 +445,13 @@ html[data-theme="dark"] .chips-page-dot--active {
   }
 
   .chip-label {
-    font-size: 8px;
+    font-size: 10px;
     line-height: 1;
   }
 
   .chip-gameweek {
-    font-size: 6px;
-    margin-top: 0.5px;
+    font-size: 8px;
+    margin-top: 1px;
     line-height: 1;
   }
 }
@@ -522,7 +542,7 @@ html[data-theme="dark"] .bento-card-transfer-delta.negative {
   background: var(--accent-red, #dc2626);
 }
 
-/* Transfers expanded: TOP TRANSFERS summary card */
+/* Transfers expanded: TOP TRANSFERS summary card – fill bento on desktop */
 .transfers-summary-card {
   flex: 1 1 auto;
   min-height: 0;
@@ -533,12 +553,50 @@ html[data-theme="dark"] .bento-card-transfer-delta.negative {
   gap: 8px;
 }
 
+.transfers-summary-show-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.transfers-summary-show-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover, rgba(128, 128, 128, 0.08));
+}
+
 .transfers-summary-content {
   flex: 1 1 auto;
   min-height: 0;
-  max-height: 320px;
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+/* Desktop: fill bento container; mobile keeps reasonable cap */
+.bento-card-transfers-compact .transfers-summary-content {
+  max-height: none;
+}
+
+@media (max-width: 768px) {
+  .bento-card-transfers-compact .transfers-summary-content {
+    max-height: 168px;
+  }
+}
+
+.bento-card-transfers-show-more .transfers-summary-content {
+  max-height: none;
 }
 
 .transfers-summary-content::-webkit-scrollbar {
@@ -955,6 +1013,11 @@ html[data-theme="dark"] .transfers-summary-column-count {
   border-radius: 4px;
 }
 
+/* More specific than .league-standings-bento-table td (font-weight: 400) so team names stay 600 */
+.league-standings-bento-table td.league-standings-bento-team {
+  font-weight: 600;
+}
+
 .league-standings-bento-team {
   min-width: 0;
   max-width: 140px;
@@ -1051,7 +1114,7 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
 
 /* Captain bento: expanded 2x3 table – no scroll, abbreviate team first then player names */
 .captain-standings-bento .league-standings-bento-table-wrapper {
-  overflow: hidden;
+  overflow: auto;
 }
 
 .captain-standings-bento-table {

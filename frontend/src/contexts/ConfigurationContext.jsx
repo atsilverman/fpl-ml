@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
+import ConfigurationModal from '../components/ConfigurationModal'
 
 const ConfigurationContext = createContext()
 
@@ -12,7 +13,8 @@ export function ConfigurationProvider({ children }) {
   const isInitialMount = useRef(true)
   const migrationAttemptedRef = useRef(false)
   const [loading, setLoading] = useState(true)
-  
+  const [configModalOpen, setConfigModalOpen] = useState(false)
+
   const [config, setConfig] = useState(() => {
     // Load from localStorage on mount (fallback for non-authenticated users)
     const saved = localStorage.getItem('fpl_configuration')
@@ -183,9 +185,23 @@ export function ConfigurationProvider({ children }) {
     setConfig(newConfig)
   }
 
+  const openConfigModal = () => setConfigModalOpen(true)
+  const handleConfigSave = ({ leagueId, managerId }) => {
+    updateConfig({
+      leagueId: parseInt(leagueId),
+      managerId: parseInt(managerId)
+    })
+    setConfigModalOpen(false)
+  }
+
   return (
-    <ConfigurationContext.Provider value={{ config, updateConfig }}>
+    <ConfigurationContext.Provider value={{ config, updateConfig, openConfigModal }}>
       {children}
+      <ConfigurationModal
+        isOpen={configModalOpen}
+        onClose={() => setConfigModalOpen(false)}
+        onSave={handleConfigSave}
+      />
     </ConfigurationContext.Provider>
   )
 }

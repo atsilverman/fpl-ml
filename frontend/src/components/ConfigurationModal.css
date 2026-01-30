@@ -97,6 +97,7 @@
 .modal-auth-unsigned {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
 }
 
@@ -104,6 +105,7 @@
   font-size: 14px;
   color: var(--text-secondary);
   margin: 0;
+  text-align: center;
 }
 
 .modal-auth-google {

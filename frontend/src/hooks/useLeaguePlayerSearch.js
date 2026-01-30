@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 /**
- * Search players by name for autocomplete. Returns { fpl_player_id, web_name, team_short_name }.
+ * Search players by name for autocomplete. Returns { fpl_player_id, web_name, team_short_name, position }.
  * Only runs when query string has at least 2 characters.
  */
 export function useLeaguePlayerSearch(query) {
@@ -19,6 +19,7 @@ export function useLeaguePlayerSearch(query) {
         .select(`
           fpl_player_id,
           web_name,
+          position,
           teams(short_name)
         `)
         .ilike('web_name', `%${trimmed}%`)
@@ -30,7 +31,8 @@ export function useLeaguePlayerSearch(query) {
       return (data || []).map((p) => ({
         fpl_player_id: p.fpl_player_id,
         web_name: p.web_name || '—',
-        team_short_name: p.teams?.short_name ?? null
+        team_short_name: p.teams?.short_name ?? null,
+        position: p.position ?? null
       }))
     },
     enabled,

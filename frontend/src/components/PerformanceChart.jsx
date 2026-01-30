@@ -314,7 +314,7 @@ export default function PerformanceChart({
     // Create a shared transition for all chart elements (area, line, points) to ensure perfect synchronization
     // This ensures they all animate together with the same timing
     const syncTransition = d3.transition('chart-sync')
-      .duration(800)
+      .duration(450)
       .ease(d3.easeCubicInOut)
 
     // Create or get main group

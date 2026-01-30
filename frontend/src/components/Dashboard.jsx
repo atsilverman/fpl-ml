@@ -1,5 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { UserSearch } from 'lucide-react'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { supabase } from '../lib/supabase'
 import './Dashboard.css'
@@ -7,7 +8,7 @@ import './Dashboard.css'
 export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { config } = useConfiguration()
+  const { config, openConfigModal } = useConfiguration()
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
 
@@ -52,6 +53,9 @@ export default function Dashboard() {
             <h1>FPL Mini League</h1>
             {subtitle && <p className="header-subtitle">{subtitle}</p>}
           </div>
+          <button type="button" className="header-user-button" aria-label="Account" title="Account" onClick={openConfigModal}>
+            <UserSearch size={16} strokeWidth={1.5} />
+          </button>
         </div>
       </header>
 

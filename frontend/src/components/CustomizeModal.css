@@ -1,0 +1,73 @@
+.customize-modal-overlay {
+  animation: none;
+}
+
+.customize-modal-content {
+  max-width: 420px;
+}
+
+.customize-modal-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+}
+
+.customize-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.customize-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: grab;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.customize-row:active {
+  cursor: grabbing;
+}
+
+.customize-row:hover {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+.customize-row-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary, var(--text-secondary));
+  flex-shrink: 0;
+}
+
+.customize-row:hover .customize-row-handle {
+  color: var(--text-secondary);
+}
+
+.customize-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.customize-row-dragging {
+  opacity: 0.85;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+  cursor: grabbing;
+}
+
+.customize-row-drag-over {
+  border-color: var(--accent-blue);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 2px var(--shadow-accent-blue-subtle, rgba(59, 130, 246, 0.2));
+}

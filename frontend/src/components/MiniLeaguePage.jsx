@@ -4,7 +4,7 @@ import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useLeagueActiveChips } from '../hooks/useLeagueActiveChips'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
-import { useLeaguePlayerOwnership } from '../hooks/useLeaguePlayerOwnership'
+import { useLeaguePlayerOwnershipMultiple } from '../hooks/useLeaguePlayerOwnership'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X } from 'lucide-react'
 import './MiniLeaguePage.css'
@@ -42,6 +42,8 @@ const CHIP_COLORS = {
   '3xc': '#f97316'
 }
 
+const POSITION_ABBREV = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
+
 export default function MiniLeaguePage() {
   const { config } = useConfiguration()
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
@@ -52,8 +54,9 @@ export default function MiniLeaguePage() {
   const { activeChipByManager, loading: activeChipLoading } = useLeagueActiveChips(gameweek)
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedSearchQuery)
-  const [selectedPlayer, setSelectedPlayer] = useState(null)
-  const { managerIdsOwningPlayer, loading: ownershipLoading } = useLeaguePlayerOwnership(selectedPlayer?.fpl_player_id ?? null, gameweek)
+  const [selectedPlayers, setSelectedPlayers] = useState([])
+  const selectedPlayerIds = useMemo(() => selectedPlayers.map((p) => p.fpl_player_id), [selectedPlayers])
+  const { managerIdsOwningAny, loading: ownershipLoading } = useLeaguePlayerOwnershipMultiple(selectedPlayerIds, gameweek)
 
   const [sort, setSort] = useState(DEFAULT_SORT)
   const [searchQuery, setSearchQuery] = useState('')
@@ -61,7 +64,7 @@ export default function MiniLeaguePage() {
   const searchContainerRef = useRef(null)
 
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearchQuery(searchQuery), 250)
+    const t = setTimeout(() => setDebouncedSearchQuery(searchQuery), 150)
     return () => clearTimeout(t)
   }, [searchQuery])
 
@@ -127,19 +130,25 @@ export default function MiniLeaguePage() {
   }, [standings, liveStatusByManager, sort.column, sort.dir])
 
   const displayRows = useMemo(() => {
-    if (!selectedPlayer || ownershipLoading) return sortedRows
-    const set = new Set(managerIdsOwningPlayer)
+    if (selectedPlayers.length === 0 || ownershipLoading) return sortedRows
+    const set = new Set(managerIdsOwningAny)
     return sortedRows.filter((r) => set.has(r.manager_id))
-  }, [sortedRows, selectedPlayer, managerIdsOwningPlayer, ownershipLoading])
+  }, [sortedRows, selectedPlayers.length, managerIdsOwningAny, ownershipLoading])
 
   const handleSelectPlayer = useCallback((player) => {
-    setSelectedPlayer(player)
+    setSelectedPlayers((prev) =>
+      prev.some((p) => p.fpl_player_id === player.fpl_player_id) ? prev : [...prev, player]
+    )
     setSearchQuery('')
     setDropdownOpen(false)
   }, [])
 
+  const handleRemovePlayer = useCallback((fplPlayerId) => {
+    setSelectedPlayers((prev) => prev.filter((p) => p.fpl_player_id !== fplPlayerId))
+  }, [])
+
   const handleClearFilter = useCallback(() => {
-    setSelectedPlayer(null)
+    setSelectedPlayers([])
     setSearchQuery('')
     setDropdownOpen(false)
   }, [])
@@ -175,45 +184,56 @@ export default function MiniLeaguePage() {
         <div className="league-ownership-search-container" ref={searchContainerRef}>
           <div className="league-ownership-search-bar">
             <Search className="league-ownership-search-icon" size={16} aria-hidden />
-            {selectedPlayer ? (
-              <div className="league-ownership-selected">
-                {selectedPlayer.team_short_name && (
-                  <img
-                    src={`/badges/${selectedPlayer.team_short_name}.svg`}
-                    alt=""
-                    className="league-ownership-player-badge"
-                    width={16}
-                    height={16}
-                  />
-                )}
-                <span className="league-ownership-player-name">{selectedPlayer.web_name}</span>
-                <button
-                  type="button"
-                  className="league-ownership-clear"
-                  onClick={handleClearFilter}
-                  aria-label="Clear player filter"
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            ) : (
-              <input
-                type="text"
-                className="league-ownership-search-input"
-                placeholder="Search player to see league ownership…"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value)
-                  setDropdownOpen(true)
-                }}
-                onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
-                aria-autocomplete="list"
-                aria-expanded={dropdownOpen}
-                aria-controls="league-player-autocomplete"
-                id="league-ownership-search"
-              />
-            )}
+            <input
+              type="text"
+              className="league-ownership-search-input"
+              placeholder="Search player to see league ownership…"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                setDropdownOpen(true)
+              }}
+              onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
+              aria-autocomplete="list"
+              aria-expanded={dropdownOpen}
+              aria-controls="league-player-autocomplete"
+              id="league-ownership-search"
+            />
           </div>
+          {selectedPlayers.length > 0 && (
+            <div className="league-ownership-selected-container">
+              {selectedPlayers.map((p) => (
+                <span key={p.fpl_player_id} className="league-ownership-selected-chip">
+                  {p.team_short_name && (
+                    <img
+                      src={`/badges/${p.team_short_name}.svg`}
+                      alt=""
+                      className="league-ownership-player-badge"
+                      width={16}
+                      height={16}
+                    />
+                  )}
+                  <span className="league-ownership-player-name">{p.web_name}</span>
+                  <button
+                    type="button"
+                    className="league-ownership-clear"
+                    onClick={() => handleRemovePlayer(p.fpl_player_id)}
+                    aria-label={`Remove ${p.web_name}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ))}
+              <button
+                type="button"
+                className="league-ownership-clear-all"
+                onClick={handleClearFilter}
+                aria-label="Clear all players"
+              >
+                Clear all
+              </button>
+            </div>
+          )}
           {dropdownOpen && searchQuery.trim().length >= 2 && (
             <ul
               id="league-player-autocomplete"
@@ -248,18 +268,30 @@ export default function MiniLeaguePage() {
                       />
                     )}
                     <span className="league-ownership-player-name">{p.web_name}</span>
+                    {p.position != null && POSITION_ABBREV[p.position] && (
+                      <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
+                        {POSITION_ABBREV[p.position]}
+                      </span>
+                    )}
                   </li>
                 ))
               )}
             </ul>
           )}
-          {selectedPlayer && !ownershipLoading && (
+          {selectedPlayers.length > 0 && !ownershipLoading && (
             <p className="league-ownership-filter-hint">
-              Showing {displayRows.length} (of {standings.length}) manager{displayRows.length !== 1 ? 's' : ''} who own <strong>{selectedPlayer.web_name}</strong> this gameweek
+              Showing {displayRows.length} (of {standings.length}) manager{displayRows.length !== 1 ? 's' : ''} who own {selectedPlayers.length === 1 ? (
+                <strong>{selectedPlayers[0].web_name}</strong>
+              ) : (
+                <>
+                  <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
+                </>
+              )}{' '}
+              this gameweek
             </p>
           )}
         </div>
-        <div className={`league-standings-bento-table-wrapper${selectedPlayer ? ' league-standings-ownership-filtered' : ''}`}>
+        <div className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
           <table className="league-standings-bento-table">
             <thead>
               <tr>
@@ -336,7 +368,7 @@ export default function MiniLeaguePage() {
                 const rank = s._rank
                 const change = s.mini_league_rank_change != null ? s.mini_league_rank_change : null
                 const displayName = s._displayName
-                const isCurrentUser = currentManagerId != null && s.manager_id === currentManagerId
+                const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
                 const leftToPlay = liveStatusLoading ? null : (s._leftToPlay ?? null)
                 const inPlay = liveStatusLoading ? null : (s._inPlay ?? null)
                 const activeChip = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)

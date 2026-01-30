@@ -11,6 +11,7 @@ Run these migrations in order for a fresh database setup:
 5. **005_create_transfer_impacts_view.sql** - Creates transfer impacts materialized view
 6. **006_add_baseline_columns.sql** - Adds baseline columns for data preservation
 7. **007_add_team_foreign_keys.sql** - Adds foreign key constraints for team references
+21. **021_manager_player_gameweek_points_mv.sql** - Per-GW points MV for Gantt gradient (All filter)
 
 ## Migration Details
 
@@ -49,6 +50,12 @@ Run these migrations in order for a fresh database setup:
 ### 005: Transfer Impacts View
 - mv_manager_transfer_impacts materialized view
 - Pre-calculates transfer point impacts
+
+### 021: Manager Player Gameweek Points MV
+- v_manager_player_gameweek_points view + mv_manager_player_gameweek_points
+- One row per (manager_id, player_id, gameweek) with points (starting XI, auto-subs, multiplier)
+- Used by frontend for Gantt gradient in "All" filter (single query instead of picks + stats)
+- refresh_manager_player_gameweek_points() added; included in refresh_all_materialized_views()
 
 ### 006: Baseline Columns
 - Adds baseline preservation columns to manager_gameweek_history

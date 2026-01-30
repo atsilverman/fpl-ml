@@ -9,16 +9,16 @@ import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon, Laptop, Settings, MoveDiagonal, X, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
-  { key: 'wc1', label: 'WC', color: '#8b5cf6' },
-  { key: 'fh', label: 'FH', color: '#3b82f6' },
-  { key: 'bb', label: 'BB', color: '#06b6d4' },
-  { key: 'tc', label: 'TC', color: '#f97316' }
+  { key: 'wc1', label: 'WC' },
+  { key: 'fh', label: 'FH' },
+  { key: 'bb', label: 'BB' },
+  { key: 'tc', label: 'TC' }
 ]
 const SECOND_HALF_CHIP_COLUMNS = [
-  { key: 'wc2', label: 'WC2', color: '#8b5cf6' },
-  { key: 'fh2', label: 'FH2', color: '#3b82f6' },
-  { key: 'bb2', label: 'BB2', color: '#06b6d4' },
-  { key: 'tc2', label: 'TC2', color: '#f97316' }
+  { key: 'wc2', label: 'WC2', isSecondHalf: true },
+  { key: 'fh2', label: 'FH2', isSecondHalf: true },
+  { key: 'bb2', label: 'BB2', isSecondHalf: true },
+  { key: 'tc2', label: 'TC2', isSecondHalf: true }
 ]
 
 export default function BentoCard({
@@ -53,6 +53,7 @@ export default function BentoCard({
   playerChartData = null,
   playerChartFilter = 'all',
   onPlayerChartFilterChange = null,
+  playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   top10ByStat = null,
   gameweek = null,
@@ -67,27 +68,15 @@ export default function BentoCard({
   leagueCaptainLoading = false
 }) {
   const isSecondHalf = gameweek != null && gameweek > 19
-  // Page 0 = first half chips, page 1 = second half; default to "other" half of season
-  const [chipsPage, setChipsPage] = useState(() => (isSecondHalf ? 0 : 1))
-  const chipColumns = chipsPage === 0 ? FIRST_HALF_CHIP_COLUMNS : SECOND_HALF_CHIP_COLUMNS
-  const collapsedChipItemsFirst = FIRST_HALF_CHIP_COLUMNS.map(({ key, label, color }) => ({
+  const chipColumns = isSecondHalf ? SECOND_HALF_CHIP_COLUMNS : FIRST_HALF_CHIP_COLUMNS
+  const collapsedChipItems = chipColumns.map(({ key, label, isSecondHalf: secondHalf }) => ({
     key,
     label,
-    color,
+    isSecondHalf: !!secondHalf,
     gameweek: chipUsage?.[key] ?? null
   }))
-  const collapsedChipItemsSecond = SECOND_HALF_CHIP_COLUMNS.map(({ key, label, color }) => ({
-    key,
-    label,
-    color,
-    gameweek: chipUsage?.[key] ?? null
-  }))
-
-  const swipeStartRef = useRef(null)
   const gwExpandIconsRef = useRef(null)
   const [showGwLegendPopup, setShowGwLegendPopup] = useState(false)
-  const SWIPE_THRESHOLD = 40
-
   useEffect(() => {
     if (id === 'gw-points' && !isExpanded) {
       setShowGwLegendPopup(false)
@@ -95,7 +84,9 @@ export default function BentoCard({
   }, [id, isExpanded])
 
   useEffect(() => {
-    if (!showGwLegendPopup || id !== 'gw-points' || !isExpanded) return
+    if (!showGwLegendPopup) return
+    if (id !== 'gw-points') return
+    if (!isExpanded) return
     const handleClickOutside = (e) => {
       if (gwExpandIconsRef.current && !gwExpandIconsRef.current.contains(e.target)) {
         setShowGwLegendPopup(false)
@@ -105,20 +96,16 @@ export default function BentoCard({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showGwLegendPopup, id, isExpanded])
 
-  const handleChipsSwipeStart = (clientX) => {
-    swipeStartRef.current = clientX
-  }
-  const handleChipsSwipeEnd = (clientX) => {
-    const start = swipeStartRef.current
-    if (start == null) return
-    swipeStartRef.current = null
-    const delta = clientX - start
-    if (delta < -SWIPE_THRESHOLD) setChipsPage((p) => Math.min(1, p + 1))
-    else if (delta > SWIPE_THRESHOLD) setChipsPage((p) => Math.max(0, p - 1))
-  }
-
   const { themeMode, cycleTheme } = useTheme()
-  const cardClasses = `bento-card bento-card-animate ${className}${isExpanded ? ' bento-card-expanded' : ''}`.trim()
+  const isTransfersExpanded = id === 'transfers' && isExpanded
+  const cardClasses = [
+    'bento-card',
+    'bento-card-animate',
+    className,
+    id === 'transfers' && 'bento-card-id-transfers',
+    isExpanded && 'bento-card-expanded',
+    isTransfersExpanded && 'bento-card-transfers-compact'
+  ].filter(Boolean).join(' ')
 
   const getThemeLabel = () => {
     if (themeMode === 'light') return 'Light'
@@ -147,46 +134,17 @@ export default function BentoCard({
   }
 
   const renderChipItems = (items) => {
-    const hexToRgba = (hex, opacity) => {
-      const r = parseInt(hex.slice(1, 3), 16)
-      const g = parseInt(hex.slice(3, 5), 16)
-      const b = parseInt(hex.slice(5, 7), 16)
-      return `rgba(${r}, ${g}, ${b}, ${opacity})`
-    }
-    return items.map(({ key, label, gameweek: gw, color }) => (
+    return items.map(({ key, label, gameweek: gw, isSecondHalf }) => (
       <div
         key={key}
         className={`chip-item ${gw ? 'chip-used' : ''}`}
-        style={gw ? {
-          background: hexToRgba(color, 0.05),
-          borderColor: color,
-          borderWidth: '2px',
-          color: color
-        } : {}}
         title={gw ? `Used in Gameweek ${gw}` : 'Not used'}
       >
         <div className="chip-label">{label}</div>
-        {gw && <div className="chip-gameweek">GW{gw}</div>}
+        {gw ? <div className="chip-gameweek">GW{gw}</div> : isSecondHalf ? <div className="chip-gameweek chip-gameweek--dash">−</div> : null}
       </div>
     ))
   }
-
-  const chipsPageDots = (
-    <div className="chips-page-dots" role="tablist" aria-label="Chips half">
-      {[0, 1].map((index) => (
-        <button
-          key={index}
-          type="button"
-          role="tab"
-          aria-selected={chipsPage === index}
-          className={`chips-page-dot ${chipsPage === index ? 'chips-page-dot--active' : ''}`}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => { e.stopPropagation(); setChipsPage(index) }}
-          title={index === 0 ? 'First half chips' : 'Second half chips'}
-        />
-      ))}
-    </div>
-  )
 
   const handleGwLegendClick = (e) => {
     e.stopPropagation()
@@ -194,47 +152,52 @@ export default function BentoCard({
   }
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
+  const isTotalPointsExpanded = id === 'total-points' && isExpanded
   const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'transfers' || id === 'chips' || id === 'league-rank' || id === 'captain'
 
   return (
     <div className={cardClasses} style={style}>
       {showExpandIcon && (
-        isGwPointsExpanded ? (
+        (isGwPointsExpanded || isTotalPointsExpanded) ? (
           <div className="bento-card-expand-icons" ref={gwExpandIconsRef}>
-            <div
-              className="bento-card-info-icon"
-              title="Legend"
-              onClick={handleGwLegendClick}
-              role="button"
-              aria-expanded={showGwLegendPopup}
-              aria-haspopup="dialog"
-            >
-              <Info className="bento-card-expand-icon-svg" size={10} strokeWidth={1.5} />
-            </div>
-            {showGwLegendPopup && (
-              <div className="gw-legend-popup" role="dialog" aria-label="GW points legend">
-                <div className="gw-legend-popup-title">Legend</div>
-                <div className="gw-legend-popup-row">
-                  <span className="gameweek-points-legend-badge rank-highlight">x</span>
-                  <span className="gw-legend-popup-text">Top 10 in GW</span>
+            {isGwPointsExpanded && (
+              <>
+                <div
+                  className="bento-card-info-icon"
+                  title="Legend"
+                  onClick={handleGwLegendClick}
+                  role="button"
+                  aria-expanded={showGwLegendPopup}
+                  aria-haspopup="dialog"
+                >
+                  <Info className="bento-card-expand-icon-svg" size={10} strokeWidth={1.5} />
                 </div>
-                <div className="gw-legend-popup-row">
-                  <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
-                  <span className="gw-legend-popup-text">Captain</span>
-                </div>
-                <div className="gw-legend-popup-row">
-                  <span className="bento-card-captain-vice-badge gw-legend-popup-badge-v">V</span>
-                  <span className="gw-legend-popup-text">Vice captain</span>
-                </div>
-                <div className="gw-legend-popup-row">
-                  <span className="gw-legend-popup-dnp">DNP</span>
-                  <span className="gw-legend-popup-text">Did not play</span>
-                </div>
-                <div className="gw-legend-popup-row">
-                  <span className="gameweek-points-legend-badge defcon-achieved">x</span>
-                  <span className="gw-legend-popup-text">Defcon achieved</span>
-                </div>
-              </div>
+                {showGwLegendPopup && (
+                  <div className="gw-legend-popup" role="dialog" aria-label="GW points legend">
+                    <div className="gw-legend-popup-title">Legend</div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gameweek-points-legend-badge rank-highlight">x</span>
+                      <span className="gw-legend-popup-text">Top 10 in GW</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
+                      <span className="gw-legend-popup-text">Captain</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="bento-card-captain-vice-badge gw-legend-popup-badge-v">V</span>
+                      <span className="gw-legend-popup-text">Vice captain</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-dnp">DNP</span>
+                      <span className="gw-legend-popup-text">Did not play</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gameweek-points-legend-badge defcon-achieved">x</span>
+                      <span className="gw-legend-popup-text">Defcon achieved</span>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
             <div
               className={`bento-card-expand-icon bento-card-expand-icon--collapse${showGwLegendPopup ? ' bento-card-expand-icon--legend-open' : ''}`}
@@ -378,116 +341,89 @@ export default function BentoCard({
         </div>
       )}
       
-      {isExpanded && id === 'transfers' && (
-        <div className="transfers-summary-card">
-          <div className="transfers-summary-content">
-            <div className="transfers-summary-columns-wrapper">
-              <div className="transfers-summary-column transfers-summary-column-out">
-                <div className="transfers-summary-column-header">
-                  <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
-                </div>
-                {leagueTopTransfersLoading ? (
-                  <div className="transfers-summary-loading">Loading...</div>
-                ) : (leagueTopTransfersOut?.length ?? 0) === 0 ? (
-                  <div className="transfers-summary-empty">No data</div>
-                ) : (
-                  <div className="transfers-summary-column-list">
-                    {(leagueTopTransfersOut || []).map((row, i) => (
-                      <div key={i} className="transfers-summary-column-item">
-                        <span className="transfers-summary-badge-slot">
-                          {row.teamShortName ? (
-                            <img
-                              src={`/badges/${row.teamShortName}.svg`}
-                              alt=""
-                              className="transfers-summary-badge"
-                            />
-                          ) : (
-                            <span className="transfers-summary-badge-placeholder" aria-hidden />
-                          )}
-                        </span>
-                        <span className="transfers-summary-column-name">{row.playerName}</span>
-                        <span className="transfers-summary-column-count">{row.count}</span>
-                      </div>
-                    ))}
+      {isExpanded && id === 'transfers' && (() => {
+        const outList = leagueTopTransfersOut || []
+        const inList = leagueTopTransfersIn || []
+        return (
+          <div className="transfers-summary-card">
+            <div className="transfers-summary-content">
+              <div className="transfers-summary-columns-wrapper">
+                <div className="transfers-summary-column transfers-summary-column-out">
+                  <div className="transfers-summary-column-header">
+                    <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
                   </div>
-                )}
-              </div>
-              <div className="transfers-summary-column transfers-summary-column-in">
-                <div className="transfers-summary-column-header">
-                  <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
+                  {leagueTopTransfersLoading ? (
+                    <div className="transfers-summary-loading">Loading...</div>
+                  ) : outList.length === 0 ? (
+                    <div className="transfers-summary-empty">No data</div>
+                  ) : (
+                    <div className="transfers-summary-column-list">
+                      {outList.map((row, i) => (
+                        <div key={i} className="transfers-summary-column-item">
+                          <span className="transfers-summary-badge-slot">
+                            {row.teamShortName ? (
+                              <img
+                                src={`/badges/${row.teamShortName}.svg`}
+                                alt=""
+                                className="transfers-summary-badge"
+                              />
+                            ) : (
+                              <span className="transfers-summary-badge-placeholder" aria-hidden />
+                            )}
+                          </span>
+                          <span className="transfers-summary-column-name">{row.playerName}</span>
+                          <span className="transfers-summary-column-count">{row.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {leagueTopTransfersLoading ? (
-                  <div className="transfers-summary-loading">Loading...</div>
-                ) : (leagueTopTransfersIn?.length ?? 0) === 0 ? (
-                  <div className="transfers-summary-empty">No data</div>
-                ) : (
-                  <div className="transfers-summary-column-list">
-                    {(leagueTopTransfersIn || []).map((row, i) => (
-                      <div key={i} className="transfers-summary-column-item">
-                        <span className="transfers-summary-badge-slot">
-                          {row.teamShortName ? (
-                            <img
-                              src={`/badges/${row.teamShortName}.svg`}
-                              alt=""
-                              className="transfers-summary-badge"
-                            />
-                          ) : (
-                            <span className="transfers-summary-badge-placeholder" aria-hidden />
-                          )}
-                        </span>
-                        <span className="transfers-summary-column-name">{row.playerName}</span>
-                        <span className="transfers-summary-column-count">{row.count}</span>
-                      </div>
-                    ))}
+                <div className="transfers-summary-column transfers-summary-column-in">
+                  <div className="transfers-summary-column-header">
+                    <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
                   </div>
-                )}
+                  {leagueTopTransfersLoading ? (
+                    <div className="transfers-summary-loading">Loading...</div>
+                  ) : inList.length === 0 ? (
+                    <div className="transfers-summary-empty">No data</div>
+                  ) : (
+                    <div className="transfers-summary-column-list">
+                      {inList.map((row, i) => (
+                        <div key={i} className="transfers-summary-column-item">
+                          <span className="transfers-summary-badge-slot">
+                            {row.teamShortName ? (
+                              <img
+                                src={`/badges/${row.teamShortName}.svg`}
+                                alt=""
+                                className="transfers-summary-badge"
+                              />
+                            ) : (
+                              <span className="transfers-summary-badge-placeholder" aria-hidden />
+                            )}
+                          </span>
+                          <span className="transfers-summary-column-name">{row.playerName}</span>
+                          <span className="transfers-summary-column-count">{row.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
       
       {isChips && !isExpanded && (
-        <div
-          className="chips-pages-wrapper"
-          onPointerDown={(e) => {
-            e.currentTarget.setPointerCapture(e.pointerId)
-            handleChipsSwipeStart(e.clientX)
-          }}
-          onPointerUp={(e) => handleChipsSwipeEnd(e.clientX)}
-          onTouchStart={(e) => handleChipsSwipeStart(e.touches[0].clientX)}
-          onTouchEnd={(e) => e.changedTouches[0] && handleChipsSwipeEnd(e.changedTouches[0].clientX)}
-        >
-          <div
-            className="chips-pages-track"
-            style={{ transform: `translateX(-${chipsPage * 50}%)` }}
-          >
-            <div className="chips-page">
-              <div className="chips-grid chips-grid-collapsed">
-                {renderChipItems(collapsedChipItemsFirst)}
-              </div>
-            </div>
-            <div className="chips-page">
-              <div className="chips-grid chips-grid-collapsed">
-                {renderChipItems(collapsedChipItemsSecond)}
-              </div>
-            </div>
+        <div className="chips-pages-wrapper">
+          <div className="chips-grid chips-grid-collapsed">
+            {renderChipItems(collapsedChipItems)}
           </div>
-          {chipsPageDots}
         </div>
       )}
 
       {isExpanded && id === 'chips' && (
-        <div
-          className="chips-pages-wrapper chips-pages-wrapper--expanded"
-          onPointerDown={(e) => {
-            e.currentTarget.setPointerCapture(e.pointerId)
-            handleChipsSwipeStart(e.clientX)
-          }}
-          onPointerUp={(e) => handleChipsSwipeEnd(e.clientX)}
-          onTouchStart={(e) => handleChipsSwipeStart(e.touches[0].clientX)}
-          onTouchEnd={(e) => e.changedTouches[0] && handleChipsSwipeEnd(e.changedTouches[0].clientX)}
-        >
+        <div className="chips-pages-wrapper chips-pages-wrapper--expanded">
           <div className="league-standings-bento chips-standings-bento">
             <div className="league-standings-bento-table-wrapper">
               {leagueChipsLoading ? (
@@ -532,7 +468,6 @@ export default function BentoCard({
               )}
             </div>
           </div>
-          {chipsPageDots}
         </div>
       )}
 
@@ -639,7 +574,7 @@ export default function BentoCard({
           </button>
           <button className="settings-bento-button configure-bento-button" onClick={onConfigureClick}>
             <Settings className="settings-icon" size={11} strokeWidth={1.5} />
-            Configure
+            Customize
           </button>
         </div>
       )}

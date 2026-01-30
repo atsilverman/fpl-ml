@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ConfigurationProvider } from './contexts/ConfigurationContext'
+import { BentoOrderProvider } from './contexts/BentoOrderContext'
+import { ToastProvider } from './contexts/ToastContext'
 import Dashboard from './components/Dashboard'
 import HomePage from './components/HomePage'
 import MiniLeaguePage from './components/MiniLeaguePage'
@@ -14,6 +16,8 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <ConfigurationProvider>
+          <BentoOrderProvider>
+          <ToastProvider>
           <Router>
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
@@ -25,6 +29,8 @@ function App() {
               </Route>
             </Routes>
           </Router>
+          </ToastProvider>
+          </BentoOrderProvider>
         </ConfigurationProvider>
       </AuthProvider>
     </ThemeProvider>
