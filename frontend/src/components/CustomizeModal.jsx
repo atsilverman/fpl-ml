@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GripVertical } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import './ConfigurationModal.css'
@@ -18,9 +18,30 @@ const BENTO_LABELS = {
 }
 
 export default function CustomizeModal({ isOpen, onClose }) {
-  const { cardOrder, setCardOrder } = useBentoOrder()
+  const { cardOrder, setCardOrder, isCardVisible, setCardVisible } = useBentoOrder()
   const [draggedId, setDraggedId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
+  const [hasChanges, setHasChanges] = useState(false)
+  const [savedJustNow, setSavedJustNow] = useState(false)
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasChanges(false)
+      setSavedJustNow(false)
+    }
+  }, [isOpen])
+
+  const handleSave = () => {
+    if (!hasChanges) return
+    setHasChanges(false)
+    setSavedJustNow(true)
+  }
+
+  useEffect(() => {
+    if (!savedJustNow) return
+    const t = setTimeout(() => setSavedJustNow(false), 1500)
+    return () => clearTimeout(t)
+  }, [savedJustNow])
 
   const handleDragStart = (e, id) => {
     setDraggedId(id)
@@ -66,12 +87,18 @@ export default function CustomizeModal({ isOpen, onClose }) {
     next.splice(toIndex, 0, dragId)
     setCardOrder(next)
     setDraggedId(null)
+    setHasChanges(true)
+  }
+
+  const handleToggleVisible = (id) => {
+    setCardVisible(id, !isCardVisible(id))
+    setHasChanges(true)
   }
 
   if (!isOpen) return null
 
   const orderedRows = cardOrder
-    .filter((id) => BENTO_LABELS[id] != null)
+    .filter((id) => BENTO_LABELS[id] != null && id !== 'settings')
     .map((id) => ({ id, label: BENTO_LABELS[id] }))
 
   return (
@@ -109,12 +136,39 @@ export default function CustomizeModal({ isOpen, onClose }) {
                   <GripVertical size={18} strokeWidth={1.5} />
                 </span>
                 <span className="customize-row-label">{label}</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={isCardVisible(id)}
+                  className={`customize-row-slider ${isCardVisible(id) ? 'customize-row-slider-on' : 'customize-row-slider-off'}`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    handleToggleVisible(id)
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  aria-label={isCardVisible(id) ? 'Hide on home' : 'Show on home'}
+                  title={isCardVisible(id) ? 'On – visible on home' : 'Off – hidden on home'}
+                >
+                  <span className="customize-row-slider-track">
+                    <span className="customize-row-slider-thumb" />
+                  </span>
+                </button>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-footer customize-modal-footer">
+          <button
+            type="button"
+            className="modal-button modal-button-save"
+            onClick={handleSave}
+            disabled={!hasChanges && !savedJustNow}
+            aria-live="polite"
+          >
+            {savedJustNow ? 'Saved' : 'Save'}
+          </button>
           <button type="button" className="modal-button modal-button-cancel" onClick={onClose}>
             Done
           </button>

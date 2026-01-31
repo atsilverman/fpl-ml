@@ -92,7 +92,10 @@ export default function MiniLeaguePage() {
   const sortedRows = useMemo(() => {
     if (!standings.length) return []
     const rows = standings.map((s, index) => {
-      const rank = s.mini_league_rank != null ? s.mini_league_rank : index + 1
+      // Use calculated_rank from MV (correct per league); mini_league_rank is stored per manager and can be from another league
+      const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
+      // Use calculated_rank_change from MV (per-league); mini_league_rank_change can be from another league
+      const rankChange = s.calculated_rank_change != null ? s.calculated_rank_change : s.mini_league_rank_change
       const displayName = (s.manager_team_name && s.manager_team_name.trim())
         ? s.manager_team_name
         : (s.manager_name || `Manager ${s.manager_id}`)
@@ -102,6 +105,7 @@ export default function MiniLeaguePage() {
       return {
         ...s,
         _rank: rank,
+        _rankChange: rankChange,
         _displayName: displayName,
         _leftToPlay: leftToPlay,
         _inPlay: inPlay
@@ -366,7 +370,7 @@ export default function MiniLeaguePage() {
             <tbody>
               {displayRows.map((s) => {
                 const rank = s._rank
-                const change = s.mini_league_rank_change != null ? s.mini_league_rank_change : null
+                const change = s._rankChange != null ? s._rankChange : null
                 const displayName = s._displayName
                 const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
                 const leftToPlay = liveStatusLoading ? null : (s._leftToPlay ?? null)

@@ -13,7 +13,8 @@
 .chart-filter-controls {
   display: flex;
   gap: 6px;
-  margin-bottom: 8px;
+  justify-content: center;
+  margin-top: 8px;
   z-index: 2;
   flex-shrink: 0;
 }
@@ -59,6 +60,7 @@
 
 .chart-filter-btn {
   padding: 6px 12px;
+  min-height: 26px;
   font-size: 11px;
   font-weight: 500;
   border: 1px solid var(--border-color);
@@ -68,6 +70,10 @@
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .chart-filter-btn:hover {
@@ -82,7 +88,19 @@
   color: white;
 }
 
-/* Wrapper takes remaining space after filter controls so legend isn't clipped */
+.chart-filter-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.chart-filter-btn-icon {
+  padding: 0 10px;
+}
+
+/* Wrapper takes remaining space; filter controls sit below chart/legend */
 .performance-chart-svg-wrapper {
   flex: 1 1 0%;
   min-height: 0;
@@ -134,7 +152,7 @@
 
   .chart-filter-controls {
     gap: 6px;
-    margin-bottom: 10px;
+    margin-top: 10px;
   }
 
   .chart-filter-btn {

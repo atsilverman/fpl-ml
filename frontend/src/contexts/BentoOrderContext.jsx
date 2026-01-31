@@ -16,6 +16,8 @@ const DEFAULT_ORDER = [
 
 const BentoOrderContext = createContext()
 
+const VISIBILITY_STORAGE_KEY = 'bento_card_visibility'
+
 export function BentoOrderProvider({ children }) {
   const [cardOrder, setCardOrder] = useState(() => {
     const saved = localStorage.getItem('bento_card_order')
@@ -27,11 +29,31 @@ export function BentoOrderProvider({ children }) {
     }
     return [...DEFAULT_ORDER]
   })
+  const [cardVisibility, setCardVisibilityState] = useState(() => {
+    const saved = localStorage.getItem(VISIBILITY_STORAGE_KEY)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed === 'object') return parsed
+      } catch (_) {}
+    }
+    return {}
+  })
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('bento_card_order', JSON.stringify(cardOrder))
   }, [cardOrder])
+
+  useEffect(() => {
+    localStorage.setItem(VISIBILITY_STORAGE_KEY, JSON.stringify(cardVisibility))
+  }, [cardVisibility])
+
+  const setCardVisible = (id, visible) => {
+    setCardVisibilityState((prev) => ({ ...prev, [id]: visible }))
+  }
+
+  const isCardVisible = (id) => id === 'settings' || cardVisibility[id] !== false
 
   const openCustomizeModal = () => setCustomizeModalOpen(true)
   const closeCustomizeModal = () => setCustomizeModalOpen(false)
@@ -41,6 +63,9 @@ export function BentoOrderProvider({ children }) {
       value={{
         cardOrder,
         setCardOrder,
+        cardVisibility,
+        setCardVisible,
+        isCardVisible,
         openCustomizeModal,
         closeCustomizeModal,
         customizeModalOpen

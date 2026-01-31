@@ -38,8 +38,10 @@
 .total-points-chart__controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   flex-shrink: 0;
+  margin-top: 1.25rem;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
@@ -112,7 +114,7 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
 }
 
 /* Gantt view: ownership by gameweek, x-axis = GW range from filter */
@@ -123,6 +125,39 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+.total-points-chart__gantt-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.total-points-chart__gantt-grid .total-points-chart__gantt-x-label-spacer {
+  flex-shrink: 0;
+}
+
+.total-points-chart__gantt-grid-track {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+}
+
+.total-points-chart__gantt-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+  opacity: 0.4;
 }
 
 .total-points-chart__gantt-x-labels {
@@ -131,11 +166,13 @@
   gap: 10px;
   flex-shrink: 0;
   margin-bottom: 4px;
+  position: relative;
+  z-index: 1;
 }
 
 .total-points-chart__gantt-x-label-spacer {
   flex-shrink: 0;
-  width: 120px;
+  width: 88px;
 }
 
 .total-points-chart__gantt-x-label-track {
@@ -160,7 +197,9 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
 }
 
 .total-points-chart__gantt-row {
@@ -251,8 +290,8 @@
 }
 
 .total-points-chart__label {
-  flex: 0 0 120px;
-  width: 120px;
+  flex: 0 0 88px;
+  width: 88px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -312,9 +351,10 @@
   white-space: nowrap;
 }
 
-/* Value placed after the bar (short bars): left position set inline */
+/* Value placed after the bar (short bars): dark text on track background */
 .total-points-chart__value--after-bar {
   text-align: left;
+  color: var(--text-primary);
 }
 
 /* Value inside the bar (long bars): right-aligned, white in light mode */
@@ -328,6 +368,11 @@ html[data-theme="light"] .total-points-chart__value--on-bar {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
+/* Light mode: value outside bar → dark text on track */
+html[data-theme="light"] .total-points-chart__value--after-bar {
+  color: #1a1a1a;
+}
+
 @media (max-width: 768px) {
   .total-points-chart {
     margin-left: 0;
@@ -336,6 +381,7 @@ html[data-theme="light"] .total-points-chart__value--on-bar {
 
   .total-points-chart__controls {
     gap: 6px;
+    margin-top: 1rem;
     margin-bottom: 10px;
   }
 
@@ -345,12 +391,12 @@ html[data-theme="light"] .total-points-chart__value--on-bar {
   }
 
   .total-points-chart__label {
-    flex: 0 0 100px;
-    width: 100px;
+    flex: 0 0 80px;
+    width: 80px;
   }
 
   .total-points-chart__gantt-x-label-spacer {
-    width: 100px;
+    width: 80px;
   }
 
   .total-points-chart__name {

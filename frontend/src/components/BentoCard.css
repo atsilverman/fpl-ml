@@ -171,6 +171,27 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   line-height: 1;
 }
 
+.live-updating-indicator {
+  display: inline-block;
+  margin-left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-green, #10b981);
+  box-shadow: 0 0 0 0 var(--accent-green, #10b981);
+  animation: live-updating-pulse 2.5s ease-in-out infinite;
+  vertical-align: middle;
+}
+
+@keyframes live-updating-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+}
+
 .bento-card-chart {
   flex: 1 1 auto;
   min-height: 0;
@@ -194,8 +215,8 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 .bento-card-info-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,10 +243,10 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 20px;
-  height: 20px;
-  color: var(--text-secondary);
-  opacity: 0.5;
+  width: 22px;
+  height: 22px;
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  opacity: 0.6;
   transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               background-color 0.2s ease,
               transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -242,8 +263,8 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 .bento-card-expand-icon-svg {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 }
 
 .bento-card-expand-icon--collapse .bento-card-collapse-x {
@@ -274,12 +295,15 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   opacity: 0.4;
 }
 
-.bento-card:hover .bento-card-expand-icon {
+.bento-card:hover .bento-card-expand-icon:not(.bento-card-expand-icon--collapse) {
   opacity: 0.7;
 }
 
 .bento-card-expand-icon:hover {
   opacity: 1;
+}
+
+.bento-card-expand-icon:not(.bento-card-expand-icon--collapse):hover {
   background-color: var(--bg-secondary);
 }
 
@@ -296,7 +320,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 20;
-  min-width: 180px;
+  min-width: 220px;
 }
 
 .gw-legend-popup-title {
@@ -326,7 +350,8 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 /* Fixed-width badge column so text aligns across rows */
-.gw-legend-popup-row > span:first-child {
+.gw-legend-popup-row > span:first-child,
+.gw-legend-popup-row-icon {
   width: 28px;
   min-width: 28px;
   flex-shrink: 0;
@@ -339,6 +364,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   flex: 1;
   min-width: 0;
   line-height: 1.3;
+  white-space: nowrap;
 }
 
 .gw-legend-popup-badge-c,
@@ -346,12 +372,67 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   flex-shrink: 0;
 }
 
-.gw-legend-popup-dnp {
+.gw-legend-popup-dnp-badge {
   flex-shrink: 0;
+  flex-grow: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  padding: 0;
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-tertiary);
-  padding: 0 4px;
+  color: #fff;
+  background: var(--impact-negative, #dc2626);
+  border-radius: 50%;
+  line-height: 0;
+  box-sizing: border-box;
+}
+
+.gw-legend-popup-autosub-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.gw-legend-popup-autosub-icon svg {
+  stroke: currentColor;
+}
+.gw-legend-popup-autosub-out {
+  color: var(--gw-autosub-out-color, #dc2626);
+}
+.gw-legend-popup-autosub-in {
+  color: var(--gw-autosub-in-color, #059669);
+}
+
+.gw-legend-popup-live-dot-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gw-legend-popup-live-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 50%;
+  background: var(--accent-green, #10b981);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: gw-legend-live-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes gw-legend-live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0);
+  }
 }
 
 /* Total points Gantt legend (same layout as GW legend, (i) next to X) */
@@ -383,7 +464,6 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 .bento-card-chips .bento-card-label {
-  font-size: 10px;
   margin-bottom: 2px;
 }
 
@@ -467,14 +547,30 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   min-width: 0;
 }
 
-.bento-card-transfers-value {
+.bento-card-transfers-value-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   flex-shrink: 0;
+}
+
+.bento-card-transfers-value {
+  /* kept for value styling; value lives inside -value-wrap */
+}
+
+.bento-card-transfers-chip-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  opacity: 0.9;
 }
 
 .bento-card-transfers-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   flex: 1 1 0;
   min-height: 0;
   min-width: 0;
@@ -493,7 +589,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   gap: 8px;
   font-size: 11px;
   color: var(--text-secondary);
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .bento-card-transfer-out {
@@ -532,6 +628,11 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   background: var(--accent-red, #ef4444);
 }
 
+.bento-card-transfer-delta.neutral {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, #e5e7eb);
+}
+
 html[data-theme="dark"] .bento-card-transfer-delta.positive {
   color: #fff;
   background: var(--accent-green, #059669);
@@ -540,6 +641,11 @@ html[data-theme="dark"] .bento-card-transfer-delta.positive {
 html[data-theme="dark"] .bento-card-transfer-delta.negative {
   color: #fff;
   background: var(--accent-red, #dc2626);
+}
+
+html[data-theme="dark"] .bento-card-transfer-delta.neutral {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, #374151);
 }
 
 /* Transfers expanded: TOP TRANSFERS summary card – fill bento on desktop */
@@ -1144,6 +1250,27 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+}
+
+.captain-standings-bento-player-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.captain-standings-bento-player-badge {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.captain-standings-bento-player-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .captain-standings-bento-header-cell {

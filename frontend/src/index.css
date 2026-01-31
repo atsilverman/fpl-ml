@@ -25,10 +25,10 @@ html[data-theme="dark"] {
   --gw-bench-fill: rgba(255, 255, 255, 0.04);
   --gw-autosub-out-bg: rgba(239, 68, 68, 0.14);
   --gw-autosub-in-bg: rgba(16, 185, 129, 0.14);
-  /* Opaque equivalents for sticky player column so scrolling stats stay hidden */
+  /* Opaque equivalents for sticky player column – same green/red as stat cells */
   --gw-bench-fill-solid: #0f1329;
-  --gw-autosub-out-bg-solid: #1a1520;
-  --gw-autosub-in-bg-solid: #0d1a1a;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 14%, var(--bg-primary) 86%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 14%, var(--bg-primary) 86%);
   --collapse-icon-color: #f87171;
   --collapse-badge-bg: rgba(248, 113, 113, 0.12);
   --collapse-badge-border: rgba(248, 113, 113, 0.35);
@@ -111,8 +111,8 @@ body {
   bottom: calc(56px + 1rem); /* above bottom nav + gap */
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-primary);
   background: var(--bg-card);
@@ -122,6 +122,7 @@ body {
   z-index: 10000; /* above nav (100) and modals (1000) */
   animation: toast-in 0.2s ease-out;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 @keyframes toast-in {

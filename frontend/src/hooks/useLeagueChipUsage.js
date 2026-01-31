@@ -91,13 +91,13 @@ export function useLeagueChipUsage(gameweek = null) {
       if (gameweek != null) {
         const { data: standings, error: standingsError } = await supabase
           .from('mv_mini_league_standings')
-          .select('manager_id, mini_league_rank')
+          .select('manager_id, calculated_rank, mini_league_rank')
           .eq('league_id', LEAGUE_ID)
           .eq('gameweek', gameweek)
 
         if (!standingsError && standings?.length) {
           standings.forEach(s => {
-            rankByManager[s.manager_id] = s.mini_league_rank ?? null
+            rankByManager[s.manager_id] = s.calculated_rank ?? s.mini_league_rank ?? null
           })
         }
       }

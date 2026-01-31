@@ -1,27 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useConfiguration } from '../contexts/ConfigurationContext'
+import { useGameweekData } from './useGameweekData'
 
 export function useManagerData() {
   const { config } = useConfiguration()
+  const { gameweek } = useGameweekData()
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
 
-  // First, get the current gameweek (uses cached query if available)
-  const { data: gameweek } = useQuery({
-    queryKey: ['gameweek', 'current'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('gameweeks')
-        .select('id')
-        .eq('is_current', true)
-        .single()
-      return data?.id || null
-    },
-    staleTime: 30000,
-  })
-
-  // Then fetch manager data (depends on gameweek, runs queries in parallel)
+  // Fetch manager data (depends on gameweek, runs queries in parallel)
   const { data: managerData, isLoading, error } = useQuery({
     queryKey: ['manager', MANAGER_ID, gameweek, LEAGUE_ID],
     queryFn: async () => {
@@ -48,7 +36,7 @@ export function useManagerData() {
         queries.push(
           supabase
             .from('mv_mini_league_standings')
-            .select('mini_league_rank, mini_league_rank_change')
+            .select('calculated_rank, mini_league_rank, calculated_rank_change, mini_league_rank_change')
             .eq('league_id', LEAGUE_ID)
             .eq('manager_id', MANAGER_ID)
             .eq('gameweek', gameweek)
@@ -67,16 +55,14 @@ export function useManagerData() {
         throw historyError
       }
 
-      // Use league rank from materialized view if available, otherwise fall back to history
-      const leagueRank = leagueStanding?.mini_league_rank || history?.mini_league_rank || null
+      // Use calculated_rank from MV (correct per league); mini_league_rank can be from another league
+      const leagueRank = leagueStanding?.calculated_rank ?? leagueStanding?.mini_league_rank ?? history?.mini_league_rank ?? null
       
-      // Calculate league rank change: use from materialized view if available, otherwise calculate
+      // Use calculated_rank_change from MV (per-league); mini_league_rank_change can be from another league
       let leagueRankChange = 0
       if (LEAGUE_ID && leagueStanding) {
-        // Use the rank change from the materialized view (already calculated correctly)
-        leagueRankChange = leagueStanding.mini_league_rank_change || 0
+        leagueRankChange = leagueStanding.calculated_rank_change ?? leagueStanding.mini_league_rank_change ?? 0
       } else if (prevHistory && history) {
-        // Fallback: calculate from previous and current ranks
         leagueRankChange = (prevHistory.mini_league_rank || 0) - (history.mini_league_rank || 0)
       }
 
@@ -110,6 +96,7 @@ export function useManagerData() {
         leagueRankChange: leagueRankChange,
         transfersMade: history?.transfers_made ?? 0,
         freeTransfersAvailable,
+        activeChip: history?.active_chip ?? null,
       }
     },
     enabled: !!MANAGER_ID && !!gameweek, // Only run if we have manager ID and gameweek

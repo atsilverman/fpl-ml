@@ -2,21 +2,27 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 export function useGameweekData() {
-  const { data: gameweek, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['gameweek', 'current'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: row, error: err } = await supabase
         .from('gameweeks')
-        .select('id, name, is_current, finished, data_checked')
+        .select('id, name, is_current, finished, data_checked, fpl_ranks_updated')
         .eq('is_current', true)
         .single()
 
-      if (error) throw error
-      return data?.id || null
+      if (err) throw err
+      return row
     },
     staleTime: 30000, // Shared data - cache for 30 seconds
     refetchInterval: 60000, // Poll every 60 seconds (automatic background refetch)
   })
 
-  return { gameweek, loading: isLoading, error }
+  return {
+    gameweek: data?.id ?? null,
+    dataChecked: data?.data_checked ?? false,
+    fplRanksUpdated: data?.fpl_ranks_updated ?? false,
+    loading: isLoading,
+    error
+  }
 }

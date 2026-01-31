@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
+import { Users } from 'lucide-react'
 import { formatNumber } from '../utils/formatNumbers'
+import { useToast } from '../contexts/ToastContext'
 import './PerformanceChart.css'
+
+/** Same subtle color for top-10 lines (except league leader) */
+const TOP10_MUTED_COLOR = 'rgba(148, 163, 184, 0.45)' // slate, subtle
+/** League leader line (distinct) */
+const TOP10_LEADER_COLOR = 'rgba(245, 158, 11, 0.7)'  // amber, more visible
 
 /**
  * D3.js Performance Chart Component
@@ -15,8 +22,13 @@ export default function PerformanceChart({
   showComparison = false,
   lineColor = 'var(--accent-green)',
   loading = false,
-  onFilterChange = null
+  onFilterChange = null,
+  showTop10Lines = false,
+  top10LinesData = null,
+  onShowTop10Change = null,
+  currentManagerId = null
 }) {
+  const { toast } = useToast()
   const svgRef = useRef(null)
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState({ width: 400, height: 300 })
@@ -210,6 +222,22 @@ export default function PerformanceChart({
     return comparisonData.filter(d => d.gameweek >= minGW && d.gameweek <= maxGW)
   }, [showComparison, comparisonData, filteredData])
 
+  // Filter to league leader only, same GW range as main chart
+  const filteredTop10LinesData = useMemo(() => {
+    if (!showTop10Lines || !top10LinesData?.length || filteredData.length === 0) return []
+    const minGW = Math.min(...filteredData.map(d => d.gameweek))
+    const maxGW = Math.max(...filteredData.map(d => d.gameweek))
+    return top10LinesData
+      .filter(s => s.leagueRank === 1)
+      .map(({ managerId, managerName, data: seriesData, leagueRank }) => ({
+        managerId,
+        managerName,
+        leagueRank,
+        data: seriesData.filter(d => d.gameweek >= minGW && d.gameweek <= maxGW)
+      }))
+      .filter(s => s.data.length > 0)
+  }, [showTop10Lines, top10LinesData, filteredData])
+
   // Render chart with D3
   useEffect(() => {
     if (!svgRef.current || filteredData.length === 0 || loading) return
@@ -243,6 +271,9 @@ export default function PerformanceChart({
     const allRanks = [...filteredData.map(d => d.overallRank)]
     if (filteredComparisonData && filteredComparisonData.length > 0) {
       allRanks.push(...filteredComparisonData.map(d => d.overallRank))
+    }
+    if (filteredTop10LinesData.length > 0) {
+      filteredTop10LinesData.forEach(s => s.data.forEach(d => allRanks.push(d.overallRank)))
     }
     
     const minRank = Math.min(...allRanks)
@@ -695,6 +726,44 @@ export default function PerformanceChart({
         .remove()
     }
 
+    // Top-10 league member lines (subtle thin lines, no points); same muted color except league leader; config manager drawn last (on top)
+    if (filteredTop10LinesData.length > 0) {
+      const top10Paths = g.selectAll('.top10-line')
+        .data(filteredTop10LinesData, (d, i) => d.managerId ?? i)
+
+      const strokeColor = (d) => (d.leagueRank === 1 ? TOP10_LEADER_COLOR : TOP10_MUTED_COLOR)
+
+      top10Paths.enter()
+        .append('path')
+        .attr('class', 'top10-line')
+        .attr('fill', 'none')
+        .attr('stroke-width', 1)
+        .attr('stroke-linecap', 'round')
+        .attr('stroke-linejoin', 'round')
+        .attr('opacity', 0)
+        .attr('d', d => line(d.data))
+        .attr('stroke', strokeColor)
+        .merge(top10Paths)
+        .transition()
+        .duration(400)
+        .ease(d3.easeCubicOut)
+        .attr('d', d => line(d.data))
+        .attr('opacity', 1)
+        .attr('stroke', strokeColor)
+
+      top10Paths.exit()
+        .transition()
+        .duration(200)
+        .attr('opacity', 0)
+        .remove()
+    } else {
+      g.selectAll('.top10-line')
+        .transition()
+        .duration(200)
+        .attr('opacity', 0)
+        .remove()
+    }
+
     const mainLineEnter = mainLine.enter()
       .append('path')
       .attr('class', 'main-line')
@@ -730,105 +799,63 @@ export default function PerformanceChart({
       .remove()
 
     // Data points with transition
-    // Create a map of previous data by gameweek for proper alignment
     const previousDataMap = new Map(previousData.map(d => [d.gameweek, d]))
-    
     const points = g.selectAll('.data-point')
-      .data(filteredData, d => d.gameweek) // Key by gameweek only for stable matching
+      .data(filteredData, d => d.gameweek)
 
-    // Enter new points - start from previous position if available
     const pointsEnter = points.enter()
       .append('circle')
       .attr('class', d => d.chip ? 'data-point chip-point' : 'data-point')
-      .attr('cx', d => {
-        // Gameweek (x position) doesn't change, always use current
-        return xScale(d.gameweek)
-      })
+      .attr('cx', d => xScale(d.gameweek))
       .attr('cy', d => {
-        // Start from previous rank position if available, otherwise current position
         const prev = previousDataMap.get(d.gameweek)
         return yScale(prev ? prev.overallRank : d.overallRank)
       })
       .attr('r', 0)
       .attr('fill', d => {
-        if (d.chip && chipInfo[d.chip]) {
-          return chipInfo[d.chip].color
-        }
+        if (d.chip && chipInfo[d.chip]) return chipInfo[d.chip].color
         return 'var(--bg-card)'
       })
       .attr('stroke', d => {
-        if (d.chip && chipInfo[d.chip]) {
-          return 'rgba(0, 0, 0, 0.3)'
-        }
+        if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
         return lineColor
       })
       .attr('stroke-width', d => d.chip ? 2 : 1.5)
       .attr('opacity', 0)
 
-    // Capture current screen positions of existing points before transition
-    // This ensures smooth animation from actual current position
     const currentPositions = new Map()
     points.each(function(d) {
-      const currentCx = d3.select(this).attr('cx')
-      const currentCy = d3.select(this).attr('cy')
-      if (currentCx && currentCy && !isNaN(parseFloat(currentCx)) && !isNaN(parseFloat(currentCy))) {
-        currentPositions.set(d.gameweek, {
-          cx: parseFloat(currentCx),
-          cy: parseFloat(currentCy)
-        })
+      const cx = d3.select(this).attr('cx')
+      const cy = d3.select(this).attr('cy')
+      if (cx && cy && !isNaN(parseFloat(cx)) && !isNaN(parseFloat(cy))) {
+        currentPositions.set(d.gameweek, { cx: parseFloat(cx), cy: parseFloat(cy) })
       }
     })
-    
-    // Create interpolated data map by gameweek for efficient lookup
+
     const getInterpolatedDataMap = (t) => {
       const interpolatedData = getInterpolatedData(filteredData, previousData, t)
       return new Map(interpolatedData.map(d => [d.gameweek, d]))
     }
-    
-    // Use the same shared transition for synchronization with area and line
+
     pointsEnter.merge(points)
       .transition(syncTransition)
       .attrTween('cx', function(d) {
-        const node = this
         const currentPos = currentPositions.get(d.gameweek)
         const targetX = xScale(d.gameweek)
-        
-        return function(t) {
-          // If we have a current screen position, interpolate from that
-          // Otherwise use the shared interpolation (for entering points)
-          if (currentPos) {
-            return currentPos.cx + (targetX - currentPos.cx) * t
-          }
-          // Use the exact same interpolation as the line, matched by gameweek
-          const interpolatedMap = getInterpolatedDataMap(t)
-          const interpolatedPoint = interpolatedMap.get(d.gameweek) || d
-          return xScale(interpolatedPoint.gameweek)
-        }
+        return (t) => currentPos
+          ? currentPos.cx + (targetX - currentPos.cx) * t
+          : xScale((getInterpolatedDataMap(t).get(d.gameweek) || d).gameweek)
       })
       .attrTween('cy', function(d) {
-        const node = this
         const currentPos = currentPositions.get(d.gameweek)
         const targetY = yScale(d.overallRank)
-        
-        return function(t) {
-          // If we have a current screen position, interpolate from that
-          // Otherwise use the shared interpolation (for entering points)
-          if (currentPos) {
-            return currentPos.cy + (targetY - currentPos.cy) * t
-          }
-          // Use the exact same interpolation as the line, matched by gameweek
-          const interpolatedMap = getInterpolatedDataMap(t)
-          const interpolatedPoint = interpolatedMap.get(d.gameweek) || d
-          return yScale(interpolatedPoint.overallRank)
-        }
+        return (t) => currentPos
+          ? currentPos.cy + (targetY - currentPos.cy) * t
+          : yScale((getInterpolatedDataMap(t).get(d.gameweek) || d).overallRank)
       })
-      .attr('r', d => {
-        if (d.chip) return 5.5
-        return 4.5
-      })
+      .attr('r', d => (d.chip ? 5 : 4))
       .attr('opacity', 1)
 
-    // Exit old points
     points.exit()
       .transition()
       .duration(300)
@@ -852,7 +879,7 @@ export default function PerformanceChart({
         .style('z-index', 1000)
     }
 
-    // Bind tooltip to all points (including newly entered ones)
+    // Bind tooltip to all points
     pointsEnter.merge(points)
       .on('mouseover', function(event, d) {
         tooltip.transition().duration(200).style('opacity', 1)
@@ -926,7 +953,7 @@ export default function PerformanceChart({
         tooltip.transition().duration(200).style('opacity', 0)
       })
 
-    // Chip legend inside SVG so dot size matches graph (r=5.5)
+    // Chip legend inside SVG so dot size matches graph (r=6/7)
     const legendChips = Object.entries(chipInfo).map(([key, { name, color }]) => ({ key, name, color }))
     const legendGroupSel = g.selectAll('.chip-legend-group').data([null])
     legendGroupSel.enter()
@@ -936,7 +963,7 @@ export default function PerformanceChart({
     const legendGroup = g.select('.chip-legend-group')
     legendGroup.attr('transform', `translate(${width / 2}, ${height - padding.bottom * 0.35})`)
 
-    const legendItemSpacing = isMobile ? 32 : 38
+    const legendItemSpacing = isMobile ? 40 : 48
     const legendTotalWidth = (legendChips.length - 1) * legendItemSpacing
     let legendX = -legendTotalWidth / 2
 
@@ -945,7 +972,7 @@ export default function PerformanceChart({
       .append('g')
       .attr('class', 'chip-legend-item')
 
-    const legendDotR = isMobile ? 3.5 : 4
+    const legendDotR = isMobile ? 4 : 5
     legendItemsEnter.append('circle')
       .attr('r', legendDotR)
       .attr('fill', d => d.color)
@@ -956,7 +983,7 @@ export default function PerformanceChart({
 
     legendItemsEnter.append('text')
       .attr('class', 'chip-legend-svg-label')
-      .attr('x', 8)
+      .attr('x', legendDotR + 3)
       .attr('y', 3.5)
       .attr('fill', 'var(--text-secondary)')
       .attr('font-size', isMobile ? 8 : 9)
@@ -975,13 +1002,14 @@ export default function PerformanceChart({
       .attr('fill', d => d.color)
 
     legendItems.select('text')
+      .attr('x', legendDotR + 3)
       .attr('font-size', isMobile ? 8 : 9)
       .text(d => d.name)
 
     legendItems.exit().remove()
 
     // No cleanup needed - tooltip persists across renders
-  }, [filteredData, filteredComparisonData, dimensions, isMobile, lineColor, loading, showComparison, filter])
+  }, [filteredData, filteredComparisonData, filteredTop10LinesData, dimensions, isMobile, lineColor, loading, showComparison, showTop10Lines, filter])
 
   if (loading || !data || data.length === 0) {
     return (
@@ -993,29 +1021,6 @@ export default function PerformanceChart({
 
   return (
     <div className="performance-chart-container">
-      {/* Filter Controls */}
-      {onFilterChange && (
-        <div className="chart-filter-controls">
-          <button
-            className={`chart-filter-btn ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => onFilterChange('all')}
-          >
-            All
-          </button>
-          <button
-            className={`chart-filter-btn ${filter === 'last12' ? 'active' : ''}`}
-            onClick={() => onFilterChange('last12')}
-          >
-            Last 12
-          </button>
-          <button
-            className={`chart-filter-btn ${filter === 'last6' ? 'active' : ''}`}
-            onClick={() => onFilterChange('last6')}
-          >
-            Last 6
-          </button>
-        </div>
-      )}
       <div ref={containerRef} className="performance-chart-svg-wrapper">
         <svg 
           ref={svgRef}
@@ -1026,6 +1031,60 @@ export default function PerformanceChart({
           className="performance-chart"
         />
       </div>
+      {/* Filter controls below legend, centered */}
+      {(onFilterChange || onShowTop10Change) && (
+        <div className="chart-filter-controls">
+          {onFilterChange && (
+            <>
+              <button
+                className={`chart-filter-btn ${filter === 'all' ? 'active' : ''}`}
+                onClick={() => {
+                  onFilterChange('all')
+                  toast('Showing all gameweeks')
+                }}
+              >
+                All
+              </button>
+              <button
+                className={`chart-filter-btn ${filter === 'last12' ? 'active' : ''}`}
+                onClick={() => {
+                  onFilterChange('last12')
+                  toast('Showing last 12 gameweeks')
+                }}
+              >
+                Last 12
+              </button>
+              <button
+                className={`chart-filter-btn ${filter === 'last6' ? 'active' : ''}`}
+                onClick={() => {
+                  onFilterChange('last6')
+                  toast('Showing last 6 gameweeks')
+                }}
+              >
+                Last 6
+              </button>
+            </>
+          )}
+          {onShowTop10Change && (
+            <>
+              <span className="chart-filter-sep" aria-hidden />
+              <button
+                type="button"
+                className={`chart-filter-btn chart-filter-btn-icon ${showTop10Lines ? 'active' : ''}`}
+                onClick={() => {
+                  const next = !showTop10Lines
+                  onShowTop10Change(next)
+                  toast(next ? 'League leader line shown' : 'League leader line hidden')
+                }}
+                title={showTop10Lines ? 'Hide league leader line' : 'Show league leader line'}
+                aria-pressed={showTop10Lines}
+              >
+                <Users size={14} strokeWidth={2} aria-hidden />
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

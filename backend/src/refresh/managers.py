@@ -424,6 +424,60 @@ class ManagerDataRefresher:
             })
             return False
     
+    async def check_fpl_rank_change(self, manager_id: int, gameweek: int) -> bool:
+        """
+        Check if FPL API has updated overall_rank or gameweek_rank for this manager/gameweek.
+        Used to trigger full manager refresh and drop stale indicator when FPL has finalized ranks.
+        
+        Returns:
+            True if API returns rank values that differ from our stored values (or we had none stored).
+        """
+        try:
+            history = await self.fpl_client.get_entry_history(manager_id)
+            picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
+            
+            current_list = history.get("current", []) or []
+            gw_history = next((h for h in current_list if h.get("event") == gameweek), None)
+            api_overall_rank = gw_history.get("overall_rank") if gw_history else None
+            entry_history = picks_data.get("entry_history", {}) or {}
+            api_gw_rank = entry_history.get("rank")
+            
+            existing = self.db_client.client.table("manager_gameweek_history").select(
+                "gameweek_rank, overall_rank"
+            ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
+            
+            stored = existing[0] if existing else {}
+            stored_overall = stored.get("overall_rank")
+            stored_gw_rank = stored.get("gameweek_rank")
+            
+            overall_changed = (
+                api_overall_rank is not None
+                and (stored_overall is None or stored_overall != api_overall_rank)
+            )
+            gw_rank_changed = (
+                api_gw_rank is not None
+                and (stored_gw_rank is None or stored_gw_rank != api_gw_rank)
+            )
+            
+            if overall_changed or gw_rank_changed:
+                logger.info("FPL rank change detected", extra={
+                    "manager_id": manager_id,
+                    "gameweek": gameweek,
+                    "api_overall_rank": api_overall_rank,
+                    "stored_overall_rank": stored_overall,
+                    "api_gw_rank": api_gw_rank,
+                    "stored_gw_rank": stored_gw_rank
+                })
+                return True
+            return False
+        except Exception as e:
+            logger.warning("Error checking FPL rank change", extra={
+                "manager_id": manager_id,
+                "gameweek": gameweek,
+                "error": str(e)
+            })
+            return False
+    
     async def refresh_manager_gameweek_history(
         self,
         manager_id: int,

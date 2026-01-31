@@ -6,7 +6,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, MoveDiagonal, X, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, MoveDiagonal, X, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -33,6 +33,7 @@ export default function BentoCard({
   isChips = false,
   isSettings = false,
   isStale = false,
+  isLiveUpdating = false,
   style = {},
   onConfigureClick,
   chartData = null,
@@ -40,6 +41,10 @@ export default function BentoCard({
   chartFilter = 'all',
   showChartComparison = false,
   onChartFilterChange = null,
+  showTop10Lines = false,
+  top10LinesData = null,
+  onShowTop10Change = null,
+  currentManagerId = null,
   chipUsage = null,
   isTransfers = false,
   transfersSummary = null,
@@ -56,12 +61,12 @@ export default function BentoCard({
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   top10ByStat = null,
+  impactByPlayerId = null,
   gameweek = null,
   leagueChipData = null,
   leagueChipsLoading = false,
   leagueStandings = null,
   leagueStandingsLoading = false,
-  currentManagerId = null,
   captainName = null,
   viceCaptainName = null,
   leagueCaptainData = null,
@@ -170,7 +175,7 @@ export default function BentoCard({
                   aria-expanded={showGwLegendPopup}
                   aria-haspopup="dialog"
                 >
-                  <Info className="bento-card-expand-icon-svg" size={10} strokeWidth={1.5} />
+                  <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
                 </div>
                 {showGwLegendPopup && (
                   <div className="gw-legend-popup" role="dialog" aria-label="GW points legend">
@@ -188,12 +193,36 @@ export default function BentoCard({
                       <span className="gw-legend-popup-text">Vice captain</span>
                     </div>
                     <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-dnp">DNP</span>
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
+                      </span>
                       <span className="gw-legend-popup-text">Did not play</span>
                     </div>
                     <div className="gw-legend-popup-row">
-                      <span className="gameweek-points-legend-badge defcon-achieved">x</span>
-                      <span className="gw-legend-popup-text">Defcon achieved</span>
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-out" title="Auto-subbed out">
+                          <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
+                        </span>
+                      </span>
+                      <span className="gw-legend-popup-text">Auto-subbed out</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-in" title="Auto-subbed in">
+                          <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
+                        </span>
+                      </span>
+                      <span className="gw-legend-popup-text">Auto-subbed in</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
+                      <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-live-dot-wrap">
+                        <span className="gw-legend-popup-live-dot" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Live match</span>
                     </div>
                   </div>
                 )}
@@ -204,7 +233,7 @@ export default function BentoCard({
               title={showGwLegendPopup ? undefined : 'Collapse'}
               onClick={handleIconClick}
             >
-              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={10} strokeWidth={1.5} />
+              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             </div>
           </div>
         ) : (
@@ -214,9 +243,9 @@ export default function BentoCard({
             onClick={handleIconClick}
           >
             {isExpanded ? (
-              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={10} strokeWidth={1.5} />
+              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             ) : (
-              <MoveDiagonal className="bento-card-expand-icon-svg" size={10} strokeWidth={1.5} />
+              <MoveDiagonal className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
             )}
           </div>
         )
@@ -245,7 +274,14 @@ export default function BentoCard({
         </div>
       ) : isTransfers && value !== undefined && !isExpanded ? (
         <div className="bento-card-transfers-row">
-          <div className="bento-card-value bento-card-transfers-value">{value}</div>
+          <div className="bento-card-transfers-value-wrap">
+            <div className="bento-card-value bento-card-transfers-value">{value}</div>
+            {(transfersSummary?.activeChip === 'wildcard' || transfersSummary?.activeChip === 'freehit') && (
+              <div className="bento-card-transfers-chip-badge">
+                {transfersSummary.activeChip === 'wildcard' ? 'Wildcard' : 'Free Hit'}
+              </div>
+            )}
+          </div>
           {transfersSummary?.transfers?.length > 0 ? (
             <div className="bento-card-transfers-list">
               {transfersSummary.transfers.map((t, i) => (
@@ -254,7 +290,7 @@ export default function BentoCard({
                   <span className="bento-card-transfer-arrow">→</span>
                   <span className="bento-card-transfer-in">{t.playerInName}</span>
                   {t.pointImpact != null && (
-                    <span className={`bento-card-transfer-delta ${t.pointImpact >= 0 ? 'positive' : 'negative'}`}>
+                    <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
                       {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
                     </span>
                   )}
@@ -269,6 +305,7 @@ export default function BentoCard({
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
               {value}
               {isStale && <span className="stale-indicator" title="Data may be out of date during live games">!</span>}
+              {isLiveUpdating && <span className="live-updating-indicator" title="Values can change at any moment during live games" aria-hidden />}
             </div>
           )}
           {id !== 'league-rank' && change !== undefined && change !== 0 && (
@@ -315,6 +352,10 @@ export default function BentoCard({
               showComparison={showChartComparison}
               loading={loading}
               onFilterChange={onChartFilterChange}
+              showTop10Lines={showTop10Lines}
+              top10LinesData={top10LinesData}
+              onShowTop10Change={onShowTop10Change}
+              currentManagerId={currentManagerId}
             />
           )}
         </div>
@@ -337,6 +378,8 @@ export default function BentoCard({
             data={currentGameweekPlayersData || []}
             loading={loading}
             top10ByStat={top10ByStat}
+            impactByPlayerId={impactByPlayerId ?? {}}
+            isLiveUpdating={isLiveUpdating}
           />
         </div>
       )}
@@ -490,8 +533,10 @@ export default function BentoCard({
                 </thead>
                 <tbody>
                   {leagueStandings.map((s, index) => {
-                    const rank = s.mini_league_rank != null ? s.mini_league_rank : (index + 1)
-                    const change = s.mini_league_rank_change != null ? s.mini_league_rank_change : null
+                    // Use calculated_rank from MV (correct per league); mini_league_rank can be from another league
+                    const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
+                    // Use calculated_rank_change from MV (per-league); mini_league_rank_change can be from another league
+                    const change = s.calculated_rank_change != null ? s.calculated_rank_change : (s.mini_league_rank_change != null ? s.mini_league_rank_change : null)
                     const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
                     const isCurrentUser = currentManagerId != null && s.manager_id === currentManagerId
                     return (
@@ -554,8 +599,32 @@ export default function BentoCard({
                       <tr key={row.manager_id} className={isCurrentUser ? 'league-standings-bento-row-you' : ''}>
                         <td className="league-standings-bento-rank">{row.rank ?? '—'}</td>
                         <td className="league-standings-bento-team" title={row.manager_team_name}>{row.manager_team_name}</td>
-                        <td className="captain-standings-bento-captain" title={row.captain_name}>{row.captain_name}</td>
-                        <td className="captain-standings-bento-vice" title={row.vice_captain_name}>{row.vice_captain_name}</td>
+                        <td className="captain-standings-bento-captain" title={row.captain_name}>
+                          <span className="captain-standings-bento-player-cell">
+                            {row.captain_team_short_name && (
+                              <img
+                                src={`/badges/${row.captain_team_short_name}.svg`}
+                                alt=""
+                                className="captain-standings-bento-player-badge"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
+                            )}
+                            <span className="captain-standings-bento-player-name">{row.captain_name}</span>
+                          </span>
+                        </td>
+                        <td className="captain-standings-bento-vice" title={row.vice_captain_name}>
+                          <span className="captain-standings-bento-player-cell">
+                            {row.vice_captain_team_short_name && (
+                              <img
+                                src={`/badges/${row.vice_captain_team_short_name}.svg`}
+                                alt=""
+                                className="captain-standings-bento-player-badge"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
+                            )}
+                            <span className="captain-standings-bento-player-name">{row.vice_captain_name}</span>
+                          </span>
+                        </td>
                       </tr>
                     )
                   })}

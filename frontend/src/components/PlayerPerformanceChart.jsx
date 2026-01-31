@@ -38,19 +38,19 @@ const VALUE_ON_BAR_THRESHOLD_MOBILE = 72
 const VALUE_ON_BAR_THRESHOLD_DESKTOP_EXCLUDE_HAALAND = 80
 const VALUE_ON_BAR_THRESHOLD_MOBILE_EXCLUDE_HAALAND = 70
 
-const MAX_NAME_LENGTH = 14
+const MAX_NAME_LENGTH = 12
 
-/** Abbreviate long player names for display; full name remains in title. */
+/** Abbreviate long player names for display (e.g. "Bruno Fernandes" → "B.Fernandes"); full name in title. */
 function abbreviateName(name) {
   if (!name || name.length <= MAX_NAME_LENGTH) return name || '—'
   const parts = name.trim().split(/\s+/)
   if (parts.length >= 2) {
     const last = parts[parts.length - 1]
-    const initials = parts.slice(0, -1).map((p) => p[0]).join('.')
-    const short = `${initials}. ${last}`
-    return short.length <= MAX_NAME_LENGTH ? short : short.slice(0, MAX_NAME_LENGTH) + '..'
+    const initials = parts.slice(0, -1).map((p) => (p[0] || '').toUpperCase()).join('.')
+    const short = initials ? `${initials}.${last}` : last
+    return short.length <= MAX_NAME_LENGTH ? short : short.slice(0, MAX_NAME_LENGTH - 1) + '…'
   }
-  return name.slice(0, MAX_NAME_LENGTH) + '..'
+  return name.slice(0, MAX_NAME_LENGTH - 1) + '…'
 }
 
 /**
@@ -161,95 +161,51 @@ export default function PlayerPerformanceChart({
 
   return (
     <div className="total-points-chart">
-      <div className="total-points-chart__controls">
-        {onFilterChange && (
-          <>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('all')
-                toast('Showing all gameweeks')
-              }}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'last12' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('last12')
-                toast('Last 12 gameweeks')
-              }}
-            >
-              Last 12
-            </button>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'last6' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('last6')
-                toast('Last 6 gameweeks')
-              }}
-            >
-              Last 6
-            </button>
-            <span className="total-points-chart__separator" aria-hidden />
-          </>
-        )}
-        <button
-          type="button"
-          className={`total-points-chart__btn total-points-chart__btn--gantt chart-gantt ${showGantt ? 'active' : ''}`}
-          onClick={() => {
-            setShowGantt((prev) => !prev)
-            toast(showGantt ? 'Showing points bar chart' : 'Showing ownership by gameweek (Gantt)')
-          }}
-          title={showGantt ? 'Show points bar chart' : 'Show ownership by gameweek (Gantt)'}
-          aria-label={showGantt ? 'Switch to bar chart' : 'Switch to Gantt chart'}
-        >
-          <ChartGantt size={14} aria-hidden />
-        </button>
-        <button
-          type="button"
-          className={`total-points-chart__btn total-points-chart__btn--exclude ${excludeHaaland ? 'active' : ''}`}
-          onClick={() => {
-            setExcludeHaaland((prev) => !prev)
-            toast(excludeHaaland ? 'Including Haaland' : 'Excluding Haaland')
-          }}
-          title="Exclude Haaland from view and recalculate percentages"
-        >
-          Exclude Haaland
-        </button>
-      </div>
-
       {showGantt ? (
         <div className="total-points-chart__gantt">
-          <div className="total-points-chart__gantt-x-labels">
-            <div className="total-points-chart__gantt-x-label-spacer" aria-hidden />
-            <div className="total-points-chart__gantt-x-label-track">
-              {(() => {
-                const maxLabels = 8
-                const step = gwRange <= maxLabels
-                  ? 1
-                  : Math.ceil((gwRange - 1) / (maxLabels - 1))
-                const ticks = []
-                for (let gw = gwMin; gw <= gwMax; gw += step) ticks.push(gw)
-                if (ticks[ticks.length - 1] !== gwMax) ticks.push(gwMax)
-                return ticks.map((gw) => (
-                  <span
-                    key={gw}
-                    className="total-points-chart__gantt-x-label"
-                    style={{
-                      left: `${((gw - gwMin) / gwRange) * 100}%`,
-                      transform: 'translateX(-50%)',
-                    }}
-                  >
-                    GW{gw}
-                  </span>
-                ))
-              })()}
-            </div>
-          </div>
+          {(() => {
+            const numBetween = gwRange > 15 ? 3 : 2
+            const ganttTicks = [gwMin]
+            for (let i = 1; i <= numBetween; i++) {
+              const gw = Math.round(gwMin + (gwMax - gwMin) * (i / (numBetween + 1)))
+              if (gw > ganttTicks[ganttTicks.length - 1] && gw < gwMax) ganttTicks.push(gw)
+            }
+            if (gwMax !== ganttTicks[ganttTicks.length - 1]) ganttTicks.push(gwMax)
+            return (
+              <>
+                {/* Vertical lines only at x-axis label positions */}
+                <div className="total-points-chart__gantt-grid" aria-hidden>
+                  <div className="total-points-chart__gantt-x-label-spacer" />
+                  <div className="total-points-chart__gantt-grid-track">
+                    {ganttTicks.map((gw) => (
+                      <div
+                        key={gw}
+                        className="total-points-chart__gantt-grid-line"
+                        style={{ left: `${((gw - gwMin) / gwRange) * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="total-points-chart__gantt-x-labels">
+                  <div className="total-points-chart__gantt-x-label-spacer" aria-hidden />
+                  <div className="total-points-chart__gantt-x-label-track">
+                    {ganttTicks.map((gw) => (
+                      <span
+                        key={gw}
+                        className="total-points-chart__gantt-x-label"
+                        style={{
+                          left: `${((gw - gwMin) / gwRange) * 100}%`,
+                          transform: 'translateX(-50%)',
+                        }}
+                      >
+                        GW{gw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )
+          })()}
           <div className="total-points-chart__gantt-rows" role="list">
             {sortedData.map((player) => {
               const streaks = getOwnershipStreaks(player)
@@ -359,6 +315,67 @@ export default function PlayerPerformanceChart({
           })}
         </div>
       )}
+
+      <div className="total-points-chart__controls">
+        {onFilterChange && (
+          <>
+            <button
+              type="button"
+              className={`total-points-chart__btn ${filter === 'all' ? 'active' : ''}`}
+              onClick={() => {
+                onFilterChange('all')
+                toast('Showing all gameweeks')
+              }}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              className={`total-points-chart__btn ${filter === 'last12' ? 'active' : ''}`}
+              onClick={() => {
+                onFilterChange('last12')
+                toast('Showing last 12 gameweeks')
+              }}
+            >
+              Last 12
+            </button>
+            <button
+              type="button"
+              className={`total-points-chart__btn ${filter === 'last6' ? 'active' : ''}`}
+              onClick={() => {
+                onFilterChange('last6')
+                toast('Showing last 6 gameweeks')
+              }}
+            >
+              Last 6
+            </button>
+            <span className="total-points-chart__separator" aria-hidden />
+          </>
+        )}
+        <button
+          type="button"
+          className={`total-points-chart__btn total-points-chart__btn--gantt chart-gantt ${showGantt ? 'active' : ''}`}
+          onClick={() => {
+            setShowGantt((prev) => !prev)
+            toast(showGantt ? 'Showing points per owned player' : 'Showing player ownership by gameweek')
+          }}
+          title={showGantt ? 'Show points bar chart' : 'Show ownership by gameweek (Gantt)'}
+          aria-label={showGantt ? 'Switch to bar chart' : 'Switch to Gantt chart'}
+        >
+          <ChartGantt size={14} aria-hidden />
+        </button>
+        <button
+          type="button"
+          className={`total-points-chart__btn total-points-chart__btn--exclude ${excludeHaaland ? 'active' : ''}`}
+          onClick={() => {
+            setExcludeHaaland((prev) => !prev)
+            toast(excludeHaaland ? 'Including Haaland' : 'Excluding Haaland')
+          }}
+          title="Exclude Haaland from view and recalculate percentages"
+        >
+          Exclude Haaland
+        </button>
+      </div>
     </div>
   )
 }

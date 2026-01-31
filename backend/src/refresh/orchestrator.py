@@ -49,6 +49,10 @@ class RefreshOrchestrator:
         self.next_gameweek_id_before_deadline: Optional[int] = None
         # Track if we've already refreshed picks/transfers for current deadline window
         self.deadline_refresh_completed: bool = False
+        # Throttle for FPL rank-change check (only run every 5 min when in BONUS_PENDING)
+        self._last_rank_check_time: Optional[datetime] = None
+        self._last_rank_check_gameweek: Optional[int] = None
+        self._rank_check_interval_seconds: int = 300  # 5 minutes
         
     async def initialize(self):
         """Initialize orchestrator and clients."""
@@ -283,6 +287,15 @@ class RefreshOrchestrator:
                 }
                 
                 self.db_client.upsert_gameweek(gameweek_data)
+            
+            # Persist total managers (bootstrap total_players) for GW rank percentile
+            total_players = bootstrap.get("total_players")
+            if total_players is not None:
+                self.db_client.upsert_fpl_global({
+                    "id": "current_season",
+                    "total_managers": total_players,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                })
             
             logger.debug("Refreshed gameweeks", extra={
                 "gameweeks_count": len(events)
@@ -620,6 +633,47 @@ class RefreshOrchestrator:
                 "error": str(e)
             }, exc_info=True)
     
+    async def _check_fpl_rank_change_and_refresh(self):
+        """
+        In BONUS_PENDING, poll FPL API for one manager to see if overall_rank/gameweek_rank
+        have been updated. When detected, set fpl_ranks_updated and trigger full manager refresh
+        so frontend can drop the stale indicator.
+        Throttled to run at most every 5 minutes.
+        """
+        if not self.current_gameweek:
+            return
+        try:
+            gameweeks = self.db_client.get_gameweeks(id=self.current_gameweek, limit=1)
+            if not gameweeks or gameweeks[0].get("fpl_ranks_updated"):
+                return
+            now = datetime.now(timezone.utc)
+            if (
+                self._last_rank_check_gameweek == self.current_gameweek
+                and self._last_rank_check_time is not None
+                and (now - self._last_rank_check_time).total_seconds() < self._rank_check_interval_seconds
+            ):
+                return
+            manager_ids = self._get_tracked_manager_ids()
+            if not manager_ids:
+                return
+            self._last_rank_check_time = now
+            self._last_rank_check_gameweek = self.current_gameweek
+            sample_manager_id = manager_ids[0]
+            rank_changed = await self.manager_refresher.check_fpl_rank_change(
+                sample_manager_id, self.current_gameweek
+            )
+            if rank_changed:
+                logger.info("FPL ranks updated detected, setting flag and refreshing all managers", extra={
+                    "gameweek": self.current_gameweek
+                })
+                self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
+                await self._refresh_manager_points()
+        except Exception as e:
+            logger.error("Error in FPL rank change check", extra={
+                "gameweek": self.current_gameweek,
+                "error": str(e)
+            }, exc_info=True)
+    
     async def _validate_player_points_integrity(self):
         """
         Validate that manager total points equals sum of player starting points + transfer costs.
@@ -710,6 +764,10 @@ class RefreshOrchestrator:
                 await self._refresh_manager_points()
                 # Validate data integrity after refresh
                 await self._validate_player_points_integrity()
+            
+            # Phase 3b: In BONUS_PENDING, poll FPL API for rank change to drop stale indicator
+            if self.current_state == RefreshState.BONUS_PENDING and self.current_gameweek:
+                await self._check_fpl_rank_change_and_refresh()
             
             if self.current_state == RefreshState.PRICE_WINDOW:
                 await self._refresh_prices()

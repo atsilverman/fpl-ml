@@ -6,6 +6,7 @@ to minimize egress usage.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from supabase import create_client, Client
@@ -136,6 +137,32 @@ class SupabaseClient:
             on_conflict="id"
         ).execute()
         
+        return result.data
+    
+    def update_gameweek_fpl_ranks_updated(self, gameweek_id: int, value: bool):
+        """
+        Set fpl_ranks_updated for a gameweek (e.g. when FPL API rank values have been detected as updated).
+        """
+        self.client.table("gameweeks").update(
+            {"fpl_ranks_updated": value, "updated_at": datetime.now(timezone.utc).isoformat()}
+        ).eq("id", gameweek_id).execute()
+    
+    def upsert_fpl_global(self, global_data: Dict[str, Any]):
+        """
+        Upsert FPL global stats (e.g. total_managers from bootstrap-static).
+        
+        Args:
+            global_data: Must include id (e.g. 'current_season'), total_managers, updated_at
+        """
+        result = self.client.table("fpl_global").upsert(
+            global_data,
+            on_conflict="id"
+        ).execute()
+        return result.data
+    
+    def get_fpl_global(self) -> Optional[Dict[str, Any]]:
+        """Get FPL global stats (total_managers). Returns single row or None."""
+        result = self.client.table("fpl_global").select("*").eq("id", "current_season").maybe_single().execute()
         return result.data
     
     def upsert_player(self, player_data: Dict[str, Any]):

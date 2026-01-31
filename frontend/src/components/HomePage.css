@@ -158,6 +158,8 @@
 
 .bento-card-label {
   font-size: 12px;
+  line-height: 1.15;
+  min-height: 14px;
   font-weight: 500;
   color: var(--text-secondary);
   text-transform: uppercase;

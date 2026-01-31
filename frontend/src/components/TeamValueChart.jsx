@@ -180,12 +180,19 @@ export default function TeamValueChart({
       prevDimensionsRef.current = { width, height }
     }
 
-    const padding = {
-      top: Math.round(height * 0.08),
-      right: Math.round(width * 0.06),
-      bottom: Math.round(height * 0.25),
-      left: Math.round(width * 0.12)
-    }
+    const padding = isMobile
+      ? {
+          top: Math.round(height * 0.05),
+          right: Math.round(width * 0.05),
+          bottom: Math.round(height * 0.18),
+          left: Math.round(width * 0.1)
+        }
+      : {
+          top: Math.round(height * 0.08),
+          right: Math.round(width * 0.06),
+          bottom: Math.round(height * 0.25),
+          left: Math.round(width * 0.12)
+        }
     
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
@@ -579,9 +586,9 @@ export default function TeamValueChart({
           .ease(d3.easeCubicOut)
           .attr('cx', d => xScale(d.gameweek))
           .attr('cy', d => yScale(d.teamValue))
-          .attr('r', 4)
+          .attr('r', 5)
           .attr('opacity', 1)
-        
+
         comparisonPoints.exit()
           .transition()
           .duration(300)
@@ -715,7 +722,7 @@ export default function TeamValueChart({
           return yScale(interpolatedPoint.teamValue)
         }
       })
-      .attr('r', 4.5)
+      .attr('r', 4)
       .attr('opacity', 1)
 
     points.exit()
@@ -809,11 +816,20 @@ export default function TeamValueChart({
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className="performance-chart-container"
     >
-      {/* Filter Controls */}
+      <div className="performance-chart-svg-wrapper">
+        <svg
+          ref={svgRef}
+          width={dimensions.width}
+          height={dimensions.height}
+          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="performance-chart"
+        />
+      </div>
       {onFilterChange && (
         <div className="chart-filter-controls">
           <button
@@ -836,14 +852,6 @@ export default function TeamValueChart({
           </button>
         </div>
       )}
-      <svg 
-        ref={svgRef}
-        width={dimensions.width}
-        height={dimensions.height}
-        viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
-        preserveAspectRatio="xMidYMid meet"
-        className="performance-chart"
-      />
     </div>
   )
 }

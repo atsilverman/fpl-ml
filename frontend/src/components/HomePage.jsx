@@ -2,19 +2,24 @@ import { useState, useEffect, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useManagerData } from '../hooks/useManagerData'
+import { useTotalManagers, getGwRankPercentileLabel } from '../hooks/useTotalManagers'
 import { useManagerHistory } from '../hooks/useManagerHistory'
 import { useTeamValueHistory } from '../hooks/useTeamValueHistory'
 import { useLeagueTeamValueHistory } from '../hooks/useLeagueTeamValueHistory'
 import { useChipUsage } from '../hooks/useChipUsage'
 import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
+import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
 import { usePlayerOwnedPerformance } from '../hooks/usePlayerOwnedPerformance'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
+import { usePlayerImpact } from '../hooks/usePlayerImpact'
 import { useTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
+import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
+import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
@@ -24,7 +29,7 @@ import './HomePage.css'
 
 export default function HomePage() {
   const { config, openConfigModal } = useConfiguration()
-  const { cardOrder, openCustomizeModal } = useBentoOrder()
+  const { cardOrder, openCustomizeModal, isCardVisible, cardVisibility } = useBentoOrder()
   
   // State declarations (must be before hooks that use them)
   const [chartFilter, setChartFilter] = useState('last12') // 'all', 'last12', 'last6'
@@ -41,18 +46,23 @@ export default function HomePage() {
   const [isChipsExpanded, setIsChipsExpanded] = useState(false)
   const [isLeagueRankExpanded, setIsLeagueRankExpanded] = useState(false)
   const [isCaptainExpanded, setIsCaptainExpanded] = useState(false)
+  const [showTop10Lines, setShowTop10Lines] = useState(false)
   
   // Hooks that depend on state
-  const { gameweek, loading: gwLoading } = useGameweekData()
+  const { gameweek, fplRanksUpdated, loading: gwLoading } = useGameweekData()
   const { managerData, loading: managerLoading } = useManagerData()
+  const { totalManagers } = useTotalManagers()
   const { historyData, loading: historyLoading } = useManagerHistory()
   const { historyData: teamValueHistoryData, loading: teamValueHistoryLoading } = useTeamValueHistory()
   const { leagueData: leagueTeamValueData, loading: leagueTeamValueLoading } = useLeagueTeamValueHistory()
   const { chipUsage, loading: chipLoading } = useChipUsage()
   const { hasLiveGames } = useLiveGameweekStatus(gameweek)
+  const { inPlay: managerInPlay } = useManagerLiveStatus(config?.managerId ?? null, gameweek)
+  const hasManagerPlayerInPlay = hasLiveGames && (managerInPlay ?? 0) > 0
   const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter)
   const { data: currentGameweekPlayers, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
   const { top10ByStat, isLoading: top10ByStatLoading } = useGameweekTop10ByStat()
+  const { impactByPlayerId, loading: impactLoading } = usePlayerImpact()
   const { transfers: transferImpacts, loading: transferImpactsLoading } = useTransferImpacts(gameweek)
 
   // Fetch league name and league top transfers (for expanded Transfers card)
@@ -60,7 +70,10 @@ export default function HomePage() {
   const { transfersOut: leagueTopTransfersOut, transfersIn: leagueTopTransfersIn, loading: leagueTopTransfersLoading } = useLeagueTopTransfers(LEAGUE_ID, gameweek)
   const { leagueChipData, loading: leagueChipsLoading } = useLeagueChipUsage(gameweek)
   const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
+  const { top10History, loading: leagueTop10HistoryLoading } = useLeagueTop10History(gameweek ?? undefined)
   const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
+  const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
+  const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { data: leagueData } = useQuery({
     queryKey: ['league', LEAGUE_ID],
     queryFn: async () => {
@@ -110,7 +123,13 @@ export default function HomePage() {
     return cardOrder
   }, [cardOrder, isMobile])
 
-  const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || currentGameweekPlayersLoading || top10ByStatLoading || transferImpactsLoading
+  // Only show cards that are turned on in Customize
+  const visibleCardOrder = useMemo(
+    () => displayCardOrder.filter((id) => isCardVisible(id)),
+    [displayCardOrder, cardVisibility]
+  )
+
+  const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueTop10HistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
 
   const cards = [
     {
@@ -124,6 +143,7 @@ export default function HomePage() {
       id: 'gw-rank',
       label: 'GW Rank',
       value: formatNumberWithTwoDecimals(managerData?.gameweekRank),
+      subtext: getGwRankPercentileLabel(managerData?.gameweekRank ?? null, totalManagers ?? null),
       size: '1x1'
     },
     {
@@ -167,7 +187,7 @@ export default function HomePage() {
       value: managerData != null
         ? `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
         : undefined,
-      size: '2x1',
+      size: '1x1',
       isTransfers: true
     },
     {
@@ -219,6 +239,11 @@ export default function HomePage() {
     // Transfers card 2x3 when expanded
     if (id === 'transfers' && isTransfersExpanded) {
       return 'bento-card-chart-large'
+    }
+
+    // Transfers card: 2x1 only when manager made transfers (to show in/out and points); else 1x1
+    if (id === 'transfers') {
+      return (managerData?.transfersMade ?? 0) > 0 ? 'bento-card-large' : 'bento-card'
     }
 
     // Chips card 2x3 when expanded
@@ -328,7 +353,7 @@ export default function HomePage() {
   return (
     <div className="home-page">
       <div className="bento-grid">
-        {displayCardOrder.map((cardId, index) => {
+        {visibleCardOrder.map((cardId, index) => {
           const card = cards.find(c => c.id === cardId)
           if (!card) return null
 
@@ -363,6 +388,9 @@ export default function HomePage() {
           let playerChartFilterToUse = 'all'
           let onPlayerChartFilterChangeToUse = null
           let currentGameweekPlayersDataToUse = null
+          let showTop10LinesToUse = false
+          let top10LinesDataToUse = null
+          let onShowTop10ChangeToUse = null
 
           if (cardId === 'overall-rank') {
             showValue = showValueInOverallRank ? card.value : undefined
@@ -372,6 +400,9 @@ export default function HomePage() {
             chartFilterToUse = chartFilter
             showChartComparisonToUse = showChartComparison
             onChartFilterChangeToUse = showChartInOverallRank ? handleChartFilterChange : null
+            showTop10LinesToUse = showTop10Lines
+            top10LinesDataToUse = showChartInOverallRank && top10History?.length ? top10History : null
+            onShowTop10ChangeToUse = showChartInOverallRank ? setShowTop10Lines : null
           } else if (cardId === 'team-value') {
             showValue = showValueInTeamValue ? card.value : undefined
             showChange = showValueInTeamValue ? card.change : undefined
@@ -439,7 +470,11 @@ export default function HomePage() {
               isChart={showChart}
               isChips={card.isChips}
               isSettings={card.isSettings}
-              isStale={hasLiveGames && (cardId === 'overall-rank' || cardId === 'gw-rank')}
+              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && !fplRanksUpdated}
+              isLiveUpdating={
+                (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
+                (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
+              }
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'transfers' && isTransfersExpanded) || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
               style={{ '--animation-delay': `${index * 0.1}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
@@ -473,12 +508,16 @@ export default function HomePage() {
               chartFilter={chartFilterToUse}
               showChartComparison={showChartComparisonToUse}
               onChartFilterChange={onChartFilterChangeToUse}
+              showTop10Lines={showTop10LinesToUse}
+              top10LinesData={top10LinesDataToUse}
+              onShowTop10Change={onShowTop10ChangeToUse}
               chipUsage={card.isChips ? chipUsage : null}
               isTransfers={card.isTransfers ?? false}
               transfersSummary={card.isTransfers ? {
                 used: managerData?.transfersMade ?? 0,
                 available: managerData?.freeTransfersAvailable ?? 0,
-                transfers: transferImpacts ?? []
+                transfers: transferImpacts ?? [],
+                activeChip: managerData?.activeChip ?? null,
               } : null}
               leagueTopTransfersOut={cardId === 'transfers' ? leagueTopTransfersOut : undefined}
               leagueTopTransfersIn={cardId === 'transfers' ? leagueTopTransfersIn : undefined}
@@ -490,9 +529,10 @@ export default function HomePage() {
               playerPointsByGameweek={cardId === 'total-points' ? playerPointsByGameweek : undefined}
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
+              impactByPlayerId={cardId === 'gw-points' ? impactByPlayerId : undefined}
               leagueStandings={cardId === 'league-rank' ? leagueStandings : undefined}
               leagueStandingsLoading={cardId === 'league-rank' ? leagueStandingsLoading : undefined}
-              currentManagerId={cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
+              currentManagerId={cardId === 'overall-rank' || cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
               captainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_captain)?.player_name ?? null) : undefined}
               viceCaptainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
               leagueCaptainData={cardId === 'captain' ? leagueCaptainData : undefined}
