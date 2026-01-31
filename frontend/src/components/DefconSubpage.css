@@ -1,0 +1,580 @@
+/* Compact list: badge | name | num/denom | notch bar | percent bar (original arrangement) */
+.defcon-subpage {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.defcon-search-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.defcon-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 320px;
+  margin-bottom: 0;
+}
+
+.defcon-search-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .defcon-search-wrap {
+    max-width: none;
+  }
+}
+
+.defcon-search-input {
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  font-size: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.defcon-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.defcon-search-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.defcon-search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.defcon-search-suggestion {
+  padding: 8px 14px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.defcon-search-suggestion:hover {
+  background: var(--bg-secondary);
+}
+
+/* Backdrop when info or filter popup is open */
+.defcon-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 50;
+  cursor: default;
+}
+
+.defcon-info-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.defcon-info-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+/* DEFCON info popup: same format as GW legend (BentoCard), so it uses .gw-legend-popup classes.
+   If BentoCard is not mounted, these rules ensure the popup still looks correct. */
+.defcon-subpage .gw-legend-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 60;
+  min-width: 220px;
+}
+
+.defcon-subpage .gw-legend-popup-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.defcon-subpage .gw-legend-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 20px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.defcon-subpage .gw-legend-popup-row:last-child {
+  margin-bottom: 0;
+}
+
+.defcon-subpage .gw-legend-popup-row > span:first-child,
+.defcon-subpage .gw-legend-popup-row-icon {
+  width: 28px;
+  min-width: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.defcon-subpage .gw-legend-popup-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.defcon-subpage .gw-legend-popup-live-dot-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.defcon-subpage .gw-legend-popup-live-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: defcon-gw-legend-live-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes defcon-gw-legend-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50% { box-shadow: 0 0 0 2px rgba(16, 185, 129, 0); }
+}
+
+.defcon-subpage .gw-legend-popup-defcon-achieved-sample {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  min-height: 14px;
+  border: 1px solid var(--accent-green);
+  border-radius: 4px;
+  background: transparent;
+}
+
+.defcon-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.defcon-filter-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.defcon-filter-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.defcon-filter-popup {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 360px;
+  max-width: 90vw;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+}
+
+.defcon-filter-matchups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.defcon-matchup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px;
+  font-size: 10px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.defcon-matchup-btn:hover {
+  background: var(--bg-card);
+  border-color: var(--text-secondary);
+}
+
+.defcon-matchup-btn--active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+
+.defcon-matchup-badge {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.defcon-matchup-vs {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin: 0 1px;
+}
+
+.defcon-loading,
+.defcon-error {
+  padding: 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.defcon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 430px;
+}
+
+.defcon-row-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.defcon-row-card--achieved {
+  border: 1px solid var(--accent-green);
+}
+
+.defcon-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+}
+
+.defcon-badge {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.defcon-player-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 0 1 90px;
+}
+
+.defcon-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.defcon-position-badge {
+  display: inline-block;
+  width: fit-content;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  padding: 1px 3px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.defcon-position-badge--1 {
+  background: rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+.defcon-position-badge--2 {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.defcon-position-badge--3 {
+  background: rgba(234, 179, 8, 0.25);
+  color: #eab308;
+}
+
+.defcon-position-badge--4 {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.defcon-row-status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.defcon-status-complete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-green);
+}
+
+.defcon-status-complete--provisional {
+  color: var(--text-secondary);
+}
+
+.defcon-status-live-dot {
+  width: 5px;
+  height: 5px;
+  min-width: 5px;
+  min-height: 5px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: defcon-live-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes defcon-live-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0);
+  }
+}
+
+.defcon-fraction {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 600;
+  margin-right: 12px;
+}
+
+.defcon-num {
+  color: var(--text-primary);
+}
+
+.defcon-sep {
+  color: var(--text-secondary);
+  margin: 0 1px;
+}
+
+.defcon-denom {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Progress bar: match player-grid progress bar (6px height, 125px), vertical line dividers */
+.defcon-notch-bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 125px;
+  height: 6px;
+  background: var(--progress-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-right: 12px;
+}
+
+.defcon-notch-fill {
+  height: 100%;
+  border-radius: 3px 0 0 3px;
+  background: linear-gradient(
+    to right,
+    hsl(48, 85%, 48%),
+    hsl(24, 85%, 48%),
+    hsl(12, 82%, 48%),
+    hsl(0, 74%, 48%)
+  );
+  transition: width 0.2s ease;
+}
+
+.defcon-notch-dividers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / var(--notches) - 1px),
+    var(--progress-bg) calc(100% / var(--notches) - 1px),
+    var(--progress-bg) calc(100% / var(--notches))
+  );
+}
+
+/* Percent: value only (progress bar to the left shows fill) */
+.defcon-percent-value {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+/* Desktop: grow spacing and progress bar with screen size */
+@media (min-width: 769px) {
+  .defcon-subpage {
+    gap: 16px;
+  }
+
+  .defcon-search-wrap {
+    max-width: 400px;
+  }
+
+  .defcon-search-input {
+    min-height: 32px;
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+
+  .defcon-list {
+    gap: 12px;
+    max-width: 600px;
+  }
+
+  .defcon-row-card {
+    padding: 10px 14px;
+    border-radius: 10px;
+  }
+
+  .defcon-row {
+    gap: 10px;
+    min-height: 40px;
+  }
+
+  .defcon-badge {
+    width: 26px;
+    height: 26px;
+  }
+
+  .defcon-player-info {
+    flex: 0 1 140px;
+  }
+
+  .defcon-name {
+    font-size: 13px;
+  }
+
+  .defcon-position-badge {
+    font-size: 8px;
+    padding: 2px 4px;
+  }
+
+  .defcon-fraction {
+    font-size: 13px;
+    margin-right: 14px;
+  }
+
+  /* Progress bar: much wider on desktop – min-width forces it to take space */
+  .defcon-notch-bar {
+    flex: 1 1 auto;
+    min-width: 280px;
+    max-width: 400px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 14px;
+  }
+
+  .defcon-notch-fill {
+    border-radius: 4px 0 0 4px;
+  }
+
+  .defcon-percent-value {
+    font-size: 13px;
+  }
+
+  .defcon-row-status {
+    width: 20px;
+    height: 20px;
+  }
+
+  .defcon-info-btn,
+  .defcon-filter-btn {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+}

@@ -32,6 +32,16 @@ html[data-theme="dark"] {
   --collapse-icon-color: #f87171;
   --collapse-badge-bg: rgba(248, 113, 113, 0.12);
   --collapse-badge-border: rgba(248, 113, 113, 0.35);
+  /* Bonus BPS (3 / 2 / 1 pts) – single accent, three intensity levels */
+  --bonus-1st: #3b82f6;
+  --bonus-1st-fg: #fff;
+  --bonus-2nd: #60a5fa;
+  --bonus-2nd-fg: #0a0e27;
+  --bonus-3rd: color-mix(in srgb, #3b82f6 42%, var(--bg-secondary));
+  --bonus-3rd-fg: #fff;
+  /* BPS chart value on bar: dark text on light bars, light text on dark bars */
+  --bps-value-on-bar-dark: #0f172a;
+  --bps-value-on-bar-light: #fff;
 }
 
 /* Light mode */
@@ -61,6 +71,16 @@ html[data-theme="light"] {
   --collapse-icon-color: #dc2626;
   --collapse-badge-bg: rgba(220, 38, 38, 0.08);
   --collapse-badge-border: rgba(220, 38, 38, 0.3);
+  /* Bonus BPS (3 / 2 / 1 pts) – single accent; fg dark for contrast on light bars */
+  --bonus-1st: #2563eb;
+  --bonus-1st-fg: #0f172a;
+  --bonus-2nd: #3b82f6;
+  --bonus-2nd-fg: #0f172a;
+  --bonus-3rd: color-mix(in srgb, #3b82f6 35%, var(--bg-secondary));
+  --bonus-3rd-fg: #0f172a;
+  /* BPS chart value on bar: dark text on light bars, light text on dark bars */
+  --bps-value-on-bar-dark: #0f172a;
+  --bps-value-on-bar-light: #fff;
 }
 
 html {

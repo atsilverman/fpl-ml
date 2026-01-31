@@ -1,0 +1,30 @@
+.gameweek-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text-primary);
+}
+
+.gameweek-simulate-banner {
+  font-size: 0.75rem;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid var(--accent-blue);
+  border-radius: 6px;
+  color: var(--text-primary);
+}
+
+.gameweek-simulate-banner code {
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.gameweek-page-content {
+  min-height: 200px;
+}
+
+.gameweek-subpage {
+  /* Empty subpages – content to be added later */
+}

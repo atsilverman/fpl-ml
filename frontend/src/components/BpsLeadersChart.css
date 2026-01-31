@@ -1,0 +1,285 @@
+/* BPS leaders horizontal bar chart – expanded matchup detail (bonus subpage) */
+.bps-chart {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+
+.bps-chart--loading {
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+.bps-chart__skeleton {
+  width: 80%;
+  max-width: 200px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--bg-secondary, #e5e7eb);
+  animation: bps-chart-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bps-chart-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.bps-chart__empty {
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.bps-chart__bars {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bps-chart__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+}
+
+/* Fixed-width label: name then badge (right-aligned so badge is right of name) */
+.bps-chart__label {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.bps-chart__name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.bps-chart__badge {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+/* Bonus column on far right: 3+ / 2+ / 1+ */
+.bps-chart__bonus-col {
+  flex: 0 0 32px;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.bps-chart__bonus-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.bps-chart__bonus-badge--3 {
+  background: var(--bonus-1st);
+  color: var(--bonus-1st-fg);
+}
+
+.bps-chart__bonus-badge--2 {
+  background: var(--bonus-2nd);
+  color: var(--bonus-2nd-fg);
+}
+
+.bps-chart__bonus-badge--1 {
+  background: var(--bonus-3rd);
+  color: var(--bonus-3rd-fg);
+}
+
+/* Light mode: 3+ and 2+ badges use white text for contrast on blue */
+html[data-theme="light"] .bps-chart__bonus-badge--3,
+html[data-theme="light"] .bps-chart__bonus-badge--2 {
+  color: #fff;
+}
+
+.bps-chart__track {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 26px;
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  overflow: visible;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.bps-chart__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: 4px;
+  transition: width 0.2s ease-out;
+}
+
+/* Top 3 BPS = bonus colors (solid, theme-aligned); rest = neutral */
+.bps-chart__fill--bonus-1 {
+  background: var(--bonus-1st);
+}
+
+.bps-chart__fill--bonus-2 {
+  background: var(--bonus-2nd);
+}
+
+.bps-chart__fill--bonus-3 {
+  background: var(--bonus-3rd);
+}
+
+.bps-chart__fill--no-bonus {
+  background: var(--bps-bar-neutral, rgba(0, 0, 0, 0.12));
+}
+
+html[data-theme="dark"] .bps-chart__fill--no-bonus {
+  background: var(--bps-bar-neutral, rgba(255, 255, 255, 0.12));
+}
+
+.bps-chart__value {
+  position: absolute;
+  z-index: 1;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Value inside bar: contrast chosen from bar background luminance (theme-aware) */
+.bps-chart__value--on-bar {
+  text-align: right;
+}
+
+/* Dark text on light bars – uses theme variable */
+.bps-chart__value--contrast-dark {
+  color: var(--bps-value-on-bar-dark);
+}
+
+/* Light text on dark bars – uses theme variable; shadow for legibility */
+.bps-chart__value--contrast-light {
+  color: var(--bps-value-on-bar-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Dark mode: bars read dark, so always use light text for values on the bar */
+html[data-theme="dark"] .bps-chart__value--on-bar.bps-chart__value--contrast-dark,
+html:not([data-theme]) .bps-chart__value--on-bar.bps-chart__value--contrast-dark {
+  color: var(--bps-value-on-bar-light);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* Light mode: no-bonus (grey) bar is light, so use black text */
+html[data-theme="light"] .bps-chart__value--no-bonus-bar {
+  color: var(--bps-value-on-bar-dark);
+  text-shadow: none;
+}
+
+/* Value outside bar (bar too small): primary text so it matches theme */
+.bps-chart__value--after-bar {
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.bps-chart__legend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bps-chart__legend-item--3::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--bonus-1st);
+  vertical-align: middle;
+}
+
+.bps-chart__legend-item--2::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--bonus-2nd);
+  vertical-align: middle;
+}
+
+.bps-chart__legend-item--1::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: var(--bonus-3rd);
+  vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+  .bps-chart__row {
+    min-height: 34px;
+  }
+
+  .bps-chart__label {
+    max-width: 120px;
+  }
+
+  .bps-chart__name {
+    font-size: 11px;
+  }
+
+  .bps-chart__track {
+    height: 22px;
+  }
+
+  .bps-chart__value {
+    font-size: 11px;
+  }
+
+  .bps-chart__badge {
+    width: 18px;
+    height: 18px;
+  }
+}

@@ -351,6 +351,9 @@
   flex: 1 1 0%;
   min-width: 0;
 }
+.gameweek-points-player-name-text--owned-by-you {
+  color: var(--accent-green, #10b981);
+}
 
 /* Captain badge – orange background, white text */
 .gameweek-points-captain-badge-inline {
@@ -501,8 +504,8 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-home-indicator {
-  font-size: 6px;
-  font-weight: 500;
+  flex-shrink: 0;
+  display: inline-block;
   color: var(--text-secondary);
   opacity: 0.8;
   margin-left: 2px;
@@ -604,6 +607,90 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   font-size: 8px;
   color: var(--text-secondary);
   opacity: 0.85;
+}
+
+/* Desktop: grow table and impact bar with screen size */
+@media (min-width: 769px) {
+  .gameweek-points-table {
+    font-size: 13px;
+  }
+
+  .gameweek-points-th {
+    height: 38px;
+    font-size: 10px;
+    padding: 14px 12px;
+  }
+
+  .gameweek-points-th-player {
+    min-width: 160px;
+    padding-left: 20px;
+  }
+
+  .gameweek-points-th-mins,
+  .gameweek-points-td-mins {
+    width: 72px;
+    min-width: 72px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .gameweek-points-th-opp,
+  .gameweek-points-td-opp,
+  .gameweek-points-th-pts,
+  .gameweek-points-td-pts {
+    width: 56px;
+    min-width: 56px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .gameweek-points-th-impact {
+    min-width: 88px;
+    width: 88px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .gameweek-points-td-impact {
+    min-width: 88px;
+    width: 88px;
+    padding: 8px 12px;
+  }
+
+  .gameweek-points-impact-bar-wrap {
+    height: 10px;
+    border-radius: 5px;
+  }
+
+  .gameweek-points-impact-bar {
+    border-radius: 5px;
+  }
+
+  .gameweek-points-impact-value {
+    font-size: 11px;
+  }
+
+  .gameweek-points-impact-popup-title,
+  .gameweek-points-impact-popup-text {
+    font-size: 12px;
+  }
+
+  .gameweek-points-th-stat,
+  .gameweek-points-td-stat {
+    min-width: 56px;
+    width: 56px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .gameweek-points-th-stat {
+    font-size: 9px;
+  }
+
+  .gameweek-points-td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 }
 
 /* Mobile */

@@ -427,7 +427,7 @@ class RefreshOrchestrator:
         
         try:
             # Get current gameweek data
-            gameweeks = self.db_client.get_gameweeks(id=self.current_gameweek, limit=1)
+            gameweeks = self.db_client.get_gameweeks(gameweek_id=self.current_gameweek, limit=1)
             if not gameweeks:
                 return
             
@@ -643,7 +643,7 @@ class RefreshOrchestrator:
         if not self.current_gameweek:
             return
         try:
-            gameweeks = self.db_client.get_gameweeks(id=self.current_gameweek, limit=1)
+            gameweeks = self.db_client.get_gameweeks(gameweek_id=self.current_gameweek, limit=1)
             if not gameweeks or gameweeks[0].get("fpl_ranks_updated"):
                 return
             now = datetime.now(timezone.utc)

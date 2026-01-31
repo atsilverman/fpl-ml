@@ -1,16 +1,40 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useState, useRef, useEffect } from 'react'
+import { Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { UserSearch } from 'lucide-react'
+import { UserSearch, ChevronDown } from 'lucide-react'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { supabase } from '../lib/supabase'
 import './Dashboard.css'
 
+const GAMEWEEK_VIEWS = [
+  { id: 'matches', label: 'Matches', disabled: false },
+  { id: 'bonus', label: 'Bonus', disabled: false },
+  { id: 'defcon', label: 'DEFCON', disabled: false },
+]
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { config, openConfigModal } = useConfiguration()
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
+  const [gameweekDropdownOpen, setGameweekDropdownOpen] = useState(false)
+  const gameweekDropdownRef = useRef(null)
+
+  const gameweekView = searchParams.get('view') || 'defcon'
+  const isOnGameweek = location.pathname === '/gameweek'
+
+  useEffect(() => {
+    if (!gameweekDropdownOpen) return
+    const handleClickOutside = (e) => {
+      if (gameweekDropdownRef.current && !gameweekDropdownRef.current.contains(e.target)) {
+        setGameweekDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [gameweekDropdownOpen])
 
   const { data: managerRow } = useQuery({
     queryKey: ['manager-name', managerId],
@@ -39,11 +63,16 @@ export default function Dashboard() {
   const pages = [
     { id: 'home', path: '/', label: 'Home' },
     { id: 'mini-league', path: '/mini-league', label: 'League' },
-    { id: 'live', path: '/live', label: 'Gameweek' },
+    { id: 'gameweek', path: '/gameweek', label: 'Gameweek' },
     { id: 'research', path: '/research', label: 'Research' }
   ]
 
   const currentPage = pages.find(p => location.pathname === p.path) || pages[0]
+
+  const setGameweekView = (view) => {
+    setSearchParams({ view }, { replace: true })
+    setGameweekDropdownOpen(false)
+  }
 
   return (
     <div className="dashboard">
@@ -59,13 +88,63 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="dashboard-content">
-        <Outlet />
-      </main>
-
-      <nav className="page-selector-bottom tracking-mode-toggle">
+      <nav className="page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
         {pages.map(page => {
-          const isDisabled = !['home', 'mini-league'].includes(page.id)
+          const isDisabled = !['home', 'mini-league', 'gameweek'].includes(page.id)
+          if (page.id === 'gameweek') {
+            return (
+              <div key={page.id} className="nav-item-gameweek-wrap" ref={gameweekDropdownRef}>
+                <button
+                  type="button"
+                  className={`tracking-mode-button nav-item-gameweek-trigger ${currentPage.id === 'gameweek' ? 'active' : ''}`}
+                  onClick={() => {
+                    setGameweekDropdownOpen(open => !open)
+                  }}
+                  disabled={isDisabled}
+                  aria-expanded={gameweekDropdownOpen}
+                  aria-haspopup="listbox"
+                  aria-label="Gameweek view"
+                >
+                  <span>Gameweek</span>
+                  <ChevronDown
+                    size={16}
+                    strokeWidth={2}
+                    className={`nav-item-gameweek-chevron ${gameweekDropdownOpen ? 'nav-item-gameweek-chevron--open' : ''}`}
+                    aria-hidden
+                  />
+                </button>
+                {gameweekDropdownOpen && (
+                  <div
+                    className={`nav-item-gameweek-panel nav-item-gameweek-panel--open`}
+                    role="listbox"
+                    aria-label="Gameweek view"
+                  >
+                    {GAMEWEEK_VIEWS.map(view => (
+                      <button
+                        key={view.id}
+                        type="button"
+                        role="option"
+                        aria-selected={currentPage.id === 'gameweek' && gameweekView === view.id}
+                        className={`nav-item-gameweek-option ${currentPage.id === 'gameweek' && gameweekView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                        onClick={() => {
+                          if (view.disabled) return
+                          if (currentPage.id !== 'gameweek') {
+                            navigate(`/gameweek?view=${view.id}`)
+                          } else {
+                            setGameweekView(view.id)
+                          }
+                          setGameweekDropdownOpen(false)
+                        }}
+                        disabled={view.disabled}
+                      >
+                        {view.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          }
           return (
             <button
               key={page.id}
@@ -78,6 +157,10 @@ export default function Dashboard() {
           )
         })}
       </nav>
+
+      <main className="dashboard-content">
+        <Outlet />
+      </main>
     </div>
   )
 }

@@ -6,11 +6,13 @@ import { ArrowDownRight, ArrowUpRight, HelpCircle } from 'lucide-react'
 
 const IMPACT_TOOLTIP = 'Importance: your share of this player\'s points vs the rest of your mini-league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than league average; negative = others gain more.'
 
+const PLAYER_NAME_MAX_LENGTH = 15
+
 const POPUP_PADDING = 12
 const POPUP_MAX_WIDTH = 320
 const POPUP_MIN_WIDTH = 260
 
-export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {} }) {
+export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null }) {
   const [showImpactPopup, setShowImpactPopup] = useState(false)
   const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
   const impactPopupRef = useRef(null)
@@ -96,6 +98,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isFirstBenchRow = player.position === 12
     const isBench = player.position >= 12
     const playerId = player.effective_player_id ?? player.player_id
+    const isOwnedByYou = ownedByYouPlayerIds != null && playerId != null && ownedByYouPlayerIds.has(Number(playerId))
     const impact = impactByPlayerId[playerId]
     const hasImpact = typeof impact === 'number'
     const impactWidth = hasImpact ? Math.min(IMPACT_BAR_MAX, Math.abs(impact)) / IMPACT_BAR_MAX : 0
@@ -105,17 +108,26 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
 
     const isGk = player.position === 1
+    const expectedStatKeys = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
+    const formatExpected = (v) => {
+      const n = Number(v)
+      if (n === 0) return '0'
+      return n.toFixed(2)
+    }
     const renderStatCell = (value, statKey) => {
-      const isZero = value === 0
+      const numVal = Number(value) || 0
+      const isZero = numVal === 0
       const isTop10ForColumn = playerId != null && top10ByStat?.[statKey]?.has(Number(playerId))
       const isDefColumn = statKey === 'defensive_contribution'
       const isSavesColumn = statKey === 'saves'
       const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
       const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
-      const showTop10Badge = !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
+      const statShowsTop10 = statKey === 'bps' || statKey === 'defensive_contribution' || expectedStatKeys.includes(statKey)
+      const showTop10Badge = statShowsTop10 && !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
       const showBadge = showDefconBadge || showSavesBadge || showTop10Badge
+      const displayVal = expectedStatKeys.includes(statKey) ? formatExpected(value) : value
       if (isZero) {
-        return <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted">{value}</td>
+        return <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted">{displayVal}</td>
       }
       const badgeClass = [
         'gameweek-points-player-points-badge',
@@ -134,9 +146,9 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       return (
         <td key={statKey} className="gameweek-points-td gameweek-points-td-stat">
           {showBadge ? (
-            <span className={badgeClass} title={title}>{value}</span>
+            <span className={badgeClass} title={title}>{displayVal}</span>
           ) : (
-            value
+            displayVal
           )}
         </td>
       )
@@ -157,8 +169,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
               />
             )}
             <div className="gameweek-points-name-and-autosub">
-              <span className="gameweek-points-player-name-text">
-                {player.player_name}
+              <span className={`gameweek-points-player-name-text${isOwnedByYou ? ' gameweek-points-player-name-text--owned-by-you' : ''}`} title={player.player_name}>
+                {(() => {
+                  const name = String(player.player_name ?? '')
+                  return name.length > PLAYER_NAME_MAX_LENGTH ? name.slice(0, PLAYER_NAME_MAX_LENGTH) + '..' : name
+                })()}
                 {captainLabel && (
                   <span className="gameweek-points-captain-badge-inline">{captainLabel}</span>
                 )}
@@ -204,7 +219,9 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 onError={(e) => { e.target.style.display = 'none' }}
               />
               {player.was_home && (
-                <span className="gameweek-points-home-indicator" title="Home">(h)</span>
+                <svg className="gameweek-points-home-indicator" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
+                  <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
+                </svg>
               )}
             </div>
           ) : (
@@ -249,6 +266,10 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         {renderStatCell(player.defensive_contribution ?? 0, 'defensive_contribution')}
         {renderStatCell(player.yellow_cards ?? 0, 'yellow_cards')}
         {renderStatCell(player.red_cards ?? 0, 'red_cards')}
+        {renderStatCell(player.expected_goals ?? 0, 'expected_goals')}
+        {renderStatCell(player.expected_assists ?? 0, 'expected_assists')}
+        {renderStatCell(player.expected_goal_involvements ?? 0, 'expected_goal_involvements')}
+        {renderStatCell(player.expected_goals_conceded ?? 0, 'expected_goals_conceded')}
       </tr>
     )
   }
@@ -314,6 +335,10 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 <th className="gameweek-points-th gameweek-points-th-stat" title="Defensive contribution">DEF</th>
                 <th className="gameweek-points-th gameweek-points-th-stat" title="Yellow cards">YC</th>
                 <th className="gameweek-points-th gameweek-points-th-stat" title="Red cards">RC</th>
+                <th className="gameweek-points-th gameweek-points-th-stat" title="Expected goals">xG</th>
+                <th className="gameweek-points-th gameweek-points-th-stat" title="Expected assists">xA</th>
+                <th className="gameweek-points-th gameweek-points-th-stat" title="Expected goal involvements">xGI</th>
+                <th className="gameweek-points-th gameweek-points-th-stat" title="Expected goals conceded">xGC</th>
               </tr>
             </thead>
             <tbody>

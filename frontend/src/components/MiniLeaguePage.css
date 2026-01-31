@@ -375,10 +375,11 @@
   padding-left: 10px;
   white-space: nowrap;
 }
-/* Manager: takes remaining space (width: 100%), min so name + chip don't overlap */
+/* Manager: capped width so long names truncate and live/left columns have room */
 .league-standings-page .league-standings-bento-table .league-standings-bento-team {
-  min-width: 100px;
-  width: 100%;
+  min-width: 80px;
+  max-width: 160px;
+  width: 160px;
   overflow: hidden;
 }
 .league-standings-page .league-standings-bento-table .league-standings-bento-total {
@@ -430,7 +431,8 @@
 
 /* Manager cell (td only): truncate long names; content stays inside column (no overrun).
    Use flex (not inline-flex) so the cell stays block-level and row borders align across all columns.
-   Scoped to td so the manager header (th) keeps var(--bg-secondary) like other header cells. */
+   Scoped to td so the manager header (th) keeps var(--bg-secondary) like other header cells.
+   Do not set background here so .league-standings-bento-row-you td.league-standings-bento-team can win. */
 .league-standings-page .league-standings-bento-table td.league-standings-bento-team {
   display: flex;
   align-items: center;
@@ -439,7 +441,6 @@
   min-width: 0; /* allow inner name to shrink for ellipsis */
   overflow: hidden;
   box-shadow: none; /* no shadow/fill leftover from old border */
-  background: var(--bg-primary); /* solid fill to cover any strip from removed border */
 }
 .league-standings-page .league-standings-bento-team .league-standings-bento-team-name {
   font-weight: 600;
@@ -484,11 +485,13 @@
   text-align: left;
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-team {
-  min-width: 100px;
-  width: 100%;
+  min-width: 80px;
+  max-width: 160px;
+  width: 160px;
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: var(--bg-secondary);
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-total {
   min-width: 48px;
@@ -563,4 +566,126 @@
   text-align: center;
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
+}
+
+/* Clickable manager row: same UI as GW Points popup on click */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row {
+  cursor: pointer;
+}
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-selected td {
+  background: var(--bg-secondary);
+}
+
+/* Manager detail modal: same layout and UI as GW Points expanded card */
+.manager-detail-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: managerDetailModalFadeIn 0.2s ease-out;
+}
+@keyframes managerDetailModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.manager-detail-modal-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 100%;
+  max-width: min(90vw, 900px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  animation: managerDetailModalSlideIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes managerDetailModalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.manager-detail-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.manager-detail-modal-header-title-wrap {
+  min-width: 0;
+}
+.manager-detail-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+.manager-detail-modal-subtitle {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+  line-height: 1.3;
+}
+.manager-detail-modal-header-actions {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.manager-detail-modal-legend-icon {
+  flex-shrink: 0;
+}
+.manager-detail-modal-legend-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+}
+.manager-detail-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+}
+.manager-detail-modal-close:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+.manager-detail-modal-body {
+  padding: 12px 16px 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.manager-detail-modal-body.bento-card-chart {
+  margin-top: 0;
+}
+
+/* Legend: "Name" (green) = Owned by you */
+.gw-legend-popup-text--name-green {
+  color: var(--accent-green, #10b981);
 }

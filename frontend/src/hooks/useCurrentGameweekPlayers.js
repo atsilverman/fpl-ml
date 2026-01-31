@@ -4,22 +4,16 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { supabase } from '../lib/supabase'
 
 /**
- * Hook to fetch current gameweek owned players (all 15) with their points and opponent info
+ * Shared fetcher for current gameweek players for a given manager.
+ * Used by useCurrentGameweekPlayers and useCurrentGameweekPlayersForManager.
  */
-export function useCurrentGameweekPlayers() {
-  const { config } = useConfiguration()
-  const { gameweek, loading: gwLoading } = useGameweekData()
-  const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
+async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
+  if (!MANAGER_ID || !gameweek) {
+    return []
+  }
 
-  const { data: playersData, isLoading, error } = useQuery({
-    queryKey: ['current-gameweek-players', MANAGER_ID, gameweek],
-    queryFn: async () => {
-      if (!MANAGER_ID || !gameweek) {
-        return []
-      }
-
-      // Fetch manager picks for current gameweek (all 15 positions)
-      const picksResult = await supabase
+  // Fetch manager picks for current gameweek (all 15 positions)
+  const picksResult = await supabase
         .from('manager_picks')
         .select(`
           position,
@@ -71,7 +65,11 @@ export function useCurrentGameweekPlayers() {
           defensive_contribution,
           yellow_cards,
           red_cards,
-          defcon_points_achieved
+          defcon_points_achieved,
+          expected_goals,
+          expected_assists,
+          expected_goal_involvements,
+          expected_goals_conceded
         `)
         .eq('gameweek', gameweek)
         .in('player_id', Array.from(playerIds))
@@ -178,18 +176,57 @@ export function useCurrentGameweekPlayers() {
           defensive_contribution: stats.defensive_contribution ?? 0,
           yellow_cards: stats.yellow_cards ?? 0,
           red_cards: stats.red_cards ?? 0,
-          defcon_points_achieved: stats.defcon_points_achieved ?? false
+          defcon_points_achieved: stats.defcon_points_achieved ?? false,
+          expected_goals: stats.expected_goals ?? 0,
+          expected_assists: stats.expected_assists ?? 0,
+          expected_goal_involvements: stats.expected_goal_involvements ?? 0,
+          expected_goals_conceded: stats.expected_goals_conceded ?? 0
         }
       })
 
-      // Sort by position (1-15)
-      players.sort((a, b) => a.position - b.position)
+  // Sort by position (1-15)
+  players.sort((a, b) => a.position - b.position)
 
-      return players
-    },
+  return players
+}
+
+/**
+ * Hook to fetch current gameweek owned players (all 15) with their points and opponent info
+ * Uses configured manager from context.
+ */
+export function useCurrentGameweekPlayers() {
+  const { config } = useConfiguration()
+  const { gameweek, loading: gwLoading } = useGameweekData()
+  const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
+
+  const { data: playersData, isLoading, error } = useQuery({
+    queryKey: ['current-gameweek-players', MANAGER_ID, gameweek],
+    queryFn: () => fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek),
     enabled: !!MANAGER_ID && !!gameweek && !gwLoading,
     staleTime: 30 * 1000, // Cache for 30 seconds
     refetchInterval: 60 * 1000, // Refetch every minute during live games
+  })
+
+  return {
+    data: playersData || [],
+    isLoading: isLoading || gwLoading,
+    error
+  }
+}
+
+/**
+ * Hook to fetch current gameweek players for an arbitrary manager (e.g. for manager detail popup).
+ * Only runs when managerId is provided.
+ */
+export function useCurrentGameweekPlayersForManager(managerId) {
+  const { gameweek, loading: gwLoading } = useGameweekData()
+
+  const { data: playersData, isLoading, error } = useQuery({
+    queryKey: ['current-gameweek-players', managerId, gameweek],
+    queryFn: () => fetchCurrentGameweekPlayersForManager(managerId, gameweek),
+    enabled: !!managerId && !!gameweek && !gwLoading,
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   })
 
   return {

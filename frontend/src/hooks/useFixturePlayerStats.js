@@ -1,0 +1,108 @@
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
+
+/**
+ * Fetches player gameweek stats for a single fixture, split into home and away teams.
+ * Used for the expanded "Show details" player tables on the Matches page.
+ */
+export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['fixture-player-stats', fixtureId, gameweek],
+    queryFn: async () => {
+      if (!fixtureId || !gameweek) return { homePlayers: [], awayPlayers: [] }
+
+      const { data: stats, error: statsError } = await supabase
+        .from('player_gameweek_stats')
+        .select(`
+          player_id,
+          team_id,
+          minutes,
+          total_points,
+          goals_scored,
+          assists,
+          clean_sheets,
+          saves,
+          bps,
+          bonus,
+          defensive_contribution,
+          yellow_cards,
+          red_cards,
+          defcon_points_achieved,
+          expected_goals,
+          expected_assists,
+          expected_goal_involvements,
+          expected_goals_conceded
+        `)
+        .eq('fixture_id', fixtureId)
+        .eq('gameweek', gameweek)
+
+      if (statsError) throw statsError
+      if (!stats?.length) return { homePlayers: [], awayPlayers: [] }
+
+      const playerIds = [...new Set(stats.map(s => s.player_id))]
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select(`
+          fpl_player_id,
+          web_name,
+          position,
+          team_id,
+          teams(short_name)
+        `)
+        .in('fpl_player_id', playerIds)
+
+      if (playersError) throw playersError
+      const playerMap = {}
+      ;(players || []).forEach(p => {
+        playerMap[p.fpl_player_id] = {
+          web_name: p.web_name,
+          position: p.position,
+          team_id: p.team_id,
+          short_name: p.teams?.short_name ?? null
+        }
+      })
+
+      const rows = stats.map(s => {
+        const info = playerMap[s.player_id] || {}
+        return {
+          player_id: s.player_id,
+          team_id: s.team_id,
+          player_name: info.web_name || 'Unknown',
+          position: info.position ?? 0,
+          player_team_short_name: info.short_name,
+          minutes: s.minutes ?? 0,
+          points: s.total_points ?? 0,
+          goals_scored: s.goals_scored ?? 0,
+          assists: s.assists ?? 0,
+          clean_sheets: s.clean_sheets ?? 0,
+          saves: s.saves ?? 0,
+          bps: s.bps ?? 0,
+          bonus: s.bonus ?? 0,
+          defensive_contribution: s.defensive_contribution ?? 0,
+          yellow_cards: s.yellow_cards ?? 0,
+          red_cards: s.red_cards ?? 0,
+          defcon_points_achieved: s.defcon_points_achieved ?? false,
+          expected_goals: Number(s.expected_goals) || 0,
+          expected_assists: Number(s.expected_assists) || 0,
+          expected_goal_involvements: Number(s.expected_goal_involvements) || 0,
+          expected_goals_conceded: Number(s.expected_goals_conceded) || 0
+        }
+      })
+
+      const byPointsDesc = (a, b) => (b.points - a.points) || (a.position - b.position) || a.player_name.localeCompare(b.player_name)
+      const homePlayers = rows.filter(r => r.team_id === homeTeamId).sort(byPointsDesc)
+      const awayPlayers = rows.filter(r => r.team_id === awayTeamId).sort(byPointsDesc)
+
+      return { homePlayers, awayPlayers }
+    },
+    enabled: !!enabled && !!fixtureId && !!gameweek && !!homeTeamId && !!awayTeamId,
+    staleTime: 30000
+  })
+
+  return {
+    homePlayers: data?.homePlayers ?? [],
+    awayPlayers: data?.awayPlayers ?? [],
+    loading: isLoading,
+    error
+  }
+}

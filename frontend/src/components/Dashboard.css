@@ -78,21 +78,22 @@
   letter-spacing: 0.2px;
 }
 
-/* Page selector: fixed at bottom, centered, equal spacing */
+/* Page selector: desktop = below header; mobile = fixed at bottom */
 .page-selector-bottom {
   position: fixed;
-  bottom: 0;
+  /* Desktop: below header (71px) */
+  top: 71px;
   left: 0;
   right: 0;
+  bottom: auto;
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 0;
   padding: 12px 16px;
   background: var(--bg-primary);
-  border-top: 1px solid var(--border-color);
-  z-index: 100;
-  box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 99;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
 .page-selector-bottom.tracking-mode-toggle {
@@ -101,10 +102,6 @@
   margin: 0;
   padding: 8px 12px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -119,8 +116,6 @@
   gap: 6px;
   padding: 4px;
   background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
 }
 
 .tracking-mode-button {
@@ -161,6 +156,95 @@
   background: transparent;
 }
 
+/* Gameweek nav item: dropdown with Matches / Bonus / DEFCON (panel opens above nav) */
+.nav-item-gameweek-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.nav-item-gameweek-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.nav-item-gameweek-chevron {
+  flex-shrink: 0;
+  color: inherit;
+  opacity: 0.85;
+  transition: transform 0.2s ease;
+}
+
+.nav-item-gameweek-chevron--open {
+  transform: rotate(180deg);
+}
+
+/* Desktop: nav at top, panel opens below */
+.nav-item-gameweek-panel {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 6px;
+  margin-bottom: 0;
+  padding: 4px;
+  min-width: 120px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 110;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease;
+}
+
+.nav-item-gameweek-panel--open {
+  max-height: 180px;
+  opacity: 1;
+}
+
+.nav-item-gameweek-option {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nav-item-gameweek-option:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.nav-item-gameweek-option--active {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
+.nav-item-gameweek-option--disabled,
+.nav-item-gameweek-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .account-button {
   padding: 8px;
   border: 1px solid var(--border-color);
@@ -184,8 +268,9 @@
 .dashboard-content {
   flex: 1;
   padding: 16px;
-  padding-top: 72px;
-  padding-bottom: 80px;
+  /* Desktop: space for header (71px) + page selector (~52px) */
+  padding-top: 124px;
+  padding-bottom: 24px;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
@@ -207,11 +292,27 @@
   }
   
   .dashboard-content {
-    padding-top: 56px;
+    padding-top: 72px;
     padding-left: 12px;
     padding-right: 12px;
     padding-bottom: 72px;
-    scroll-margin-top: 56px;
+    scroll-margin-top: 72px;
+  }
+  
+  /* Mobile: page selector at bottom */
+  .page-selector-bottom {
+    top: auto;
+    bottom: 0;
+    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Mobile: Gameweek panel opens above the nav */
+  .nav-item-gameweek-panel {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 6px;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
   }
   
   .page-selector-bottom.tracking-mode-toggle {

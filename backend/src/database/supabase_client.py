@@ -101,6 +101,7 @@ class SupabaseClient:
     
     def get_gameweeks(
         self,
+        gameweek_id: Optional[int] = None,
         is_current: Optional[bool] = None,
         limit: Optional[int] = None
     ) -> List[Dict[str, Any]]:
@@ -108,6 +109,7 @@ class SupabaseClient:
         Get gameweeks with optional filtering.
         
         Args:
+            gameweek_id: Filter by gameweek id
             is_current: Filter by is_current flag
             limit: Limit number of results
             
@@ -116,6 +118,8 @@ class SupabaseClient:
         """
         query = self.client.table("gameweeks").select("*")
         
+        if gameweek_id is not None:
+            query = query.eq("id", gameweek_id)
         if is_current is not None:
             query = query.eq("is_current", is_current)
         

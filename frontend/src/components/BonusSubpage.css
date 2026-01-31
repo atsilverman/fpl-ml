@@ -1,0 +1,30 @@
+/* Bonus subpage – matchup bento cards with BPS leaders chart in details */
+@import './MatchesSubpage.css';
+
+.bonus-subpage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bonus-subpage-loading,
+.bonus-subpage-empty {
+  padding: 24px 16px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.bonus-subpage-empty {
+  text-align: center;
+}
+
+/* Expanded detail: BPS horizontal bar chart (like home bento total points chart) */
+.matchup-card-details--bps-chart {
+  padding: 12px 16px 16px;
+}
+
+.bps-chart-wrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}

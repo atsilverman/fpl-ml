@@ -104,19 +104,21 @@ async def update_manager_names(fpl_client: FPLAPIClient, db_client: SupabaseClie
                 print(f"    ⚠️  Error fetching page {page}: {e}")
                 break
         
-        # Update manager names: manager_team_name = entry (squad) name for UI display
+        # Update manager names: manager_team_name = squad/entry name, manager_name = person name
         updated_count = 0
         for manager_data in all_manager_data:
             manager_id = manager_data["manager_id"]
             entry_name = (manager_data.get("entry_name") or "").strip()
             player_name = (manager_data.get("player_name") or "").strip()
-            # Prefer entry_name (FPL squad name) for display; fallback to player_name
-            display_name = entry_name or player_name
-            if not display_name:
+            # manager_team_name = FPL squad/entry name (for table display and modal title)
+            # manager_name = person name (for modal subtitle; fallback to entry name)
+            team_name = entry_name or player_name
+            person_name = player_name or entry_name
+            if not team_name and not person_name:
                 continue
             update_payload = {
-                "manager_team_name": entry_name or player_name,
-                "manager_name": display_name,
+                "manager_team_name": team_name or person_name,
+                "manager_name": person_name or team_name,
             }
             db_client.client.table("managers").update(update_payload).eq("manager_id", manager_id).execute()
             updated_count += 1

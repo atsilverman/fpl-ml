@@ -17,7 +17,11 @@ function computeTop10ByStat(rows) {
     bonus: new Set(),
     defensive_contribution: new Set(),
     yellow_cards: new Set(),
-    red_cards: new Set()
+    red_cards: new Set(),
+    expected_goals: new Set(),
+    expected_assists: new Set(),
+    expected_goal_involvements: new Set(),
+    expected_goals_conceded: new Set()
   }
   if (!rows || rows.length === 0) return out
 
@@ -31,12 +35,23 @@ function computeTop10ByStat(rows) {
     bonus: 'bonus',
     defensive_contribution: 'defensive_contribution',
     yellow_cards: 'yellow_cards',
-    red_cards: 'red_cards'
+    red_cards: 'red_cards',
+    expected_goals: 'expected_goals',
+    expected_assists: 'expected_assists',
+    expected_goal_involvements: 'expected_goal_involvements',
+    expected_goals_conceded: 'expected_goals_conceded'
   }
+
+  const lowerIsBetter = new Set(['expected_goals_conceded'])
 
   for (const statKey of Object.keys(keyToCol)) {
     const col = keyToCol[statKey]
-    const sorted = [...rows].sort((a, b) => (Number(b[col]) || 0) - (Number(a[col]) || 0))
+    const desc = !lowerIsBetter.has(statKey)
+    const sorted = [...rows].sort((a, b) => {
+      const av = Number(a[col]) || 0
+      const bv = Number(b[col]) || 0
+      return desc ? bv - av : av - bv
+    })
     const top10 = sorted.slice(0, 10)
     top10.forEach((row) => {
       const id = row.player_id
@@ -61,7 +76,7 @@ export function useGameweekTop10ByStat() {
       const { data, error } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'player_id, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards'
+          'player_id, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
         )
         .eq('gameweek', gameweek)
 

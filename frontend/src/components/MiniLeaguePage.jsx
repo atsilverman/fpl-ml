@@ -5,13 +5,26 @@ import { useLeagueActiveChips } from '../hooks/useLeagueActiveChips'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { useLeaguePlayerOwnershipMultiple } from '../hooks/useLeaguePlayerOwnership'
+import { useCurrentGameweekPlayers, useCurrentGameweekPlayersForManager } from '../hooks/useCurrentGameweekPlayers'
+import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
+import { usePlayerImpactForManager } from '../hooks/usePlayerImpact'
+import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
+import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import GameweekPointsView from './GameweekPointsView'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
+import './GameweekPointsView.css'
 
 const SORT_COLUMNS = ['rank', 'manager', 'total', 'gw', 'left', 'live']
 const DEFAULT_SORT = { column: 'total', dir: 'desc' }
+const MANAGER_TEAM_NAME_MAX_LENGTH = 15
+
+function abbreviateName(name) {
+  if (!name || typeof name !== 'string') return name ?? ''
+  return name.length > MANAGER_TEAM_NAME_MAX_LENGTH ? name.slice(0, MANAGER_TEAM_NAME_MAX_LENGTH) + '..' : name
+}
 
 function SortTriangle({ direction }) {
   const isAsc = direction === 'asc'
@@ -61,7 +74,24 @@ export default function MiniLeaguePage() {
   const [sort, setSort] = useState(DEFAULT_SORT)
   const [searchQuery, setSearchQuery] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [selectedManagerId, setSelectedManagerId] = useState(null)
+  const [selectedManagerDisplayName, setSelectedManagerDisplayName] = useState('')
+  const [selectedManagerName, setSelectedManagerName] = useState('')
+  const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
   const searchContainerRef = useRef(null)
+  const managerDetailLegendRef = useRef(null)
+
+  const { data: selectedManagerPlayers, isLoading: selectedManagerPlayersLoading } = useCurrentGameweekPlayersForManager(selectedManagerId)
+  const { data: configuredManagerPlayers } = useCurrentGameweekPlayers()
+  const { top10ByStat } = useGameweekTop10ByStat()
+  const { impactByPlayerId: selectedManagerImpact, loading: selectedManagerImpactLoading } = usePlayerImpactForManager(selectedManagerId, LEAGUE_ID)
+  const { hasLiveGames } = useLiveGameweekStatus(gameweek)
+  const { inPlay: selectedManagerInPlay } = useManagerLiveStatus(selectedManagerId, gameweek)
+  const isSelectedManagerLiveUpdating = hasLiveGames && (selectedManagerInPlay ?? 0) > 0
+  const isViewingAnotherManager = selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) !== Number(currentManagerId)
+  const ownedByYouPlayerIds = isViewingAnotherManager && configuredManagerPlayers?.length
+    ? new Set(configuredManagerPlayers.map((p) => p.player_id))
+    : undefined
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearchQuery(searchQuery), 150)
@@ -78,6 +108,50 @@ export default function MiniLeaguePage() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [dropdownOpen])
+
+  useEffect(() => {
+    if (!selectedManagerId) return
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        setSelectedManagerId(null)
+        setSelectedManagerDisplayName('')
+        setSelectedManagerName('')
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [selectedManagerId])
+
+  useEffect(() => {
+    if (selectedManagerId != null) {
+      const prev = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prev
+      }
+    }
+  }, [selectedManagerId])
+
+  useEffect(() => {
+    if (selectedManagerId == null) setShowManagerDetailLegend(false)
+  }, [selectedManagerId])
+
+  useEffect(() => {
+    if (!showManagerDetailLegend) return
+    const handleClickOutside = (e) => {
+      if (managerDetailLegendRef.current && !managerDetailLegendRef.current.contains(e.target)) {
+        setShowManagerDetailLegend(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showManagerDetailLegend])
+
+  const handleManagerRowClick = useCallback((managerId, teamName, managerName) => {
+    setSelectedManagerId(managerId)
+    setSelectedManagerDisplayName(teamName || `Manager ${managerId}`)
+    setSelectedManagerName(managerName || '')
+  }, [])
 
   const handleSort = useCallback((column) => {
     if (!SORT_COLUMNS.includes(column)) return
@@ -380,7 +454,20 @@ export default function MiniLeaguePage() {
                 const chipColor = activeChip ? (CHIP_COLORS[activeChip] ?? 'var(--text-secondary)') : null
 
                 return (
-                  <tr key={s.manager_id} className={isCurrentUser ? 'league-standings-bento-row-you' : ''}>
+                  <tr
+                    key={s.manager_id}
+                    className={`league-standings-bento-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''}`}
+                    onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleManagerRowClick(s.manager_id, displayName, s.manager_name)
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    title={`View GW points for ${displayName}`}
+                  >
                     <td className="league-standings-bento-rank">
                       <span className="league-standings-bento-rank-inner">
                         <span className="league-standings-bento-rank-value">{rank}</span>
@@ -395,7 +482,7 @@ export default function MiniLeaguePage() {
                       </span>
                     </td>
                     <td className="league-standings-bento-team" title={displayName}>
-                      <span className="league-standings-bento-team-name">{displayName}</span>
+                      <span className="league-standings-bento-team-name">{abbreviateName(displayName)}</span>
                       {chipLabel && (
                         <span
                           className="league-standings-bento-chip-badge"
@@ -421,6 +508,127 @@ export default function MiniLeaguePage() {
           </table>
         </div>
       </div>
+
+      {selectedManagerId != null && (
+        <div
+          className="manager-detail-modal-overlay"
+          onClick={() => {
+            setSelectedManagerId(null)
+            setSelectedManagerDisplayName('')
+            setSelectedManagerName('')
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="manager-detail-modal-title"
+        >
+          <div
+            className="manager-detail-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="manager-detail-modal-header">
+              <div className="manager-detail-modal-header-title-wrap">
+                <h2 id="manager-detail-modal-title" className="manager-detail-modal-title">
+                  {selectedManagerDisplayName}
+                </h2>
+                {selectedManagerName && (
+                  <p className="manager-detail-modal-subtitle">{selectedManagerName}</p>
+                )}
+              </div>
+              <div className="manager-detail-modal-header-actions" ref={managerDetailLegendRef}>
+                <div
+                  className="bento-card-info-icon manager-detail-modal-legend-icon"
+                  title="Legend"
+                  onClick={() => setShowManagerDetailLegend((v) => !v)}
+                  role="button"
+                  aria-expanded={showManagerDetailLegend}
+                  aria-haspopup="dialog"
+                >
+                  <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
+                </div>
+                {showManagerDetailLegend && (
+                  <div className="gw-legend-popup manager-detail-modal-legend-popup" role="dialog" aria-label="GW points legend">
+                    <div className="gw-legend-popup-title">Legend</div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gameweek-points-legend-badge rank-highlight">x</span>
+                      <span className="gw-legend-popup-text">Top 10 in GW</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
+                      <span className="gw-legend-popup-text">Captain</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="bento-card-captain-vice-badge gw-legend-popup-badge-v">V</span>
+                      <span className="gw-legend-popup-text">Vice captain</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
+                      </span>
+                      <span className="gw-legend-popup-text">Did not play</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-out" title="Auto-subbed out">
+                          <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
+                        </span>
+                      </span>
+                      <span className="gw-legend-popup-text">Auto-subbed out</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-in" title="Auto-subbed in">
+                          <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
+                        </span>
+                      </span>
+                      <span className="gw-legend-popup-text">Auto-subbed in</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
+                      <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-live-dot-wrap">
+                        <span className="gw-legend-popup-live-dot" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Live match</span>
+                    </div>
+                    {isViewingAnotherManager && (
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-text gw-legend-popup-text--name-green">Name</span>
+                        </span>
+                        <span className="gw-legend-popup-text">Owned by you</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="manager-detail-modal-close"
+                  onClick={() => {
+                    setSelectedManagerId(null)
+                    setSelectedManagerDisplayName('')
+                    setSelectedManagerName('')
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="manager-detail-modal-body bento-card-chart">
+              <GameweekPointsView
+                data={selectedManagerPlayers || []}
+                loading={selectedManagerPlayersLoading || selectedManagerImpactLoading}
+                top10ByStat={top10ByStat}
+                impactByPlayerId={selectedManagerImpact ?? {}}
+                isLiveUpdating={isSelectedManagerLiveUpdating}
+                ownedByYouPlayerIds={ownedByYouPlayerIds}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
