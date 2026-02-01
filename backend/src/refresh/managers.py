@@ -63,7 +63,7 @@ class ManagerDataRefresher:
                 # Try a lightweight endpoint to check API availability
                 await self.fpl_client.get_bootstrap_static()
                 
-                logger.info("FPL API is back online after maintenance", extra={
+                logger.info("FPL API back online", extra={
                     "time_since_deadline_min": time_since_deadline,
                     "attempt": attempt + 1
                 })
@@ -73,7 +73,7 @@ class ManagerDataRefresher:
                 if attempt < max_attempts - 1:
                     delay = min(base_delay + (attempt * 60), max_delay)
                     logger.info(
-                        "FPL API still in maintenance, waiting",
+                        "FPL API in maintenance, waiting",
                         extra={
                             "time_since_deadline_min": time_since_deadline,
                             "attempt": attempt + 1,
@@ -84,7 +84,7 @@ class ManagerDataRefresher:
                     continue
                 else:
                     logger.warning(
-                        "FPL API still in maintenance after max attempts",
+                        "FPL API still in maintenance (max attempts)",
                         extra={"time_since_deadline_min": time_since_deadline}
                     )
                     raise
@@ -305,7 +305,7 @@ class ManagerDataRefresher:
                     on_conflict="league_id,gameweek,player_id"
                 ).execute()
             
-            logger.info("Built player whitelist", extra={
+            logger.info("Player whitelist built", extra={
                 "league_id": league_id,
                 "gameweek": gameweek,
                 "players_count": len(owned_players),
@@ -313,7 +313,7 @@ class ManagerDataRefresher:
             })
             
         except Exception as e:
-            logger.error("Error building player whitelist", extra={
+            logger.error("Player whitelist failed", extra={
                 "league_id": league_id,
                 "gameweek": gameweek,
                 "error": str(e)
@@ -403,7 +403,7 @@ class ManagerDataRefresher:
             
             # If current count > last count, new bonuses were confirmed
             if current_count > last_count:
-                logger.info("New bonuses confirmed detected", extra={
+                logger.info("New bonuses confirmed", extra={
                     "gameweek": gameweek,
                     "last_count": last_count,
                     "current_count": current_count,
@@ -418,7 +418,7 @@ class ManagerDataRefresher:
             return False
             
         except Exception as e:
-            logger.warning("Error checking for new bonus confirmations", extra={
+            logger.warning("Bonus check failed", extra={
                 "gameweek": gameweek,
                 "error": str(e)
             })
@@ -460,7 +460,7 @@ class ManagerDataRefresher:
             )
             
             if overall_changed or gw_rank_changed:
-                logger.info("FPL rank change detected", extra={
+                logger.info("FPL rank changed", extra={
                     "manager_id": manager_id,
                     "gameweek": gameweek,
                     "api_overall_rank": api_overall_rank,
@@ -471,7 +471,7 @@ class ManagerDataRefresher:
                 return True
             return False
         except Exception as e:
-            logger.warning("Error checking FPL rank change", extra={
+            logger.warning("FPL rank check failed", extra={
                 "manager_id": manager_id,
                 "gameweek": gameweek,
                 "error": str(e)
@@ -515,9 +515,10 @@ class ManagerDataRefresher:
                 {}
             )
             
-            # Get existing history with baseline data (preserve baselines)
+            # Get existing history with baseline data (preserve baselines and deadline-only fields during live)
             existing_history = self.db_client.client.table("manager_gameweek_history").select(
-                "baseline_total_points, total_points, previous_mini_league_rank, previous_overall_rank, mini_league_rank"
+                "baseline_total_points, total_points, previous_mini_league_rank, previous_overall_rank, mini_league_rank, "
+                "team_value_tenths, bank_tenths, active_chip"
             ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
             
             existing = existing_history[0] if existing_history else {}
@@ -575,31 +576,28 @@ class ManagerDataRefresher:
                 transfer_cost = points_data.get("transfer_cost", 0)
                 active_chip = points_data.get("active_chip")
                 
-                # Get ranks (only if bonuses confirmed for live gameweeks)
-                new_bonuses_confirmed = self._check_new_bonuses_confirmed(gameweek)
+                # Always try to fetch ranks from FPL for live gameweeks (available after each matchday)
                 gameweek_rank = None
                 overall_rank = None
-                
-                if new_bonuses_confirmed:
-                    try:
-                        picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
-                        entry_history = picks_data.get("entry_history", {})
-                        gameweek_rank = entry_history.get("rank")
-                        overall_rank = gw_history.get("overall_rank")
-                        logger.info("Fetched ranks after new bonus confirmation", extra={
+                try:
+                    picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
+                    entry_history = picks_data.get("entry_history", {}) or {}
+                    gameweek_rank = entry_history.get("rank")
+                    overall_rank = gw_history.get("overall_rank")
+                    if gameweek_rank is not None or overall_rank is not None:
+                        logger.debug("Ranks from API (live)", extra={
                             "manager_id": manager_id,
                             "gameweek": gameweek,
                             "gameweek_rank": gameweek_rank,
                             "overall_rank": overall_rank
                         })
-                    except Exception as e:
-                        logger.warning("Failed to fetch ranks", extra={
-                            "manager_id": manager_id,
-                            "gameweek": gameweek,
-                            "error": str(e)
-                        })
-                else:
-                    # Preserve existing ranks
+                except Exception as e:
+                    logger.debug("Ranks fetch failed, preserving existing", extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "error": str(e)
+                    })
+                if gameweek_rank is None and overall_rank is None:
                     existing_ranks = self.db_client.client.table("manager_gameweek_history").select(
                         "gameweek_rank, overall_rank"
                     ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
@@ -631,20 +629,29 @@ class ManagerDataRefresher:
             if existing.get("previous_overall_rank") is not None and overall_rank is not None:
                 overall_rank_change = existing["previous_overall_rank"] - overall_rank
             
-            # Build history data - preserve baseline columns and mini_league_rank if they exist
+            # Build history data - preserve baseline columns and mini_league_rank if they exist.
+            # During live, preserve deadline-only fields (team_value_tenths, bank_tenths, active_chip)—not refreshed during live.
+            if is_finished:
+                _team_value = gw_history.get("value")
+                _bank = gw_history.get("bank")
+                _chip = active_chip
+            else:
+                _team_value = existing.get("team_value_tenths")
+                _bank = existing.get("bank_tenths")
+                _chip = existing.get("active_chip")
             history_data = {
                 "manager_id": manager_id,
                 "gameweek": gameweek,
                 "gameweek_points": gameweek_points,
                 "transfer_cost": transfer_cost,
                 "total_points": current_total,
-                "team_value_tenths": gw_history.get("value"),
-                "bank_tenths": gw_history.get("bank"),
+                "team_value_tenths": _team_value,
+                "bank_tenths": _bank,
                 "overall_rank": overall_rank,
                 "overall_rank_change": overall_rank_change,
                 "gameweek_rank": gameweek_rank,
                 "transfers_made": gw_history.get("event_transfers", 0),
-                "active_chip": active_chip,
+                "active_chip": _chip,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
             
@@ -661,6 +668,8 @@ class ManagerDataRefresher:
                 history_data["mini_league_rank"] = existing_mini_league_rank
             
             self.db_client.upsert_manager_gameweek_history(history_data)
+            if overall_rank is not None or gameweek_rank is not None:
+                self.db_client.update_gameweek_fpl_ranks_updated(gameweek, True)
             
             logger.debug("Refreshed manager gameweek history", extra={
                 "manager_id": manager_id,
@@ -770,15 +779,7 @@ class ManagerDataRefresher:
                 
                 previous_points = total_points
             
-            logger.info("Calculated mini league ranks", extra={
-                "league_id": league_id,
-                "gameweek": gameweek,
-                "managers_count": len(manager_totals)
-            })
+            logger.info("League ranks updated", extra={"league_id": league_id, "gameweek": gameweek, "count": len(manager_totals)})
             
         except Exception as e:
-            logger.error("Error calculating mini league ranks", extra={
-                "league_id": league_id,
-                "gameweek": gameweek,
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("League ranks failed", extra={"league_id": league_id, "gameweek": gameweek, "error": str(e)}, exc_info=True)

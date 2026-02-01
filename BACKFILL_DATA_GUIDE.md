@@ -94,15 +94,17 @@ If you need to backfill specific data types:
 ### Manager Picks
 
 ```bash
-# Backfill all tracked managers
+# Backfill all tracked managers (only managers in mini_league_managers)
 python backend/scripts/backfill_manager_picks.py
 
-# Backfill specific manager
+# Backfill your configured manager (required if they are not in a mini league)
 python backend/scripts/backfill_manager_picks.py --manager-id 344182
 
 # Backfill specific gameweeks
 python backend/scripts/backfill_manager_picks.py --gameweeks 1,2,3,4,5
 ```
+
+**Note:** Running without `--manager-id` only processes managers listed in `mini_league_managers`. If your configured manager (e.g. your own team) is not in any loaded mini league, the UI will show 0 points and an empty GW points / player list until you run the backfill with `--manager-id YOUR_MANAGER_ID`.
 
 ### Manager History
 

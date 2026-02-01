@@ -35,6 +35,10 @@ class Config:
     
     # Refresh Intervals (in seconds)
     gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "45"))
+    # Fast loop (gameweeks + fixtures + players) during live matches
+    fast_loop_interval: int = int(os.getenv("FAST_LOOP_INTERVAL", "15"))
+    # Slow loop (manager points + MVs) during live matches
+    full_refresh_interval_live: int = int(os.getenv("FULL_REFRESH_INTERVAL_LIVE", "120"))
     fixtures_refresh_interval_live: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_LIVE", "30"))
     fixtures_refresh_interval_idle: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_IDLE", "600"))
     players_refresh_interval_live: int = int(os.getenv("PLAYERS_REFRESH_INTERVAL_LIVE", "60"))

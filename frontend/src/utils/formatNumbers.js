@@ -1,4 +1,17 @@
 /**
+ * Format "last refreshed" for league/standings (dataUpdatedAt from React Query, ms).
+ * @param {number} dataUpdatedAtMs - Timestamp of last successful fetch (ms)
+ * @returns {string|null} "Last refreshed X minutes ago" or null if no timestamp
+ */
+export function formatLastRefreshed(dataUpdatedAtMs) {
+  if (dataUpdatedAtMs == null || typeof dataUpdatedAtMs !== 'number') return null
+  const mins = Math.floor((Date.now() - dataUpdatedAtMs) / 60_000)
+  if (mins < 1) return 'Last refreshed just now'
+  if (mins === 1) return 'Last refreshed 1 minute ago'
+  return `Last refreshed ${mins} minutes ago`
+}
+
+/**
  * Format a number with K (thousands) or M (millions) suffix and commas
  * @param {number} num - The number to format
  * @returns {string} Formatted number (e.g., "1.2K", "3.5M", "1,234")

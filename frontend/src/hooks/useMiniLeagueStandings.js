@@ -6,7 +6,7 @@ export function useMiniLeagueStandings(gameweek = null) {
   const { config } = useConfiguration()
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
 
-  const { data: standings = [], isLoading, error } = useQuery({
+  const { data: standings = [], isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['standings', LEAGUE_ID, gameweek],
     queryFn: async () => {
       if (!LEAGUE_ID) return []
@@ -31,5 +31,5 @@ export function useMiniLeagueStandings(gameweek = null) {
     refetchInterval: 30000, // Poll every 30 seconds (automatic background refetch)
   })
 
-  return { standings, loading: isLoading, error }
+  return { standings, loading: isLoading, error, dataUpdatedAt }
 }

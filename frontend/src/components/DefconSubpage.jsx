@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CircleCheck, Filter, Info } from 'lucide-react'
+import { Filter, Info } from 'lucide-react'
 import { useDefconGameweekPlayers } from '../hooks/useDefconGameweekPlayers'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
@@ -17,7 +17,6 @@ function DefconRow({ player }) {
   const numDisplay = isGk ? 0 : (defcon ?? 0)
   const notches = isGk ? 0 : threshold
   const filledNotches = isGk ? 0 : Math.min(defcon, threshold)
-  const percent = isGk ? 0 : Math.min(100, Math.round((defcon / threshold) * 100))
   const positionLabel = POSITION_LABELS[position] ?? '—'
   const fractionTitle = isGk ? 'Goalkeepers cannot earn DEFCON (no threshold)' : undefined
   const defconAchieved = !isGk && defcon >= threshold
@@ -25,20 +24,6 @@ function DefconRow({ player }) {
   return (
     <div className={`defcon-row-card${defconAchieved ? ' defcon-row-card--achieved' : ''}`}>
       <div className="defcon-row">
-      {(match_complete || is_live) && (
-        <span className="defcon-row-status" aria-hidden>
-          {match_complete ? (
-            <span
-              className={`defcon-status-complete ${match_provisional ? 'defcon-status-complete--provisional' : ''}`}
-              title={match_provisional ? 'Match complete (provisional)' : 'Match complete'}
-            >
-              <CircleCheck size={14} strokeWidth={2} />
-            </span>
-          ) : (
-            <span className="defcon-status-live-dot" title="Live" aria-label="Live" />
-          )}
-        </span>
-      )}
       {team_short_name && (
         <img
           src={`/badges/${team_short_name}.svg`}
@@ -47,38 +32,62 @@ function DefconRow({ player }) {
         />
       )}
       <div className="defcon-player-info">
-        <span className="defcon-name">{web_name}</span>
+        <div className="defcon-name-row">
+          <span className="defcon-name">{web_name}</span>
+          {(match_complete || is_live) && (
+            <span className="defcon-status-dot-wrap" aria-hidden>
+              {match_complete ? (
+                match_provisional ? (
+                  <span
+                    className="defcon-status-dot defcon-status-dot--provisional"
+                    title="Match complete (provisional)"
+                    aria-label="Provisional"
+                  />
+                ) : (
+                  <span
+                    className="defcon-status-dot defcon-status-dot--complete"
+                    title="Match complete"
+                    aria-label="Complete"
+                  />
+                )
+              ) : (
+                <span
+                  className="defcon-status-dot defcon-status-dot--live"
+                  title="Live"
+                  aria-label="Live"
+                />
+              )}
+            </span>
+          )}
+        </div>
         <span className={`defcon-position-badge defcon-position-badge--${position}`}>
           {positionLabel}
         </span>
       </div>
+      {notches > 0 && (
+        <div className="defcon-notch-badge">
+          <div
+            className="defcon-notch-bar"
+            style={{ '--notches': notches }}
+            role="progressbar"
+            aria-valuenow={defcon}
+            aria-valuemin={0}
+            aria-valuemax={threshold}
+            aria-label={`DEFCON ${defcon} of ${threshold}`}
+          >
+            <div
+              className="defcon-notch-fill"
+              style={{ width: `${notches ? (filledNotches / notches) * 100 : 0}%` }}
+            />
+            <div className="defcon-notch-dividers" aria-hidden />
+          </div>
+        </div>
+      )}
       <span className="defcon-fraction" title={fractionTitle}>
         <span className="defcon-num">{numDisplay}</span>
         <span className="defcon-sep">/</span>
         <span className="defcon-denom">{denomDisplay}</span>
       </span>
-      {notches > 0 && (
-        <div
-          className="defcon-notch-bar"
-          style={{ '--notches': notches }}
-          role="progressbar"
-          aria-valuenow={defcon}
-          aria-valuemin={0}
-          aria-valuemax={threshold}
-          aria-label={`DEFCON ${defcon} of ${threshold}`}
-        >
-          <div
-            className="defcon-notch-fill"
-            style={{ width: `${notches ? (filledNotches / notches) * 100 : 0}%` }}
-          />
-          <div className="defcon-notch-dividers" aria-hidden />
-        </div>
-      )}
-      {notches > 0 && (
-        <span className="defcon-percent-value" aria-label={`${percent}% to threshold`}>
-          {percent}%
-        </span>
-      )}
       </div>
     </div>
   )
@@ -285,19 +294,19 @@ export default function DefconSubpage() {
             <div className="gw-legend-popup-title">Legend</div>
             <div className="gw-legend-popup-row">
               <span className="gw-legend-popup-row-icon">
-                <span className="defcon-status-complete" aria-hidden><CircleCheck size={14} strokeWidth={2} /></span>
+                <span className="gw-legend-popup-dot gw-legend-popup-dot--complete" aria-hidden />
               </span>
               <span className="gw-legend-popup-text">Match finished (confirmed)</span>
             </div>
             <div className="gw-legend-popup-row">
               <span className="gw-legend-popup-row-icon">
-                <span className="defcon-status-complete defcon-status-complete--provisional" aria-hidden><CircleCheck size={14} strokeWidth={2} /></span>
+                <span className="gw-legend-popup-dot gw-legend-popup-dot--provisional" aria-hidden />
               </span>
               <span className="gw-legend-popup-text">Match finished (provisional, stats may update)</span>
             </div>
             <div className="gw-legend-popup-row">
               <span className="gw-legend-popup-live-dot-wrap">
-                <span className="gw-legend-popup-live-dot" aria-hidden />
+                <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />
               </span>
               <span className="gw-legend-popup-text">Match in progress (live)</span>
             </div>

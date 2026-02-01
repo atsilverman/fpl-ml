@@ -63,36 +63,48 @@ async def check_missing_data(
 ) -> dict:
     """
     Check what data is missing for the configured manager.
+    Only considers the current (live) gameweek (is_current=true).
     
     Returns a dict with missing data information.
     """
     logger.info(f"Checking missing data for manager {manager_id}...")
     
-    # Get all gameweeks
-    gameweeks_result = db_client.client.table("gameweeks").select(
+    # Only the current (live) gameweek
+    current_gw_result = db_client.client.table("gameweeks").select(
         "id"
-    ).order("id", desc=False).execute()
-    all_gameweeks = [gw["id"] for gw in gameweeks_result.data]
+    ).eq("is_current", True).limit(1).execute()
+    if not current_gw_result.data:
+        logger.warning("No current gameweek (is_current=true) in DB; run bootstrap/refresh first.")
+        return {
+            "all_gameweeks": [],
+            "missing_picks": [],
+            "missing_history": [],
+            "missing_player_stats": [],
+            "has_mv_data": False,
+            "total_gameweeks": 0,
+            "picks_coverage": 0,
+            "history_coverage": 0,
+        }
+    all_gameweeks = [current_gw_result.data[0]["id"]]
     
-    # Check manager_picks
+    # Check manager_picks (only for current gameweek)
     picks_result = db_client.client.table("manager_picks").select(
         "gameweek"
-    ).eq("manager_id", manager_id).execute()
+    ).eq("manager_id", manager_id).in_("gameweek", all_gameweeks).execute()
     picks_gameweeks = set([p["gameweek"] for p in picks_result.data])
     missing_picks = [gw for gw in all_gameweeks if gw not in picks_gameweeks]
     
-    # Check manager_gameweek_history
+    # Check manager_gameweek_history (only for current gameweek)
     history_result = db_client.client.table("manager_gameweek_history").select(
         "gameweek"
-    ).eq("manager_id", manager_id).execute()
+    ).eq("manager_id", manager_id).in_("gameweek", all_gameweeks).execute()
     history_gameweeks = set([h["gameweek"] for h in history_result.data])
     missing_history = [gw for gw in all_gameweeks if gw not in history_gameweeks]
     
-    # Check player_gameweek_stats (check if we have stats for players owned by this manager)
-    # Get all unique player IDs from manager_picks
+    # Check player_gameweek_stats only for the current gameweek (players owned this GW)
     owned_players_result = db_client.client.table("manager_picks").select(
         "player_id, gameweek"
-    ).eq("manager_id", manager_id).execute()
+    ).eq("manager_id", manager_id).in_("gameweek", all_gameweeks).execute()
     
     owned_players_by_gw = {}
     for pick in owned_players_result.data:
@@ -102,9 +114,10 @@ async def check_missing_data(
             owned_players_by_gw[gw] = set()
         owned_players_by_gw[gw].add(player_id)
     
-    # Check which player-gameweek combinations are missing stats
+    # Only check stats for gameweeks we care about (current GW)
     missing_player_stats = []
-    for gw, player_ids in owned_players_by_gw.items():
+    for gw in all_gameweeks:
+        player_ids = owned_players_by_gw.get(gw) or set()
         if not player_ids:
             continue
         stats_result = db_client.client.table("player_gameweek_stats").select(

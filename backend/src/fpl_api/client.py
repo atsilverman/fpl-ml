@@ -281,7 +281,7 @@ class FPLAPIClient:
         
         # Check if response has content
         if not response.content:
-            logger.error("Empty response from bootstrap-static endpoint", extra={
+            logger.error("Bootstrap-static empty", extra={
                 "status_code": response.status_code,
                 "headers": dict(response.headers)
             })
@@ -290,7 +290,7 @@ class FPLAPIClient:
         # Check if we got HTML instead of JSON (likely a redirect or blocking)
         content_type = response.headers.get('content-type', '').lower()
         if 'text/html' in content_type:
-            logger.error("Received HTML instead of JSON - API may be blocking request", extra={
+            logger.error("API returned HTML (blocking?)", extra={
                 "url": str(response.url),
                 "status_code": response.status_code,
                 "content_type": content_type
@@ -312,14 +312,14 @@ class FPLAPIClient:
             else:
                 error_info["response_preview"] = "No text content"
             
-            logger.error("Failed to parse JSON response", extra=error_info)
+            logger.error("JSON parse failed", extra=error_info)
             raise FPLAPIError(f"Failed to parse JSON: {e}") from e
         
         # Update cache
         self._bootstrap_cache = data
         self._bootstrap_cache_time = datetime.now(timezone.utc)
         
-        logger.info("Fetched bootstrap-static data", extra={
+        logger.info("Bootstrap-static fetched", extra={
             "players_count": len(data.get("elements", [])),
             "teams_count": len(data.get("teams", [])),
             "gameweeks_count": len(data.get("events", []))

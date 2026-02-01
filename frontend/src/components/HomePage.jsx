@@ -20,12 +20,22 @@ import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
+import { useRefreshState } from '../hooks/useRefreshState'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
+
+const STATE_DEBUG_DEFINITIONS = [
+  { term: 'Outside GW', description: 'No current gameweek in DB or is_current is false.' },
+  { term: 'Live matches', description: 'At least one fixture: started and not finished_provisional.' },
+  { term: 'Bonus pending', description: 'All fixtures: finished_provisional and not finished.' },
+  { term: 'Price window', description: 'Time is in 17:30–17:36 PST (configurable).' },
+  { term: 'Transfer deadline', description: 'Current GW exists, ≥30 min after GW deadline (post-deadline refresh window).' },
+  { term: 'Idle', description: 'Current GW, no live/bonus/price/deadline conditions.' }
+]
 
 export default function HomePage() {
   const { config, openConfigModal } = useConfiguration()
@@ -74,6 +84,16 @@ export default function HomePage() {
   const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
   const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
+  const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
+
+  // Live GW total from starting XI (includes provisional bonus when match past 45 min)
+  const liveGwPoints = useMemo(() => {
+    if (refreshState !== 'live_matches' && refreshState !== 'bonus_pending') return null
+    if (!currentGameweekPlayers?.length) return null
+    return currentGameweekPlayers
+      .filter((p) => p.position >= 1 && p.position <= 11)
+      .reduce((sum, p) => sum + (p.points || 0) * (p.multiplier || 1), 0)
+  }, [refreshState, currentGameweekPlayers])
   const { data: leagueData } = useQuery({
     queryKey: ['league', LEAGUE_ID],
     queryFn: async () => {
@@ -157,7 +177,9 @@ export default function HomePage() {
     {
       id: 'gw-points',
       label: 'GW Points',
-      value: formatNumber(managerData?.gameweekPoints),
+      value: (refreshState === 'live_matches' || refreshState === 'bonus_pending') && liveGwPoints != null
+        ? formatNumber(liveGwPoints)
+        : formatNumber(managerData?.gameweekPoints),
       subtext: `Gameweek ${gameweek}`,
       size: '1x1'
     },
@@ -205,6 +227,13 @@ export default function HomePage() {
       size: '1x1'
     },
     {
+      id: 'refresh-state',
+      label: 'State',
+      value: refreshStateLabel ?? '—',
+      size: '1x1',
+      isStateDebug: true
+    },
+    {
       id: 'settings',
       label: 'Settings',
       size: '1x1',
@@ -241,9 +270,12 @@ export default function HomePage() {
       return 'bento-card-chart-large'
     }
 
-    // Transfers card: 2x1 only when manager made transfers (to show in/out and points); else 1x1
+    // Transfers card: 2x1 when there's something to show (transfers, wildcard/free hit, or list from picks diff); else 1x1
     if (id === 'transfers') {
-      return (managerData?.transfersMade ?? 0) > 0 ? 'bento-card-large' : 'bento-card'
+      const hasTransfers = (managerData?.transfersMade ?? 0) > 0
+      const usedWildcardOrFreeHit = managerData?.activeChip === 'wildcard' || managerData?.activeChip === 'freehit'
+      const hasTransferList = (transferImpacts?.length ?? 0) > 0
+      return (hasTransfers || usedWildcardOrFreeHit || hasTransferList) ? 'bento-card-large' : 'bento-card'
     }
 
     // Chips card 2x3 when expanded
@@ -475,6 +507,7 @@ export default function HomePage() {
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
               }
+              isProvisionalOnly={refreshState === 'bonus_pending'}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'transfers' && isTransfersExpanded) || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
               style={{ '--animation-delay': `${index * 0.1}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
@@ -537,6 +570,8 @@ export default function HomePage() {
               viceCaptainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
               leagueCaptainData={cardId === 'captain' ? leagueCaptainData : undefined}
               leagueCaptainLoading={cardId === 'captain' ? leagueCaptainLoading : undefined}
+              stateDebugValue={cardId === 'refresh-state' ? refreshStateLabel : undefined}
+              stateDebugDefinitions={cardId === 'refresh-state' ? STATE_DEBUG_DEFINITIONS : undefined}
             />
           )
         })}

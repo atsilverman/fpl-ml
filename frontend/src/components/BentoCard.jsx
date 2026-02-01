@@ -1,5 +1,6 @@
 import './BentoCard.css'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { formatNumber } from '../utils/formatNumbers'
 import PerformanceChart from './PerformanceChart'
 import TeamValueChart from './TeamValueChart'
@@ -21,6 +22,22 @@ const SECOND_HALF_CHIP_COLUMNS = [
   { key: 'tc2', label: 'TC2', isSecondHalf: true }
 ]
 
+const POPUP_GAP = 6
+const POPUP_PAD = 8
+
+/** Compute top/left so popup stays within viewport; prefer below and right-aligned to anchor. */
+function getPopupPosition(anchorRect, popupWidth, popupHeight) {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0
+  let left = anchorRect.right - popupWidth
+  let top = anchorRect.bottom + POPUP_GAP
+  if (left < POPUP_PAD) left = POPUP_PAD
+  if (left + popupWidth > vw - POPUP_PAD) left = vw - POPUP_PAD - popupWidth
+  if (top + popupHeight > vh - POPUP_PAD) top = anchorRect.top - POPUP_GAP - popupHeight
+  if (top < POPUP_PAD) top = POPUP_PAD
+  return { top, left }
+}
+
 export default function BentoCard({
   id,
   label,
@@ -34,6 +51,7 @@ export default function BentoCard({
   isSettings = false,
   isStale = false,
   isLiveUpdating = false,
+  isProvisionalOnly = false,
   style = {},
   onConfigureClick,
   chartData = null,
@@ -70,7 +88,9 @@ export default function BentoCard({
   captainName = null,
   viceCaptainName = null,
   leagueCaptainData = null,
-  leagueCaptainLoading = false
+  leagueCaptainLoading = false,
+  stateDebugValue = null,
+  stateDebugDefinitions = null
 }) {
   const isSecondHalf = gameweek != null && gameweek > 19
   const chipColumns = isSecondHalf ? SECOND_HALF_CHIP_COLUMNS : FIRST_HALF_CHIP_COLUMNS
@@ -81,7 +101,43 @@ export default function BentoCard({
     gameweek: chipUsage?.[key] ?? null
   }))
   const gwExpandIconsRef = useRef(null)
+  const stateDebugPopupRef = useRef(null)
+  const stateDebugPopupContentRef = useRef(null)
   const [showGwLegendPopup, setShowGwLegendPopup] = useState(false)
+  const [showStateDebugPopup, setShowStateDebugPopup] = useState(false)
+  const [stateDebugPopupPosition, setStateDebugPopupPosition] = useState(null)
+  const [gwLegendPopupPosition, setGwLegendPopupPosition] = useState(null)
+  const gwLegendPopupContentRef = useRef(null)
+
+  useEffect(() => {
+    if (!showStateDebugPopup) setStateDebugPopupPosition(null)
+  }, [showStateDebugPopup])
+  useEffect(() => {
+    if (!showGwLegendPopup) setGwLegendPopupPosition(null)
+  }, [showGwLegendPopup])
+
+  useLayoutEffect(() => {
+    if (!showStateDebugPopup || id !== 'refresh-state') return
+    const anchor = stateDebugPopupRef.current
+    const popup = stateDebugPopupContentRef.current
+    if (!anchor || !popup) return
+    const anchorRect = anchor.getBoundingClientRect()
+    const w = popup.offsetWidth
+    const h = popup.offsetHeight
+    setStateDebugPopupPosition(getPopupPosition(anchorRect, w, h))
+  }, [showStateDebugPopup, id, stateDebugDefinitions])
+
+  useLayoutEffect(() => {
+    if (!showGwLegendPopup || id !== 'gw-points') return
+    const anchor = gwExpandIconsRef.current
+    const popup = gwLegendPopupContentRef.current
+    if (!anchor || !popup) return
+    const anchorRect = anchor.getBoundingClientRect()
+    const w = popup.offsetWidth
+    const h = popup.offsetHeight
+    setGwLegendPopupPosition(getPopupPosition(anchorRect, w, h))
+  }, [showGwLegendPopup, id])
+
   useEffect(() => {
     if (id === 'gw-points' && !isExpanded) {
       setShowGwLegendPopup(false)
@@ -93,13 +149,26 @@ export default function BentoCard({
     if (id !== 'gw-points') return
     if (!isExpanded) return
     const handleClickOutside = (e) => {
-      if (gwExpandIconsRef.current && !gwExpandIconsRef.current.contains(e.target)) {
-        setShowGwLegendPopup(false)
-      }
+      const anchor = gwExpandIconsRef.current
+      const popup = gwLegendPopupContentRef.current
+      if ((anchor && anchor.contains(e.target)) || (popup && popup.contains(e.target))) return
+      setShowGwLegendPopup(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showGwLegendPopup, id, isExpanded])
+
+  useEffect(() => {
+    if (!showStateDebugPopup || id !== 'refresh-state') return
+    const handleClickOutside = (e) => {
+      const anchor = stateDebugPopupRef.current
+      const popup = stateDebugPopupContentRef.current
+      if ((anchor && anchor.contains(e.target)) || (popup && popup.contains(e.target))) return
+      setShowStateDebugPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showStateDebugPopup, id])
 
   const { themeMode, cycleTheme } = useTheme()
   const isTransfersExpanded = id === 'transfers' && isExpanded
@@ -159,10 +228,57 @@ export default function BentoCard({
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
   const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'transfers' || id === 'chips' || id === 'league-rank' || id === 'captain'
+  const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
+
+  const handleStateDebugClick = (e) => {
+    e.stopPropagation()
+    setShowStateDebugPopup((v) => !v)
+  }
 
   return (
     <div className={cardClasses} style={style}>
-      {showExpandIcon && (
+      {showStateDebugIcon && (
+        <div className="bento-card-expand-icons" ref={stateDebugPopupRef}>
+          <button
+            type="button"
+            className="bento-card-info-icon"
+            title="State criteria"
+            onClick={handleStateDebugClick}
+            aria-expanded={showStateDebugPopup}
+            aria-haspopup="dialog"
+          >
+            <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+          </button>
+          {showStateDebugPopup &&
+            createPortal(
+              <div
+                ref={stateDebugPopupContentRef}
+                className="gw-legend-popup state-debug-popup gw-legend-popup-fixed"
+                role="dialog"
+                aria-label="Refresh state criteria"
+                style={{
+                  position: 'fixed',
+                  left: stateDebugPopupPosition?.left ?? 0,
+                  top: stateDebugPopupPosition?.top ?? 0,
+                  visibility: stateDebugPopupPosition ? 'visible' : 'hidden',
+                  zIndex: 9999
+                }}
+              >
+                <div className="gw-legend-popup-title">State criteria</div>
+                <dl className="state-debug-dl">
+                  {stateDebugDefinitions.map(({ term, description }) => (
+                    <div key={term} className="state-debug-dl-row">
+                      <dt>{term}</dt>
+                      <dd>{description}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>,
+              document.body
+            )}
+        </div>
+      )}
+      {showExpandIcon && !showStateDebugIcon && (
         (isGwPointsExpanded || isTotalPointsExpanded) ? (
           <div className="bento-card-expand-icons" ref={gwExpandIconsRef}>
             {isGwPointsExpanded && (
@@ -177,55 +293,75 @@ export default function BentoCard({
                 >
                   <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
                 </div>
-                {showGwLegendPopup && (
-                  <div className="gw-legend-popup" role="dialog" aria-label="GW points legend">
-                    <div className="gw-legend-popup-title">Legend</div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gameweek-points-legend-badge rank-highlight">x</span>
-                      <span className="gw-legend-popup-text">Top 10 in GW</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
-                      <span className="gw-legend-popup-text">Captain</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="bento-card-captain-vice-badge gw-legend-popup-badge-v">V</span>
-                      <span className="gw-legend-popup-text">Vice captain</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
-                      </span>
-                      <span className="gw-legend-popup-text">Did not play</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-out" title="Auto-subbed out">
-                          <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
+                {showGwLegendPopup &&
+                  createPortal(
+                    <div
+                      ref={gwLegendPopupContentRef}
+                      className="gw-legend-popup gw-legend-popup-fixed"
+                      role="dialog"
+                      aria-label="GW points legend"
+                      style={{
+                        position: 'fixed',
+                        left: gwLegendPopupPosition?.left ?? 0,
+                        top: gwLegendPopupPosition?.top ?? 0,
+                        visibility: gwLegendPopupPosition ? 'visible' : 'hidden',
+                        zIndex: 9999
+                      }}
+                    >
+                      <div className="gw-legend-popup-title">Legend</div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gameweek-points-legend-badge rank-highlight">x</span>
+                        <span className="gw-legend-popup-text">Top 10 in GW</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
+                        <span className="gw-legend-popup-text">Captain</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="bento-card-captain-vice-badge gw-legend-popup-badge-v">V</span>
+                        <span className="gw-legend-popup-text">Vice captain</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
                         </span>
-                      </span>
-                      <span className="gw-legend-popup-text">Auto-subbed out</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-in" title="Auto-subbed in">
-                          <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
+                        <span className="gw-legend-popup-text">Did not play</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-out" title="Auto-subbed out">
+                            <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
+                          </span>
                         </span>
-                      </span>
-                      <span className="gw-legend-popup-text">Auto-subbed in</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
-                      <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-live-dot-wrap">
-                        <span className="gw-legend-popup-live-dot" aria-hidden />
-                      </span>
-                      <span className="gw-legend-popup-text">Live match</span>
-                    </div>
-                  </div>
-                )}
+                        <span className="gw-legend-popup-text">Auto-subbed out</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-autosub-icon gw-legend-popup-autosub-in" title="Auto-subbed in">
+                            <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
+                          </span>
+                        </span>
+                        <span className="gw-legend-popup-text">Auto-subbed in</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
+                        <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-live-dot-wrap">
+                          <span className="gw-legend-popup-live-dot" aria-hidden />
+                        </span>
+                        <span className="gw-legend-popup-text">Live match</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-live-dot-wrap">
+                          <span className="gw-legend-popup-live-dot gw-legend-popup-provisional-dot" aria-hidden />
+                        </span>
+                        <span className="gw-legend-popup-text">Provisional (stats may update)</span>
+                      </div>
+                    </div>,
+                    document.body
+                  )}
               </>
             )}
             <div
@@ -283,19 +419,21 @@ export default function BentoCard({
             )}
           </div>
           {transfersSummary?.transfers?.length > 0 ? (
-            <div className="bento-card-transfers-list">
-              {transfersSummary.transfers.map((t, i) => (
-                <div key={i} className="bento-card-transfer-item">
-                  <span className="bento-card-transfer-out">{t.playerOutName}</span>
-                  <span className="bento-card-transfer-arrow">→</span>
-                  <span className="bento-card-transfer-in">{t.playerInName}</span>
-                  {t.pointImpact != null && (
-                    <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
-                      {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
-                    </span>
-                  )}
-                </div>
-              ))}
+            <div className="bento-card-transfers-list-scroll">
+              <div className="bento-card-transfers-list">
+                {transfersSummary.transfers.map((t, i) => (
+                  <div key={i} className="bento-card-transfer-item">
+                    <span className="bento-card-transfer-out">{t.playerOutName}</span>
+                    <span className="bento-card-transfer-arrow">→</span>
+                    <span className="bento-card-transfer-in">{t.playerInName}</span>
+                    {t.pointImpact != null && (
+                      <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
+                        {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>
@@ -305,10 +443,16 @@ export default function BentoCard({
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
               {value}
               {isStale && <span className="stale-indicator" title="Data may be out of date during live games">!</span>}
-              {isLiveUpdating && <span className="live-updating-indicator" title="Values can change at any moment during live games" aria-hidden />}
+              {isLiveUpdating && (
+                <span
+                  className={`live-updating-indicator${isProvisionalOnly ? ' live-updating-indicator--provisional' : ''}`}
+                  title={isProvisionalOnly ? 'Provisional: stats may update when bonus is confirmed' : 'Values can change at any moment during live games'}
+                  aria-hidden
+                />
+              )}
             </div>
           )}
-          {id !== 'league-rank' && change !== undefined && change !== 0 && (
+          {id !== 'league-rank' && change !== undefined && change !== 0 && (id !== 'overall-rank' || !isStale) && (
             <div className={`bento-card-change ${change > 0 ? 'positive' : 'negative'}`}>
               {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumber(Math.abs(change))}
             </div>

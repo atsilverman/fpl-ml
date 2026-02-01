@@ -128,7 +128,7 @@ function BonusBento({ fixture, expanded, onToggle, gameweekMaxBps }) {
             </div>
           ) : (
             <div className="bps-chart-wrap">
-              <BpsLeadersChart players={mergedPlayers} loading={statsLoading} gameweekMaxBps={gameweekMaxBps} />
+              <BpsLeadersChart players={mergedPlayers} loading={statsLoading} gameweekMaxBps={gameweekMaxBps} isProvisional={status === 'live' || status === 'provisional'} />
             </div>
           )}
         </div>

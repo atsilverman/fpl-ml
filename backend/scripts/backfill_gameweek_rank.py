@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 """
-Script to backfill gameweek_rank for the current gameweek (if finished).
+Script to backfill overall_rank and gameweek_rank at end of match day.
 
-This script will:
-1. Get the current gameweek (is_current = true)
-2. Check if it's finished
-3. Get all tracked managers
-4. Refresh manager gameweek history for the current gameweek
-   (which will populate gameweek_rank from the picks endpoint)
+Runs when all fixtures for the current gameweek have finished_provisional
+(same gate as orchestrator "end of gameday"), not when gameweek.finished.
+Refreshes all tracked managers (mini_league_managers) and sets fpl_ranks_updated.
 
 Usage:
     python3 scripts/backfill_gameweek_rank.py
@@ -52,7 +49,7 @@ async def backfill_gameweek_rank():
     try:
         # Get only the current gameweek
         current_gameweek_result = db_client.client.table("gameweeks").select(
-            "id, name, finished"
+            "id, name"
         ).eq("is_current", True).single().execute()
         
         if not current_gameweek_result.data:
@@ -60,27 +57,37 @@ async def backfill_gameweek_rank():
             return
         
         current_gameweek = current_gameweek_result.data
-        
-        if not current_gameweek.get("finished"):
-            print(f"⚠️  Current gameweek ({current_gameweek['name']}) is not finished yet.")
-            print("   gameweek_rank will be populated automatically when the gameweek finishes.")
-            return
-        
         gameweek = current_gameweek["id"]
         gameweek_name = current_gameweek["name"]
         
-        print(f"📊 Processing current gameweek: {gameweek_name} (ID: {gameweek})\n")
+        # End of gameday: all fixtures for this gameweek have finished_provisional (same as orchestrator)
+        fixtures = db_client.client.table("fixtures").select(
+            "finished_provisional"
+        ).eq("gameweek", gameweek).execute().data or []
         
-        # Get all tracked managers
-        managers = db_client.client.table("managers").select(
-            "manager_id, manager_name"
-        ).execute().data
-        
-        if not managers:
-            print("⚠️  No managers found. Nothing to backfill.")
+        if not fixtures:
+            print(f"⚠️  No fixtures found for {gameweek_name}. Nothing to backfill.")
             return
         
-        print(f"👥 Found {len(managers)} manager(s) to process\n")
+        if not any(f.get("finished_provisional") for f in fixtures):
+            print(f"⚠️  No matchday completed yet for {gameweek_name}.")
+            print("   At least one fixture must have finished_provisional = true.")
+            print("   Run again after the first matchday (e.g. Sat), or let the orchestrator handle it.")
+            return
+        
+        print(f"📊 Processing current gameweek: {gameweek_name} (ID: {gameweek}) [at least one matchday done]\n")
+        
+        # Get all tracked managers (same as orchestrator: mini_league_managers)
+        managers_result = db_client.client.table("mini_league_managers").select(
+            "manager_id"
+        ).execute()
+        manager_ids = list(set(m["manager_id"] for m in (managers_result.data or [])))
+        
+        if not manager_ids:
+            print("⚠️  No tracked managers found in mini_league_managers. Nothing to backfill.")
+            return
+        
+        print(f"👥 Found {len(manager_ids)} tracked manager(s) to process\n")
         
         # Process each manager for the current gameweek
         processed = 0
@@ -88,17 +95,14 @@ async def backfill_gameweek_rank():
         
         print(f"🔄 Processing {gameweek_name}...")
         
-        for manager in managers:
-            manager_id = manager["manager_id"]
-            manager_name = manager["manager_name"]
-            
+        for manager_id in manager_ids:
             try:
-                # Refresh manager gameweek history (will populate gameweek_rank if finished)
+                # Refresh manager gameweek history (populates overall_rank, gameweek_rank when FPL has them)
                 await manager_refresher.refresh_manager_gameweek_history(manager_id, gameweek)
                 processed += 1
                 
                 if processed % 10 == 0:
-                    print(f"   ✅ Processed {processed}/{len(managers)} managers...")
+                    print(f"   ✅ Processed {processed}/{len(manager_ids)} managers...")
                 
                 # Small delay to avoid rate limiting
                 await asyncio.sleep(0.5)
@@ -107,17 +111,21 @@ async def backfill_gameweek_rank():
                 errors += 1
                 logger.error("Error backfilling gameweek rank", extra={
                     "manager_id": manager_id,
-                    "manager_name": manager_name,
                     "gameweek": gameweek,
                     "error": str(e)
                 })
-                print(f"   ⚠️  Error for {manager_name}: {e}")
+                print(f"   ⚠️  Error for manager {manager_id}: {e}")
+        
+        # Mark gameweek as having final ranks so frontend drops the ! stale indicator
+        if processed > 0:
+            db_client.update_gameweek_fpl_ranks_updated(gameweek, True)
+            print("   - Set fpl_ranks_updated = true for this gameweek (stale indicator will clear).")
         
         print(f"\n✅ Backfill completed!")
-        print(f"   - Processed: {processed}/{len(managers)}")
+        print(f"   - Processed: {processed}/{len(manager_ids)}")
         if errors > 0:
             print(f"   - Errors: {errors}")
-        print(f"\n📊 gameweek_rank should now be populated for {gameweek_name}.")
+        print(f"\n📊 overall_rank and gameweek_rank should now be populated for {gameweek_name}.")
         
     except Exception as e:
         print(f"\n❌ Error during backfill: {e}")

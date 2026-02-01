@@ -2,15 +2,16 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import CustomizeModal from '../components/CustomizeModal'
 
 const DEFAULT_ORDER = [
-  'overall-rank',
   'gw-points',
+  'overall-rank',
   'total-points',
-  'gw-rank',
-  'team-value',
-  'chips',
-  'transfers',
   'league-rank',
   'captain',
+  'team-value',
+  'gw-rank',
+  'chips',
+  'transfers',
+  'refresh-state',
   'settings'
 ]
 
@@ -24,7 +25,22 @@ export function BentoOrderProvider({ children }) {
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
-        if (Array.isArray(parsed) && parsed.length) return parsed
+        if (Array.isArray(parsed) && parsed.length) {
+          // Merge in any DEFAULT_ORDER ids that are missing (e.g. new cards like refresh-state)
+          let merged = parsed.filter((id) => DEFAULT_ORDER.includes(id))
+          DEFAULT_ORDER.forEach((id) => {
+            if (!merged.includes(id)) merged.push(id)
+          })
+          // One-time migration: apply gw-rank / league-rank swap (gw-rank before league-rank)
+          const gwRankIdx = merged.indexOf('gw-rank')
+          const leagueRankIdx = merged.indexOf('league-rank')
+          if (gwRankIdx !== -1 && leagueRankIdx !== -1 && leagueRankIdx < gwRankIdx) {
+            merged = [...merged]
+            merged[leagueRankIdx] = 'gw-rank'
+            merged[gwRankIdx] = 'league-rank'
+          }
+          return merged
+        }
       } catch (_) {}
     }
     return [...DEFAULT_ORDER]

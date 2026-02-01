@@ -53,10 +53,12 @@ class RefreshOrchestrator:
         self._last_rank_check_time: Optional[datetime] = None
         self._last_rank_check_gameweek: Optional[int] = None
         self._rank_check_interval_seconds: int = 300  # 5 minutes
+        # During LIVE_MATCHES/BONUS_PENDING: player data every cycle; manager points + MVs every full_refresh_interval_live
+        self._last_full_refresh_time: Optional[datetime] = None
         
     async def initialize(self):
         """Initialize orchestrator and clients."""
-        logger.info("Initializing refresh orchestrator")
+        logger.info("Orchestrator starting")
         
         # Initialize clients
         self.fpl_client = FPLAPIClient(self.config)
@@ -65,17 +67,17 @@ class RefreshOrchestrator:
         self.manager_refresher = ManagerDataRefresher(self.fpl_client, self.db_client)
         self.baseline_capture = BaselineCapture(self.fpl_client, self.db_client)
         
-        logger.info("Refresh orchestrator initialized")
+        logger.info("Orchestrator ready")
     
     async def shutdown(self):
         """Shutdown orchestrator gracefully."""
-        logger.info("Shutting down refresh orchestrator")
+        logger.info("Orchestrator shutting down")
         self.running = False
         
         if self.fpl_client:
             await self.fpl_client.close()
         
-        logger.info("Refresh orchestrator shut down")
+        logger.info("Orchestrator stopped")
     
     def _is_price_change_window(self, current_time: datetime) -> bool:
         """
@@ -127,22 +129,20 @@ class RefreshOrchestrator:
             "gameweek", self.current_gameweek
         ).execute().data
         
-        # Check for live matches
+        # Check for live matches (match in progress: clock running, not yet provisionally finished)
         live_matches = [
             f for f in fixtures
-            if f.get("started") and not f.get("finished")
+            if f.get("started") and not f.get("finished_provisional")
         ]
         
         if live_matches:
             return RefreshState.LIVE_MATCHES
         
-        # Check for bonus pending
-        bonus_pending_matches = [
-            f for f in fixtures
-            if f.get("finished_provisional") and not f.get("finished")
-        ]
-        
-        if bonus_pending_matches:
+        # Check for bonus pending: all fixtures finished_provisional and not finished
+        if fixtures and all(
+            f.get("finished_provisional") and not f.get("finished")
+            for f in fixtures
+        ):
             return RefreshState.BONUS_PENDING
         
         # Check price change window
@@ -234,25 +234,19 @@ class RefreshOrchestrator:
         
         # Detect if is_next gameweek became is_current
         if prev.get("is_next") and curr.get("is_current") and prev.get("id") == curr.get("id"):
-            logger.info("Gameweek status change detected: is_next → is_current", extra={
-                "gameweek": curr.get("id")
-            })
+            logger.info("GW status: next → current", extra={"gameweek": curr.get("id")})
             return True
         
         # Detect if is_current gameweek became is_previous
         if prev.get("is_current") and curr.get("is_previous") and prev.get("id") == curr.get("id"):
-            logger.info("Gameweek status change detected: is_current → is_previous", extra={
-                "gameweek": curr.get("id")
-            })
+            logger.info("GW status: current → previous", extra={"gameweek": curr.get("id")})
             return True
         
         # Detect if tracked next gameweek became current (different gameweek)
         if (self.next_gameweek_id_before_deadline and 
             curr.get("id") == self.next_gameweek_id_before_deadline and 
             curr.get("is_current")):
-            logger.info("Gameweek status change detected: tracked next gameweek became current", extra={
-                "gameweek": curr.get("id")
-            })
+            logger.info("GW status: next became current", extra={"gameweek": curr.get("id")})
             return True
         
         # Update previous state
@@ -265,8 +259,8 @@ class RefreshOrchestrator:
         
         return False
     
-    async def _refresh_gameweeks(self):
-        """Refresh gameweeks table."""
+    async def _refresh_gameweeks(self) -> Optional[Dict[str, Any]]:
+        """Refresh gameweeks table. Returns bootstrap for reuse (e.g. player refresh)."""
         try:
             bootstrap = await self.fpl_client.get_bootstrap_static()
             events = bootstrap.get("events", [])
@@ -300,14 +294,13 @@ class RefreshOrchestrator:
             logger.debug("Refreshed gameweeks", extra={
                 "gameweeks_count": len(events)
             })
-            
+            return bootstrap
         except Exception as e:
-            logger.error("Error refreshing gameweeks", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Gameweeks refresh failed", extra={"error": str(e)}, exc_info=True)
+            return None
     
-    async def _refresh_fixtures(self):
-        """Refresh fixtures table."""
+    async def _refresh_fixtures(self) -> Optional[Dict[int, Dict[str, Any]]]:
+        """Refresh fixtures table. Returns fixtures for current gameweek keyed by fpl_fixture_id for reuse (e.g. player refresh)."""
         try:
             fixtures = await self.fpl_client.get_fixtures()
             
@@ -327,8 +320,10 @@ class RefreshOrchestrator:
                 if gw.get("deadline_time")
             }
             
+            fixtures_by_id: Dict[int, Dict[str, Any]] = {}
             for fixture in fixtures:
                 gameweek_id = fixture.get("event")
+                fixtures_by_id[fixture["id"]] = fixture
                 fixture_data = {
                     "fpl_fixture_id": fixture["id"],
                     "gameweek": gameweek_id,
@@ -352,25 +347,28 @@ class RefreshOrchestrator:
                 "fixtures_count": len(fixtures),
                 "gameweek": self.current_gameweek
             })
-            
+            return fixtures_by_id
         except Exception as e:
-            logger.error("Error refreshing fixtures", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Fixtures refresh failed", extra={"error": str(e)}, exc_info=True)
+            return None
     
-    async def _refresh_players(self):
-        """Refresh player gameweek stats for active players."""
+    async def _refresh_players(
+        self,
+        bootstrap: Optional[Dict[str, Any]] = None,
+        fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """Refresh player gameweek stats for active players. Reuses bootstrap and fixtures when provided to avoid duplicate API calls. Returns live_data when live so caller can sync fixture scores from same source."""
         if not self.current_gameweek:
-            return
+            return None
         
         # Get fixtures to check for live matches (defensive check)
         fixtures = self.db_client.client.table("fixtures").select("*").eq(
             "gameweek", self.current_gameweek
         ).execute().data
         
-        # Defensive check: skip if no live matches
+        # Defensive check: skip if no live matches (match in progress: not yet finished_provisional)
         has_live_matches = any(
-            f.get("started", False) and not f.get("finished", False)
+            f.get("started", False) and not f.get("finished_provisional", False)
             for f in fixtures
         )
         
@@ -378,7 +376,7 @@ class RefreshOrchestrator:
             logger.debug("No live matches detected, skipping player refresh", extra={
                 "gameweek": self.current_gameweek
             })
-            return
+            return None
         
         # Get live event data (single API call)
         try:
@@ -389,25 +387,61 @@ class RefreshOrchestrator:
             }
             
             if active_player_ids:
-                # Get fixtures from API for fixture context
-                fixtures_api = await self.fpl_client.get_fixtures()
-                fixtures_by_gameweek = {
-                    f["id"]: f for f in fixtures_api
-                    if f.get("event") == self.current_gameweek
-                }
-                
                 await self.player_refresher.refresh_player_gameweek_stats(
                     self.current_gameweek,
                     active_player_ids,
                     live_data=live_data,
                     fixtures=fixtures_by_gameweek,
+                    bootstrap=bootstrap,
                     live_only=True  # Skip expected/ICT stats during live matches
                 )
+            return live_data
         except Exception as e:
-            logger.error("Error refreshing players", extra={
-                "error": str(e)
-            }, exc_info=True)
-    
+            logger.error("Player refresh failed", extra={"error": str(e)}, exc_info=True)
+            return None
+
+    def _update_fixture_scores_from_live(
+        self,
+        live_data: Dict[str, Any],
+        bootstrap: Optional[Dict[str, Any]],
+        fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]],
+    ) -> None:
+        """
+        Update fixture home_score/away_score from event-live (same source as GW points).
+        Keeps matches page in sync with GW points when FPL fixtures API lags behind event-live.
+        """
+        if not bootstrap or not fixtures_by_gameweek or not live_data.get("elements"):
+            return
+        elements = bootstrap.get("elements", [])
+        player_team = {int(e["id"]): int(e["team"]) for e in elements if "id" in e and "team" in e}
+        for fpl_fixture_id, fixture in fixtures_by_gameweek.items():
+            team_h = fixture.get("team_h")
+            team_a = fixture.get("team_a")
+            if team_h is None or team_a is None:
+                continue
+            home_goals = 0
+            away_goals = 0
+            for elem in live_data.get("elements", []):
+                pid = elem.get("id")
+                stats = elem.get("stats") or {}
+                goals = stats.get("goals_scored", 0) or 0
+                team_id = player_team.get(pid)
+                if team_id == team_h:
+                    home_goals += goals
+                elif team_id == team_a:
+                    away_goals += goals
+            try:
+                self.db_client.update_fixture_scores(
+                    fpl_fixture_id,
+                    home_score=home_goals,
+                    away_score=away_goals,
+                )
+            except Exception as e:
+                logger.warning(
+                    "Fixture score update failed",
+                    extra={"fpl_fixture_id": fpl_fixture_id, "error": str(e)},
+                )
+
     async def _refresh_prices(self):
         """Refresh player prices."""
         if not self.current_gameweek:
@@ -443,21 +477,19 @@ class RefreshOrchestrator:
                 deadline_time,
                 current_time
             ):
-                logger.info("Capturing baselines for gameweek", extra={
-                    "gameweek": self.current_gameweek
-                })
+                logger.info("Capturing baselines", extra={"gameweek": self.current_gameweek})
                 
                 # Get all tracked managers (from mini leagues)
                 result = await self.baseline_capture.capture_all_baselines_for_gameweek(
                     self.current_gameweek
                 )
                 
-                logger.info("Baseline capture completed", extra={
+                logger.info("Baselines captured", extra={
                     "gameweek": self.current_gameweek,
                     **result
                 })
         except Exception as e:
-            logger.error("Error capturing baselines", extra={
+            logger.error("Baseline capture failed", extra={
                 "gameweek": self.current_gameweek,
                 "error": str(e)
             }, exc_info=True)
@@ -481,9 +513,7 @@ class RefreshOrchestrator:
             return manager_ids
             
         except Exception as e:
-            logger.error("Error getting tracked manager IDs", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Tracked manager IDs failed", extra={"error": str(e)}, exc_info=True)
             return []
     
     def _get_active_manager_ids(self) -> List[int]:
@@ -491,9 +521,11 @@ class RefreshOrchestrator:
         Get manager IDs who have players currently playing in live matches.
         
         OPTIMIZATION: Only refresh managers with active players to reduce API calls.
+        When no one has minutes > 0 yet (e.g. first kick-off), returns managers who
+        have picks for this gameweek so we still limit scope instead of all tracked.
         
         Returns:
-            List of manager IDs with active players
+            List of manager IDs with active players (or with picks for this GW if none active yet)
         """
         try:
             # Get all managers with picks in current gameweek
@@ -503,9 +535,6 @@ class RefreshOrchestrator:
             
             if not picks_result.data:
                 return []
-            
-            # Get player IDs from picks
-            player_ids = list(set([p["player_id"] for p in picks_result.data]))
             
             # Get active players (those with minutes > 0 in current gameweek)
             active_players_result = self.db_client.client.table("player_gameweek_stats").select(
@@ -520,16 +549,39 @@ class RefreshOrchestrator:
                 if pick["player_id"] in active_player_ids:
                     active_manager_ids.add(pick["manager_id"])
             
-            return list(active_manager_ids)
+            if active_manager_ids:
+                return list(active_manager_ids)
+            
+            # No one has minutes > 0 yet (e.g. first kick-off, or picks not backfilled).
+            # Fallback: managers who have picks for this GW (smaller than all tracked).
+            managers_with_picks = list(set([p["manager_id"] for p in picks_result.data]))
+            return managers_with_picks
             
         except Exception as e:
-            logger.error("Error identifying active managers", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Active managers check failed", extra={"error": str(e)}, exc_info=True)
             # Fallback: return all tracked managers if error
             return self._get_tracked_manager_ids()
     
-    async def _refresh_manager_points(self):
+    def _is_end_of_gameday(self) -> bool:
+        """
+        True when at least one fixture for the current gameweek has finished_provisional
+        (at least one matchday has ended; ranks may be available from FPL after each day).
+        Allows multiple rank-refresh cycles per gameweek (Sat, Sun, Mon, midweek).
+        """
+        if not self.current_gameweek or not self.db_client:
+            return False
+        try:
+            fixtures = self.db_client.client.table("fixtures").select(
+                "finished_provisional"
+            ).eq("gameweek", self.current_gameweek).execute().data
+            if not fixtures:
+                return False
+            return any(f.get("finished_provisional") for f in fixtures)
+        except Exception as e:
+            logger.debug("End-of-gameday check failed", extra={"error": str(e)})
+            return False
+
+    async def _refresh_manager_points(self, force_all_managers: bool = False):
         """
         Refresh manager gameweek history (points, ranks) for all tracked managers.
         
@@ -539,24 +591,50 @@ class RefreshOrchestrator:
         
         ⚠️ CRITICAL: This preserves baseline data (baseline_total_points, previous ranks)
         during live updates. Baselines are only set by baseline_capture module.
+        
+        Args:
+            force_all_managers: If True, always refresh all tracked managers (e.g. when
+                ranks have just finalized); otherwise use active-only during live.
         """
         if not self.current_gameweek:
             return
         
         try:
-            # OPTIMIZATION: Only refresh managers with active players during live matches
-            if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+            # When ranks finalize we refresh all managers; otherwise optimize during live
+            if force_all_managers:
+                manager_ids = self._get_tracked_manager_ids()
+                if manager_ids:
+                    logger.info("Refreshing all manager points (ranks final)", extra={
+                        "count": len(manager_ids),
+                        "gameweek": self.current_gameweek
+                    })
+            elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                 manager_ids = self._get_active_manager_ids()
-                logger.info("Refreshing active manager points", extra={
-                    "manager_count": len(manager_ids),
-                    "gameweek": self.current_gameweek,
-                    "optimization": "active_managers_only"
-                })
+                used_fallback = False
+                if not manager_ids:
+                    # Fallback: no "active" managers found (e.g. manager_picks for GW empty
+                    # or no player_gameweek_stats with minutes>0 yet). Refresh all tracked
+                    # managers so points still update and UI is not stuck at 0.
+                    manager_ids = self._get_tracked_manager_ids()
+                    used_fallback = True
+                    logger.warning(
+                        "No active managers, using all tracked",
+                        extra={
+                            "gameweek": self.current_gameweek,
+                            "fallback_count": len(manager_ids)
+                        }
+                    )
+                if manager_ids:
+                    logger.info("Refreshing manager points", extra={
+                        "count": len(manager_ids),
+                        "gameweek": self.current_gameweek,
+                        "optimization": "active_managers_only" if not used_fallback else "all_tracked_fallback"
+                    })
             else:
                 # Outside live matches, refresh all managers
                 manager_ids = self._get_tracked_manager_ids()
                 logger.info("Refreshing all manager points", extra={
-                    "manager_count": len(manager_ids),
+                    "count": len(manager_ids),
                     "gameweek": self.current_gameweek
                 })
             
@@ -596,7 +674,7 @@ class RefreshOrchestrator:
                 # Log any errors
                 for manager_id, result in zip(batch, results):
                     if isinstance(result, Exception):
-                        logger.error("Error refreshing manager points", extra={
+                        logger.error("Manager points refresh failed", extra={
                             "manager_id": manager_id,
                             "gameweek": self.current_gameweek,
                             "error": str(result)
@@ -621,24 +699,53 @@ class RefreshOrchestrator:
                         self.current_gameweek
                     )
                 except Exception as e:
-                    logger.error("Error calculating mini league ranks", extra={
+                    logger.error("League ranks failed", extra={
                         "league_id": league["league_id"],
                         "gameweek": self.current_gameweek,
                         "error": str(e)
                     }, exc_info=True)
             
         except Exception as e:
-            logger.error("Error refreshing manager points", extra={
+            logger.error("Manager points refresh failed", extra={
                 "gameweek": self.current_gameweek,
                 "error": str(e)
             }, exc_info=True)
     
-    async def _check_fpl_rank_change_and_refresh(self):
+    async def _check_ranks_final_and_refresh(self):
         """
-        In BONUS_PENDING, poll FPL API for one manager to see if overall_rank/gameweek_rank
-        have been updated. When detected, set fpl_ranks_updated and trigger full manager refresh
-        so frontend can drop the stale indicator.
-        Throttled to run at most every 5 minutes.
+        At end of gameday (all fixtures finished_provisional), ensure we capture rank update:
+        (1) If gameweek.data_checked is true, set fpl_ranks_updated and refresh all managers.
+        (2) Else poll one manager for rank change (throttled); when detected, refresh all managers.
+        Uses fixtures table to gate: runs when at least one fixture has finished_provisional (after each matchday).
+        """
+        if not self.current_gameweek or not self._is_end_of_gameday():
+            return
+        try:
+            gameweeks = self.db_client.get_gameweeks(gameweek_id=self.current_gameweek, limit=1)
+            if not gameweeks:
+                return
+            gw = gameweeks[0]
+            if gw.get("fpl_ranks_updated"):
+                return
+            if gw.get("data_checked"):
+                logger.info("Gameweek data_checked true, refreshing all managers for ranks", extra={
+                    "gameweek": self.current_gameweek
+                })
+                self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
+                await self._refresh_manager_points(force_all_managers=True)
+                return
+            await self._check_fpl_rank_change_and_refresh(force_all_managers=True)
+        except Exception as e:
+            logger.error("Ranks final check failed", extra={
+                "gameweek": self.current_gameweek,
+                "error": str(e)
+            }, exc_info=True)
+
+    async def _check_fpl_rank_change_and_refresh(self, force_all_managers: bool = False):
+        """
+        Poll FPL API for one manager to see if overall_rank/gameweek_rank have been updated.
+        When detected, set fpl_ranks_updated and trigger full manager refresh so frontend
+        can drop the stale indicator. Throttled to run at most every 5 minutes.
         """
         if not self.current_gameweek:
             return
@@ -663,16 +770,11 @@ class RefreshOrchestrator:
                 sample_manager_id, self.current_gameweek
             )
             if rank_changed:
-                logger.info("FPL ranks updated detected, setting flag and refreshing all managers", extra={
-                    "gameweek": self.current_gameweek
-                })
+                logger.info("FPL ranks updated, refreshing all managers", extra={"gameweek": self.current_gameweek})
                 self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
-                await self._refresh_manager_points()
+                await self._refresh_manager_points(force_all_managers=force_all_managers)
         except Exception as e:
-            logger.error("Error in FPL rank change check", extra={
-                "gameweek": self.current_gameweek,
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("FPL rank check failed", extra={"gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
     
     async def _validate_player_points_integrity(self):
         """
@@ -700,37 +802,25 @@ class RefreshOrchestrator:
                         "manager_name": row.get("manager_name"),
                         "difference": row.get("difference", 0)
                     })
-                    logger.warning("Player points integrity check failed", extra={
-                        "manager_id": row.get("manager_id"),
-                        "manager_name": row.get("manager_name"),
-                        "manager_total_points": row.get("manager_total_points"),
-                        "sum_player_starting_points": row.get("sum_player_starting_points"),
-                        "transfer_costs": row.get("transfer_costs"),
-                        "difference": row.get("difference"),
-                        "expected": row.get("sum_player_starting_points", 0) + row.get("transfer_costs", 0)
-                    })
             
             if invalid_managers:
-                logger.warning("Data integrity validation found discrepancies", extra={
-                    "invalid_count": len(invalid_managers),
-                    "total_checked": len(manager_ids),
-                    "invalid_managers": invalid_managers
+                n, total = len(invalid_managers), len(manager_ids)
+                logger.warning("Points mismatch: %s of %s managers", n, total, extra={
+                    "invalid_count": n,
+                    "total_checked": total,
+                    "sample": invalid_managers[:3]
                 })
             else:
-                logger.debug("Data integrity validation passed for all managers", extra={
-                    "checked_count": len(manager_ids)
-                })
+                logger.debug("Points validation OK", extra={"checked": len(manager_ids)})
                 
         except Exception as e:
-            logger.error("Error validating player points integrity", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Points validation failed", extra={"error": str(e)}, exc_info=True)
     
-    async def _refresh_cycle(self):
-        """Execute one refresh cycle."""
+    async def _fast_cycle(self):
+        """Execute fast refresh cycle (gameweeks, state, fixtures, players when live). No manager points or MVs in live - those run in slow loop."""
         try:
-            # Phase 1: Always refresh foundational tables first
-            await self._refresh_gameweeks()
+            # Phase 1: Always refresh foundational tables first (reuse bootstrap for player refresh)
+            bootstrap = await self._refresh_gameweeks()
             
             # Detect current state
             new_state = await self._detect_state()
@@ -742,8 +832,8 @@ class RefreshOrchestrator:
                 
                 # If transitioning away from TRANSFER_DEADLINE, reset tracking flags
                 if self.current_state == RefreshState.TRANSFER_DEADLINE:
-                    logger.info("Exiting TRANSFER_DEADLINE state", extra={
-                        "refresh_completed": self.deadline_refresh_completed,
+                    logger.info("Exiting deadline state", extra={
+                        "refresh_done": self.deadline_refresh_completed,
                         "new_state": new_state.value
                     })
                     # Reset flags for next deadline window
@@ -753,21 +843,19 @@ class RefreshOrchestrator:
                 
                 self.current_state = new_state
             
-            # Phase 2: Refresh fixtures (state-dependent)
-            await self._refresh_fixtures()
+            # Phase 2: Refresh fixtures (state-dependent); reuse for player refresh to avoid duplicate get_fixtures()
+            fixtures_by_gameweek = await self._refresh_fixtures()
             
-            # Phase 3: Conditional refreshes based on state
+            # Phase 3 (fast only): player data every cycle; manager points + MVs run in slow loop
             if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
-                await self._refresh_players()
-                # ⚠️ CRITICAL: Refresh manager points to apply auto-subs progressively
-                # Auto-subs are applied as matches finish, so we need to recalculate manager points
-                await self._refresh_manager_points()
-                # Validate data integrity after refresh
-                await self._validate_player_points_integrity()
-            
-            # Phase 3b: In BONUS_PENDING, poll FPL API for rank change to drop stale indicator
-            if self.current_state == RefreshState.BONUS_PENDING and self.current_gameweek:
-                await self._check_fpl_rank_change_and_refresh()
+                live_data = await self._refresh_players(
+                    bootstrap=bootstrap, fixtures_by_gameweek=fixtures_by_gameweek
+                )
+                # Sync fixture scores from event-live so matches page stays in sync with GW points
+                if live_data:
+                    self._update_fixture_scores_from_live(
+                        live_data, bootstrap, fixtures_by_gameweek
+                    )
             
             if self.current_state == RefreshState.PRICE_WINDOW:
                 await self._refresh_prices()
@@ -785,9 +873,7 @@ class RefreshOrchestrator:
                     
                     if status_changed and not self.deadline_refresh_completed:
                         # Gameweek status changed - API is back, refresh all deadline data
-                        logger.info("Gameweek status change detected - refreshing deadline data", extra={
-                            "gameweek": self.current_gameweek
-                        })
+                        logger.info("GW status changed, refreshing deadline data", extra={"gameweek": self.current_gameweek})
                         
                         # Get all tracked managers
                         manager_ids = self._get_tracked_manager_ids()
@@ -797,8 +883,8 @@ class RefreshOrchestrator:
                             batch_size = 5
                             total_batches = (len(manager_ids) + batch_size - 1) // batch_size
                             
-                            logger.info("Refreshing manager picks and transfers", extra={
-                                "manager_count": len(manager_ids),
+                            logger.info("Refreshing picks and transfers", extra={
+                                "count": len(manager_ids),
                                 "total_batches": total_batches,
                                 "gameweek": self.current_gameweek
                             })
@@ -814,23 +900,16 @@ class RefreshOrchestrator:
                             # This handles cases where status changed but API still has errors
                             if deadline_time:
                                 current_time = datetime.now(timezone.utc)
-                                logger.info("Waiting for API to be ready before batch refresh", extra={
-                                    "gameweek": self.current_gameweek
-                                })
+                                logger.info("Waiting for API before batch refresh", extra={"gameweek": self.current_gameweek})
                                 try:
                                     api_ready = await self.manager_refresher.wait_for_api_after_deadline(
                                         deadline_time,
                                         current_time
                                     )
                                     if not api_ready:
-                                        logger.warning("API not ready after wait, proceeding with caution", extra={
-                                            "gameweek": self.current_gameweek
-                                        })
+                                        logger.warning("API not ready, proceeding anyway", extra={"gameweek": self.current_gameweek})
                                 except Exception as e:
-                                    logger.warning("Error waiting for API, proceeding anyway", extra={
-                                        "gameweek": self.current_gameweek,
-                                        "error": str(e)
-                                    })
+                                    logger.warning("API wait failed, proceeding anyway", extra={"gameweek": self.current_gameweek, "error": str(e)})
                             
                             # Track errors during batch refresh
                             failed_managers = set()
@@ -882,7 +961,7 @@ class RefreshOrchestrator:
                                             "500", "502", "503", "504", "timeout", "connection", "maintenance"
                                         ])
                                         
-                                        logger.error(f"Error refreshing manager {task_type}", extra={
+                                        logger.error("Manager %s failed", task_type, extra={
                                             "manager_id": manager_id,
                                             "gameweek": self.current_gameweek,
                                             "task_type": task_type,
@@ -900,11 +979,11 @@ class RefreshOrchestrator:
                             
                             # Retry failed managers once if we have retryable errors
                             if failed_managers and success_rate < 90:  # Less than 90% success
-                                logger.warning("Batch refresh had failures, retrying failed managers", extra={
+                                logger.warning("Batch had failures, retrying", extra={
                                     "gameweek": self.current_gameweek,
-                                    "failed_count": len(failed_managers),
+                                    "failed": len(failed_managers),
                                     "success_rate": f"{success_rate:.1f}%",
-                                    "total_managers": len(manager_ids)
+                                    "total": len(manager_ids)
                                 })
                                 
                                 # Wait a bit before retry
@@ -926,17 +1005,10 @@ class RefreshOrchestrator:
                                             manager_id,
                                             self.current_gameweek
                                         )
-                                        logger.info("Successfully retried manager refresh", extra={
-                                            "manager_id": manager_id,
-                                            "gameweek": self.current_gameweek
-                                        })
+                                        logger.info("Retry succeeded", extra={"manager_id": manager_id, "gameweek": self.current_gameweek})
                                     except Exception as e:
                                         failed_managers.add(manager_id)
-                                        logger.error("Retry failed for manager", extra={
-                                            "manager_id": manager_id,
-                                            "gameweek": self.current_gameweek,
-                                            "error": str(e)
-                                        }, exc_info=True)
+                                        logger.error("Retry failed", extra={"manager_id": manager_id, "gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
                                     
                                     # Rate limiting between retries
                                     await asyncio.sleep(2.0)
@@ -948,10 +1020,10 @@ class RefreshOrchestrator:
                             # Only mark as completed if we have reasonable success rate
                             # Allow some failures (e.g., network issues) but not complete failure
                             if success_rate >= 80:  # At least 80% success
-                                logger.info("Batch refresh completed with acceptable success rate", extra={
+                                logger.info("Batch refresh done", extra={
                                     "gameweek": self.current_gameweek,
-                                    "success_count": success_count,
-                                    "failed_count": len(failed_managers),
+                                    "success": success_count,
+                                    "failed": len(failed_managers),
                                     "success_rate": f"{success_rate:.1f}%"
                                 })
                                 
@@ -970,7 +1042,7 @@ class RefreshOrchestrator:
                                             self.current_gameweek
                                         )
                                     except Exception as e:
-                                        logger.error("Error building player whitelist", extra={
+                                        logger.error("Player whitelist failed", extra={
                                             "league_id": league["league_id"],
                                             "gameweek": self.current_gameweek,
                                             "error": str(e)
@@ -980,28 +1052,25 @@ class RefreshOrchestrator:
                                 # and allow normal state detection (e.g., LIVE_MATCHES when games start)
                                 self.deadline_refresh_completed = True
                                 
-                                logger.info("Deadline refresh completed - exiting TRANSFER_DEADLINE state", extra={
+                                logger.info("Deadline refresh done", extra={
                                     "gameweek": self.current_gameweek,
-                                    "managers_refreshed": success_count,
-                                    "managers_failed": len(failed_managers),
-                                    "success_rate": f"{success_rate:.1f}%",
-                                    "note": "Will now detect LIVE_MATCHES state when games start"
+                                    "success": success_count,
+                                    "failed": len(failed_managers),
+                                    "success_rate": f"{success_rate:.1f}%"
                                 })
                             else:
                                 # Too many failures - don't mark as completed, will retry next cycle
-                                logger.error("Batch refresh failed - too many errors, will retry next cycle", extra={
+                                logger.error("Batch failed, retrying next cycle", extra={
                                     "gameweek": self.current_gameweek,
-                                    "success_count": success_count,
-                                    "failed_count": len(failed_managers),
+                                    "success": success_count,
+                                    "failed": len(failed_managers),
                                     "success_rate": f"{success_rate:.1f}%",
                                     "threshold": "80%"
                                 })
                                 # Don't mark as completed - will retry on next cycle
                                 return  # Exit early, don't mark as completed
                         else:
-                            logger.warning("No tracked managers found for deadline refresh", extra={
-                                "gameweek": self.current_gameweek
-                            })
+                            logger.warning("No managers for deadline refresh", extra={"gameweek": self.current_gameweek})
                     elif not status_changed:
                         # Status hasn't changed yet - still waiting for API
                         logger.debug("Waiting for gameweek status change after deadline", extra={
@@ -1014,43 +1083,63 @@ class RefreshOrchestrator:
                             "gameweek": self.current_gameweek
                         })
                 else:
-                    logger.warning("Could not get current gameweek for deadline refresh check")
+                    logger.warning("No current gameweek for deadline check")
             
-            # Phase 4: Refresh materialized views
-            try:
-                self.db_client.refresh_all_materialized_views()
-            except Exception as e:
-                logger.error("Error refreshing materialized views", extra={
-                    "error": str(e)
-                }, exc_info=True)
+            # Phase 4: Refresh materialized views (non-live states only; live does MVs in Phase 3 when do_full)
+            if self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                try:
+                    self.db_client.refresh_all_materialized_views()
+                except Exception as e:
+                    logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
             
         except Exception as e:
-            logger.error("Error in refresh cycle", extra={
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Fast cycle failed", extra={"error": str(e)}, exc_info=True)
     
-    async def run(self):
-        """Run the refresh orchestrator main loop."""
-        logger.info("Starting refresh orchestrator main loop")
-        self.running = True
-        
+    async def _run_fast_loop(self):
+        """Fast loop: gameweeks, fixtures, players every 30s in live (or gameweeks interval otherwise). Does not block on manager points or MVs."""
         while self.running:
             try:
-                await self._refresh_cycle()
-                
-                # Use 1 minute interval during TRANSFER_DEADLINE state to check for status changes
-                # Otherwise use gameweeks interval as base
+                await self._fast_cycle()
                 if self.current_state == RefreshState.TRANSFER_DEADLINE:
-                    await asyncio.sleep(60)  # 1 minute
+                    await asyncio.sleep(60)
+                elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                    await asyncio.sleep(self.config.fast_loop_interval)
                 else:
                     await asyncio.sleep(self.config.gameweeks_refresh_interval)
-                
             except asyncio.CancelledError:
-                logger.info("Refresh orchestrator cancelled")
                 break
             except Exception as e:
-                logger.error("Fatal error in refresh loop", extra={
-                    "error": str(e)
-                }, exc_info=True)
-                # Wait before retrying
+                logger.error("Fast loop error", extra={"error": str(e)}, exc_info=True)
+                await asyncio.sleep(30)
+    
+    async def _run_slow_loop(self):
+        """Slow loop: manager points + MVs every full_refresh_interval_live when in live. Runs in parallel with fast loop."""
+        while self.running:
+            try:
+                # End of gameday (fixtures table: all finished_provisional): capture rank update, refresh all managers
+                if self.current_gameweek:
+                    await self._check_ranks_final_and_refresh()
+                if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                    await self._refresh_manager_points()
+                    await self._validate_player_points_integrity()
+                    try:
+                        self.db_client.refresh_materialized_views_for_live()
+                    except Exception as e:
+                        logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
+                await asyncio.sleep(self.config.full_refresh_interval_live)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error("Slow loop error", extra={"error": str(e)}, exc_info=True)
                 await asyncio.sleep(60)
+    
+    async def run(self):
+        """Run fast and slow loops in parallel."""
+        logger.info("Refresh loops started (fast + slow)")
+        self.running = True
+        try:
+            await asyncio.gather(self._run_fast_loop(), self._run_slow_loop())
+        except asyncio.CancelledError:
+            logger.info("Refresh loops cancelled")
+        finally:
+            self.running = False

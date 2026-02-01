@@ -15,10 +15,14 @@
   padding: 20px;
 }
 
+/* Single scroll container (like captaincy table) so sticky thead sticks when scrolling vertically */
 .gameweek-points-scrollable {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: transparent;
   scrollbar-width: none;
 }
 
@@ -26,12 +30,10 @@
   display: none;
 }
 
-/* Table container (spreadsheet-style) – no colored background */
+/* Wrapper for table only – no overflow so thead sticky works relative to .gameweek-points-scrollable */
 .gameweek-points-box-content {
   width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
+  min-width: min-content;
   background: transparent;
 }
 
@@ -43,21 +45,23 @@
   table-layout: auto;
 }
 
+/* Sticky header row – stays visible when scrolling to bottom of list (like captaincy table); z above body so player names never overlap */
 .gameweek-points-table thead {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;
   background: var(--bg-secondary);
+  box-shadow: 0 1px 0 var(--border-color);
 }
 .gameweek-points-table thead th {
   background: var(--bg-secondary);
 }
 
-/* Sticky player header when horizontally scrolling; padding-left aligns "PLAYER" with badge */
+/* Sticky player header (corner): top + left; z above header row and body player column */
 .gameweek-points-table thead .gameweek-points-th-player {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 11;
   background: var(--bg-secondary);
   padding-left: 16px;
 }
@@ -256,7 +260,7 @@
 }
 
 .gameweek-points-td {
-  padding: 6px 8px;
+  padding: 8px 8px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
   color: var(--text-primary);
@@ -264,11 +268,11 @@
   font-size: 8px;
 }
 
-/* Player column – sticky on horizontal scroll; must use opaque backgrounds so stat columns don't show through on scroll */
+/* Player column – sticky on horizontal scroll; z below thead so header always wins when scrolling vertically */
 .gameweek-points-td-player-fixed {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 1;
   background: var(--bg-primary);
   min-width: 0;
   overflow: visible;
@@ -451,18 +455,33 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
   margin-left: 0;
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
   box-shadow: 0 0 0 0 var(--accent-green, #10b981);
-  animation: gameweek-points-mins-live-pulse 2.5s ease-in-out infinite;
+  animation: gameweek-points-mins-live-pulse 2s ease-in-out infinite;
+}
+
+.gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-provisional {
+  background: #ca8a04;
+  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  animation: gameweek-points-mins-provisional-pulse 2s ease-in-out infinite;
 }
 
 @keyframes gameweek-points-mins-live-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes gameweek-points-mins-provisional-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(202, 138, 4, 0);
   }
 }
 
@@ -483,11 +502,46 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   flex-shrink: 0;
 }
 
+/* Upcoming match: day + time in local TZ (subtle, not DNP) */
+.gameweek-points-mins-upcoming {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  font-size: 8px;
+  line-height: 1.2;
+}
+.gameweek-points-mins-upcoming-day {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.gameweek-points-mins-upcoming-time {
+  font-size: 7px;
+  opacity: 0.85;
+}
+.gameweek-points-mins-upcoming-tbd {
+  flex-direction: row;
+  font-weight: 500;
+}
+
 
 /* DNP and 0 pts – more subtle so they don’t compete with real data */
 /* Muted value only – do not change cell background */
 .gameweek-points-td.gameweek-points-cell-muted {
   color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+}
+
+/* Provisional bonus / live scoring */
+.gameweek-points-cell-provisional {
+  color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
+}
+.gameweek-points-player-points-badge.gameweek-points-stat-provisional {
+  font-style: italic;
+  color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
 }
 
 .gameweek-points-opponent-cell {
@@ -516,16 +570,16 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   font-variant-numeric: tabular-nums;
 }
 
-/* Top 10 gameweek scorer points badge – green */
+/* Top 10 gameweek scorer points badge – green; font inherits so points match other points */
 .gameweek-points-player-points-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 26px;
-  height: 18px;
-  padding: 0 4px;
+  min-height: 1.35em;
+  padding: 2px 6px;
   border-radius: 4px;
-  font-size: 8px;
+  font-size: inherit;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -688,7 +742,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
 
   .gameweek-points-td {
-    padding: 10px 12px;
+    padding: 12px 12px;
     font-size: 13px;
   }
 }
@@ -717,8 +771,49 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 
   .gameweek-points-th,
   .gameweek-points-td {
-    padding: 5px 6px;
+    padding: 7px 6px;
+    font-size: 11px;
+  }
+
+  .gameweek-points-th-stat {
+    font-size: 10px;
+  }
+  .gameweek-points-td-stat {
+    font-size: 10px;
+  }
+
+  .gameweek-points-player-name-text {
+    font-size: 11px;
+  }
+  .gameweek-points-captain-badge-inline {
     font-size: 9px;
+  }
+  .gameweek-points-assistant-badge-inline {
+    font-size: 10px;
+  }
+
+  .gameweek-points-mins-dnp-badge {
+    font-size: 10px;
+  }
+  .gameweek-points-mins-upcoming {
+    font-size: 8px;
+  }
+  .gameweek-points-mins-upcoming-time {
+    font-size: 7px;
+  }
+
+  .gameweek-points-impact-value {
+    font-size: 9px;
+  }
+
+  .gameweek-points-legend {
+    font-size: 10px;
+  }
+  .gameweek-points-legend-badge {
+    font-size: 10px;
+  }
+  .gameweek-points-legend-scroll-hint {
+    font-size: 10px;
   }
 
   .gameweek-points-team-badge {

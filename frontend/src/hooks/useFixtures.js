@@ -19,6 +19,7 @@ export function useFixtures(gameweek) {
     enabled: !!gameweek, // Only run if we have a gameweek
     staleTime: 30000, // Shared data - cache for 30 seconds
     refetchInterval: 30000, // Poll every 30 seconds (automatic background refetch)
+    refetchIntervalInBackground: true,
   })
 
   return { fixtures, loading: isLoading, error }

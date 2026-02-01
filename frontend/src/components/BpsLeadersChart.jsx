@@ -66,13 +66,15 @@ const VALUE_ON_BAR_MIN_WIDTH_PCT = 32
  * Top 3 by BPS (with FPL tiebreakers) are colored: 3 pts = gold, 2 pts = silver, 1 pt = bronze.
  * Optional gameweekMaxBps scales bars to gameweek-wide max so all fixtures share the same scale.
  */
-export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null }) {
+export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false }) {
   const barsRef = useRef(null)
   const [contrastByPlayerId, setContrastByPlayerId] = useState({})
 
   const { sortedPlayers, maxBps } = useMemo(() => {
     if (!players?.length) return { sortedPlayers: [], maxBps: 1 }
-    const sorted = sortByBpsAndTiebreakers(players)
+    const withBps = players.filter((p) => (p.bps ?? 0) > 0)
+    if (!withBps.length) return { sortedPlayers: [], maxBps: 1 }
+    const sorted = sortByBpsAndTiebreakers(withBps)
     const fixtureMax = Math.max(...sorted.map((p) => p.bps ?? 0), 1)
     const scaleMax = gameweekMaxBps != null && gameweekMaxBps > 0
       ? Math.max(gameweekMaxBps, fixtureMax)
@@ -139,13 +141,23 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   }
 
   return (
-    <div className="bps-chart" role="list" aria-label="BPS leaders">
+    <div className={`bps-chart${isProvisional ? ' bps-chart--provisional' : ''}`} role="list" aria-label="BPS leaders">
+      <div className="bps-chart__header" aria-hidden>
+        <div className="bps-chart__header-label" />
+        <div className="bps-chart__header-bps">BPS</div>
+        <div className="bps-chart__header-bonus">Bonus</div>
+      </div>
       <div className="bps-chart__bars" ref={barsRef}>
-        {sortedPlayers.map((player) => {
+        {sortedPlayers.map((player, index) => {
           const bps = player.bps ?? 0
           const widthPct = barWidthPercent(bps)
           const valueOnBar = widthPct >= VALUE_ON_BAR_MIN_WIDTH_PCT
-          const bonus = player.bonus ?? 0
+          const apiBonus = player.bonus ?? 0
+          const bonus = apiBonus >= 1 && apiBonus <= 3
+            ? apiBonus
+            : isProvisional
+              ? (index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0)
+              : 0
           const inBonus = bonus >= 1 && bonus <= 3
           return (
             <div
@@ -197,11 +209,6 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
             </div>
           )
         })}
-      </div>
-      <div className="bps-chart__legend" aria-hidden>
-        <span className="bps-chart__legend-item bps-chart__legend-item--3">3 pts</span>
-        <span className="bps-chart__legend-item bps-chart__legend-item--2">2 pts</span>
-        <span className="bps-chart__legend-item bps-chart__legend-item--1">1 pt</span>
       </div>
     </div>
   )

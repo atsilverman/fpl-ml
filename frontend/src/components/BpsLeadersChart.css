@@ -33,6 +33,43 @@
   text-align: center;
 }
 
+.bps-chart__header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.bps-chart__header-label {
+  flex: 0 0 110px;
+  width: 110px;
+  min-width: 0;
+}
+
+.bps-chart__header-bps {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.bps-chart__header-bonus {
+  flex: 0 0 32px;
+  width: 32px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: right;
+}
+
 .bps-chart__bars {
   flex: 1 1 auto;
   min-height: 0;
@@ -47,7 +84,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 38px;
+  min-height: 28px;
 }
 
 /* Fixed-width label: name then badge (right-aligned so badge is right of name) */
@@ -122,7 +159,7 @@ html[data-theme="light"] .bps-chart__bonus-badge--2 {
 .bps-chart__track {
   flex: 1 1 auto;
   min-width: 0;
-  height: 26px;
+  height: 18px;
   background: var(--bg-secondary);
   border-radius: 6px;
   overflow: visible;
@@ -259,7 +296,7 @@ html[data-theme="light"] .bps-chart__value--no-bonus-bar {
 
 @media (max-width: 768px) {
   .bps-chart__row {
-    min-height: 34px;
+    min-height: 28px;
   }
 
   .bps-chart__label {
@@ -271,7 +308,7 @@ html[data-theme="light"] .bps-chart__value--no-bonus-bar {
   }
 
   .bps-chart__track {
-    height: 22px;
+    height: 18px;
   }
 
   .bps-chart__value {

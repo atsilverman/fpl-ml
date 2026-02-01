@@ -82,6 +82,8 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
     const isTop10ForColumn = playerId != null && top10ByStat?.[key]?.has(playerId)
     const isDefColumn = key === 'defensive_contribution'
     const isSavesColumn = key === 'saves'
+    const isBonusColumn = key === 'bonus'
+    const isProvisionalBonus = isBonusColumn && player.bonus_status === 'provisional' && !isZero
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isGk = player.position === 1
     const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
@@ -101,14 +103,16 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
       'matchup-detail-stat-badge',
       showTop10Badge && 'matchup-detail-rank-highlight',
       showDefconBadge && 'matchup-detail-defcon-achieved',
-      showSavesBadge && 'matchup-detail-saves-achieved'
+      showSavesBadge && 'matchup-detail-saves-achieved',
+      isProvisionalBonus && 'matchup-detail-stat-provisional'
     ].filter(Boolean).join(' ')
     let title = `Top 10 in GW for ${key}`
-    if (showDefconBadge) title = isTop10ForColumn ? 'Top 10 in GW & Defcon achieved' : 'Defcon achieved (DEF ≥ position threshold)'
+    if (isProvisionalBonus) title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
+    else if (showDefconBadge) title = isTop10ForColumn ? 'Top 10 in GW & Defcon achieved' : 'Defcon achieved (DEF ≥ position threshold)'
     else if (showSavesBadge) title = isTop10ForColumn ? 'Top 10 in GW & Saves achieved (3+)' : 'Saves achieved (3+ saves = 1 pt per 3)'
     return (
-      <td key={key} className="matchup-detail-td matchup-detail-td-stat">
-        {showBadge ? (
+      <td key={key} className={`matchup-detail-td matchup-detail-td-stat${isProvisionalBonus ? ' matchup-detail-cell-provisional' : ''}`}>
+        {showBadge || isProvisionalBonus ? (
           <span className={badgeClass} title={title}>{displayVal}</span>
         ) : (
           displayVal
@@ -155,6 +159,7 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
               const isTop10Pts = playerId != null && top10ByStat?.pts?.has(playerId)
               const isDnp = p.minutes == null || p.minutes === 0
               const isOwnedByYou = ownedPlayerIds != null && playerId != null && ownedPlayerIds.has(playerId)
+              const ptsIncludesProvisional = p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0
               return (
                 <tr key={p.player_id} className={`matchup-detail-tr ${isDnp ? 'matchup-detail-tr-dnp' : ''}`}>
                   <td className="matchup-detail-td matchup-detail-td-player">
@@ -170,7 +175,10 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
                       `${p.minutes}'`
                     )}
                   </td>
-                  <td className={`matchup-detail-td matchup-detail-td-pts ${!isTop10Pts && p.points === 0 ? 'matchup-detail-cell-muted' : ''}`}>
+                  <td
+                    className={`matchup-detail-td matchup-detail-td-pts ${!isTop10Pts && p.points === 0 ? 'matchup-detail-cell-muted' : ''}${ptsIncludesProvisional ? ' matchup-detail-cell-provisional' : ''}`}
+                    title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : undefined}
+                  >
                     {isTop10Pts ? (
                       <span className="matchup-detail-stat-badge matchup-detail-rank-highlight" title="Top 10 in GW for points">
                         {formatNumber(p.points)}

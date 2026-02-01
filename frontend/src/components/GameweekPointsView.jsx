@@ -88,6 +88,20 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   const formatMinutes = (minutes) => (minutes != null && minutes > 0 ? `${minutes}'` : 'DNP')
 
+  /** Format kickoff for MP placeholder: { day: 'SAT', time: '15:00' } in device local TZ; null if invalid */
+  const formatKickoffShort = (isoString) => {
+    if (!isoString) return null
+    try {
+      const d = new Date(isoString)
+      if (Number.isNaN(d.getTime())) return null
+      const day = d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase().slice(0, 3)
+      const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: false })
+      return { day, time }
+    } catch {
+      return null
+    }
+  }
+
   const IMPACT_BAR_MAX = 100
 
   const PlayerTableRow = ({ player }) => {
@@ -106,6 +120,13 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
+    const matchStarted = Boolean(player.match_started)
+    const matchFinished = Boolean(player.match_finished)
+    const matchFinishedProvisional = Boolean(player.match_finished_provisional)
+    const isMatchLive = matchStarted && !matchFinished && !matchFinishedProvisional
+    const isMatchProvisional = matchFinishedProvisional && !matchFinished
+    const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && (isMatchLive || isMatchProvisional || (isLiveUpdating && player.match_started === undefined))
+    const minsDotProvisional = isMatchProvisional && !isMatchLive
 
     const isGk = player.position === 1
     const expectedStatKeys = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
@@ -114,17 +135,18 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       if (n === 0) return '0'
       return n.toFixed(2)
     }
-    const renderStatCell = (value, statKey) => {
+    const renderStatCell = (value, statKey, opts = {}) => {
       const numVal = Number(value) || 0
       const isZero = numVal === 0
       const isTop10ForColumn = playerId != null && top10ByStat?.[statKey]?.has(Number(playerId))
       const isDefColumn = statKey === 'defensive_contribution'
       const isSavesColumn = statKey === 'saves'
+      const isProvisionalBonus = opts.isProvisionalBonus ?? false
       const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
       const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
       const statShowsTop10 = statKey === 'bps' || statKey === 'defensive_contribution' || expectedStatKeys.includes(statKey)
       const showTop10Badge = statShowsTop10 && !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
-      const showBadge = showDefconBadge || showSavesBadge || showTop10Badge
+      const showBadge = showDefconBadge || showSavesBadge || showTop10Badge || isProvisionalBonus
       const displayVal = expectedStatKeys.includes(statKey) ? formatExpected(value) : value
       if (isZero) {
         return <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted">{displayVal}</td>
@@ -133,10 +155,13 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         'gameweek-points-player-points-badge',
         showTop10Badge && 'rank-highlight',
         showDefconBadge && 'defcon-achieved',
-        showSavesBadge && 'saves-achieved'
+        showSavesBadge && 'saves-achieved',
+        isProvisionalBonus && 'gameweek-points-stat-provisional'
       ].filter(Boolean).join(' ')
       let title
-      if (showDefconBadge) {
+      if (isProvisionalBonus) {
+        title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
+      } else if (showDefconBadge) {
         title = isTop10ForColumn ? 'Top 10 in GW & Defcon achieved (DEF ≥ position threshold)' : 'Defcon achieved (DEF ≥ position threshold)'
       } else if (showSavesBadge) {
         title = isTop10ForColumn ? 'Top 10 in GW & Saves achieved (3+ saves = 1 pt per 3)' : 'Saves achieved (3+ saves = 1 pt per 3)'
@@ -144,7 +169,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         title = `Top 10 in GW for ${statKey}`
       }
       return (
-        <td key={statKey} className="gameweek-points-td gameweek-points-td-stat">
+        <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat${isProvisionalBonus ? ' gameweek-points-cell-provisional' : ''}`}>
           {showBadge ? (
             <span className={badgeClass} title={title}>{displayVal}</span>
           ) : (
@@ -195,15 +220,32 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           </div>
           <span className="gameweek-points-col-sep" aria-hidden />
         </td>
-        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) ? 'gameweek-points-cell-muted' : ''}`}>
+        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchStarted ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
               <>
                 {formatMinutes(player.minutes)}
-                {isLiveUpdating && (
-                  <span className="live-updating-indicator gameweek-points-mins-live" title="Minutes can change during live games" aria-hidden />
+                {showMinsLiveDot && (
+                  <span
+                    className={`live-updating-indicator gameweek-points-mins-live ${minsDotProvisional ? 'gameweek-points-mins-provisional' : ''}`}
+                    title={minsDotProvisional ? 'Match finished (provisional); stats may update' : 'Minutes can change during live games'}
+                    aria-hidden
+                  />
                 )}
               </>
+            ) : !matchStarted ? (
+              (() => {
+                const kickoff = formatKickoffShort(player.kickoff_time)
+                if (kickoff) {
+                  return (
+                    <span className="gameweek-points-mins-upcoming" title={`Kickoff: ${kickoff.day} ${kickoff.time} (local)`}>
+                      <span className="gameweek-points-mins-upcoming-day">{kickoff.day}</span>
+                      <span className="gameweek-points-mins-upcoming-time">{kickoff.time}</span>
+                    </span>
+                  )
+                }
+                return <span className="gameweek-points-mins-upcoming gameweek-points-mins-upcoming-tbd">–</span>
+              })()
             ) : (
               <span className="gameweek-points-mins-dnp-badge" title="Did not play">!</span>
             )}
@@ -228,18 +270,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             '–'
           )}
         </td>
-        <td className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && player.points === 0 ? 'gameweek-points-cell-muted' : ''}`}>
-          {isTop10Pts ? (
-            <span
-              className="gameweek-points-player-points-badge rank-highlight"
-              title="Top 10 in GW for points"
-            >
-              {formatNumber(player.points)}
-            </span>
-          ) : (
-            formatNumber(player.points)
-          )}
-        </td>
+        <td
+            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && player.points === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
+            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : undefined}
+          >
+            {isTop10Pts ? (
+              <span
+                className="gameweek-points-player-points-badge rank-highlight"
+                title="Top 10 in GW for points"
+              >
+                {formatNumber(player.points)}
+              </span>
+            ) : (
+              formatNumber(player.points)
+            )}
+          </td>
         <td className="gameweek-points-td gameweek-points-td-impact">
           {hasImpact ? (
             <div className="gameweek-points-impact-cell" title={IMPACT_TOOLTIP}>
@@ -262,7 +307,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         {renderStatCell(player.clean_sheets ?? 0, 'clean_sheets')}
         {renderStatCell(player.saves ?? 0, 'saves')}
         {renderStatCell(player.bps ?? 0, 'bps')}
-        {renderStatCell(player.bonus ?? 0, 'bonus')}
+        {renderStatCell(player.bonus ?? 0, 'bonus', { isProvisionalBonus: player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 })}
         {renderStatCell(player.defensive_contribution ?? 0, 'defensive_contribution')}
         {renderStatCell(player.yellow_cards ?? 0, 'yellow_cards')}
         {renderStatCell(player.red_cards ?? 0, 'red_cards')}

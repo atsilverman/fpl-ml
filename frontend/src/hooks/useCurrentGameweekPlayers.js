@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from './useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
+import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 
 /**
@@ -56,12 +57,18 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           minutes,
           opponent_team_id,
           was_home,
+          started,
+          kickoff_time,
+          match_finished,
+          match_finished_provisional,
           goals_scored,
           assists,
           clean_sheets,
           saves,
           bps,
           bonus,
+          bonus_status,
+          provisional_bonus,
           defensive_contribution,
           yellow_cards,
           red_cards,
@@ -149,6 +156,13 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         const slotName = slotPlayerInfo.web_name || 'Unknown'
         const slotTeamShortName = slotPlayerInfo.teams?.short_name || null
 
+        const bonusStatus = stats.bonus_status ?? 'provisional'
+        const provisionalBonus = Number(stats.provisional_bonus) || 0
+        const officialBonus = Number(stats.bonus) || 0
+        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+        const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
+        const effectiveBonus = isBonusConfirmed ? officialBonus : provisionalBonus
+
         return {
           position: pick.position,
           player_id: pick.player_id,
@@ -162,8 +176,12 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           multiplier: pick.multiplier || 1,
           was_auto_subbed_in: pick.was_auto_subbed_in,
           was_auto_subbed_out: subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId,
-          points: stats.total_points || 0,
+          points: effectivePoints,
           minutes: stats.minutes ?? 0,
+          match_started: stats.started ?? false,
+          match_finished: stats.match_finished ?? false,
+          match_finished_provisional: stats.match_finished_provisional ?? false,
+          kickoff_time: stats.kickoff_time || null,
           opponent_team_id: stats.opponent_team_id || null,
           opponent_team_short_name: opponentTeam?.short_name || null,
           was_home: stats.was_home || false,
@@ -172,7 +190,8 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           clean_sheets: stats.clean_sheets ?? 0,
           saves: stats.saves ?? 0,
           bps: stats.bps ?? 0,
-          bonus: stats.bonus ?? 0,
+          bonus: effectiveBonus,
+          bonus_status: bonusStatus,
           defensive_contribution: stats.defensive_contribution ?? 0,
           yellow_cards: stats.yellow_cards ?? 0,
           red_cards: stats.red_cards ?? 0,
@@ -197,14 +216,17 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
 export function useCurrentGameweekPlayers() {
   const { config } = useConfiguration()
   const { gameweek, loading: gwLoading } = useGameweekData()
+  const { state: refreshState } = useRefreshState()
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
 
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   const { data: playersData, isLoading, error } = useQuery({
     queryKey: ['current-gameweek-players', MANAGER_ID, gameweek],
     queryFn: () => fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek),
     enabled: !!MANAGER_ID && !!gameweek && !gwLoading,
     staleTime: 30 * 1000, // Cache for 30 seconds
-    refetchInterval: 60 * 1000, // Refetch every minute during live games
+    refetchInterval: isLive ? 25 * 1000 : 60 * 1000, // 25s when live, 1 min otherwise
+    refetchIntervalInBackground: true,
   })
 
   return {
@@ -220,13 +242,16 @@ export function useCurrentGameweekPlayers() {
  */
 export function useCurrentGameweekPlayersForManager(managerId) {
   const { gameweek, loading: gwLoading } = useGameweekData()
+  const { state: refreshState } = useRefreshState()
 
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   const { data: playersData, isLoading, error } = useQuery({
     queryKey: ['current-gameweek-players', managerId, gameweek],
     queryFn: () => fetchCurrentGameweekPlayersForManager(managerId, gameweek),
     enabled: !!managerId && !!gameweek && !gwLoading,
     staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    refetchInterval: isLive ? 25 * 1000 : 60 * 1000,
+    refetchIntervalInBackground: true,
   })
 
   return {

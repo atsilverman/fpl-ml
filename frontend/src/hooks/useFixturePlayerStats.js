@@ -24,6 +24,8 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
           saves,
           bps,
           bonus,
+          bonus_status,
+          provisional_bonus,
           defensive_contribution,
           yellow_cards,
           red_cards,
@@ -64,6 +66,12 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
 
       const rows = stats.map(s => {
         const info = playerMap[s.player_id] || {}
+        const bonusStatus = s.bonus_status ?? 'provisional'
+        const provisionalBonus = Number(s.provisional_bonus) || 0
+        const officialBonus = Number(s.bonus) || 0
+        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+        const displayPoints = isBonusConfirmed ? (s.total_points ?? 0) : (s.total_points ?? 0) + provisionalBonus
+        const displayBonus = isBonusConfirmed ? officialBonus : provisionalBonus
         return {
           player_id: s.player_id,
           team_id: s.team_id,
@@ -71,13 +79,14 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
           position: info.position ?? 0,
           player_team_short_name: info.short_name,
           minutes: s.minutes ?? 0,
-          points: s.total_points ?? 0,
+          points: displayPoints,
           goals_scored: s.goals_scored ?? 0,
           assists: s.assists ?? 0,
           clean_sheets: s.clean_sheets ?? 0,
           saves: s.saves ?? 0,
           bps: s.bps ?? 0,
-          bonus: s.bonus ?? 0,
+          bonus: displayBonus,
+          bonus_status: bonusStatus,
           defensive_contribution: s.defensive_contribution ?? 0,
           yellow_cards: s.yellow_cards ?? 0,
           red_cards: s.red_cards ?? 0,

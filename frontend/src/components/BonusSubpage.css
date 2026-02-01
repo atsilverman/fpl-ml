@@ -28,3 +28,10 @@
   max-width: 520px;
   margin: 0 auto;
 }
+
+.bps-chart-provisional-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 8px;
+  font-style: italic;
+}

@@ -91,12 +91,15 @@ async def backfill_manager_history(
             gameweek_list = gameweeks
             logger.info(f"Backfilling specific gameweeks: {gameweek_list}")
         else:
-            # Get all gameweeks from database
-            gameweeks_result = db_client.client.table("gameweeks").select(
+            # Only the current (live) gameweek
+            current_gw_result = db_client.client.table("gameweeks").select(
                 "id"
-            ).order("id", desc=False).execute()
-            gameweek_list = [gw["id"] for gw in gameweeks_result.data]
-            logger.info(f"Found {len(gameweek_list)} gameweeks to backfill: {gameweek_list}")
+            ).eq("is_current", True).limit(1).execute()
+            if not current_gw_result.data:
+                logger.error("No current gameweek (is_current=true) in DB. Run bootstrap/refresh first or pass --gameweeks.")
+                return
+            gameweek_list = [current_gw_result.data[0]["id"]]
+            logger.info(f"Backfilling current (live) gameweek only: GW {gameweek_list[0]}")
         
         # OPTIMIZATION: Batch fetch gameweek finished status upfront (one query instead of per-gameweek)
         gameweeks_result = db_client.client.table("gameweeks").select(

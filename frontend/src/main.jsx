@@ -12,6 +12,7 @@ const queryClient = new QueryClient({
       gcTime: 60000, // Keep in cache for 1 minute (formerly cacheTime)
       refetchOnWindowFocus: false, // Don't refetch on window focus (reduce queries)
       refetchOnReconnect: true, // Refetch when connection restored
+      refetchIntervalInBackground: true, // Keep polling when tab is in background
       retry: 1, // Only retry once on failure
     },
   },

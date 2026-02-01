@@ -105,20 +105,26 @@ class PlayerDataRefresher:
         active_player_ids: Set[int],
         live_data: Optional[Dict] = None,
         fixtures: Optional[Dict[int, Dict]] = None,
-        live_only: bool = False
+        bootstrap: Optional[Dict] = None,
+        live_only: bool = False,
+        expect_live_unavailable: bool = False,
     ):
         """
         Refresh player gameweek stats for active players.
         
         Optimized to use live endpoint data directly when available, avoiding
-        300+ element-summary API calls.
+        300+ element-summary API calls. "Live data" is the FPL API response from
+        /event/{gameweek}/live; it is often unavailable for past/finished gameweeks
+        or outside match windows, in which case we fall back to element-summary calls.
         
         Args:
             gameweek: Gameweek number
             active_player_ids: Set of active player IDs to refresh
             live_data: Optional live endpoint data (from /event/{gameweek}/live)
             fixtures: Optional fixtures dict keyed by fixture_id for fixture context
+            bootstrap: Optional bootstrap-static data (avoids refetch when e.g. backfilling)
             live_only: If True, skip updating expected stats and ICT stats (static per match)
+            expect_live_unavailable: If True, log fallback to element-summary at debug (e.g. backfill)
         """
         if not active_player_ids:
             logger.debug("No active players to refresh", extra={"gameweek": gameweek})
@@ -130,12 +136,10 @@ class PlayerDataRefresher:
             "using_live_data": live_data is not None
         })
         
-        # Get bootstrap for player positions (only if not using live_data)
-        if live_data is None:
-            bootstrap = await self.fpl_client.get_bootstrap_static()
+        # Use provided bootstrap or fetch
+        if bootstrap is not None:
             players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
         else:
-            # Get bootstrap for player positions (needed for team_id and position)
             bootstrap = await self.fpl_client.get_bootstrap_static()
             players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
         
@@ -145,6 +149,26 @@ class PlayerDataRefresher:
             fixtures = {f["id"]: f for f in fixtures_api if f.get("event") == gameweek}
         
         fixtures_by_id = fixtures
+        
+        # Ensure all active players exist in players table (avoids FK violation for new FPL players e.g. mid-season signings).
+        # Skip during live: players (reference) are not refreshed during live—only player_gameweek_stats are.
+        if not live_only:
+            for player_id in active_player_ids:
+                elem = players_map.get(player_id)
+                if elem:
+                    player_data = {
+                        "fpl_player_id": elem["id"],
+                        "first_name": elem.get("first_name", ""),
+                        "second_name": elem.get("second_name", ""),
+                        "web_name": elem.get("web_name", ""),
+                        "team_id": elem.get("team", 0),
+                        "position": elem.get("element_type", 0),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    try:
+                        self.db_client.upsert_player(player_data)
+                    except Exception as e:
+                        logger.warning("Upsert player failed", extra={"player_id": player_id, "error": str(e)})
         
         # Get existing player_gameweek_stats for fixture context
         # (live endpoint doesn't have fixture_id, opponent_team, etc.)
@@ -164,7 +188,35 @@ class PlayerDataRefresher:
         # Use live endpoint data directly if available (optimization)
         if live_data:
             live_elements = {elem["id"]: elem for elem in live_data.get("elements", [])}
-            
+            batch_stats = []
+
+            # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (MP > 45 = second half)
+            fixture_players: Dict[int, List[Dict]] = {}
+            for player_id in active_player_ids:
+                existing_stat = existing_stats_by_player.get(player_id, {})
+                fixture_id = existing_stat.get("fixture_id")
+                if not fixture_id and fixtures_by_id:
+                    team_id = players_map.get(player_id, {}).get("team", 0)
+                    for f_id, fixture in fixtures_by_id.items():
+                        if fixture.get("team_h") == team_id or fixture.get("team_a") == team_id:
+                            fixture_id = f_id
+                            break
+                if not fixture_id:
+                    continue
+                live_elem = live_elements.get(player_id)
+                if not live_elem:
+                    continue
+                st = live_elem.get("stats", {})
+                bps = st.get("bps", 0)
+                minutes = st.get("minutes", 0)
+                if fixture_id not in fixture_players:
+                    fixture_players[fixture_id] = []
+                fixture_players[fixture_id].append({"id": player_id, "bps": bps, "minutes": minutes})
+            fixture_past_threshold = {
+                fid: max((p["minutes"] for p in plist), default=0) > 45
+                for fid, plist in fixture_players.items()
+            }
+
             for player_id in active_player_ids:
                 live_elem = live_elements.get(player_id)
                 if not live_elem:
@@ -212,6 +264,17 @@ class PlayerDataRefresher:
                 # Determine bonus status from stats
                 bonus = stats.get("bonus", 0)
                 bonus_status = "confirmed" if bonus > 0 else "provisional"
+
+                # Provisional bonus (1-3 from BPS rank) only after second half (MP > 45)
+                provisional_bonus_val = 0
+                if bonus_status == "provisional" and bonus == 0 and fixture_id and fixture_past_threshold.get(fixture_id, False):
+                    all_in_fixture = fixture_players.get(fixture_id, [])
+                    provisional_bonus_val = self._calculate_provisional_bonus(
+                        player_id,
+                        stats.get("bps", 0),
+                        fixture_id,
+                        all_in_fixture,
+                    )
                 
                 # Calculate DEFCON
                 stats_for_defcon = {
@@ -246,6 +309,7 @@ class PlayerDataRefresher:
                     "started": stats.get("minutes", 0) > 0,
                     "total_points": stats.get("total_points", 0),
                     "bonus": bonus,
+                    "provisional_bonus": provisional_bonus_val,
                     "bps": stats.get("bps", 0),
                     "bonus_status": bonus_status,
                     "goals_scored": stats.get("goals_scored", 0),
@@ -269,36 +333,47 @@ class PlayerDataRefresher:
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
                 
-                # Only update expected/ICT stats if not live_only or match is finished
-                if live_only and not match_finished:
-                    # Preserve existing expected/ICT stats during live matches
-                    stats_data["expected_goals"] = float(existing_expected_goals or 0)
-                    stats_data["expected_assists"] = float(existing_expected_assists or 0)
-                    stats_data["expected_goal_involvements"] = float(existing_expected_goal_involvements or 0)
-                    stats_data["expected_goals_conceded"] = float(existing_expected_goals_conceded or 0)
-                    stats_data["influence"] = float(existing_influence or 0)
-                    stats_data["creativity"] = float(existing_creativity or 0)
-                    stats_data["threat"] = float(existing_threat or 0)
-                    stats_data["ict_index"] = float(existing_ict_index or 0)
-                else:
-                    # Update expected/ICT stats (full refresh or match finished)
-                    stats_data["expected_goals"] = float(stats.get("expected_goals", 0) or 0)
-                    stats_data["expected_assists"] = float(stats.get("expected_assists", 0) or 0)
-                    stats_data["expected_goal_involvements"] = float(stats.get("expected_goal_involvements", 0) or 0)
-                    stats_data["expected_goals_conceded"] = float(stats.get("expected_goals_conceded", 0) or 0)
-                    stats_data["influence"] = float(stats.get("influence", 0) or 0)
-                    stats_data["creativity"] = float(stats.get("creativity", 0) or 0)
-                    stats_data["threat"] = float(stats.get("threat", 0) or 0)
-                    stats_data["ict_index"] = float(stats.get("ict_index", 0) or 0)
+                # Expected/ICT: use live endpoint values when present (FPL live returns xG/xA for players who played)
+                # During live_only and unfinished match, only preserve existing when live doesn't provide the stat
+                def _float_from(v):
+                    if v is None or v == "":
+                        return None
+                    try:
+                        return float(v)
+                    except (TypeError, ValueError):
+                        return None
+
+                def _expected_or_existing(key: str, existing: Optional[float]) -> float:
+                    from_live = _float_from(stats.get(key))
+                    if from_live is not None:
+                        return from_live
+                    if live_only and not match_finished and existing is not None:
+                        return float(existing)
+                    return 0.0
+
+                stats_data["expected_goals"] = _expected_or_existing("expected_goals", existing_expected_goals)
+                stats_data["expected_assists"] = _expected_or_existing("expected_assists", existing_expected_assists)
+                stats_data["expected_goal_involvements"] = _expected_or_existing("expected_goal_involvements", existing_expected_goal_involvements)
+                stats_data["expected_goals_conceded"] = _expected_or_existing("expected_goals_conceded", existing_expected_goals_conceded)
+                stats_data["influence"] = _expected_or_existing("influence", existing_influence)
+                stats_data["creativity"] = _expected_or_existing("creativity", existing_creativity)
+                stats_data["threat"] = _expected_or_existing("threat", existing_threat)
+                stats_data["ict_index"] = _expected_or_existing("ict_index", existing_ict_index)
                 
-                self.db_client.upsert_player_gameweek_stats(stats_data)
+                batch_stats.append(stats_data)
+            
+            if batch_stats:
+                self.db_client.upsert_player_gameweek_stats(batch_stats)
         
         else:
-            # Fallback to original method (element-summary calls) if live_data not available
-            # This should rarely happen, but kept for backward compatibility
-            logger.warning("Live data not available, falling back to element-summary calls", extra={
-                "gameweek": gameweek
-            })
+            # Fallback to element-summary calls when /event/{gw}/live is unavailable
+            # (e.g. past gameweeks, backfill, or outside match window)
+            if expect_live_unavailable:
+                logger.debug("Live data not available, using element-summary calls", extra={
+                    "gameweek": gameweek
+                })
+            else:
+                logger.warning("Live data unavailable, using element-summary", extra={"gameweek": gameweek})
             
             # Refresh players in batches to avoid overwhelming API
             batch_size = 10
@@ -306,6 +381,7 @@ class PlayerDataRefresher:
             
             for i in range(0, len(player_list), batch_size):
                 batch = player_list[i:i + batch_size]
+                batch_stats = []
                 
                 # Fetch player summaries in parallel
                 tasks = [
@@ -317,7 +393,7 @@ class PlayerDataRefresher:
                 
                 for player_id, summary in zip(batch, summaries):
                     if isinstance(summary, Exception):
-                        logger.error("Error fetching player summary", extra={
+                        logger.error("Player summary failed", extra={
                             "player_id": player_id,
                             "error": str(summary)
                         })
@@ -368,6 +444,7 @@ class PlayerDataRefresher:
                         "started": gw_data.get("minutes", 0) > 0,
                         "total_points": gw_data.get("total_points", 0),
                         "bonus": bonus,
+                        "provisional_bonus": 0,
                         "bps": gw_data.get("bps", 0),
                         "bonus_status": bonus_status,
                         "goals_scored": gw_data.get("goals_scored", 0),
@@ -399,16 +476,16 @@ class PlayerDataRefresher:
                         "updated_at": datetime.now(timezone.utc).isoformat()
                     }
                     
-                    self.db_client.upsert_player_gameweek_stats(stats_data)
+                    batch_stats.append(stats_data)
+                
+                if batch_stats:
+                    self.db_client.upsert_player_gameweek_stats(batch_stats)
                 
                 # Small delay between batches
                 if i + batch_size < len(player_list):
                     await asyncio.sleep(0.5)
         
-        logger.info("Completed refreshing player stats", extra={
-            "gameweek": gameweek,
-            "player_count": len(active_player_ids)
-        })
+        logger.info("Player stats done", extra={"gameweek": gameweek, "count": len(active_player_ids)})
     
     async def refresh_player_prices(self, gameweek: int):
         """
@@ -454,21 +531,12 @@ class PlayerDataRefresher:
                     })
             
             if price_changes:
-                logger.info("Detected price changes", extra={
-                    "gameweek": gameweek,
-                    "changes_count": len(price_changes)
-                })
+                logger.info("Price changes", extra={"gameweek": gameweek, "count": len(price_changes)})
             
-            logger.info("Completed refreshing player prices", extra={
-                "gameweek": gameweek,
-                "players_count": len(players)
-            })
+            logger.info("Player prices done", extra={"gameweek": gameweek, "count": len(players)})
             
         except Exception as e:
-            logger.error("Error refreshing player prices", extra={
-                "gameweek": gameweek,
-                "error": str(e)
-            }, exc_info=True)
+            logger.error("Player prices failed", extra={"gameweek": gameweek, "error": str(e)}, exc_info=True)
     
     def get_active_player_ids(
         self,

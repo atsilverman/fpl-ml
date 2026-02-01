@@ -68,20 +68,20 @@
 
 .matchup-card-status-dot {
   display: inline-block;
-  width: 6px;
-  height: 6px;
-  min-width: 6px;
-  min-height: 6px;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
   border-radius: 50%;
   background: currentColor;
   margin-right: 6px;
   vertical-align: middle;
-  animation: matchup-status-dot-pulse 1.4s ease-in-out infinite;
+  animation: matchup-status-dot-pulse 1.2s ease-in-out infinite;
 }
 
 @keyframes matchup-status-dot-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.1); }
+  50% { opacity: 0.7; transform: scale(1.25); }
 }
 
 /* Final: green text (finished = true) */
@@ -335,6 +335,12 @@
   font-size: 11px;
 }
 
+/* Keep header row above body when scrolling (stacking context so thead always wins) */
+.matchup-detail-table thead {
+  position: relative;
+  z-index: 5;
+}
+
 .matchup-detail-table thead th {
   position: sticky;
   top: 0;
@@ -363,7 +369,7 @@
   position: sticky;
   top: 0;
   left: 0;
-  z-index: 20;
+  z-index: 10;
   text-align: left;
   padding-left: 12px;
   min-width: 100px;
@@ -399,7 +405,7 @@
 .matchup-detail-td-player {
   position: sticky;
   left: 0;
-  z-index: 1;
+  z-index: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -459,6 +465,15 @@
 
 .matchup-detail-cell-muted {
   color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+}
+
+/* Provisional bonus / live scoring: muted so users know it can change */
+.matchup-detail-cell-provisional {
+  color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
+}
+.matchup-detail-stat-badge.matchup-detail-stat-provisional {
+  font-style: italic;
+  color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
 }
 
 .matchup-detail-tr-dnp .matchup-detail-td {

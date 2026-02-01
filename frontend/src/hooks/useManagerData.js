@@ -78,12 +78,18 @@ export function useManagerData() {
           ? 1
           : (prevHistory?.transfers_made === 0 ? 2 : 1)
 
+      // Rank change: use computed delta when both ranks exist; else use stored overall_rank_change (don't show prev rank as "gain")
+      const hasCurrentRank = history?.overall_rank != null
+      const hasPrevRank = prevHistory?.overall_rank != null
+      const overallRankChange =
+        hasCurrentRank && hasPrevRank
+          ? prevHistory.overall_rank - history.overall_rank
+          : (history?.overall_rank_change ?? 0)
+
       return {
-        overallRank: history?.overall_rank || null,
-        overallRankChange: prevHistory
-          ? prevHistory.overall_rank - (history?.overall_rank || 0)
-          : 0,
-        gameweekRank: history?.gameweek_rank || null,
+        overallRank: history?.overall_rank ?? null,
+        overallRankChange,
+        gameweekRank: history?.gameweek_rank ?? null,
         totalPoints: history?.total_points || 0,
         gameweekPoints: history?.gameweek_points || 0,
         teamValue: history?.team_value_tenths

@@ -174,21 +174,36 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 .live-updating-indicator {
   display: inline-block;
   margin-left: 10px;
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--accent-green, #10b981);
   box-shadow: 0 0 0 0 var(--accent-green, #10b981);
-  animation: live-updating-pulse 2.5s ease-in-out infinite;
+  animation: live-updating-pulse 2s ease-in-out infinite;
   vertical-align: middle;
 }
 
 @keyframes live-updating-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
+  }
+}
+
+.live-updating-indicator--provisional {
+  background: #ca8a04;
+  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  animation: live-updating-pulse-provisional 2s ease-in-out infinite;
+}
+
+@keyframes live-updating-pulse-provisional {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(202, 138, 4, 0);
   }
 }
 
@@ -323,6 +338,14 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   min-width: 220px;
 }
 
+/* Portaled popups: position fixed, coords set by JS to stay in viewport */
+.gw-legend-popup-fixed {
+  margin: 0;
+  top: 0;
+  left: 0;
+  right: auto;
+}
+
 .gw-legend-popup-title {
   font-size: 11px;
   font-weight: 700;
@@ -416,23 +439,71 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 .gw-legend-popup-live-dot {
   flex-shrink: 0;
-  width: 5px;
-  height: 5px;
-  min-width: 5px;
-  min-height: 5px;
+  width: 8px;
+  height: 8px;
+  min-width: 8px;
+  min-height: 8px;
   border-radius: 50%;
   background: var(--accent-green, #10b981);
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
-  animation: gw-legend-live-pulse 2.5s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  animation: gw-legend-live-pulse 2s ease-in-out infinite;
 }
 
 @keyframes gw-legend-live-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
   }
+}
+
+.gw-legend-popup-provisional-dot {
+  background: #ca8a04;
+  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  animation: gw-legend-provisional-pulse 2s ease-in-out infinite;
+}
+
+@keyframes gw-legend-provisional-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(202, 138, 4, 0);
+  }
+}
+
+/* State debug popup: description list of refresh states */
+.state-debug-popup {
+  max-width: 280px;
+}
+
+.state-debug-dl {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.state-debug-dl-row {
+  margin-bottom: 8px;
+}
+
+.state-debug-dl-row:last-child {
+  margin-bottom: 0;
+}
+
+.state-debug-dl-row dt {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 2px 0;
+}
+
+.state-debug-dl-row dd {
+  margin: 0;
+  padding-left: 0;
+  color: var(--text-primary);
+  opacity: 0.9;
 }
 
 /* Total points Gantt legend (same layout as GW legend, (i) next to X) */
@@ -536,15 +607,16 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   }
 }
 
-/* Transfers bento: value and list in a row so list starts at right edge of "X of Y" */
+/* Transfers bento: value + chip fixed; only the in/out list scrolls */
 .bento-card-transfers-row {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch; /* list stretches to row height so overflow-y can scroll */
   gap: 40px;
   flex: 1 1 0;
   min-height: 0;
   min-width: 0;
+  overflow: hidden; /* establish scroll containment so list can scroll */
 }
 
 .bento-card-transfers-value-wrap {
@@ -552,6 +624,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   flex-direction: column;
   gap: 4px;
   flex-shrink: 0;
+  align-self: flex-start; /* don't stretch; only the list gets row height for scrolling */
 }
 
 .bento-card-transfers-value {
@@ -567,20 +640,36 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   opacity: 0.9;
 }
 
-.bento-card-transfers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+/* Scroll wrapper: takes row height, scrolls when list overflows */
+.bento-card-transfers-list-scroll {
   flex: 1 1 0;
   min-height: 0;
   min-width: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
-.bento-card-transfers-list::-webkit-scrollbar {
-  display: none;
+.bento-card-transfers-list-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.bento-card-transfers-list-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bento-card-transfers-list-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+/* List content: grows with items, no overflow (parent scrolls) */
+.bento-card-transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .bento-card-transfer-item {
@@ -624,7 +713,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 .bento-card-transfer-delta.negative {
-  color: #000;
+  color: #fff;
   background: var(--accent-red, #ef4444);
 }
 
@@ -1319,4 +1408,3 @@ html[data-theme="dark"] .captain-standings-bento-badge-v {
   color: #d1d5db;
   background: #4b5563;
 }
-

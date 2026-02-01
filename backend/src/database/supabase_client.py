@@ -7,7 +7,7 @@ to minimize egress usage.
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from supabase import create_client, Client
 from supabase.lib.client_options import ClientOptions
@@ -93,7 +93,15 @@ class SupabaseClient:
         """Refresh all materialized views."""
         result = self.client.rpc("refresh_all_materialized_views").execute()
         
-        logger.info("Refreshed all materialized views")
+        logger.info("Materialized views refreshed")
+        
+        return result
+    
+    def refresh_materialized_views_for_live(self):
+        """Refresh MVs used by UI during live matches (skips mv_manager_gameweek_summary)."""
+        result = self.client.rpc("refresh_materialized_views_for_live").execute()
+        
+        logger.info("Materialized views for live refreshed")
         
         return result
     
@@ -183,18 +191,20 @@ class SupabaseClient:
         
         return result.data
     
-    def upsert_player_gameweek_stats(self, stats_data: Dict[str, Any]):
+    def upsert_player_gameweek_stats(self, stats_data: Union[Dict[str, Any], List[Dict[str, Any]]]):
         """
-        Upsert player gameweek stats.
+        Upsert player gameweek stats (single row or batch).
         
         Args:
-            stats_data: Player stats data dictionary
+            stats_data: Single player stats dict or list of dicts
         """
+        rows = stats_data if isinstance(stats_data, list) else [stats_data]
+        if not rows:
+            return None
         result = self.client.table("player_gameweek_stats").upsert(
-            stats_data,
+            rows,
             on_conflict="player_id,gameweek"
         ).execute()
-        
         return result.data
     
     def upsert_fixture(self, fixture_data: Dict[str, Any]):
@@ -210,7 +220,27 @@ class SupabaseClient:
         ).execute()
         
         return result.data
-    
+
+    def update_fixture_scores(
+        self,
+        fpl_fixture_id: int,
+        home_score: Optional[int],
+        away_score: Optional[int],
+    ):
+        """
+        Update only home_score and away_score for a fixture (e.g. from event-live).
+        Used during live matches so the matches page stays in sync with GW points.
+        """
+        payload = {
+            "home_score": home_score,
+            "away_score": away_score,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        result = self.client.table("fixtures").update(payload).eq(
+            "fpl_fixture_id", fpl_fixture_id
+        ).execute()
+        return result.data
+
     def upsert_manager(self, manager_data: Dict[str, Any]):
         """
         Upsert a manager.
