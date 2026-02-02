@@ -535,7 +535,7 @@ export default function HomePage() {
               isChart={showChart}
               isChips={card.isChips}
               isSettings={card.isSettings}
-              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && !fplRanksUpdated}
+              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && (hasLiveGames || !fplRanksUpdated)}
               isLiveUpdating={
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))

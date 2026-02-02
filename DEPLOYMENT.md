@@ -2,6 +2,8 @@
 
 ## Backend Deployment (Digital Ocean)
 
+**New droplet?** Use **[DROPLET_SETUP.md](DROPLET_SETUP.md)** for a step-by-step setup from scratch (create droplet → clone → venv → .env → systemd → running).
+
 ### 1. Set Up Droplet
 
 1. Create a new Digital Ocean droplet (Ubuntu 22.04 LTS)

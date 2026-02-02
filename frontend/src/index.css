@@ -15,6 +15,7 @@ html[data-theme="dark"] {
   --accent-blue: #3b82f6;
   --accent-green: #10b981;
   --accent-yellow: #f59e0b;
+  --accent-orange: #f97316;
   --border-color: #2d3748;
   --progress-bg: #2d3748;
   --progress-fill: #3b82f6;
@@ -54,6 +55,7 @@ html[data-theme="light"] {
   --accent-blue: #2563eb;
   --accent-green: #059669;
   --accent-yellow: #d97706;
+  --accent-orange: #ea580c;
   --border-color: #e2e8f0;
   --progress-bg: #e2e8f0;
   --progress-fill: #2563eb;
