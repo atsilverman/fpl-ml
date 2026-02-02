@@ -72,7 +72,11 @@ sudo journalctl -u fpl-refresh.service -f
 
 ### 8. Deploy updates to production (main → droplet)
 
-After pushing changes to `main`, deploy to the Digital Ocean droplet:
+After pushing changes to `main`, deploy to the Digital Ocean droplet.
+
+**Option 0 – automatic via GitHub Actions (recommended):**
+
+Push to `main`; the workflow [.github/workflows/deploy-droplet.yml](.github/workflows/deploy-droplet.yml) runs and deploys to the droplet. Requires repo secrets: `DROPLET_IP`, `DROPLET_SSH_KEY` (private key for `root@DROPLET_IP`).
 
 **Option A – run on the droplet (SSH in first):**
 
