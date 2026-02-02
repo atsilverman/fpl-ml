@@ -514,52 +514,51 @@ class PlayerDataRefresher:
     
     async def refresh_player_prices(self, gameweek: int):
         """
-        Refresh player prices.
-        
-        Args:
-            gameweek: Gameweek number
+        Refresh player prices (5:40pm-style snapshot). Fetches last known prices from DB
+        to set prior_price_tenths so price_change views and backfill work.
         """
         logger.info("Refreshing player prices", extra={"gameweek": gameweek})
         
         try:
             bootstrap = await self.fpl_client.get_bootstrap_static()
             players = bootstrap.get("elements", [])
-            
-            # Get last known prices from database
-            # This would require a query - simplified for now
-            last_prices = {}  # TODO: Fetch from database
-            
+            today_iso = datetime.now(timezone.utc).date().isoformat()
+
+            # Last snapshot before today (same gameweek) for prior_price_tenths
+            last_prices = self.db_client.get_last_known_prices(today_iso, gameweek)
+
             price_changes = []
-            
             for player in players:
                 player_id = player["id"]
                 current_price = player.get("now_cost", 0)  # Price in tenths
                 last_price = last_prices.get(player_id)
-                
+
                 price_data = {
                     "player_id": player_id,
                     "gameweek": gameweek,
                     "price_tenths": current_price,
                     "price_change_tenths": current_price - (last_price or current_price),
                     "recorded_at": datetime.now(timezone.utc).isoformat(),
-                    "recorded_date": datetime.now(timezone.utc).date().isoformat()
+                    "recorded_date": today_iso,
                 }
-                
+                if last_price is not None:
+                    price_data["prior_price_tenths"] = last_price
+
                 self.db_client.upsert_player_price(price_data)
-                
-                if last_price and current_price != last_price:
+
+                if last_price is not None and current_price != last_price:
                     price_changes.append({
                         "player_id": player_id,
                         "old_price": last_price,
                         "new_price": current_price,
-                        "change": current_price - last_price
+                        "change": current_price - last_price,
                     })
-            
+
             if price_changes:
                 logger.info("Price changes", extra={"gameweek": gameweek, "count": len(price_changes)})
-            
+
             logger.info("Player prices done", extra={"gameweek": gameweek, "count": len(players)})
-            
+
         except Exception as e:
             logger.error("Player prices failed", extra={"gameweek": gameweek, "error": str(e)}, exc_info=True)
     

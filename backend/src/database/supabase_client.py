@@ -315,12 +315,53 @@ class SupabaseClient:
         
         return result.data
     
+    def get_last_known_prices(
+        self,
+        before_date: str,
+        gameweek: int
+    ) -> Dict[int, int]:
+        """
+        Get each player's price from the most recent snapshot before before_date (same gameweek).
+        Used to set prior_price_tenths when writing the next snapshot (e.g. 5:40pm daily).
+
+        Args:
+            before_date: ISO date string (e.g. today); we take latest recorded_date < this.
+            gameweek: Gameweek to match.
+
+        Returns:
+            Dict mapping player_id -> price_tenths from that snapshot. Empty if no prior snapshot.
+        """
+        # Latest recorded_date before before_date
+        date_result = (
+            self.client.table("player_prices")
+            .select("recorded_date")
+            .lt("recorded_date", before_date)
+            .eq("gameweek", gameweek)
+            .order("recorded_date", desc=True)
+            .limit(1)
+            .execute()
+        )
+        if not date_result.data or len(date_result.data) == 0:
+            return {}
+        last_date = date_result.data[0].get("recorded_date")
+        if not last_date:
+            return {}
+        # All prices for that date and gameweek
+        rows = (
+            self.client.table("player_prices")
+            .select("player_id, price_tenths")
+            .eq("recorded_date", last_date)
+            .eq("gameweek", gameweek)
+            .execute()
+        )
+        return {r["player_id"]: r["price_tenths"] for r in (rows.data or [])}
+
     def upsert_player_price(self, price_data: Dict[str, Any]):
         """
         Upsert a player price.
         
         Args:
-            price_data: Player price data dictionary
+            price_data: Player price data dictionary (may include prior_price_tenths for snapshot).
         """
         result = self.client.table("player_prices").upsert(
             price_data,

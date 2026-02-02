@@ -3,11 +3,47 @@
   color: var(--text-primary);
 }
 
-.research-page h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 24px;
+/* Card header: title (bento font) + source link, inside the card */
+.research-page-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px 14px 0;
+}
+
+/* Same font as bento card title (.bento-card-label) */
+.research-page-card-title {
+  font-size: 12px;
+  line-height: 1.15;
+  min-height: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.research-page-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.research-page-source:hover {
   color: var(--text-primary);
+}
+
+.research-page-source-logo {
+  height: 20px;
+  width: auto;
+  display: block;
+  vertical-align: middle;
 }
 
 .research-filters {
@@ -114,10 +150,15 @@
 }
 
 @media (max-width: 768px) {
+  .research-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
   .players-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .research-filters {
     flex-direction: column;
   }

@@ -162,7 +162,7 @@
   font-weight: 600;
   font-size: 12px;
   line-height: 17px;
-  color: rgba(255, 255, 255, 1);
+  color: var(--text-primary);
   background: var(--transfers-count-bg, var(--bg-secondary));
   padding: 3px 8px;
   border-radius: 4px;
@@ -186,4 +186,42 @@ html[data-theme="dark"] .price-changes-column-price {
   min-height: 60px;
 }
 
-/* Mobile: keep both columns visible side-by-side (same as expanded transfers bento) */
+/* Mobile: scale down text and keep both columns visible side-by-side */
+@media (max-width: 768px) {
+  .price-changes-content {
+    padding: 8px 12px;
+    gap: 5px;
+  }
+
+  .price-changes-updated {
+    font-size: 10px;
+  }
+
+  .price-changes-column-title {
+    font-size: 10px;
+  }
+
+  .price-changes-column-item {
+    font-size: 10px;
+    padding: 5px 6px;
+    min-height: 32px;
+    gap: 5px;
+  }
+
+  .price-changes-column-name {
+    font-size: 10px;
+    line-height: 13px;
+  }
+
+  .price-changes-column-price {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+
+  .price-changes-badge-slot,
+  .price-changes-badge,
+  .price-changes-badge-placeholder {
+    width: 18px;
+    height: 18px;
+  }
+}

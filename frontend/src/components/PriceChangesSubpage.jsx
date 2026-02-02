@@ -16,26 +16,16 @@ function formatCapturedAt(iso) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function PriceChangesSubpage() {
+export default function PriceChangesSubpage({ showCard = true }) {
   const { rises, falls, capturedAt, loading, error } = usePriceChangePredictions()
   const { getTeamForPlayer } = usePlayerTeamMap()
 
-  if (error) {
-    return (
-      <div className="price-changes-subpage">
-        <div className="price-changes-card">
-          <div className="price-changes-content">
-            <div className="price-changes-error">Failed to load price change predictions.</div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="price-changes-subpage">
-      <div className="price-changes-card">
-        <div className="price-changes-content">
+  const content = (
+    <div className="price-changes-content">
+      {error ? (
+        <div className="price-changes-error">Failed to load price change predictions.</div>
+      ) : (
+        <>
           {capturedAt && (
             <p className="price-changes-updated" aria-live="polite">
               Updated {formatCapturedAt(capturedAt)}
@@ -119,7 +109,19 @@ export default function PriceChangesSubpage() {
           )}
         </div>
       </div>
-        </div>
+        </>
+      )}
+    </div>
+  )
+
+  if (!showCard) {
+    return <div className="price-changes-subpage">{content}</div>
+  }
+
+  return (
+    <div className="price-changes-subpage">
+      <div className="price-changes-card">
+        {content}
       </div>
     </div>
   )
