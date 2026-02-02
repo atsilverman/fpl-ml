@@ -1,0 +1,124 @@
+.debug-modal-content {
+  max-width: 520px;
+  max-height: 85vh;
+}
+
+.debug-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.debug-modal-section {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--bg-secondary);
+}
+
+.debug-modal-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px 0;
+}
+
+.debug-modal-section-state .debug-modal-section-title {
+  margin-bottom: 8px;
+}
+
+.debug-modal-state-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.debug-modal-state-button {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-tertiary, #f0f0f0);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: default;
+  min-width: 100px;
+}
+
+html[data-theme="dark"] .debug-modal-state-button {
+  background: var(--bg-tertiary);
+}
+
+.debug-modal-state-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.debug-modal-state-info:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.debug-modal-state-dl {
+  margin-top: 12px;
+}
+
+.debug-modal-state-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.debug-modal-section .state-debug-dl {
+  margin: 0;
+}
+
+.debug-modal-section .state-debug-dl-row {
+  margin-bottom: 8px;
+}
+
+.debug-modal-section .state-debug-dl-row dt {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 2px 0;
+}
+
+.debug-modal-section .state-debug-dl-row dd {
+  font-size: 12px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.debug-modal-section .gw-debug-bento-content,
+.debug-modal-section .gw-debug-fixtures-wrap,
+.debug-modal-section .updates-debug-bento-content {
+  background: transparent;
+  padding: 0;
+}
+
+/* Fixtures: keep match cell on one line, scale down text to fit */
+.debug-modal-section .gw-debug-fixtures-wrap .gw-debug-fixtures-table {
+  font-size: 0.75rem;
+}
+
+.debug-modal-section .gw-debug-fixtures-wrap .gw-debug-match-cell {
+  white-space: nowrap;
+}
+
+.debug-modal-section .gw-debug-fixtures-wrap {
+  overflow-x: auto;
+}
+
+.debug-modal-section .updates-debug-table-wrapper {
+  overflow-x: auto;
+}

@@ -13,6 +13,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
+  margin-top: 16px;
 }
 
 .defcon-search-wrap {
@@ -35,6 +36,15 @@
   .defcon-search-wrap {
     max-width: none;
   }
+}
+
+.defcon-filter-summary {
+  margin: 0;
+  padding: 0 0 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  opacity: 0.9;
 }
 
 .defcon-search-input {
@@ -191,10 +201,10 @@
 
 .defcon-subpage .gw-legend-popup-dot {
   flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  min-width: 8px;
-  min-height: 8px;
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
   border-radius: 50%;
 }
 
@@ -203,8 +213,8 @@
 }
 
 .defcon-subpage .gw-legend-popup-dot--provisional {
-  background: #ca8a04;
-  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  background: #FFB404;
+  box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   animation: defcon-gw-legend-provisional-pulse 2s ease-in-out infinite;
 }
 
@@ -216,12 +226,12 @@
 
 @keyframes defcon-gw-legend-live-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); }
-  50% { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(16, 185, 129, 0); }
 }
 
 @keyframes defcon-gw-legend-provisional-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6); }
-  50% { box-shadow: 0 0 0 5px rgba(202, 138, 4, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 180, 4, 0); }
 }
 
 .defcon-subpage .gw-legend-popup-defcon-achieved-sample {
@@ -277,6 +287,34 @@
   z-index: 60;
 }
 
+.defcon-filter-section {
+  margin-bottom: 10px;
+}
+
+.defcon-filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.defcon-filter-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.defcon-filter-section--disabled .defcon-filter-section-title,
+.defcon-filter-section--disabled .defcon-matchup-btn {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.defcon-filter-section--disabled .defcon-matchup-btn {
+  cursor: not-allowed;
+}
+
+.defcon-filter-buttons,
 .defcon-filter-matchups {
   display: flex;
   flex-wrap: wrap;
@@ -328,11 +366,20 @@
   color: var(--text-secondary);
 }
 
+.defcon-list-empty {
+  margin: 0;
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  opacity: 0.9;
+}
+
 .defcon-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-width: 430px;
+  width: 100%;
 }
 
 .defcon-row-card {
@@ -383,10 +430,10 @@
 }
 
 .defcon-status-dot {
-  width: 8px;
-  height: 8px;
-  min-width: 8px;
-  min-height: 8px;
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
   border-radius: 50%;
 }
 
@@ -397,13 +444,14 @@
 }
 
 .defcon-status-dot--provisional {
-  background: #ca8a04;
-  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  background: #FFB404;
+  box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   animation: defcon-provisional-pulse 2s ease-in-out infinite;
 }
 
+/* Complete = data_checked (same as matches Final – GW confirmed) */
 .defcon-status-dot--complete {
-  background: var(--accent-green, #10b981);
+  background: #059669;
 }
 
 .defcon-name {
@@ -415,6 +463,7 @@
   text-overflow: ellipsis;
 }
 
+/* Same greyish pill as matches page top-points position fallback */
 .defcon-position-badge {
   display: inline-block;
   width: fit-content;
@@ -424,26 +473,12 @@
   padding: 1px 2px;
   border-radius: 2px;
   text-transform: uppercase;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
+  color: var(--text-secondary);
 }
 
-.defcon-position-badge--1 {
-  background: rgba(148, 163, 184, 0.25);
-  color: #94a3b8;
-}
-
-.defcon-position-badge--2 {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-}
-
-.defcon-position-badge--3 {
-  background: rgba(234, 179, 8, 0.25);
-  color: #eab308;
-}
-
-.defcon-position-badge--4 {
-  background: rgba(239, 68, 68, 0.2);
-  color: #f87171;
+html[data-theme="dark"] .defcon-position-badge {
+  background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
 }
 
 @keyframes defcon-live-pulse {
@@ -451,16 +486,16 @@
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
   }
 }
 
 @keyframes defcon-provisional-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+    box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(202, 138, 4, 0);
+    box-shadow: 0 0 0 4px rgba(255, 180, 4, 0);
   }
 }
 
@@ -483,7 +518,7 @@
 }
 
 .defcon-row-card--achieved .defcon-num {
-  font-weight: 700;
+  font-weight: 800;
   color: var(--accent-green, #10b981);
 }
 
@@ -497,11 +532,10 @@
   font-weight: 500;
 }
 
-/* Badge behind progress bar: subtle background to make bar more prominent */
+/* Badge behind progress bar: fills available space so bar widens with screen */
 .defcon-notch-badge {
-  flex: 1;
-  min-width: 0;
-  max-width: 200px;
+  flex: 1 1 auto;
+  min-width: 80px;
   padding: 0;
   margin-right: 16px;
 }
@@ -509,23 +543,28 @@
 .defcon-notch-bar {
   position: relative;
   width: 100%;
-  height: 6px;
-  background: var(--progress-bg);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.defcon-notch-fill {
-  height: 100%;
-  border-radius: 3px 0 0 3px;
+  height: 7px;
+  /* Full gradient fixed to bar: 0% = cool, 100% = red; no green; cover hides right portion so only 0→progress shows */
   background: linear-gradient(
     to right,
+    hsl(210, 55%, 45%),
     hsl(48, 85%, 48%),
     hsl(24, 85%, 48%),
     hsl(12, 82%, 48%),
     hsl(0, 74%, 48%)
   );
-  transition: width 0.2s ease;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+/* Cover from progress% to 100% so gradient is only visible from 0 to progress (cool when low, redder as achieved) */
+.defcon-notch-cover {
+  position: absolute;
+  inset: 0;
+  left: var(--progress-pct, 0%);
+  background: var(--progress-bg);
+  border-radius: 0 3px 3px 0;
+  transition: left 0.2s ease;
 }
 
 .defcon-notch-dividers {
@@ -548,7 +587,7 @@
   }
 
   .defcon-search-row {
-    max-width: 600px;
+    width: 100%;
   }
 
   .defcon-search-wrap {
@@ -563,7 +602,7 @@
 
   .defcon-list {
     gap: 12px;
-    max-width: 600px;
+    width: 100%;
   }
 
   .defcon-row-card {
@@ -598,16 +637,16 @@
     font-size: 13px;
   }
 
-  /* Progress bar: much wider on desktop – min-width forces it to take space */
+  /* Progress bar: wider on desktop to push fraction to the right */
   .defcon-notch-badge {
     flex: 1 1 auto;
-    min-width: 320px;
-    max-width: 500px;
+    min-width: 360px;
+    max-width: none;
     margin-right: 20px;
   }
 
   .defcon-notch-bar {
-    height: 8px;
+    height: 9px;
     border-radius: 4px;
   }
 

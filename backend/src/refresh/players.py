@@ -151,8 +151,8 @@ class PlayerDataRefresher:
         fixtures_by_id = fixtures
         
         # Ensure all active players exist in players table (avoids FK violation for new FPL players e.g. mid-season signings).
-        # Skip during live: players (reference) are not refreshed during live—only player_gameweek_stats are.
         if not live_only:
+            # Full refresh: upsert every active player from bootstrap.
             for player_id in active_player_ids:
                 elem = players_map.get(player_id)
                 if elem:
@@ -169,6 +169,31 @@ class PlayerDataRefresher:
                         self.db_client.upsert_player(player_data)
                     except Exception as e:
                         logger.warning("Upsert player failed", extra={"player_id": player_id, "error": str(e)})
+        else:
+            # Live-only: still ensure any player we write stats for exists (e.g. new mid-season FPL ID 808).
+            existing_players = self.db_client.client.table("players").select("fpl_player_id").in_(
+                "fpl_player_id", list(active_player_ids)
+            ).execute().data or []
+            existing_ids = {r["fpl_player_id"] for r in existing_players}
+            missing_ids = active_player_ids - existing_ids
+            if missing_ids:
+                logger.info("Upserting missing players for FK", extra={"gameweek": gameweek, "count": len(missing_ids), "player_ids": list(missing_ids)[:10]})
+                for player_id in missing_ids:
+                    elem = players_map.get(player_id)
+                    if elem:
+                        player_data = {
+                            "fpl_player_id": elem["id"],
+                            "first_name": elem.get("first_name", ""),
+                            "second_name": elem.get("second_name", ""),
+                            "web_name": elem.get("web_name", ""),
+                            "team_id": elem.get("team", 0),
+                            "position": elem.get("element_type", 0),
+                            "updated_at": datetime.now(timezone.utc).isoformat(),
+                        }
+                        try:
+                            self.db_client.upsert_player(player_data)
+                        except Exception as e:
+                            logger.warning("Upsert player failed", extra={"player_id": player_id, "error": str(e)})
         
         # Get existing player_gameweek_stats for fixture context
         # (live endpoint doesn't have fixture_id, opponent_team, etc.)
@@ -296,7 +321,7 @@ class PlayerDataRefresher:
                 existing_threat = existing_stat.get("threat", 0) if live_only else None
                 existing_ict_index = existing_stat.get("ict_index", 0) if live_only else None
                 
-                # Prepare stats data from live endpoint
+                # Prepare stats data from live endpoint (store total_points as FPL sends; official bonus already in total_points)
                 stats_data = {
                     "player_id": player_id,
                     "gameweek": gameweek,
@@ -431,7 +456,7 @@ class PlayerDataRefresher:
                             match_finished = fixture.get("finished", False)
                             match_finished_provisional = fixture.get("finished_provisional", False)
                     
-                    # Prepare stats data
+                    # Prepare stats data (store total_points as FPL sends; official bonus already in total_points)
                     stats_data = {
                         "player_id": player_id,
                         "gameweek": gameweek,

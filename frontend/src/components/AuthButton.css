@@ -1,26 +1,26 @@
 .auth-button-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
 }
 
 .auth-user-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .auth-avatar {
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .auth-user-name {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--text-primary, #333);
-  max-width: 150px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -30,70 +30,75 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
   white-space: nowrap;
 }
 
 .auth-button-signin {
-  background: white;
-  color: #333;
-  border: 1px solid #dadce0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #333);
 }
 
 .auth-button-signin:hover {
-  background: #f8f9fa;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  background: var(--bg-secondary, #f8f9fa);
+  border-color: var(--border-color, #e5e7eb);
 }
 
 .auth-button-signout {
-  background: #f1f3f4;
-  color: #5f6368;
+  background: var(--bg-secondary, #f1f3f4);
+  color: var(--text-secondary, #5f6368);
+  padding: 0 8px;
 }
 
 .auth-button-signout:hover {
-  background: #e8eaed;
+  background: var(--bg-primary, #e8eaed);
 }
 
 .auth-google-icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
 }
 
 .auth-button-loading {
-  padding: 10px 16px;
-  color: #666;
-  font-size: 14px;
+  height: 28px;
+  padding: 0 10px;
+  color: var(--text-secondary, #666);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
 }
 
-/* Dark mode support */
+/* Dark mode: vars handle theme; these only if no CSS vars */
 @media (prefers-color-scheme: dark) {
   .auth-user-name {
     color: var(--text-primary, #e0e0e0);
   }
 
   .auth-button-signin {
-    background: #2d2d2d;
-    color: #e0e0e0;
-    border-color: #444;
+    background: var(--bg-card, #2d2d2d);
+    color: var(--text-primary, #e0e0e0);
+    border-color: var(--border-color, #444);
   }
 
   .auth-button-signin:hover {
-    background: #3d3d3d;
+    background: var(--bg-secondary, #3d3d3d);
   }
 
   .auth-button-signout {
-    background: #3d3d3d;
-    color: #b0b0b0;
+    background: var(--bg-secondary, #3d3d3d);
+    color: var(--text-secondary, #b0b0b0);
   }
 
   .auth-button-signout:hover {
-    background: #4d4d4d;
+    background: var(--bg-primary, #4d4d4d);
   }
 }

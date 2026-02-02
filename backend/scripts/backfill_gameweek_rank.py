@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """
-Script to backfill overall_rank and gameweek_rank at end of match day.
+Script to backfill overall_rank and gameweek_rank (and previous_overall_rank / rank gain-loss).
 
-Runs when all fixtures for the current gameweek have finished_provisional
-(same gate as orchestrator "end of gameday"), not when gameweek.finished.
-Refreshes all tracked managers (mini_league_managers) and sets fpl_ranks_updated.
+By default runs when at least one fixture for the current gameweek has finished_provisional
+(same gate as orchestrator "end of gameday"). With --force, runs regardless (e.g. idle period)
+so you can pull latest ranks and backfill previous_overall_rank for rank gain/loss display.
+
+Refreshes all tracked managers (mini_league_managers), recalculates mini-league ranks,
+and sets fpl_ranks_updated.
 
 Usage:
-    python3 scripts/backfill_gameweek_rank.py
+    python3 scripts/backfill_gameweek_rank.py           # only when at least one matchday done
+    python3 scripts/backfill_gameweek_rank.py --force   # now (e.g. idle between GWs)
 """
 
 import asyncio
@@ -34,8 +38,10 @@ from utils.logger import setup_logging
 logger = logging.getLogger(__name__)
 
 
-async def backfill_gameweek_rank():
-    """Backfill gameweek_rank for the current gameweek (if finished)."""
+async def backfill_gameweek_rank(force: bool = False):
+    """Backfill gameweek_rank and overall_rank for the current gameweek.
+    With force=True, run even when no fixture has finished_provisional (e.g. idle period).
+    """
     # Set up logging
     setup_logging()
     
@@ -60,22 +66,23 @@ async def backfill_gameweek_rank():
         gameweek = current_gameweek["id"]
         gameweek_name = current_gameweek["name"]
         
-        # End of gameday: all fixtures for this gameweek have finished_provisional (same as orchestrator)
-        fixtures = db_client.client.table("fixtures").select(
-            "finished_provisional"
-        ).eq("gameweek", gameweek).execute().data or []
+        # Without --force: require at least one fixture finished_provisional (same as orchestrator)
+        if not force:
+            fixtures = db_client.client.table("fixtures").select(
+                "finished_provisional"
+            ).eq("gameweek", gameweek).execute().data or []
+            
+            if not fixtures:
+                print(f"⚠️  No fixtures found for {gameweek_name}. Nothing to backfill.")
+                return
+            
+            if not any(f.get("finished_provisional") for f in fixtures):
+                print(f"⚠️  No matchday completed yet for {gameweek_name}.")
+                print("   At least one fixture must have finished_provisional = true.")
+                print("   Run with --force to refresh anyway (e.g. idle period): python3 scripts/backfill_gameweek_rank.py --force")
+                return
         
-        if not fixtures:
-            print(f"⚠️  No fixtures found for {gameweek_name}. Nothing to backfill.")
-            return
-        
-        if not any(f.get("finished_provisional") for f in fixtures):
-            print(f"⚠️  No matchday completed yet for {gameweek_name}.")
-            print("   At least one fixture must have finished_provisional = true.")
-            print("   Run again after the first matchday (e.g. Sat), or let the orchestrator handle it.")
-            return
-        
-        print(f"📊 Processing current gameweek: {gameweek_name} (ID: {gameweek}) [at least one matchday done]\n")
+        print(f"📊 Processing current gameweek: {gameweek_name} (ID: {gameweek}){' [--force]' if force else ' [at least one matchday done]'}\n")
         
         # Get all tracked managers (same as orchestrator: mini_league_managers)
         managers_result = db_client.client.table("mini_league_managers").select(
@@ -116,8 +123,15 @@ async def backfill_gameweek_rank():
                 })
                 print(f"   ⚠️  Error for manager {manager_id}: {e}")
         
-        # Mark gameweek as having final ranks so frontend drops the ! stale indicator
+        # Recalculate mini-league ranks so league standings and league rank change update
         if processed > 0:
+            leagues_result = db_client.client.table("mini_leagues").select("league_id").execute()
+            for league in (leagues_result.data or []):
+                try:
+                    await manager_refresher.calculate_mini_league_ranks(league["league_id"], gameweek)
+                except Exception as e:
+                    logger.warning("League ranks failed", extra={"league_id": league["league_id"], "error": str(e)})
+            print("   - Recalculated mini-league ranks.")
             db_client.update_gameweek_fpl_ranks_updated(gameweek, True)
             print("   - Set fpl_ranks_updated = true for this gameweek (stale indicator will clear).")
         
@@ -125,7 +139,7 @@ async def backfill_gameweek_rank():
         print(f"   - Processed: {processed}/{len(manager_ids)}")
         if errors > 0:
             print(f"   - Errors: {errors}")
-        print(f"\n📊 overall_rank and gameweek_rank should now be populated for {gameweek_name}.")
+        print(f"\n📊 overall_rank, gameweek_rank, and rank gain/loss (previous_overall_rank) should now be updated for {gameweek_name}.")
         
     except Exception as e:
         print(f"\n❌ Error during backfill: {e}")
@@ -139,4 +153,8 @@ async def backfill_gameweek_rank():
 
 
 if __name__ == "__main__":
-    asyncio.run(backfill_gameweek_rank())
+    import argparse
+    parser = argparse.ArgumentParser(description="Backfill overall_rank and gameweek_rank for current GW.")
+    parser.add_argument("--force", action="store_true", help="Run even when no fixture has finished_provisional (e.g. idle period)")
+    args = parser.parse_args()
+    asyncio.run(backfill_gameweek_rank(force=args.force))

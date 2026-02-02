@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { UserSearch, ChevronDown, HelpCircle } from 'lucide-react'
+import { UserSearch, ChevronDown, Bug } from 'lucide-react'
+import DebugModal from './DebugModal'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { supabase } from '../lib/supabase'
 import './Dashboard.css'
@@ -20,13 +21,12 @@ export default function Dashboard() {
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
   const [gameweekDropdownOpen, setGameweekDropdownOpen] = useState(false)
-  const [showBonusLegend, setShowBonusLegend] = useState(false)
   const gameweekDropdownRef = useRef(null)
-  const bonusLegendRef = useRef(null)
 
   const gameweekView = searchParams.get('view') || 'defcon'
   const isOnGameweek = location.pathname === '/gameweek'
-  const isBonusView = isOnGameweek && gameweekView === 'bonus'
+  const [toggleBonus, setToggleBonus] = useState(false)
+  const [debugModalOpen, setDebugModalOpen] = useState(false)
 
   useEffect(() => {
     if (!gameweekDropdownOpen) return
@@ -38,17 +38,6 @@ export default function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [gameweekDropdownOpen])
-
-  useEffect(() => {
-    if (!showBonusLegend) return
-    const handleClickOutside = (e) => {
-      if (bonusLegendRef.current && !bonusLegendRef.current.contains(e.target)) {
-        setShowBonusLegend(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showBonusLegend])
 
   const { data: managerRow } = useQuery({
     queryKey: ['manager-name', managerId],
@@ -96,15 +85,20 @@ export default function Dashboard() {
             <h1>FPL Mini League</h1>
             {subtitle && <p className="header-subtitle">{subtitle}</p>}
           </div>
-          <button type="button" className="header-user-button" aria-label="Account" title="Account" onClick={openConfigModal}>
-            <UserSearch size={16} strokeWidth={1.5} />
-          </button>
+          <div className="header-buttons">
+            <button type="button" className="header-user-button" aria-label="Debug" title="Debug" onClick={() => setDebugModalOpen(true)}>
+              <Bug size={16} strokeWidth={1.5} />
+            </button>
+            <button type="button" className="header-user-button" aria-label="Account" title="Account" onClick={openConfigModal}>
+              <UserSearch size={16} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
       </header>
 
       <nav className="page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
         {pages.map(page => {
-          const isDisabled = !['home', 'mini-league', 'gameweek'].includes(page.id)
+          const isDisabled = !['home', 'mini-league', 'gameweek', 'research'].includes(page.id)
           if (page.id === 'gameweek') {
             return (
               <div key={page.id} className="nav-item-gameweek-wrap" ref={gameweekDropdownRef}>
@@ -159,6 +153,18 @@ export default function Dashboard() {
               </div>
             )
           }
+          if (page.id === 'research') {
+            return (
+              <button
+                key={page.id}
+                className={`tracking-mode-button ${currentPage.id === 'research' ? 'active' : ''}`}
+                onClick={() => !isDisabled && navigate('/research')}
+                disabled={isDisabled}
+              >
+                Research
+              </button>
+            )
+          }
           return (
             <button
               key={page.id}
@@ -173,65 +179,9 @@ export default function Dashboard() {
       </nav>
 
       <main className="dashboard-content">
-        {isOnGameweek && (
-          <div className="dashboard-subpage-header-wrap" ref={isBonusView ? bonusLegendRef : null}>
-            <h2 className="dashboard-subpage-header">
-              {GAMEWEEK_VIEWS.find(v => v.id === gameweekView)?.label ?? 'Gameweek'}
-            </h2>
-            {isBonusView && (
-              <>
-                <button
-                  type="button"
-                  className="dashboard-bonus-info-btn"
-                  onClick={() => setShowBonusLegend(open => !open)}
-                  aria-label="Bonus and BPS legend"
-                  aria-expanded={showBonusLegend}
-                  aria-haspopup="dialog"
-                >
-                  <HelpCircle size={16} strokeWidth={2} />
-                </button>
-                {showBonusLegend && (
-                  <div
-                    className="gw-legend-popup dashboard-bonus-legend-popup"
-                    role="dialog"
-                    aria-label="Bonus status and BPS legend"
-                  >
-                    <div className="gw-legend-popup-title">Status</div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-dot gw-legend-popup-dot--scheduled" aria-hidden />
-                      </span>
-                      <span className="gw-legend-popup-text">Scheduled – match not started; no bonus yet</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />
-                      </span>
-                      <span className="gw-legend-popup-text">Live – match in progress; we show provisional bonus from BPS rank (top 3 get 3, 2, 1 pts) once past 45 min</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-dot gw-legend-popup-dot--provisional" aria-hidden />
-                      </span>
-                      <span className="gw-legend-popup-text">Finished – match ended, bonus not yet confirmed; we show provisional from BPS</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-row-icon">
-                        <span className="gw-legend-popup-dot gw-legend-popup-dot--complete" aria-hidden />
-                      </span>
-                      <span className="gw-legend-popup-text">Final – bonus confirmed by FPL (~1h after full-time)</span>
-                    </div>
-                    <p className="dashboard-bonus-legend-desc">
-                      Bonus is awarded to the top 3 players in a match by BPS (Bonus Point System). We show provisional bonus from BPS rank once the match is past 45 minutes; FPL confirms final bonus about 1 hour after full-time.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        )}
-        <Outlet />
+        <Outlet context={{ toggleBonus, setToggleBonus, showH2H: false, setShowH2H: () => {} }} />
       </main>
+      <DebugModal isOpen={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
     </div>
   )
 }

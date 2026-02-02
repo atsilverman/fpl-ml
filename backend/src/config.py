@@ -37,6 +37,12 @@ class Config:
     gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "45"))
     # Fast loop (gameweeks + fixtures + players) during live matches
     fast_loop_interval: int = int(os.getenv("FAST_LOOP_INTERVAL", "15"))
+    # Kickoff window: use short interval when now is within N minutes of any fixture kickoff (multi-day GW: Sat–Mon)
+    kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
+    # Post-deadline: wait N seconds after gameweek status change before batch refresh (lets API endpoints settle)
+    post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "180"))
+    # Post-deadline: run picks+transfers batch for this many minutes so transfers endpoint has time to update (FPL can lag vs is_current)
+    deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
     # Slow loop (manager points + MVs) during live matches
     full_refresh_interval_live: int = int(os.getenv("FULL_REFRESH_INTERVAL_LIVE", "120"))
     fixtures_refresh_interval_live: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_LIVE", "30"))
@@ -49,6 +55,12 @@ class Config:
     # Price Change Window (PST timezone)
     price_change_time: str = os.getenv("PRICE_CHANGE_TIME", "17:30")  # 5:30 PM PST
     price_change_window_duration: int = int(os.getenv("PRICE_CHANGE_WINDOW_DURATION", "6"))  # 6 minutes (5:30-5:36 PM PST)
+    # After price window closes, run manager refresh for this many minutes to capture post–price-change team value
+    price_window_cooldown_minutes: int = int(os.getenv("PRICE_WINDOW_COOLDOWN_MINUTES", "5"))
+
+    # Rank monitoring: after last game of the match day, poll FPL for rank updates for this many hours (FPL can update at undocumented times)
+    rank_monitor_hours_after_last_matchday: int = int(os.getenv("RANK_MONITOR_HOURS_AFTER_LAST_MATCHDAY", "5"))
+    rank_monitor_interval_seconds: int = int(os.getenv("RANK_MONITOR_INTERVAL_SECONDS", "900"))  # 15 minutes
     
     # Cache Configuration
     bootstrap_cache_ttl: int = int(os.getenv("BOOTSTRAP_CACHE_TTL", "300"))  # 5 minutes

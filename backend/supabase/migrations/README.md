@@ -12,6 +12,7 @@ Run these migrations in order for a fresh database setup:
 6. **006_add_baseline_columns.sql** - Adds baseline columns for data preservation
 7. **007_add_team_foreign_keys.sql** - Adds foreign key constraints for team references
 21. **021_manager_player_gameweek_points_mv.sql** - Per-GW points MV for Gantt gradient (All filter)
+31. **031_player_owned_leaderboard_autosub_out.sql** - Fix player-owned leaderboard: when a starter is auto-subbed OUT, attribute that slot's points to the substitute (fixes inflated Total Points e.g. Haaland 349→291)
 
 ## Migration Details
 

@@ -1,8 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import './GameweekPointsView.css'
 import { formatNumber } from '../utils/formatNumbers'
 import { ArrowDownRight, ArrowUpRight, HelpCircle } from 'lucide-react'
+import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 
 const IMPACT_TOOLTIP = 'Importance: your share of this player\'s points vs the rest of your mini-league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than league average; negative = others gain more.'
 
@@ -12,7 +13,13 @@ const POPUP_PADDING = 12
 const POPUP_MAX_WIDTH = 320
 const POPUP_MIN_WIDTH = 260
 
-export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null }) {
+export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [] }) {
+  const { fixtures: debugFixtures = [] } = useGameweekDebugData()
+  const fixtures = (fixturesProp != null && fixturesProp.length > 0) ? fixturesProp : debugFixtures
+  const fixturesById = useMemo(
+    () => Object.fromEntries((fixtures || []).map((f) => [f.fpl_fixture_id, f])),
+    [fixtures]
+  )
   const [showImpactPopup, setShowImpactPopup] = useState(false)
   const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
   const impactPopupRef = useRef(null)
@@ -121,12 +128,16 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
     const matchStarted = Boolean(player.match_started)
-    const matchFinished = Boolean(player.match_finished)
-    const matchFinishedProvisional = Boolean(player.match_finished_provisional)
+    // Use fixture table state when available (same source as debug panel) so dot matches "game finished"
+    const fixtureForPlayer = fixturesById && player.fixture_id != null ? fixturesById[player.fixture_id] : null
+    const matchFinished = fixtureForPlayer ? Boolean(fixtureForPlayer.finished) : Boolean(player.match_finished)
+    const matchFinishedProvisional = fixtureForPlayer ? Boolean(fixtureForPlayer.finished_provisional) : Boolean(player.match_finished_provisional)
     const isMatchLive = matchStarted && !matchFinished && !matchFinishedProvisional
     const isMatchProvisional = matchFinishedProvisional && !matchFinished
     const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && (isMatchLive || isMatchProvisional || (isLiveUpdating && player.match_started === undefined))
-    const minsDotProvisional = isMatchProvisional && !isMatchLive
+    // Don't show provisional dot when this player's bonus is already confirmed (e.g. from catch-up refresh)
+    const minsDotProvisional = isMatchProvisional && !isMatchLive && player.bonus_status !== 'confirmed'
+    const ptsDisplay = player.contributedPoints ?? player.points
 
     const isGk = player.position === 1
     const expectedStatKeys = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
@@ -271,18 +282,18 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           )}
         </td>
         <td
-            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && player.points === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
-            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : undefined}
+            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
+            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
           >
             {isTop10Pts ? (
               <span
                 className="gameweek-points-player-points-badge rank-highlight"
                 title="Top 10 in GW for points"
               >
-                {formatNumber(player.points)}
+                {formatNumber(ptsDisplay)}
               </span>
             ) : (
-              formatNumber(player.points)
+              formatNumber(ptsDisplay)
             )}
           </td>
         <td className="gameweek-points-td gameweek-points-td-impact">

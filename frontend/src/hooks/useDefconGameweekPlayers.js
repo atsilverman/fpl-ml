@@ -50,7 +50,9 @@ export function useDefconGameweekPlayers() {
         }
       })
 
-      const list = (playerRows || []).map(p => {
+      const list = (playerRows || [])
+        .filter(p => (p.position ?? 1) !== 1) // hide GK from DEFCON page
+        .map(p => {
         const stat = statsByPlayer[p.fpl_player_id] ?? {}
         const defcon = stat.defcon ?? 0
         const position = p.position ?? 1
@@ -74,7 +76,7 @@ export function useDefconGameweekPlayers() {
           percent,
         }
       })
-      // Sort: outfield by % desc (closest to DEFCON first); then 0%; then no-threshold (0/—) at very bottom
+      // Sort: outfield by % desc (closest to DEFCON first); then 0%
       list.sort((a, b) => {
         const aNoThreshold = a.threshold >= 999
         const bNoThreshold = b.threshold >= 999

@@ -104,6 +104,12 @@ class SupabaseClient:
         logger.info("Materialized views for live refreshed")
         
         return result
+
+    def refresh_league_transfer_aggregation(self):
+        """Refresh mv_league_transfer_aggregation (ML Top Transfers). Call after deadline batch writes manager_transfers."""
+        result = self.client.rpc("refresh_league_transfer_aggregation").execute()
+        logger.debug("League transfer aggregation refreshed")
+        return result
     
     # Table access methods (using Supabase client)
     
@@ -176,7 +182,19 @@ class SupabaseClient:
         """Get FPL global stats (total_managers). Returns single row or None."""
         result = self.client.table("fpl_global").select("*").eq("id", "current_season").maybe_single().execute()
         return result.data
-    
+
+    def insert_refresh_event(self, path: str):
+        """
+        Record that a refresh cycle completed (for frontend lag monitoring).
+        path must be 'fast' or 'slow'. Called at end of _fast_cycle and _run_slow_loop.
+        """
+        if path not in ("fast", "slow"):
+            raise ValueError("path must be 'fast' or 'slow'")
+        self.client.table("refresh_events").insert({
+            "path": path,
+            "occurred_at": datetime.now(timezone.utc).isoformat(),
+        }).execute()
+
     def upsert_player(self, player_data: Dict[str, Any]):
         """
         Upsert a player.

@@ -14,7 +14,6 @@ const BENTO_LABELS = {
   'transfers': 'Transfers',
   'league-rank': 'League Rank',
   'captain': 'Captaincy',
-  'refresh-state': 'State (debug)',
   'settings': 'Settings'
 }
 

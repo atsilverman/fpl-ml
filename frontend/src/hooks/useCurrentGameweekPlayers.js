@@ -53,6 +53,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         .from('player_gameweek_stats')
         .select(`
           player_id,
+          fixture_id,
           total_points,
           minutes,
           opponent_team_id,
@@ -143,6 +144,24 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
       // Who was auto-subbed out? (the starter whose place was taken by the bench player)
       const subbedOutPlayerId = picks.find(p => p.was_auto_subbed_in)?.auto_sub_replaced_player_id || null
 
+      // Fetch fixtures for this gameweek so we can use fixture.finished (same source as debug panel)
+      // to decide "match finished" and show official bonus in B column instead of stale provisional
+      const fixturesResult = await supabase
+        .from('fixtures')
+        .select('fpl_fixture_id, finished')
+        .eq('gameweek', gameweek)
+      const fixturesById = {}
+      const fixtureList = fixturesResult.data || []
+      fixtureList.forEach(f => {
+        const id = f.fpl_fixture_id
+        fixturesById[id] = f
+        fixturesById[Number(id)] = f
+        fixturesById[String(id)] = f
+      })
+      const allFixturesFinished = fixtureList.length > 0 && fixtureList.every(
+        f => f.finished === true || f.finished === 'true'
+      )
+
       // Combine picks with stats and player info
       const players = picks.map(pick => {
         // Stats: always show this slot's player's actual match (minutes, opponent, points)
@@ -158,10 +177,17 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
 
         const bonusStatus = stats.bonus_status ?? 'provisional'
         const provisionalBonus = Number(stats.provisional_bonus) || 0
-        const officialBonus = Number(stats.bonus) || 0
+        const officialBonus = Number(stats.bonus) ?? 0
         const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+        // Use fixture.finished (same source as debug panel) so B column shows official bonus once game is finished
+        const fid = stats.fixture_id != null ? stats.fixture_id : null
+        const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
+        const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
+        const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
+        // Only add provisional when in provisional period; when official, total_points already includes bonus
         const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
-        const effectiveBonus = isBonusConfirmed ? officialBonus : provisionalBonus
+        // Once match is finished, always show official bonus for B column (avoid showing BPS-calculated provisional that can be wrong)
+        const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : provisionalBonus
 
         return {
           position: pick.position,
@@ -177,10 +203,12 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           was_auto_subbed_in: pick.was_auto_subbed_in,
           was_auto_subbed_out: subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId,
           points: effectivePoints,
+          contributedPoints: effectivePoints * (pick.multiplier || 1),
           minutes: stats.minutes ?? 0,
           match_started: stats.started ?? false,
           match_finished: stats.match_finished ?? false,
           match_finished_provisional: stats.match_finished_provisional ?? false,
+          fixture_id: stats.fixture_id ?? null,
           kickoff_time: stats.kickoff_time || null,
           opponent_team_id: stats.opponent_team_id || null,
           opponent_team_short_name: opponentTeam?.short_name || null,

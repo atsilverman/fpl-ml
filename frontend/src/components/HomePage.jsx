@@ -28,15 +28,6 @@ import BentoCard from './BentoCard'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
-const STATE_DEBUG_DEFINITIONS = [
-  { term: 'Outside GW', description: 'No current gameweek in DB or is_current is false.' },
-  { term: 'Live matches', description: 'At least one fixture: started and not finished_provisional.' },
-  { term: 'Bonus pending', description: 'All fixtures: finished_provisional and not finished.' },
-  { term: 'Price window', description: 'Time is in 17:30–17:36 PST (configurable).' },
-  { term: 'Transfer deadline', description: 'Current GW exists, ≥30 min after GW deadline (post-deadline refresh window).' },
-  { term: 'Idle', description: 'Current GW, no live/bonus/price/deadline conditions.' }
-]
-
 export default function HomePage() {
   const { config, openConfigModal } = useConfiguration()
   const { cardOrder, openCustomizeModal, isCardVisible, cardVisibility } = useBentoOrder()
@@ -86,14 +77,52 @@ export default function HomePage() {
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
 
-  // Live GW total from starting XI (includes provisional bonus when match past 45 min)
-  const liveGwPoints = useMemo(() => {
-    if (refreshState !== 'live_matches' && refreshState !== 'bonus_pending') return null
+  const { data: nextGameweek } = useQuery({
+    queryKey: ['gameweek', 'next'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gameweeks')
+        .select('id, name, deadline_time')
+        .eq('is_next', true)
+        .single()
+      if (error) return null
+      return data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const nextDeadlineLocal = useMemo(() => {
+    const iso = nextGameweek?.deadline_time
+    if (!iso) return null
+    try {
+      const d = new Date(iso.replace('Z', '+00:00'))
+      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+    } catch {
+      return null
+    }
+  }, [nextGameweek?.deadline_time])
+
+  // GW total from starting XI (same source as expanded table: contributedPoints with auto-subs, minus transfer cost)
+  const gwPointsFromPlayers = useMemo(() => {
     if (!currentGameweekPlayers?.length) return null
-    return currentGameweekPlayers
-      .filter((p) => p.position >= 1 && p.position <= 11)
-      .reduce((sum, p) => sum + (p.points || 0) * (p.multiplier || 1), 0)
-  }, [refreshState, currentGameweekPlayers])
+    const starters = currentGameweekPlayers.filter((p) => p.position >= 1 && p.position <= 11)
+    let total = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
+    const subbedOut = currentGameweekPlayers.find((p) => p.was_auto_subbed_out)
+    const subbedIn = currentGameweekPlayers.find((p) => p.was_auto_subbed_in)
+    if (subbedOut && subbedIn) {
+      total = total - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    }
+    const transferCost = managerData?.transferCost ?? 0
+    return total - transferCost
+  }, [currentGameweekPlayers, managerData?.transferCost])
+
+  // Total points in sync with GW points: previous GW total + this GW from players (same data source)
+  const totalPointsFromPlayers = useMemo(() => {
+    if (gwPointsFromPlayers == null) return null
+    const prevTotal = managerData?.previousGameweekTotalPoints ?? 0
+    return prevTotal + gwPointsFromPlayers
+  }, [gwPointsFromPlayers, managerData?.previousGameweekTotalPoints])
+
   const { data: leagueData } = useQuery({
     queryKey: ['league', LEAGUE_ID],
     queryFn: async () => {
@@ -169,16 +198,18 @@ export default function HomePage() {
     {
       id: 'total-points',
       label: 'Total Points',
-      value: managerData?.totalPoints != null 
-        ? managerData.totalPoints.toLocaleString('en-GB')
-        : '—',
+      value: totalPointsFromPlayers != null
+        ? totalPointsFromPlayers.toLocaleString('en-GB')
+        : managerData?.totalPoints != null
+          ? managerData.totalPoints.toLocaleString('en-GB')
+          : '—',
       size: '1x1'
     },
     {
       id: 'gw-points',
       label: 'GW Points',
-      value: (refreshState === 'live_matches' || refreshState === 'bonus_pending') && liveGwPoints != null
-        ? formatNumber(liveGwPoints)
+      value: gwPointsFromPlayers != null
+        ? formatNumber(gwPointsFromPlayers)
         : formatNumber(managerData?.gameweekPoints),
       subtext: `Gameweek ${gameweek}`,
       size: '1x1'
@@ -225,13 +256,6 @@ export default function HomePage() {
       id: 'captain',
       label: 'Captaincy',
       size: '1x1'
-    },
-    {
-      id: 'refresh-state',
-      label: 'State',
-      value: refreshStateLabel ?? '—',
-      size: '1x1',
-      isStateDebug: true
     },
     {
       id: 'settings',
@@ -292,7 +316,7 @@ export default function HomePage() {
     if (id === 'captain' && isCaptainExpanded) {
       return 'bento-card-chart-large'
     }
-    
+
     if (card.size === '2x3') return 'bento-card-chart-large'
     if (card.size === '2x1') return 'bento-card-large'
     if (id === 'chips') return 'bento-card-chips'
@@ -384,6 +408,11 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      {nextDeadlineLocal && (
+        <p className="home-page-next-deadline">
+          Next deadline: {nextGameweek?.name ? `${nextGameweek.name} ` : ''}{nextDeadlineLocal}
+        </p>
+      )}
       <div className="bento-grid">
         {visibleCardOrder.map((cardId, index) => {
           const card = cards.find(c => c.id === cardId)
@@ -570,8 +599,6 @@ export default function HomePage() {
               viceCaptainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
               leagueCaptainData={cardId === 'captain' ? leagueCaptainData : undefined}
               leagueCaptainLoading={cardId === 'captain' ? leagueCaptainLoading : undefined}
-              stateDebugValue={cardId === 'refresh-state' ? refreshStateLabel : undefined}
-              stateDebugDefinitions={cardId === 'refresh-state' ? STATE_DEBUG_DEFINITIONS : undefined}
             />
           )
         })}

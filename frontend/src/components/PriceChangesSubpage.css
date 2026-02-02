@@ -1,0 +1,189 @@
+/* Price Changes subpage: same design as expanded transfers bento (two columns Rise / Fall) */
+
+.price-changes-subpage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text-primary);
+}
+
+.price-changes-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.price-changes-card:hover {
+  border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+.price-changes-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-changes-updated {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 4px 0;
+}
+
+.price-changes-error {
+  font-size: 14px;
+  color: var(--accent-red, #ef4444);
+  padding: 16px;
+}
+
+/* Same layout as transfers bento: row on all breakpoints so both columns visible on mobile */
+.price-changes-columns-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
+  min-height: min-content;
+}
+
+.price-changes-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 4px;
+}
+
+.price-changes-column-header {
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.price-changes-column-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.price-changes-column-title-rise {
+  color: var(--accent-green, #10b981);
+}
+
+.price-changes-column-title-fall {
+  color: var(--accent-red, #ef4444);
+}
+
+.price-changes-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Match transfers-summary-column-item: same padding, radius, no border */
+.price-changes-column-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+  padding: 8px 10px;
+  min-height: 40px;
+  box-sizing: border-box;
+  border-radius: 6px;
+}
+
+.price-changes-column-rise .price-changes-column-item {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.price-changes-column-fall .price-changes-column-item {
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.price-changes-badge-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.price-changes-badge {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.price-changes-badge-placeholder {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+/* Match transfers-summary-column-name: colored by column (in=green, out=red) */
+.price-changes-column-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.price-changes-column-rise .price-changes-column-name {
+  color: var(--accent-green, #10b981);
+}
+
+.price-changes-column-fall .price-changes-column-name {
+  color: var(--accent-red, #ef4444);
+}
+
+/* Match transfers-summary-column-count: pill style for value */
+.price-changes-column-price {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 17px;
+  color: rgba(255, 255, 255, 1);
+  background: var(--transfers-count-bg, var(--bg-secondary));
+  padding: 3px 8px;
+  border-radius: 4px;
+  min-width: 24px;
+  text-align: center;
+  margin-left: auto;
+}
+
+html[data-theme="dark"] .price-changes-column-price {
+  background: var(--transfers-count-bg, var(--bg-primary));
+}
+
+.price-changes-loading,
+.price-changes-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-height: 60px;
+}
+
+/* Mobile: keep both columns visible side-by-side (same as expanded transfers bento) */

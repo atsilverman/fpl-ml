@@ -66,7 +66,7 @@ const VALUE_ON_BAR_MIN_WIDTH_PCT = 32
  * Top 3 by BPS (with FPL tiebreakers) are colored: 3 pts = gold, 2 pts = silver, 1 pt = bronze.
  * Optional gameweekMaxBps scales bars to gameweek-wide max so all fixtures share the same scale.
  */
-export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false }) {
+export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true }) {
   const barsRef = useRef(null)
   const [contrastByPlayerId, setContrastByPlayerId] = useState({})
 
@@ -141,12 +141,14 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   }
 
   return (
-    <div className={`bps-chart${isProvisional ? ' bps-chart--provisional' : ''}`} role="list" aria-label="BPS leaders">
-      <div className="bps-chart__header" aria-hidden>
-        <div className="bps-chart__header-label" />
-        <div className="bps-chart__header-bps">BPS</div>
-        <div className="bps-chart__header-bonus">Bonus</div>
-      </div>
+    <div className={`bps-chart${isProvisional ? ' bps-chart--provisional' : ''}${!showHeader ? ' bps-chart--no-header' : ''}`} role="list" aria-label="BPS leaders">
+      {showHeader && (
+        <div className="bps-chart__header" aria-hidden>
+          <div className="bps-chart__header-label" />
+          <div className="bps-chart__header-bps">BPS</div>
+          <div className="bps-chart__header-bonus">Bonus</div>
+        </div>
+      )}
       <div className="bps-chart__bars" ref={barsRef}>
         {sortedPlayers.map((player, index) => {
           const bps = player.bps ?? 0

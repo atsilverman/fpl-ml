@@ -1,11 +1,12 @@
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useOutletContext } from 'react-router-dom'
 import DefconSubpage from './DefconSubpage'
 import MatchesSubpage from './MatchesSubpage'
-import BonusSubpage from './BonusSubpage'
 import './GameweekPage.css'
 
 export default function GameweekPage() {
   const [searchParams] = useSearchParams()
+  const outletContext = useOutletContext() ?? {}
+  const { toggleBonus = false, showH2H = false } = outletContext
   const view = searchParams.get('view') || 'defcon'
   const simulateStatuses = searchParams.get('simulate') === '1' || searchParams.get('simulate') === 'status'
 
@@ -17,14 +18,9 @@ export default function GameweekPage() {
         </div>
       )}
       <div className="gameweek-page-content">
-        {view === 'matches' && (
-          <div className="gameweek-subpage gameweek-subpage-matches">
-            <MatchesSubpage simulateStatuses={simulateStatuses} />
-          </div>
-        )}
-        {view === 'bonus' && (
-          <div className="gameweek-subpage gameweek-subpage-bonus">
-            <BonusSubpage simulateStatuses={simulateStatuses} />
+        {(view === 'matches' || view === 'bonus') && (
+          <div className={`gameweek-subpage ${view === 'bonus' ? 'gameweek-subpage-bonus' : 'gameweek-subpage-matches'}`}>
+            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={view === 'bonus'} showH2H={showH2H} />
           </div>
         )}
         {view === 'defcon' && (

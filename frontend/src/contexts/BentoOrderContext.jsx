@@ -11,7 +11,6 @@ const DEFAULT_ORDER = [
   'gw-rank',
   'chips',
   'transfers',
-  'refresh-state',
   'settings'
 ]
 

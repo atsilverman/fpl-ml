@@ -82,6 +82,16 @@
   flex: 1;
 }
 
+.modal-config-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
 /* Auth section inside modal (below Step 1 content) */
 .modal-auth-section {
   margin-top: 20px;

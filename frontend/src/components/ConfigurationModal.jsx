@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import './ConfigurationModal.css'
 
-export default function ConfigurationModal({ isOpen, onClose, onSave }) {
+export default function ConfigurationModal({ isOpen, onClose, onSave, currentConfig }) {
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
   const [step, setStep] = useState(1)
   const [selectedLeague, setSelectedLeague] = useState(null)
@@ -61,14 +61,21 @@ export default function ConfigurationModal({ isOpen, onClose, onSave }) {
     staleTime: 300000, // Cache for 5 minutes
   })
 
-  // Reset state when modal opens/closes
+  // When modal opens: pre-seed with current config so user can see and change their selection
   useEffect(() => {
     if (isOpen) {
-      setStep(1)
-      setSelectedLeague(null)
-      setSelectedManagerId(null)
+      const hasConfig = currentConfig?.leagueId != null && currentConfig?.managerId != null
+      if (hasConfig) {
+        setSelectedLeague(currentConfig.leagueId)
+        setSelectedManagerId(currentConfig.managerId)
+        setStep(2)
+      } else {
+        setStep(1)
+        setSelectedLeague(null)
+        setSelectedManagerId(null)
+      }
     }
-  }, [isOpen])
+  }, [isOpen, currentConfig?.leagueId, currentConfig?.managerId])
 
   const handleLeagueSelect = (leagueId) => {
     setSelectedLeague(leagueId)
@@ -105,6 +112,11 @@ export default function ConfigurationModal({ isOpen, onClose, onSave }) {
         </div>
 
         <div className="modal-body">
+          {user && currentConfig?.leagueId != null && currentConfig?.managerId != null && (
+            <p className="modal-config-hint">
+              Your selection is saved. You can change league or manager below.
+            </p>
+          )}
           {step === 1 && (
             <div className="modal-step">
               <h3>Step 1: Select League</h3>

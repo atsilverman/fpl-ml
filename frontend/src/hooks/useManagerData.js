@@ -78,20 +78,17 @@ export function useManagerData() {
           ? 1
           : (prevHistory?.transfers_made === 0 ? 2 : 1)
 
-      // Rank change: use computed delta when both ranks exist; else use stored overall_rank_change (don't show prev rank as "gain")
-      const hasCurrentRank = history?.overall_rank != null
-      const hasPrevRank = prevHistory?.overall_rank != null
-      const overallRankChange =
-        hasCurrentRank && hasPrevRank
-          ? prevHistory.overall_rank - history.overall_rank
-          : (history?.overall_rank_change ?? 0)
+      // Rank change: use backend value (rank before GW kickoff − current rank); don't recompute from prev GW row (that can change after deadline)
+      const overallRankChange = history?.overall_rank_change ?? 0
 
       return {
         overallRank: history?.overall_rank ?? null,
         overallRankChange,
         gameweekRank: history?.gameweek_rank ?? null,
         totalPoints: history?.total_points || 0,
+        previousGameweekTotalPoints: prevHistory?.total_points ?? null,
         gameweekPoints: history?.gameweek_points || 0,
+        transferCost: history?.transfer_cost ?? 0,
         teamValue: history?.team_value_tenths
           ? (history.team_value_tenths / 10).toFixed(1)
           : null,

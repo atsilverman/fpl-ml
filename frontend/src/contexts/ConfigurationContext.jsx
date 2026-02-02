@@ -12,6 +12,7 @@ export function ConfigurationProvider({ children }) {
   const prevConfigRef = useRef(null)
   const isInitialMount = useRef(true)
   const migrationAttemptedRef = useRef(false)
+  const prevUserRef = useRef(user)
   const [loading, setLoading] = useState(true)
   const [configModalOpen, setConfigModalOpen] = useState(false)
 
@@ -96,6 +97,15 @@ export function ConfigurationProvider({ children }) {
   useEffect(() => {
     migrationAttemptedRef.current = false
   }, [user?.id])
+
+  // Clear config when user signs out so we don't show previous user's data
+  useEffect(() => {
+    if (prevUserRef.current && !user) {
+      setConfig(null)
+      localStorage.removeItem('fpl_configuration')
+    }
+    prevUserRef.current = user
+  }, [user])
 
   // Save configuration to Supabase for authenticated users, localStorage for others
   useEffect(() => {
@@ -201,6 +211,7 @@ export function ConfigurationProvider({ children }) {
         isOpen={configModalOpen}
         onClose={() => setConfigModalOpen(false)}
         onSave={handleConfigSave}
+        currentConfig={config}
       />
     </ConfigurationContext.Provider>
   )

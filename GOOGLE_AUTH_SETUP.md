@@ -67,30 +67,65 @@ You already have a Google OAuth Client ID. You just need to ensure it's configur
 
 ## Step 3: Run Database Migration
 
-The user configurations table needs to be created in your Supabase database:
+The user configurations table needs to be created in your Supabase database.
 
-1. **Apply the Migration**
-   - The migration file is located at: `backend/supabase/migrations/012_create_user_configurations.sql`
-   - You can apply it via:
-     - Supabase Dashboard: Go to "SQL Editor" and run the migration SQL
-     - Or use the Supabase CLI: `supabase db push`
+### Option A: Supabase Dashboard (recommended)
 
-2. **Verify the Migration**
-   - Go to "Table Editor" in Supabase Dashboard
-   - You should see a new table called `user_configurations`
-   - Verify that Row Level Security (RLS) is enabled
+1. Open your [Supabase Dashboard](https://supabase.com/dashboard) and select your project.
+2. In the left sidebar, go to **SQL Editor**.
+3. Click **New query**.
+4. Open the file `backend/supabase/migrations/012_create_user_configurations.sql` in your project, copy its entire contents, and paste into the SQL Editor.
+5. Click **Run** (or press Cmd/Ctrl+Enter).
+6. You should see "Success. No rows returned" (creating a table doesn’t return rows).
 
-## Step 4: Environment Variables
+### Option B: Supabase CLI
 
-Make sure your frontend has the correct Supabase environment variables:
+If you use the Supabase CLI and your project is linked:
 
-```env
-VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key
+```bash
+cd backend
+supabase db push
 ```
 
-These should already be set up. You can find them in:
-- Supabase Dashboard > "Settings" > "API"
+This runs all pending migrations (including 012). Only use this if you normally apply migrations via CLI.
+
+### Verify the migration
+
+- Go to **Table Editor** in the Supabase Dashboard.
+- You should see a table **user_configurations** with columns: `id`, `user_id`, `manager_id`, `league_id`, `created_at`, `updated_at`.
+- Click the table → **Policies** and confirm Row Level Security (RLS) is enabled and the four policies are listed.
+
+## Step 4: Frontend environment variables
+
+The frontend needs Supabase URL and anon key so it can talk to your project and use Auth.
+
+1. **Create or edit the env file**
+   - Path: **`frontend/.env`** (in the `frontend` folder, not the project root).
+   - If it doesn’t exist: copy from the example:
+     ```bash
+     cp frontend/.env.example frontend/.env
+     ```
+
+2. **Set these two variables** (no quotes, no spaces around `=`):
+
+   ```env
+   VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+   VITE_SUPABASE_ANON_KEY=your_anon_key
+   ```
+
+3. **Where to get the values**
+   - In Supabase Dashboard go to **Settings** (gear) → **API**.
+   - **Project URL** → use as `VITE_SUPABASE_URL` (e.g. `https://rjkgwyngnqgzqudqqzqi.supabase.co`).
+   - **Project API keys** → under "anon" **public**, click **Reveal** and copy → use as `VITE_SUPABASE_ANON_KEY`.
+
+4. **Optional** (for default manager/league):
+   - `VITE_MANAGER_ID=your_manager_id`
+   - `VITE_LEAGUE_ID=your_league_id`
+
+5. Restart the dev server after changing `.env`:
+   ```bash
+   cd frontend && npm run dev
+   ```
 
 ## Step 5: Test the Authentication
 

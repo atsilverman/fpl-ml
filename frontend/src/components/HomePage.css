@@ -6,6 +6,16 @@
   width: 100%;
 }
 
+.home-page-next-deadline {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  letter-spacing: 0.02em;
+  text-align: center;
+  opacity: 0.85;
+}
+
 /* Bento Grid System */
 :root {
   --bento-unit-width: 200px;

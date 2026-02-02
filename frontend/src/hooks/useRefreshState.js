@@ -36,6 +36,7 @@ export function useRefreshState() {
     },
     enabled: currentGameweek != null,
     staleTime: 30_000,
+    refetchInterval: 30_000, // Poll so Updates (debug) and state stay in sync with backend fast loop
   })
 
   const state = (() => {
@@ -66,11 +67,11 @@ export function useRefreshState() {
 
   const stateLabel =
     {
-      outside_gameweek: 'Outside GW',
-      live_matches: 'Live matches',
-      bonus_pending: 'Bonus pending',
-      price_window: 'Price window',
-      transfer_deadline: 'Transfer deadline',
+      outside_gameweek: 'Idle',
+      live_matches: 'Live',
+      bonus_pending: 'Bonus Pending',
+      price_window: 'Price Window',
+      transfer_deadline: 'Deadline',
       idle: 'Idle',
     }[state] ?? state
 

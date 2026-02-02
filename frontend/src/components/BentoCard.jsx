@@ -7,7 +7,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, MoveDiagonal, X, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -24,6 +24,25 @@ const SECOND_HALF_CHIP_COLUMNS = [
 
 const POPUP_GAP = 6
 const POPUP_PAD = 8
+
+function formatDeadlineGw(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso.replace('Z', '+00:00'))
+    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })
+  } catch {
+    return '—'
+  }
+}
+
+function GwDebugBadge({ value }) {
+  const isTrue = value === true
+  return (
+    <span className={`gw-debug-badge gw-debug-badge--${isTrue ? 'true' : 'false'}`}>
+      {isTrue ? 'true' : 'false'}
+    </span>
+  )
+}
 
 /** Compute top/left so popup stays within viewport; prefer below and right-aligned to anchor. */
 function getPopupPosition(anchorRect, popupWidth, popupHeight) {
@@ -90,7 +109,12 @@ export default function BentoCard({
   leagueCaptainData = null,
   leagueCaptainLoading = false,
   stateDebugValue = null,
-  stateDebugDefinitions = null
+  stateDebugDefinitions = null,
+  isGwDebug = false,
+  gameweekDebugData = null,
+  gameweekDebugLoading = false,
+  isUpdatesDebug = false,
+  updateTimestampsData = null
 }) {
   const isSecondHalf = gameweek != null && gameweek > 19
   const chipColumns = isSecondHalf ? SECOND_HALF_CHIP_COLUMNS : FIRST_HALF_CHIP_COLUMNS
@@ -369,7 +393,7 @@ export default function BentoCard({
               title={showGwLegendPopup ? undefined : 'Collapse'}
               onClick={handleIconClick}
             >
-              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
+              <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             </div>
           </div>
         ) : (
@@ -379,7 +403,7 @@ export default function BentoCard({
             onClick={handleIconClick}
           >
             {isExpanded ? (
-              <X className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
+              <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             ) : (
               <MoveDiagonal className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
             )}
@@ -396,6 +420,89 @@ export default function BentoCard({
       {loading ? (
         <div className="bento-card-value loading">
           <div className="skeleton-text"></div>
+        </div>
+      ) : id === 'updates-debug' && isUpdatesDebug && updateTimestampsData ? (
+        <div className="updates-debug-bento-content">
+          <div className="updates-debug-now">Local time: {updateTimestampsData.localTimeNow}</div>
+          <div className="updates-debug-table-wrapper">
+            <table className="updates-debug-table league-standings-bento-table">
+                  <thead>
+                    <tr>
+                      <th className="updates-debug-th-rank">#</th>
+                      <th>Path</th>
+                      <th>Source</th>
+                      <th className="updates-debug-th-since">Since backend</th>
+                      <th className="updates-debug-th-since">Since frontend</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {updateTimestampsData.rows.map((row, i) => (
+                      <tr key={`${row.path}-${row.source}`}>
+                        <td className="updates-debug-rank">{i + 1}</td>
+                        <td className="updates-debug-path">{row.path}</td>
+                        <td className="updates-debug-source">{row.source}</td>
+                        <td className="updates-debug-since">{row.timeSinceBackend ?? '—'}</td>
+                        <td className="updates-debug-since">{row.timeSince}</td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : id === 'gw-debug' && isGwDebug ? (
+        <div className="gw-debug-bento-content">
+          {gameweekDebugLoading ? (
+            <div className="bento-card-value loading">
+              <div className="skeleton-text"></div>
+            </div>
+          ) : !gameweekDebugData?.gameweekRow ? (
+            <div className="gw-debug-empty">No current gameweek</div>
+          ) : (
+            <>
+              <table className="gw-debug-table">
+                <tbody>
+                  <tr><td className="gw-debug-table-label">id</td><td>{gameweekDebugData.gameweekRow.id}</td></tr>
+                  <tr><td className="gw-debug-table-label">name</td><td>{gameweekDebugData.gameweekRow.name ?? '—'}</td></tr>
+                  <tr><td className="gw-debug-table-label">deadline</td><td className="gw-debug-table-mono">{formatDeadlineGw(gameweekDebugData.gameweekRow.deadline_time)}</td></tr>
+                  <tr><td className="gw-debug-table-label">is_current</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.is_current} /></td></tr>
+                  <tr><td className="gw-debug-table-label">is_previous</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.is_previous} /></td></tr>
+                  <tr><td className="gw-debug-table-label">is_next</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.is_next} /></td></tr>
+                  <tr><td className="gw-debug-table-label">finished</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.finished} /></td></tr>
+                  <tr><td className="gw-debug-table-label">data_checked</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.data_checked} /></td></tr>
+                  <tr><td className="gw-debug-table-label">fpl_ranks_updated</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.fpl_ranks_updated} /></td></tr>
+                </tbody>
+              </table>
+              <div className="gw-debug-fixtures-wrap">
+                <div className="gw-debug-fixtures-title">Fixtures</div>
+                {!gameweekDebugData.fixtures?.length ? (
+                  <div className="gw-debug-empty">No fixtures</div>
+                ) : (
+                  <table className="gw-debug-table gw-debug-fixtures-table">
+                    <thead>
+                      <tr>
+                        <th>Match</th>
+                        <th>started</th>
+                        <th>finished</th>
+                        <th>prov</th>
+                        <th>min</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gameweekDebugData.fixtures.map((f) => (
+                        <tr key={f.fpl_fixture_id}>
+                          <td className="gw-debug-match-cell">{f.home_short} {f.home_score ?? '–'} – {f.away_score ?? '–'} {f.away_short}</td>
+                          <td><GwDebugBadge value={f.started} /></td>
+                          <td><GwDebugBadge value={f.finished} /></td>
+                          <td><GwDebugBadge value={f.finished_provisional} /></td>
+                          <td>{f.minutes != null ? `${f.minutes}'` : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
         </div>
       ) : id === 'captain' && !isExpanded ? (
         <div className="bento-card-captain-collapsed">
@@ -437,7 +544,7 @@ export default function BentoCard({
             </div>
           ) : null}
         </div>
-      ) : value !== undefined ? (
+      ) : value !== undefined && id !== 'gw-debug' ? (
         <>
           {!(id === 'league-rank' && isExpanded) && (
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
@@ -524,6 +631,7 @@ export default function BentoCard({
             top10ByStat={top10ByStat}
             impactByPlayerId={impactByPlayerId ?? {}}
             isLiveUpdating={isLiveUpdating}
+            fixtures={gameweekDebugData?.fixtures ?? []}
           />
         </div>
       )}

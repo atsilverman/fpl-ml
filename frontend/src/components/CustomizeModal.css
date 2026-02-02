@@ -15,26 +15,49 @@
 }
 
 .customize-modal-content {
-  max-width: 420px;
+  max-width: 360px;
+  max-height: min(520px, 88vh);
+  min-height: 0;
+}
+
+.customize-modal-content .modal-header {
+  padding: 14px 18px;
+  flex-shrink: 0;
+}
+
+.customize-modal-content .modal-body {
+  padding: 14px 18px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.customize-modal-content .modal-header h2 {
+  font-size: 17px;
+}
+
+.customize-modal-content .modal-footer {
+  padding: 12px 18px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-color);
 }
 
 .customize-modal-description {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-secondary);
-  margin: 0 0 16px 0;
+  margin: 0 0 12px 0;
 }
 
 .customize-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .customize-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -65,7 +88,7 @@
 }
 
 .customize-row-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
   flex: 1;

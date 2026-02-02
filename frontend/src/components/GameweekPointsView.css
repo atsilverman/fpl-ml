@@ -455,15 +455,15 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
   margin-left: 0;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   box-shadow: 0 0 0 0 var(--accent-green, #10b981);
   animation: gameweek-points-mins-live-pulse 2s ease-in-out infinite;
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-provisional {
-  background: #ca8a04;
-  box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+  background: #FFB404;
+  box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   animation: gameweek-points-mins-provisional-pulse 2s ease-in-out infinite;
 }
 
@@ -472,16 +472,16 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
   }
 }
 
 @keyframes gameweek-points-mins-provisional-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(202, 138, 4, 0.6);
+    box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   }
   50% {
-    box-shadow: 0 0 0 5px rgba(202, 138, 4, 0);
+    box-shadow: 0 0 0 4px rgba(255, 180, 4, 0);
   }
 }
 

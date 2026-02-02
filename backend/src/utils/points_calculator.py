@@ -55,18 +55,13 @@ class PointsCalculator:
         match_finished = stats_data.get("match_finished", False)
         match_finished_provisional = stats_data.get("match_finished_provisional", False)
         
-        # Handle provisional bonus
+        # Only add provisional when in provisional period; when official, total_points already includes bonus
         if match_finished or match_finished_provisional:
             if bonus_status == "provisional" and bonus == 0:
-                # ⚠️ TODO: Calculate provisional bonus from BPS ranking
-                # This requires fixture BPS data to rank all players in the match
-                # Top 3 BPS players get: 3, 2, 1 bonus points
-                # For now, use 0 (provisional bonus calculation not yet implemented)
-                # This may cause points to be 1-3 lower than FPL website during provisional period
-                provisional_bonus = 0
+                provisional_bonus = stats_data.get("provisional_bonus", 0)
                 points = points + provisional_bonus
             elif bonus_status == "confirmed" and bonus > 0:
-                # Bonus already included in total_points
+                # Bonus already included in total_points from FPL
                 pass
         
         return {

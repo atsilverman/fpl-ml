@@ -624,20 +624,53 @@ class ManagerDataRefresher:
                         fpl_total = gw_history.get("total_points")
                         current_total = fpl_total if fpl_total is not None else gameweek_points
             
+            # Backfill previous_overall_rank when missing (e.g. missed post-deadline capture or freeze just lifted)
+            previous_overall_rank = existing.get("previous_overall_rank")
+            if previous_overall_rank is None and gameweek > 1:
+                prev_gw_rows = self.db_client.client.table("manager_gameweek_history").select(
+                    "overall_rank"
+                ).eq("manager_id", manager_id).eq("gameweek", gameweek - 1).limit(1).execute().data
+                if prev_gw_rows and prev_gw_rows[0].get("overall_rank") is not None:
+                    previous_overall_rank = prev_gw_rows[0]["overall_rank"]
+                    logger.debug("Backfilled previous_overall_rank from previous GW", extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "previous_overall_rank": previous_overall_rank
+                    })
+
             # Calculate overall rank change from baseline
             overall_rank_change = None
-            if existing.get("previous_overall_rank") is not None and overall_rank is not None:
-                overall_rank_change = existing["previous_overall_rank"] - overall_rank
-            
+            if previous_overall_rank is not None and overall_rank is not None:
+                overall_rank_change = previous_overall_rank - overall_rank
+
+            # Team value and bank: for current gameweek prefer entry endpoint (last_deadline_value/bank)
+            # so we get the latest value after price changes; fallback to history then existing.
+            _team_value = gw_history.get("value")
+            _bank = gw_history.get("bank")
+            is_current_gw = False
+            try:
+                gw_row = self.db_client.client.table("gameweeks").select("is_current").eq("id", gameweek).limit(1).execute().data
+                is_current_gw = bool(gw_row and gw_row[0].get("is_current"))
+            except Exception:
+                pass
+            if is_current_gw:
+                try:
+                    entry = await self.fpl_client.get_entry(manager_id)
+                    if entry.get("last_deadline_value") is not None:
+                        _team_value = entry["last_deadline_value"]
+                    if entry.get("last_deadline_bank") is not None:
+                        _bank = entry["last_deadline_bank"]
+                except Exception as e:
+                    logger.debug("get_entry for team value failed", extra={"manager_id": manager_id, "error": str(e)})
+            if _team_value is None:
+                _team_value = existing.get("team_value_tenths")
+            if _bank is None:
+                _bank = existing.get("bank_tenths")
+
             # Build history data - preserve baseline columns and mini_league_rank if they exist.
-            # During live, preserve deadline-only fields (team_value_tenths, bank_tenths, active_chip)—not refreshed during live.
             if is_finished:
-                _team_value = gw_history.get("value")
-                _bank = gw_history.get("bank")
                 _chip = active_chip
             else:
-                _team_value = existing.get("team_value_tenths")
-                _bank = existing.get("bank_tenths")
                 _chip = existing.get("active_chip")
             history_data = {
                 "manager_id": manager_id,
@@ -660,8 +693,8 @@ class ManagerDataRefresher:
                 history_data["baseline_total_points"] = baseline_total
             if existing.get("previous_mini_league_rank") is not None:
                 history_data["previous_mini_league_rank"] = existing["previous_mini_league_rank"]
-            if existing.get("previous_overall_rank") is not None:
-                history_data["previous_overall_rank"] = existing["previous_overall_rank"]
+            if previous_overall_rank is not None:
+                history_data["previous_overall_rank"] = previous_overall_rank
             
             # Preserve mini_league_rank if it exists (calculated separately)
             if existing_mini_league_rank is not None:
