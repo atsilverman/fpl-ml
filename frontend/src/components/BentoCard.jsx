@@ -574,7 +574,7 @@ export default function BentoCard({
               )}
             </div>
           )}
-          {id !== 'league-rank' && change !== undefined && change !== 0 && (id !== 'overall-rank' || !isStale) && (
+          {id !== 'league-rank' && change !== undefined && change !== 0 && (
             <div className={`bento-card-change ${change > 0 ? 'positive' : 'negative'}`}>
               {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumber(Math.abs(change))}
             </div>
