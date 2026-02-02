@@ -156,8 +156,11 @@
 .modal-auth-avatar {
   width: 36px;
   height: 36px;
+  min-width: 0;
+  flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
+  display: block;
 }
 
 .modal-auth-name {

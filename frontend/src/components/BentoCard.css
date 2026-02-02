@@ -123,6 +123,19 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   justify-content: center;
 }
 
+/* 2x1 settings bento: 2 columns, 2 rows — wider buttons, [Theme|Customize] [Debug|empty] */
+.bento-card-large .settings-bento-content {
+  flex-direction: row;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+}
+
+.bento-card-large .settings-bento-button {
+  width: 100%;
+  min-width: 0;
+}
+
 .settings-bento-button {
   display: flex;
   align-items: center;

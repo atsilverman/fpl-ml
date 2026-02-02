@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useManagerData } from '../hooks/useManagerData'
@@ -31,6 +32,7 @@ import './HomePage.css'
 export default function HomePage() {
   const { config, openConfigModal } = useConfiguration()
   const { cardOrder, openCustomizeModal, isCardVisible, cardVisibility } = useBentoOrder()
+  const { openDebugModal } = useOutletContext()
   
   // State declarations (must be before hooks that use them)
   const [chartFilter, setChartFilter] = useState('last12') // 'all', 'last12', 'last6'
@@ -260,7 +262,7 @@ export default function HomePage() {
     {
       id: 'settings',
       label: 'Settings',
-      size: '1x1',
+      size: '2x1',
       isSettings: true
     }
   ]
@@ -513,7 +515,7 @@ export default function HomePage() {
           if (cardId === 'transfers' && isTransfersExpanded) {
             labelToUse = (
               <>
-                TRANSFERS <span className="bento-card-label-suffix">ML Top Transfers</span>
+                TRANSFERS <span className="bento-card-label-suffix">| ML Top Transfers</span>
               </>
             )
           }
@@ -540,6 +542,7 @@ export default function HomePage() {
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'transfers' && isTransfersExpanded) || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
               style={{ '--animation-delay': `${index * 0.1}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
+              onDebugClick={card.isSettings ? openDebugModal : undefined}
               onExpandClick={
                 cardId === 'overall-rank' ? handleExpandClick :
                 cardId === 'team-value' ? handleTeamValueExpandClick :

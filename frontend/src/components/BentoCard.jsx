@@ -7,7 +7,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -73,6 +73,7 @@ export default function BentoCard({
   isProvisionalOnly = false,
   style = {},
   onConfigureClick,
+  onDebugClick,
   chartData = null,
   chartComparisonData = null,
   chartFilter = 'all',
@@ -205,10 +206,10 @@ export default function BentoCard({
     isTransfersExpanded && 'bento-card-transfers-compact'
   ].filter(Boolean).join(' ')
 
-  const getThemeLabel = () => {
-    if (themeMode === 'light') return 'Light'
-    if (themeMode === 'dark') return 'Dark'
-    return 'System'
+  const getThemeValueLabel = () => {
+    if (themeMode === 'light') return 'light'
+    if (themeMode === 'dark') return 'dark'
+    return 'system'
   }
 
   const getThemeIcon = () => {
@@ -889,14 +890,20 @@ export default function BentoCard({
       
       {isSettings && (
         <div className="settings-bento-content">
-          <button className="settings-bento-button" onClick={cycleTheme} title={`Theme: ${getThemeLabel()}`}>
+          <button className="settings-bento-button" onClick={cycleTheme} title={`Theme: ${getThemeValueLabel()}`}>
             {getThemeIcon()}
-            {getThemeLabel()}
+            Theme
           </button>
           <button className="settings-bento-button configure-bento-button" onClick={onConfigureClick}>
             <Settings className="settings-icon" size={11} strokeWidth={1.5} />
             Customize
           </button>
+          {onDebugClick && (
+            <button className="settings-bento-button" onClick={onDebugClick} title="Debug" aria-label="Debug">
+              <Bug className="settings-icon" size={11} strokeWidth={1.5} />
+              Debug
+            </button>
+          )}
         </div>
       )}
     </div>

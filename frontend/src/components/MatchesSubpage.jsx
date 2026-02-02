@@ -590,6 +590,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
         <div className="matches-subpage-empty">No fixtures for this gameweek</div>
       ) : (
         <>
+          {!toggleBonus && (
           <div className={`gw-top-points-card ${isTopPerformersExpanded ? 'gw-top-points-card--expanded' : 'gw-top-points-card--collapsed'}`}>
             <div className="gw-top-points-content">
               <div
@@ -676,9 +677,14 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
               )}
             </div>
           </div>
+          )}
           <div className="matchup-grid">
           {displayedFixtures.map((f, index) => (
-            <div key={f.fpl_fixture_id} ref={(showH2H ? index === 0 : index === firstScheduledIndex) ? firstScheduledRef : null}>
+            <div
+              key={f.fpl_fixture_id}
+              className={expandedId === f.fpl_fixture_id ? 'matchup-grid-item matchup-grid-item--expanded' : 'matchup-grid-item'}
+              ref={(showH2H ? index === 0 : index === firstScheduledIndex) ? firstScheduledRef : null}
+            >
               <MatchBento
                 fixture={f}
                 expanded={expandedId === f.fpl_fixture_id}

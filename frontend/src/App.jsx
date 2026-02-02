@@ -11,6 +11,7 @@ import GameweekPage from './components/GameweekPage'
 import ResearchPage from './components/ResearchPage'
 import LivePage from './components/LivePage'
 import AuthCallback from './components/AuthCallback'
+import OnboardingPage from './components/OnboardingPage'
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Router>
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/welcome" element={<OnboardingPage />} />
               <Route path="/" element={<Dashboard />}>
                 <Route index element={<HomePage />} />
                 <Route path="mini-league" element={<MiniLeaguePage />} />

@@ -205,7 +205,7 @@ export function ConfigurationProvider({ children }) {
   }
 
   return (
-    <ConfigurationContext.Provider value={{ config, updateConfig, openConfigModal }}>
+    <ConfigurationContext.Provider value={{ config, updateConfig, openConfigModal, loading }}>
       {children}
       <ConfigurationModal
         isOpen={configModalOpen}

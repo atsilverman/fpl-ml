@@ -1,4 +1,5 @@
 import { useAuth } from '../contexts/AuthContext'
+import UserAvatar from './UserAvatar'
 import './AuthButton.css'
 
 export default function AuthButton() {
@@ -12,11 +13,7 @@ export default function AuthButton() {
   return (
     <div className="auth-button-container">
       <div className="auth-user-info">
-        <img
-          src={user.user_metadata?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.user_metadata?.full_name || user.email)}&background=random`}
-          alt={user.user_metadata?.full_name || user.email}
-          className="auth-avatar"
-        />
+        <UserAvatar user={user} className="auth-avatar" alt={user.user_metadata?.full_name || user.email} />
         <span className="auth-user-name">
           {user.user_metadata?.full_name || user.email}
         </span>
