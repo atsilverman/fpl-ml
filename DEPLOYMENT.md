@@ -31,9 +31,9 @@ sudo useradd -r -s /bin/false fpl
 sudo mkdir -p /opt/fpl-refresh
 sudo chown -R fpl:fpl /opt/fpl-refresh
 
-# Clone or copy code
-sudo -u fpl git clone <your-repo> /opt/fpl-refresh/backend
-# Or copy files manually
+# Clone repo (root at /opt/fpl-refresh so backend is at /opt/fpl-refresh/backend)
+sudo -u fpl git clone <your-repo> /opt/fpl-refresh
+# Or copy files so backend app lives at /opt/fpl-refresh/backend
 ```
 
 ### 4. Set Up Python Environment
@@ -62,6 +62,41 @@ sudo systemctl start fpl-refresh.service
 ```
 
 ### 7. Check Status
+
+```bash
+sudo systemctl status fpl-refresh.service
+sudo journalctl -u fpl-refresh.service -f
+```
+
+### 8. Deploy updates to production (main → droplet)
+
+After pushing changes to `main`, deploy to the Digital Ocean droplet:
+
+**Option A – run on the droplet (SSH in first):**
+
+```bash
+# SSH into your droplet, then (repo root = /opt/fpl-refresh):
+cd /opt/fpl-refresh
+sudo -u fpl git fetch origin && sudo -u fpl git checkout main && sudo -u fpl git pull origin main
+sudo -u fpl /opt/fpl-refresh/venv/bin/pip install -r /opt/fpl-refresh/backend/requirements.txt --quiet
+sudo systemctl restart fpl-refresh.service
+sudo systemctl status fpl-refresh.service
+```
+
+**Option B – one-liner from your machine (replace DROPLET_IP):**
+
+```bash
+ssh root@DROPLET_IP 'cd /opt/fpl-refresh && sudo -u fpl git fetch origin && sudo -u fpl git checkout main && sudo -u fpl git pull origin main && sudo -u fpl /opt/fpl-refresh/venv/bin/pip install -r /opt/fpl-refresh/backend/requirements.txt --quiet && sudo systemctl restart fpl-refresh.service && sudo systemctl status fpl-refresh.service'
+```
+
+**Option C – use the deploy script on the server:**
+
+```bash
+# On the droplet (after copying or pulling the script):
+sudo bash /opt/fpl-refresh/backend/scripts/deploy.sh
+```
+
+After deploy, confirm the service is running and check logs:
 
 ```bash
 sudo systemctl status fpl-refresh.service

@@ -240,7 +240,9 @@ export default function HomePage() {
       id: 'transfers',
       label: 'Transfers',
       value: managerData != null
-        ? `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
+        ? (managerData.activeChip === 'wildcard' || managerData.activeChip === 'freehit')
+          ? 'n/a'
+          : `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
         : undefined,
       size: '1x1',
       isTransfers: true

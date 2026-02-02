@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Pencil, ChevronDown } from 'lucide-react'
 import DebugModal from './DebugModal'
@@ -93,8 +93,15 @@ export default function Dashboard() {
       <header className="dashboard-header">
         <div className="header-content">
           <div className="header-title-section">
-            <h1>FPL Mini League</h1>
-            {subtitle && <p className="header-subtitle">{subtitle}</p>}
+            <Link to="/" className="header-title-link" aria-label="Go to home">
+              <h1>FPL Mini League</h1>
+            </Link>
+            <div className="header-subtitle-row">
+              {subtitle && <p className="header-subtitle">{subtitle}</p>}
+              <button type="button" className="header-config-icon" aria-label="Configure league and manager" title="Configure league and manager" onClick={openConfigModal}>
+                <Pencil size={12} strokeWidth={1.5} />
+              </button>
+            </div>
           </div>
           <nav className="header-nav page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
         {pages.map(page => {
@@ -195,9 +202,6 @@ export default function Dashboard() {
                 </svg>
               </button>
             )}
-            <button type="button" className="header-user-button" aria-label="Configure league and manager" title="Configure league and manager" onClick={openConfigModal}>
-              <Pencil size={16} strokeWidth={1.5} />
-            </button>
           </div>
         </div>
       </header>

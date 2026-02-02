@@ -197,10 +197,24 @@ export default function BentoCard({
 
   const { themeMode, cycleTheme } = useTheme()
   const isTransfersExpanded = id === 'transfers' && isExpanded
+  const overallRankBorderClass =
+    id === 'overall-rank' && change != null && change !== 0
+      ? change > 0
+        ? 'bento-card-overall-rank-border-positive'
+        : 'bento-card-overall-rank-border-negative'
+      : null
+  const leagueRankBorderClass =
+    id === 'league-rank' && change != null && change !== 0
+      ? change > 0
+        ? 'bento-card-league-rank-border-positive'
+        : 'bento-card-league-rank-border-negative'
+      : null
   const cardClasses = [
     'bento-card',
     'bento-card-animate',
     className,
+    overallRankBorderClass,
+    leagueRankBorderClass,
     id === 'transfers' && 'bento-card-id-transfers',
     isExpanded && 'bento-card-expanded',
     isTransfersExpanded && 'bento-card-transfers-compact'

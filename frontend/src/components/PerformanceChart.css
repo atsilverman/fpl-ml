@@ -133,7 +133,7 @@
 /* Chart point hover effects */
 .data-point {
   cursor: pointer;
-  transition: r 0.2s ease;
+  transition: r 0.12s ease;
 }
 
 .data-point:hover {

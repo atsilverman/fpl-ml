@@ -144,21 +144,65 @@
   flex-shrink: 0;
 }
 
+.header-title-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.header-title-link:hover h1 {
+  opacity: 0.9;
+}
+
 .dashboard-header h1 {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   margin: 0;
   color: var(--text-primary);
   letter-spacing: -0.5px;
+  transition: opacity 0.2s ease;
 }
 
 .header-subtitle {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 400;
   margin: 0;
   color: var(--text-secondary);
   opacity: 0.75;
   letter-spacing: 0.2px;
+}
+
+.header-subtitle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.header-config-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent-blue);
+  cursor: pointer;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.header-config-icon:hover {
+  color: var(--accent-blue);
+  opacity: 0.85;
+}
+
+.header-config-icon:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
 }
 
 /* Page selector: desktop = right side of header (FotMob-style); mobile = fixed at bottom */
@@ -185,17 +229,17 @@
 .page-selector-bottom.tracking-mode-toggle {
   width: auto;
   max-width: none;
-  gap: 28px;
+  gap: 8px;
   background: transparent;
   padding: 0;
 }
 
 .page-selector-bottom .tracking-mode-button {
   flex: 0 0 auto;
-  width: 112px;
-  min-width: 112px;
-  padding: 6px 12px;
-  font-size: 13px;
+  width: 90px;
+  min-width: 90px;
+  padding: 5px 10px;
+  font-size: 12px;
   font-weight: 600;
   border-radius: 6px;
   justify-content: center;
@@ -381,6 +425,16 @@
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;
+}
+
+/* Desktop: prevent layout reflow below 4 bentos wide; use horizontal scroll instead */
+@media (min-width: 769px) {
+  .dashboard {
+    overflow-x: auto;
+  }
+  .dashboard-content {
+    min-width: 896px;
+  }
 }
 
 .dashboard-subpage-header-wrap {
@@ -591,7 +645,7 @@
   }
   
   .dashboard-header h1 {
-    font-size: 22px;
+    font-size: 17px;
   }
   
   .tracking-mode-button {

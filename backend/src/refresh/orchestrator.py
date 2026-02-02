@@ -984,6 +984,38 @@ class RefreshOrchestrator:
         except Exception as e:
             logger.error("Points validation failed", extra={"error": str(e)}, exc_info=True)
     
+    def _is_likely_live_window(self) -> bool:
+        """
+        True when we're in IDLE but current time is past the earliest kickoff of the current gameweek.
+        Ensures we keep using fast_loop_interval so we quickly get started=true from FPL and
+        transition to LIVE_MATCHES (avoids stale 'Since backend' when DB is behind real kickoffs).
+        """
+        if not self.current_gameweek or not self.db_client:
+            return False
+        try:
+            fixtures = self.db_client.client.table("fixtures").select(
+                "kickoff_time"
+            ).eq("gameweek", self.current_gameweek).execute().data
+            if not fixtures:
+                return False
+            now = datetime.now(timezone.utc)
+            for f in fixtures:
+                k = f.get("kickoff_time")
+                if not k:
+                    continue
+                try:
+                    kickoff = datetime.fromisoformat(k.replace("Z", "+00:00"))
+                    if kickoff.tzinfo is None:
+                        kickoff = kickoff.replace(tzinfo=timezone.utc)
+                    if now >= kickoff - timedelta(minutes=self.config.kickoff_window_minutes):
+                        return True
+                except (ValueError, TypeError):
+                    continue
+            return False
+        except Exception as e:
+            logger.debug("Likely live window check failed", extra={"error": str(e)})
+            return False
+
     async def _fast_cycle(self):
         """Execute fast refresh cycle (gameweeks, state, fixtures, players when live). No manager points or MVs in live - those run in slow loop."""
         try:
@@ -1333,14 +1365,14 @@ class RefreshOrchestrator:
                 except Exception as e:
                     logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
 
-            # Record fast cycle completion for frontend lag monitoring
-            try:
-                self.db_client.insert_refresh_event("fast")
-            except Exception as e:
-                logger.debug("Refresh event insert failed", extra={"path": "fast", "error": str(e)})
-            
         except Exception as e:
             logger.error("Fast cycle failed", extra={"error": str(e)}, exc_info=True)
+        finally:
+            # Always record fast cycle attempt so debug panel shows backend activity even when cycle fails
+            try:
+                self.db_client.insert_refresh_event("fast")
+            except Exception as ev:
+                logger.debug("Refresh event insert failed", extra={"path": "fast", "error": str(ev)})
     
     async def _run_fast_loop(self):
         """Fast loop: gameweeks, fixtures, players every 30s in live (or gameweeks interval otherwise). Does not block on manager points or MVs."""
@@ -1352,8 +1384,8 @@ class RefreshOrchestrator:
                 elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     await asyncio.sleep(self.config.fast_loop_interval)
                 else:
-                    # Idle: use short interval when within kickoff window (5 min before/after any fixture) for multi-day GW
-                    if self._is_in_kickoff_window():
+                    # Idle: use short interval when within kickoff window or past kickoff (likely live, DB may be stale)
+                    if self._is_in_kickoff_window() or self._is_likely_live_window():
                         await asyncio.sleep(self.config.fast_loop_interval)
                     else:
                         await asyncio.sleep(self.config.gameweeks_refresh_interval)

@@ -79,6 +79,25 @@
   vertical-align: middle;
 }
 
+.gameweek-points-th-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.gameweek-points-th-sortable:hover {
+  color: var(--text-primary);
+}
+.gameweek-points-th-sort-icon {
+  margin-left: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--text-secondary);
+}
+.gameweek-points-th-sortable.gameweek-points-th-sorted-desc .gameweek-points-th-sort-icon,
+.gameweek-points-th-sortable.gameweek-points-th-sorted-asc .gameweek-points-th-sort-icon {
+  color: var(--accent-blue, #2563eb);
+}
+
 .gameweek-points-th-player {
   min-width: 120px;
   width: 45%;
@@ -824,5 +843,139 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   .gameweek-points-opponent-badge {
     width: 16px;
     height: 16px;
+  }
+}
+
+/* Home page bento: expanded GW points uses mobile-like sizing, slightly larger (desktop only) */
+@media (min-width: 769px) {
+  .home-page .bento-card-chart-2x4 .gameweek-points-table {
+    font-size: 12px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th {
+    height: 32px;
+    font-size: 9px;
+    padding: 10px 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-player {
+    min-width: 110px;
+    padding-left: 12px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-mins,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-mins {
+    width: 64px;
+    min-width: 64px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-opp,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-opp,
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-pts,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-pts {
+    width: 50px;
+    min-width: 50px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-impact {
+    min-width: 72px;
+    width: 72px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-impact {
+    min-width: 72px;
+    width: 72px;
+    padding: 6px 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-bar-wrap {
+    height: 8px;
+    border-radius: 4px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-bar {
+    border-radius: 4px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-value {
+    font-size: 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-popup-title,
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-popup-text {
+    font-size: 10px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-stat,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-stat {
+    min-width: 50px;
+    width: 50px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-stat {
+    font-size: 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-td {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-player-name-text {
+    font-size: 11px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-captain-badge-inline {
+    font-size: 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-assistant-badge-inline {
+    font-size: 9px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-mins-dnp-badge {
+    font-size: 9px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-mins-upcoming {
+    font-size: 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-mins-upcoming-time {
+    font-size: 7px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-legend {
+    font-size: 9px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-legend-badge {
+    font-size: 9px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-legend-scroll-hint {
+    font-size: 9px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-team-badge {
+    width: 17px;
+    height: 17px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-opponent-badge {
+    width: 17px;
+    height: 17px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-stat {
+    font-size: 9px;
   }
 }

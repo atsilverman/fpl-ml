@@ -6,8 +6,8 @@ The **Updates (debug)** bento on the home page shows when data was last updated,
 
 | Column | Meaning |
 |--------|--------|
-| **Backend last** | When the backend last **finished** a refresh cycle for that path (fast or slow). Source: `refresh_events.occurred_at`. |
-| **Since backend** | Time since that backend cycle completed. **This is the main “true lag” metric** — how long since the backend last did work for this path. |
+| **Backend last** | When the backend last **ran** a refresh cycle for that path (fast or slow). Source: `refresh_events.occurred_at`. Fast path is recorded in a `finally` block so it reflects every attempt even when the cycle fails. |
+| **Since backend** | Time since that backend cycle ran. **This is the main “true lag” metric** — how long since the backend last did work for this path. |
 | **Frontend last** | When the frontend last **successfully fetched** this data (React Query `dataUpdatedAt`). |
 | **Since frontend** | Time since that frontend fetch. |
 
@@ -25,7 +25,7 @@ The **Updates (debug)** bento on the home page shows when data was last updated,
 ## Backend implementation
 
 - Table: `refresh_events` (`path` = `'fast'` or `'slow'`, `occurred_at`).
-- The orchestrator inserts a row at the end of `_fast_cycle()` (path `'fast'`) and after manager points + MVs in `_run_slow_loop()` (path `'slow'`).
+- The orchestrator inserts a row in a `finally` block of `_fast_cycle()` (path `'fast'`) so every attempt is recorded even on failure, and after manager points + MVs in `_run_slow_loop()` (path `'slow'`).
 - Migration: `backend/supabase/migrations/030_refresh_events.sql`.
 
 ## Frontend implementation

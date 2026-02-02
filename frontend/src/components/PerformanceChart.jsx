@@ -31,9 +31,10 @@ export default function PerformanceChart({
   const { toast } = useToast()
   const svgRef = useRef(null)
   const containerRef = useRef(null)
-  const [dimensions, setDimensions] = useState({ width: 400, height: 300 })
+  const [dimensions, setDimensions] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
-  const prevDimensionsRef = useRef(dimensions)
+  const [measurementReady, setMeasurementReady] = useState(false)
+  const prevDimensionsRef = useRef({ width: 0, height: 0 })
   
   // Chip display configuration
   const chipInfo = {
@@ -88,91 +89,89 @@ export default function PerformanceChart({
     }
   }, [])
 
-  // Responsive sizing with ResizeObserver
+  // Delay first measurement so bento expand (280ms) finishes – avoids small-then-big double draw
   useEffect(() => {
+    const t = setTimeout(() => setMeasurementReady(true), 350)
+    return () => clearTimeout(t)
+  }, [])
+
+  // Responsive sizing with ResizeObserver (only after measurementReady so we get final size once)
+  useEffect(() => {
+    if (!measurementReady) return
+
     let resizeTimeout
     let isUpdating = false
-    const currentDimensionsRef = { width: dimensions.width, height: dimensions.height }
-    
+    const currentDimensionsRef = { width: dimensions?.width ?? 0, height: dimensions?.height ?? 0 }
+
     const updateDimensions = () => {
       if (containerRef.current && !isUpdating) {
         isUpdating = true
-        
+
         const container = containerRef.current
         const newWidth = Math.max(300, container.clientWidth || 400)
         const newHeight = Math.max(200, container.clientHeight || 300)
-        
+
         setDimensions(prev => {
+          if (!prev) {
+            isUpdating = false
+            currentDimensionsRef.width = newWidth
+            currentDimensionsRef.height = newHeight
+            return { width: newWidth, height: newHeight }
+          }
           const widthDiff = Math.abs(prev.width - newWidth)
           const heightDiff = Math.abs(prev.height - newHeight)
-          
-          // Prevent update if dimensions haven't changed (avoid resize loop)
+
           if (widthDiff < 1 && heightDiff < 1) {
             isUpdating = false
             return prev
           }
-          
+
           isUpdating = false
-          const newDims = { width: newWidth, height: newHeight }
           currentDimensionsRef.width = newWidth
           currentDimensionsRef.height = newHeight
-          return newDims
+          return { width: newWidth, height: newHeight }
         })
       } else {
         isUpdating = false
       }
     }
-    
-    // Initial measurement - try immediate first, then use requestAnimationFrame
+
+    // Single measurement now that bento has settled
     if (containerRef.current) {
-      const container = containerRef.current
-      const immediateWidth = container.clientWidth
-      const immediateHeight = container.clientHeight
-      if (immediateWidth > 0 && immediateHeight > 0) {
-        updateDimensions()
-      }
-    }
-    const initFrame = requestAnimationFrame(() => {
       updateDimensions()
-    })
-    
-    // ResizeObserver for container size tracking
+    }
+
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = entry.contentBoxSize?.[0]?.inlineSize || entry.contentRect.width
         const newHeight = entry.contentBoxSize?.[0]?.blockSize || entry.contentRect.height
-        
+
         const widthDiff = Math.abs(currentDimensionsRef.width - newWidth)
         const heightDiff = Math.abs(currentDimensionsRef.height - newHeight)
-        
-        if (widthDiff < 1 && heightDiff < 1) {
-          return
-        }
-        
-        // Debounce resize updates
+
+        if (widthDiff < 1 && heightDiff < 1) return
+
         clearTimeout(resizeTimeout)
-        resizeTimeout = setTimeout(updateDimensions, 150)
+        resizeTimeout = setTimeout(updateDimensions, 200)
       }
     })
-    
+
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current)
     }
-    
-    // Window resize fallback
+
     const handleResize = () => {
       clearTimeout(resizeTimeout)
-      resizeTimeout = setTimeout(updateDimensions, 150)
+      resizeTimeout = setTimeout(updateDimensions, 200)
     }
     window.addEventListener('resize', handleResize)
-    
+
     return () => {
-      cancelAnimationFrame(initFrame)
       clearTimeout(resizeTimeout)
       resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
     }
-  }, [dimensions])
+  }, [measurementReady])
 
   // Debug: Log data when it changes
   useEffect(() => {
@@ -238,9 +237,9 @@ export default function PerformanceChart({
       .filter(s => s.data.length > 0)
   }, [showTop10Lines, top10LinesData, filteredData])
 
-  // Render chart with D3
+  // Render chart with D3 (only after we have settled dimensions to avoid small-then-big bounce)
   useEffect(() => {
-    if (!svgRef.current || filteredData.length === 0 || loading) return
+    if (!dimensions || !svgRef.current || filteredData.length === 0 || loading) return
 
     const svg = d3.select(svgRef.current)
     const width = dimensions.width
@@ -255,6 +254,9 @@ export default function PerformanceChart({
       svg.selectAll('*').remove()
       prevDimensionsRef.current = { width, height }
     }
+
+    // When redrawing due to resize (e.g. bento just expanded), skip transitions to avoid double-load flicker
+    const transitionMs = (n) => (dimensionsChanged ? 0 : n)
 
     // Proportional padding – tighter so graph + chip legend fit in bento without scroll
     const padding = {
@@ -345,7 +347,7 @@ export default function PerformanceChart({
     // Create a shared transition for all chart elements (area, line, points) to ensure perfect synchronization
     // This ensures they all animate together with the same timing
     const syncTransition = d3.transition('chart-sync')
-      .duration(450)
+      .duration(transitionMs(220))
       .ease(d3.easeCubicInOut)
 
     // Create or get main group
@@ -379,7 +381,7 @@ export default function PerformanceChart({
     mergedGridLines.lower() // Ensure grid lines are behind other elements (call on selection, not transition)
     mergedGridLines
       .transition()
-      .duration(600)
+      .duration(transitionMs(320))
       .ease(d3.easeCubicOut)
       .attr('y1', d => yScale(d))
       .attr('y2', d => yScale(d))
@@ -387,7 +389,7 @@ export default function PerformanceChart({
 
     gridLines.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('opacity', 0)
       .remove()
 
@@ -409,7 +411,7 @@ export default function PerformanceChart({
 
     yLabelsEnter.merge(yLabels)
       .transition()
-      .duration(600)
+      .duration(transitionMs(320))
       .ease(d3.easeCubicOut)
       .attr('y', d => yScale(d) + 4)
       .attr('opacity', 1)
@@ -417,7 +419,7 @@ export default function PerformanceChart({
 
     yLabels.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('opacity', 0)
       .remove()
 
@@ -458,14 +460,14 @@ export default function PerformanceChart({
 
     xLabelsEnter.merge(xLabels)
       .transition()
-      .duration(600)
+      .duration(transitionMs(320))
       .ease(d3.easeCubicOut)
       .attr('x', d => xScale(d))
       .attr('opacity', 1)
 
     xLabels.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('opacity', 0)
       .remove()
 
@@ -530,7 +532,7 @@ export default function PerformanceChart({
       
       midpointLineEnter.merge(midpointLine)
         .transition()
-        .duration(600)
+        .duration(transitionMs(320))
         .ease(d3.easeCubicOut)
         .attr('x1', midpointX)
         .attr('x2', midpointX)
@@ -538,14 +540,14 @@ export default function PerformanceChart({
       
       midpointLine.exit()
         .transition()
-        .duration(300)
+        .duration(transitionMs(180))
         .attr('opacity', 0)
         .remove()
     } else {
       // Remove midpoint line if not in range
       g.selectAll('.season-midpoint-line')
         .transition()
-        .duration(300)
+        .duration(transitionMs(180))
         .attr('opacity', 0)
         .remove()
     }
@@ -655,7 +657,7 @@ export default function PerformanceChart({
 
     areaPath.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('opacity', 0)
       .remove()
 
@@ -676,14 +678,14 @@ export default function PerformanceChart({
       
       comparisonLineEnter.merge(comparisonLine)
         .transition()
-        .duration(600)
+        .duration(transitionMs(320))
         .ease(d3.easeCubicOut)
         .attr('d', line)
         .attr('opacity', 0.8)
       
       comparisonLine.exit()
         .transition()
-        .duration(300)
+        .duration(transitionMs(180))
         .attr('opacity', 0)
         .remove()
 
@@ -704,7 +706,7 @@ export default function PerformanceChart({
       
       comparisonPointsEnter.merge(comparisonPoints)
         .transition()
-        .duration(600)
+        .duration(transitionMs(320))
         .ease(d3.easeCubicOut)
         .attr('cx', d => xScale(d.gameweek))
         .attr('cy', d => yScale(d.overallRank))
@@ -713,7 +715,7 @@ export default function PerformanceChart({
       
       comparisonPoints.exit()
         .transition()
-        .duration(300)
+        .duration(transitionMs(180))
         .attr('r', 0)
         .attr('opacity', 0)
         .remove()
@@ -721,7 +723,7 @@ export default function PerformanceChart({
       // Remove comparison line if disabled
       g.selectAll('.comparison-line, .comparison-point')
         .transition()
-        .duration(300)
+        .duration(transitionMs(180))
         .attr('opacity', 0)
         .remove()
     }
@@ -745,7 +747,7 @@ export default function PerformanceChart({
         .attr('stroke', strokeColor)
         .merge(top10Paths)
         .transition()
-        .duration(400)
+        .duration(transitionMs(240))
         .ease(d3.easeCubicOut)
         .attr('d', d => line(d.data))
         .attr('opacity', 1)
@@ -753,13 +755,13 @@ export default function PerformanceChart({
 
       top10Paths.exit()
         .transition()
-        .duration(200)
+        .duration(transitionMs(200))
         .attr('opacity', 0)
         .remove()
     } else {
       g.selectAll('.top10-line')
         .transition()
-        .duration(200)
+        .duration(transitionMs(200))
         .attr('opacity', 0)
         .remove()
     }
@@ -794,7 +796,7 @@ export default function PerformanceChart({
 
     mainLine.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('opacity', 0)
       .remove()
 
@@ -858,7 +860,7 @@ export default function PerformanceChart({
 
     points.exit()
       .transition()
-      .duration(300)
+      .duration(transitionMs(180))
       .attr('r', 0)
       .attr('opacity', 0)
       .remove()
@@ -1019,14 +1021,16 @@ export default function PerformanceChart({
     )
   }
 
+  const displayDims = dimensions ?? { width: 400, height: 300 }
+
   return (
     <div className="performance-chart-container">
       <div ref={containerRef} className="performance-chart-svg-wrapper">
         <svg 
           ref={svgRef}
-          width={dimensions.width}
-          height={dimensions.height}
-          viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
+          width={displayDims.width}
+          height={displayDims.height}
+          viewBox={`0 0 ${displayDims.width} ${displayDims.height}`}
           preserveAspectRatio="xMidYMid meet"
           className="performance-chart"
         />

@@ -66,6 +66,26 @@
   animation-delay: var(--animation-delay, 0s);
 }
 
+/* Overall rank bento: same green/red as .bento-card-change (rank and value delta) */
+.bento-card.bento-card-overall-rank-border-positive {
+  border-width: 1px;
+  border-color: #10b981;
+}
+.bento-card.bento-card-overall-rank-border-negative {
+  border-width: 1px;
+  border-color: #ef4444;
+}
+
+/* League rank bento: same green/red as rank and value delta */
+.bento-card.bento-card-league-rank-border-positive {
+  border-width: 1px;
+  border-color: #10b981;
+}
+.bento-card.bento-card-league-rank-border-negative {
+  border-width: 1px;
+  border-color: #ef4444;
+}
+
 @keyframes bentoCardFadeIn {
   from {
     opacity: 0;
@@ -123,8 +143,9 @@
   max-height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
 }
 
+/* GW points expanded: 3 columns wide on desktop; mobile stays 2 columns */
 .bento-card-chart-2x4 {
-  grid-column: span 2;
+  grid-column: span 3;
   grid-row: span 4;
   height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
   min-height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
@@ -326,6 +347,7 @@
     max-height: calc(var(--bento-unit-height) * 3 + var(--bento-gap) * 2);
   }
 
+  /* GW points expanded: 2 columns on mobile (full width) */
   .bento-card-chart-2x4 {
     grid-column: span 2;
     grid-row: span 4;

@@ -355,16 +355,6 @@ export default function DefconSubpage() {
               >
                 Owned
               </button>
-              <button
-                type="button"
-                className={`defcon-matchup-btn ${scopeFilter === 'live' ? 'defcon-matchup-btn--active' : ''}`}
-                onClick={() => {
-                  setScopeFilter('live')
-                  setMatchupFilter('all')
-                }}
-              >
-                Live
-              </button>
             </div>
           </div>
           <div className="defcon-filter-section">
@@ -411,6 +401,17 @@ export default function DefconSubpage() {
                 aria-disabled={scopeFilter === 'live'}
               >
                 All
+              </button>
+              <button
+                type="button"
+                className={`defcon-matchup-btn defcon-matchup-btn--live ${scopeFilter === 'live' ? 'defcon-matchup-btn--active' : ''}`}
+                onClick={() => {
+                  setScopeFilter(scopeFilter === 'live' ? 'all' : 'live')
+                  setMatchupFilter('all')
+                }}
+                aria-pressed={scopeFilter === 'live'}
+              >
+                Live
               </button>
               {matchups.map((m) => (
                 <button
