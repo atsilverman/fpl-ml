@@ -47,6 +47,7 @@ logs/
 # Test outputs and generated files
 standings_output/
 *.html
+!frontend/index.html
 test_*.py
 audit_*.py
 calculate_*.py
