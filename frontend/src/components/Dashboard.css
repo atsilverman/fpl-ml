@@ -44,6 +44,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  margin-left: auto;
 }
 
 .header-user-button {
@@ -229,20 +230,26 @@
 .page-selector-bottom.tracking-mode-toggle {
   width: auto;
   max-width: none;
-  gap: 8px;
+  gap: 20px;
   background: transparent;
   padding: 0;
+  flex: 0 0 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  margin-left: 18px;
 }
 
 .page-selector-bottom .tracking-mode-button {
-  flex: 0 0 auto;
-  width: 90px;
-  min-width: 90px;
-  padding: 5px 10px;
-  font-size: 12px;
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 32px;
+  padding: 8px 18px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   border-radius: 6px;
   justify-content: center;
+  white-space: nowrap;
 }
 
 /* No hover effect on header/bottom page selector */
@@ -260,27 +267,29 @@
 
 .tracking-mode-toggle {
   display: flex;
-  gap: 10px;
-  padding: 6px 10px;
+  gap: 20px;
+  padding: 8px 20px;
   background: var(--bg-secondary);
-  /* No rounded corners in desktop view */
+  border-radius: 8px;
   max-width: 100%;
 }
 
 .tracking-mode-button {
-  padding: 8px 18px;
+  padding: 6px 10px;
+  min-height: 32px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tracking-mode-button:hover {
@@ -306,12 +315,11 @@
   background: transparent;
 }
 
-/* Gameweek nav item: dropdown with Matches / DEFCON (panel opens above nav) */
+/* Gameweek / Research nav item: dropdown (same size as other nav buttons) */
 .nav-item-gameweek-wrap {
   position: relative;
-  flex: 0 0 auto;
-  width: 112px;
-  min-width: 112px;
+  flex: 0 1 auto;
+  min-width: 0;
   display: flex;
   justify-content: center;
   align-items: stretch;
@@ -321,14 +329,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
   min-width: 0;
   width: 100%;
+  font-size: inherit;
+}
+
+.nav-item-gameweek-trigger span {
+  white-space: nowrap;
 }
 
 .nav-item-gameweek-chevron {
   flex-shrink: 0;
+  width: 12px;
+  height: 12px;
   color: inherit;
   opacity: 0.85;
   transition: transform 0.2s ease;
@@ -422,18 +437,19 @@
   /* Space for fixed header (71px) + buffer so content isn't covered */
   padding-top: 88px;
   padding-bottom: 24px;
-  max-width: 1400px;
   width: 100%;
   margin: 0 auto;
 }
 
-/* Desktop: prevent layout reflow below 4 bentos wide; use horizontal scroll instead */
+/* Desktop: cap content at 4 bentos wide so it doesn't grow with viewport; screen can grow, content stays fixed max width */
 @media (min-width: 769px) {
   .dashboard {
     overflow-x: auto;
   }
   .dashboard-content {
-    min-width: 896px;
+    /* 4 bentos: 4*200 + 3*16 gap + 32 padding = 880 */
+    max-width: 880px;
+    min-width: 320px;
   }
 }
 
@@ -639,67 +655,89 @@
   overflow-wrap: break-word;
 }
 
+/* --- Mobile (max-width: 768px): bottom page nav --- */
 @media (max-width: 768px) {
   .dashboard-header {
     padding: 12px;
   }
-  
+
   .dashboard-header h1 {
     font-size: 17px;
   }
-  
-  .tracking-mode-button {
-    padding: 6px 12px;
-    font-size: 12px;
-  }
-  
+
   .dashboard-content {
     padding-top: 72px;
     padding-left: 12px;
     padding-right: 12px;
-    padding-bottom: 72px;
+    padding-bottom: 58px;
     scroll-margin-top: 72px;
   }
-  
-  /* Mobile: page selector fixed at bottom (taken out of header flow) */
-  .header-nav.page-selector-bottom {
+
+  /* Hide nav from header flow on mobile (it’s fixed at bottom) */
+  .header-content .header-nav.page-selector-bottom {
     position: fixed;
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    padding: 10px 16px;
-    background: var(--bg-secondary);
-    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
-    z-index: 99;
+    inset: auto 0 0 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
-    max-width: none;
-    gap: 10px;
+    min-height: 48px;
+    padding: 6px 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    margin: 0;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+    z-index: 99;
+    border-radius: 0;
   }
-  
-  .page-selector-bottom .tracking-mode-button {
-    flex: 1;
+
+  .header-nav.page-selector-bottom.tracking-mode-toggle {
+    flex: none;
+    max-width: none;
+    background: var(--bg-secondary);
+    padding: 6px 10px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+
+  /* Equal-width nav items (Home, League, Gameweek, Research) */
+  .page-selector-bottom > .tracking-mode-button,
+  .page-selector-bottom > .nav-item-gameweek-wrap {
+    flex: 1 1 0%;
     min-width: 0;
+    max-width: none;
+  }
+
+  .page-selector-bottom .tracking-mode-button {
+    min-height: 40px;
+    padding: 8px 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border-radius: 8px;
     justify-content: center;
   }
-  
+
   .nav-item-gameweek-wrap {
-    flex: 1;
-    min-width: 120px;
+    display: flex;
+    min-width: 0;
   }
-  
-  /* Mobile: Gameweek panel opens above the nav */
+
+  .nav-item-gameweek-trigger {
+    min-height: 40px;
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  /* Dropdown panel above nav on mobile */
   .nav-item-gameweek-panel {
     top: auto;
     bottom: 100%;
     margin-top: 0;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);
-  }
-  
-  .page-selector-bottom.tracking-mode-toggle {
-    width: 100%;
-    max-width: none;
-    border-radius: 8px;
   }
 }

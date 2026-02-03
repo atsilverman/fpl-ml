@@ -6,7 +6,7 @@ automatic substitutions, multipliers, and transfer costs.
 """
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
@@ -196,6 +196,88 @@ class PointsCalculator:
                 adjusted_picks.append(pick)
         
         return adjusted_picks
+    
+    def infer_automatic_subs_from_db(
+        self,
+        gameweek: int,
+        picks: List[Dict],
+    ) -> List[Dict]:
+        """
+        Infer automatic substitutions from DB when FPL API has not returned them yet.
+        Uses same rules as apply_automatic_subs: starter 0 minutes + match finished
+        -> first valid bench player (position-compatible, match finished, minutes > 0).
+        Returns list of {"element_out": player_id, "element_in": player_id} in API shape.
+        """
+        if not picks:
+            return []
+        player_ids = [p["player_id"] for p in picks]
+        # Fetch minutes and match status for all picked players (one query)
+        stats_result = self.db_client.client.table("player_gameweek_stats").select(
+            "player_id, minutes, match_finished, match_finished_provisional"
+        ).eq("gameweek", gameweek).in_("player_id", player_ids).execute()
+        stats_list = stats_result.data if stats_result.data else []
+        player_minutes: Dict[int, int] = {}
+        player_fixtures: Dict[int, Dict] = {}
+        for row in stats_list:
+            pid = row.get("player_id")
+            if pid is not None:
+                player_minutes[pid] = row.get("minutes", 0)
+                player_fixtures[pid] = {
+                    "finished": row.get("match_finished", False),
+                    "finished_provisional": row.get("match_finished_provisional", False),
+                }
+        # Fetch position (1=GK, 2=DEF, 3=MID, 4=FWD) for position compatibility
+        players_result = self.db_client.client.table("players").select(
+            "fpl_player_id, position"
+        ).in_("fpl_player_id", player_ids).execute()
+        players_list = players_result.data if players_result.data else []
+        player_position_type: Dict[int, int] = {
+            p["fpl_player_id"]: p.get("position", 0) for p in players_list
+        }
+        # Infer subs: same logic as apply_automatic_subs but collect (out, in) pairs
+        automatic_subs: List[Dict] = []
+        used_bench_positions: Set[int] = set()
+        bench_players = [p for p in picks if p["position"] > 11]
+        bench_players.sort(key=lambda x: x["position"])
+        for pick in picks:
+            player_id = pick["player_id"]
+            position = pick["position"]
+            if position > 11:
+                continue
+            minutes = player_minutes.get(player_id, 0)
+            fixture = player_fixtures.get(player_id, {})
+            match_finished = fixture.get("finished") or fixture.get("finished_provisional")
+            if not (match_finished and minutes == 0):
+                continue
+            substitute_id = None
+            starter_position_type = player_position_type.get(player_id)
+            for bench_pick in bench_players:
+                bench_player_id = bench_pick["player_id"]
+                bench_position = bench_pick["position"]
+                if bench_position in used_bench_positions:
+                    continue
+                bench_position_type = player_position_type.get(bench_player_id)
+                if starter_position_type == 1:
+                    if bench_position_type != 1:
+                        continue
+                else:
+                    if bench_position_type == 1:
+                        continue
+                bench_minutes = player_minutes.get(bench_player_id, 0)
+                bench_fixture = player_fixtures.get(bench_player_id, {})
+                bench_match_finished = (
+                    bench_fixture.get("finished") or bench_fixture.get("finished_provisional")
+                )
+                if bench_match_finished and bench_minutes > 0:
+                    substitute_id = bench_player_id
+                    used_bench_positions.add(bench_position)
+                    break
+            if substitute_id is not None:
+                automatic_subs.append({
+                    "element_out": player_id,
+                    "element_in": substitute_id,
+                })
+        return automatic_subs
     
     async def calculate_manager_gameweek_points(
         self,

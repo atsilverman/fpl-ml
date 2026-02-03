@@ -2,9 +2,55 @@
 .matches-subpage {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+  padding-top: 4px;
   /* Keep first content below fixed header when scrolling */
   scroll-margin-top: 88px;
+}
+
+.matches-subpage-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.matches-anchor-toggle {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+}
+.matches-anchor-btn {
+  padding: 6px 14px;
+  min-height: 28px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.matches-anchor-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+.matches-anchor-btn--active {
+  background: var(--accent-blue);
+  color: white;
+}
+.matches-anchor-btn--active:hover {
+  background: var(--accent-blue);
+  color: white;
+}
+.matches-anchor-btn:not(:last-child) {
+  border-right: 1px solid var(--border-color);
 }
 
 .matches-subpage-title {
@@ -27,7 +73,7 @@
 
 /* Top FPL points – styled like expanded transfers bento (badge + name + points pill) */
 .gw-top-points-card {
-  margin-top: 12px;
+  margin-top: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -363,14 +409,14 @@ html[data-theme="dark"] .gw-top-points-pill {
   50% { opacity: 0.7; transform: scale(1.25); }
 }
 
-/* Final: data_checked = true (GW confirmed at end of gameweek) – muted green = confirmed */
+/* Final: finished === true (match confirmed by FPL) – reddish/orange */
 .matchup-card.final {
-  border-color: rgba(5, 150, 105, 0.2);
+  border-color: rgba(234, 88, 12, 0.25);
 }
 
 .matchup-card.final .matchup-card-status {
-  background: rgba(5, 150, 105, 0.12);
-  color: #059669;
+  background: rgba(234, 88, 12, 0.12);
+  color: #c2410c;
 }
 
 /* Provisional (Finished): match done (finished_provisional), bonus/data not yet confirmed – amber */
@@ -406,8 +452,14 @@ html[data-theme="dark"] .gw-top-points-pill {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
   text-align: center;
+}
+.matchup-card-main--tap-to-close {
+  cursor: pointer;
+}
+.matchup-card-main--tap-to-close:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
 .matchup-card-headline {
@@ -629,6 +681,14 @@ html[data-theme="dark"] .gw-top-points-pill {
   overflow: hidden;
 }
 
+.matchup-detail-table-wrap--tap-to-close {
+  cursor: pointer;
+}
+.matchup-detail-table-wrap--tap-to-close:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
 .matchup-detail-table-header {
   display: flex;
   align-items: center;
@@ -723,6 +783,57 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-detail-th-pts { min-width: 36px; }
 .matchup-detail-th-stat { min-width: 28px; }
 
+/* Sortable column headers */
+.matchup-detail-th-sortable {
+  padding: 0;
+  vertical-align: middle;
+}
+.matchup-detail-th-sort-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 28px;
+  padding: 8px 6px;
+  margin: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.matchup-detail-th-sort-btn:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  color: var(--text-primary);
+}
+.matchup-detail-th-sort-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+.matchup-detail-th-player .matchup-detail-th-sort-btn {
+  justify-content: flex-start;
+  padding-left: 12px;
+}
+.matchup-detail-th-label {
+  display: inline-block;
+}
+.matchup-detail-th-sort-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+.matchup-detail-th-sorted .matchup-detail-th-sort-btn {
+  color: var(--text-primary);
+}
+
 .matchup-detail-tr {
   border-bottom: 1px solid var(--border-color);
 }
@@ -775,12 +886,21 @@ html[data-theme="dark"] .gw-top-points-pill {
   text-align: center;
 }
 
+/* Non-zero stat numbers: prominent (primary color, medium weight) */
 .matchup-detail-td-stat {
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .matchup-detail-td-pts {
   font-weight: 600;
+}
+
+/* Zero values: subtle so non-zero numbers stand out (matchup card + schedule popup + expanded GW bento) */
+.matchup-detail-cell-muted {
+  color: var(--text-tertiary, color-mix(in srgb, var(--text-secondary) 55%, var(--bg-primary)));
+  font-weight: 500;
+  opacity: 0.65;
 }
 
 /* Did not play badge (matches GW points view) */
@@ -796,10 +916,6 @@ html[data-theme="dark"] .gw-top-points-pill {
   background: color-mix(in srgb, var(--text-secondary) 18%, transparent);
   border-radius: 3px;
   line-height: 1;
-}
-
-.matchup-detail-cell-muted {
-  color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
 }
 
 /* Provisional bonus / live scoring: muted so users know it can change */

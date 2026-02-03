@@ -113,6 +113,8 @@ html[data-theme="dark"] .debug-modal-state-button {
 
 .debug-modal-section .gw-debug-fixtures-wrap .gw-debug-match-cell {
   white-space: nowrap;
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .debug-modal-section .gw-debug-fixtures-wrap {
@@ -121,4 +123,49 @@ html[data-theme="dark"] .debug-modal-state-button {
 
 .debug-modal-section .updates-debug-table-wrapper {
   overflow-x: auto;
+}
+
+/* Attribute verification (vs FPL API) */
+.debug-modal-verify-intro {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0 0 10px 0;
+}
+
+.debug-modal-verify-button {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-tertiary, #f0f0f0);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.debug-modal-verify-button:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--accent-blue);
+}
+
+.debug-modal-verify-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+html[data-theme="dark"] .debug-modal-verify-button {
+  background: var(--bg-tertiary);
+}
+
+.debug-modal-verify-error {
+  font-size: 12px;
+  color: var(--accent-orange, #f97316);
+  margin-bottom: 10px;
+}
+
+.debug-modal-verify-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
 }

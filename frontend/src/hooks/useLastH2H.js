@@ -22,11 +22,11 @@ export function useLastH2H(gameweek) {
   const { data: lastH2HMap = {}, isLoading, error } = useQuery({
     queryKey: ['last-h2h', gameweek],
     queryFn: async () => {
-      if (!gameweek || !isSecondHalf) return {}
+      if (!gameweek) return {}
 
       const { data: fixtures, error: fetchError } = await supabase
         .from('fixtures')
-        .select('gameweek, home_team_id, away_team_id, home_score, away_score')
+        .select('fpl_fixture_id, gameweek, home_team_id, away_team_id, home_score, away_score')
         .eq('finished', true)
         .lt('gameweek', Number(gameweek))
         .order('gameweek', { ascending: false })
@@ -41,7 +41,7 @@ export function useLastH2H(gameweek) {
       }
       return byPair
     },
-    enabled: isSecondHalf,
+    enabled: !!gameweek,
     staleTime: 5 * 60 * 1000
   })
 

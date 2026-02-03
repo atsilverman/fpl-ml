@@ -311,9 +311,9 @@
   opacity: 0.65;
 }
 
-/* Table: auto layout so columns size to content; min-widths prevent overlap; horizontal scroll when narrow */
+/* Table: fixed layout with colgroup widths (14% rank, 30% manager, 14% each total/gw/left/live) */
 .league-standings-page .league-standings-bento-table {
-  table-layout: auto;
+  table-layout: fixed;
   width: 100%;
   min-width: 420px;
   border-collapse: collapse;
@@ -325,8 +325,14 @@
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
 }
+.league-standings-page .league-standings-bento-table thead tr {
+  min-height: 44px;
+}
 .league-standings-page .league-standings-bento-table th {
   background: var(--bg-secondary);
+  min-height: 44px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 .league-standings-page .league-standings-bento-table td {
   border-bottom: none; /* only use tr border so one flush line per row; overrides shared BentoCard rule */
@@ -358,7 +364,7 @@
   box-sizing: border-box;
 }
 
-/* Auto layout: min-widths prevent overlapping; no fixed % so columns size to content + available space */
+/* Column widths set via colgroup (14% rank, 30% manager, 14% each total/gw/left/live) */
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank,
 .league-standings-page .league-standings-bento-table .league-standings-bento-team,
 .league-standings-page .league-standings-bento-table .league-standings-bento-total,
@@ -368,36 +374,17 @@
   padding: 6px 8px;
   box-sizing: border-box;
 }
-/* Rank: room for number + arrow + change badge so they never overlap */
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank {
-  min-width: 72px;
-  width: 1%;
   padding-left: 10px;
   white-space: nowrap;
 }
-/* Manager: capped width so long names truncate and live/left columns have room */
 .league-standings-page .league-standings-bento-table .league-standings-bento-team {
-  min-width: 80px;
-  max-width: 160px;
-  width: 160px;
   overflow: hidden;
 }
-.league-standings-page .league-standings-bento-table .league-standings-bento-total {
-  min-width: 48px;
-  width: 1%;
-  text-align: center;
-  white-space: nowrap;
-}
-.league-standings-page .league-standings-bento-table .league-standings-bento-gw {
-  min-width: 44px;
-  width: 1%;
-  text-align: center;
-  white-space: nowrap;
-}
+.league-standings-page .league-standings-bento-table .league-standings-bento-total,
+.league-standings-page .league-standings-bento-table .league-standings-bento-gw,
 .league-standings-page .league-standings-bento-table .league-standings-bento-left-to-play,
 .league-standings-page .league-standings-bento-table .league-standings-bento-in-play {
-  min-width: 44px;
-  width: 1%;
   text-align: center;
   white-space: nowrap;
 }
@@ -469,7 +456,7 @@
   letter-spacing: 0.02em;
 }
 
-/* Header: same auto layout as body (min-widths, width 1% / 100%) so columns align */
+/* Header: column widths from colgroup */
 .league-standings-page .league-standings-bento-table th {
   vertical-align: middle;
   line-height: 1.2;
@@ -480,33 +467,18 @@
   overflow: hidden;
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-rank {
-  min-width: 72px;
-  width: 1%;
   text-align: left;
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-team {
-  min-width: 80px;
-  max-width: 160px;
-  width: 160px;
   text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   background: var(--bg-secondary);
 }
-.league-standings-page .league-standings-bento-table th.league-standings-bento-total {
-  min-width: 48px;
-  width: 1%;
-  text-align: center;
-}
-.league-standings-page .league-standings-bento-table th.league-standings-bento-gw {
-  min-width: 44px;
-  width: 1%;
-  text-align: center;
-}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw,
 .league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play,
 .league-standings-page .league-standings-bento-table th.league-standings-bento-in-play {
-  min-width: 44px;
-  width: 1%;
   text-align: center;
 }
 
@@ -566,6 +538,27 @@
   text-align: center;
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
+}
+
+/* Mobile: fit table in viewport (no horizontal scroll); slightly tighter padding */
+@media (max-width: 640px) {
+  .league-standings-page .league-standings-bento-table {
+    min-width: 0;
+  }
+  .league-standings-page .league-standings-bento-table .league-standings-bento-rank,
+  .league-standings-page .league-standings-bento-table .league-standings-bento-team,
+  .league-standings-page .league-standings-bento-table .league-standings-bento-total,
+  .league-standings-page .league-standings-bento-table .league-standings-bento-gw,
+  .league-standings-page .league-standings-bento-table .league-standings-bento-left-to-play,
+  .league-standings-page .league-standings-bento-table .league-standings-bento-in-play {
+    padding: 4px 6px;
+  }
+  .league-standings-page .league-standings-bento-table th {
+    padding: 4px 6px;
+  }
+  .league-standings-page .league-standings-bento-table .league-standings-bento-rank {
+    padding-left: 6px;
+  }
 }
 
 /* Clickable manager row: same UI as GW Points popup on click */

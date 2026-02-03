@@ -3,9 +3,12 @@ import { Info } from 'lucide-react'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useUpdateTimestamps } from '../hooks/useUpdateTimestamps'
 import { useRefreshState } from '../hooks/useRefreshState'
+import { useVerifyManagerAttributes } from '../hooks/useVerifyManagerAttributes'
 import './ConfigurationModal.css'
 import './BentoCard.css'
 import './DebugModal.css'
+
+const VERIFY_MANAGER_ID = 344182
 
 const STATE_DEBUG_DEFINITIONS = [
   { term: 'Live', description: 'At least one fixture: started and not finished_provisional.' },
@@ -38,6 +41,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading } = useGameweekDebugData()
   const updateTimestampsData = useUpdateTimestamps()
   const { stateLabel } = useRefreshState()
+  const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
   const [showStateCriteria, setShowStateCriteria] = useState(false)
   const stateCriteriaRef = useRef(null)
 
@@ -157,6 +161,55 @@ export default function DebugModal({ isOpen, onClose }) {
                 </table>
               )}
             </div>
+          </section>
+
+          <section className="debug-modal-section">
+            <h3 className="debug-modal-section-title">Attribute verification (vs FPL API)</h3>
+            <p className="debug-modal-verify-intro">Manager {VERIFY_MANAGER_ID} (check)</p>
+            <button
+              type="button"
+              className="debug-modal-verify-button"
+              onClick={verify}
+              disabled={verifyLoading}
+              aria-busy={verifyLoading}
+            >
+              {verifyLoading ? 'Verifying…' : 'Verify'}
+            </button>
+            {verifyError && (
+              <div className="debug-modal-verify-error" role="alert">
+                {verifyError}
+              </div>
+            )}
+            {verifyData?.attributes?.length > 0 && (
+              <div className="gw-debug-fixtures-wrap">
+                <table className="gw-debug-table gw-debug-fixtures-table">
+                  <thead>
+                    <tr>
+                      <th>Attribute</th>
+                      <th>DB</th>
+                      <th>API</th>
+                      <th>Match</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {verifyData.attributes.map((row) => (
+                      <tr key={row.name}>
+                        <td className="gw-debug-table-label">{row.name}</td>
+                        <td className="gw-debug-table-mono">{row.db ?? '—'}</td>
+                        <td className="gw-debug-table-mono">{row.api ?? '—'}</td>
+                        <td><GwDebugBadge value={row.match} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {verifyData.gameweek != null && (
+                  <div className="debug-modal-verify-meta">GW {verifyData.gameweek}</div>
+                )}
+              </div>
+            )}
+            {verifyData && (!verifyData.attributes || verifyData.attributes.length === 0) && !verifyLoading && (
+              <div className="gw-debug-empty">No attributes to compare (no current GW or API/DB missing)</div>
+            )}
           </section>
 
           <section className="debug-modal-section">

@@ -1,14 +1,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
-export function useGameweekData() {
+/**
+ * @param anchor - 'current' = gameweek with is_current (this GW); 'next' = gameweek with is_next (upcoming GW). Default 'current'.
+ */
+export function useGameweekData(anchor = 'current') {
+  const isNext = anchor === 'next'
   const { data, isLoading, error } = useQuery({
-    queryKey: ['gameweek', 'current'],
+    queryKey: ['gameweek', anchor],
     queryFn: async () => {
       const { data: row, error: err } = await supabase
         .from('gameweeks')
         .select('id, name, is_current, finished, data_checked, fpl_ranks_updated')
-        .eq('is_current', true)
+        .eq(isNext ? 'is_next' : 'is_current', true)
         .single()
 
       if (err) throw err

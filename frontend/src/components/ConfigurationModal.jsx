@@ -44,7 +44,7 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
       const managerIds = leagueManagers.map(m => m.manager_id)
       const { data: managerDetails, error: managerError } = await supabase
         .from('managers')
-        .select('manager_id, manager_name')
+        .select('manager_id, manager_name, manager_team_name')
         .in('manager_id', managerIds)
         .order('manager_id', { ascending: true })
       
@@ -52,7 +52,8 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
       
       return (managerDetails || []).map(manager => ({
         manager_id: manager.manager_id,
-        manager_name: manager.manager_name || `Manager ${manager.manager_id}`
+        manager_name: manager.manager_name || null,
+        manager_team_name: manager.manager_team_name || null
       }))
     },
     enabled: isOpen && step === 2 && !!selectedLeague,
@@ -161,9 +162,11 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
                       onClick={() => handleManagerSelect(manager.manager_id)}
                     >
                       <div className="modal-option-content">
-                        <span className="modal-option-name">{manager.manager_name || `Manager ${manager.manager_id}`}</span>
-                        {manager.manager_name && manager.manager_name !== `Manager ${manager.manager_id}` && (
-                          <span className="modal-option-id">ID: {manager.manager_id}</span>
+                        <span className="modal-option-name">
+                          {manager.manager_team_name || manager.manager_name || `Manager ${manager.manager_id}`}
+                        </span>
+                        {manager.manager_team_name && manager.manager_name && (
+                          <span className="modal-option-subtitle">{manager.manager_name}</span>
                         )}
                       </div>
                       {selectedManagerId === manager.manager_id && (

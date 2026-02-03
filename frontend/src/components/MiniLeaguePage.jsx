@@ -20,6 +20,7 @@ import './GameweekPointsView.css'
 const SORT_COLUMNS = ['rank', 'manager', 'total', 'gw', 'left', 'live']
 const DEFAULT_SORT = { column: 'total', dir: 'desc' }
 const MANAGER_TEAM_NAME_MAX_LENGTH = 15
+const MANAGER_ABBREV_MAX_WIDTH = 400
 
 function abbreviateName(name) {
   if (!name || typeof name !== 'string') return name ?? ''
@@ -78,8 +79,16 @@ export default function MiniLeaguePage() {
   const [selectedManagerDisplayName, setSelectedManagerDisplayName] = useState('')
   const [selectedManagerName, setSelectedManagerName] = useState('')
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
+  const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MANAGER_ABBREV_MAX_WIDTH - 1}px)`)
+    const handler = () => setIsNarrowScreen(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
 
   const { data: selectedManagerPlayers, isLoading: selectedManagerPlayersLoading } = useCurrentGameweekPlayersForManager(selectedManagerId)
   const { data: configuredManagerPlayers } = useCurrentGameweekPlayers()
@@ -371,6 +380,14 @@ export default function MiniLeaguePage() {
         </div>
         <div className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
           <table className="league-standings-bento-table">
+            <colgroup>
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '30%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '14%' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th className="league-standings-bento-rank">
@@ -482,7 +499,7 @@ export default function MiniLeaguePage() {
                       </span>
                     </td>
                     <td className="league-standings-bento-team" title={displayName}>
-                      <span className="league-standings-bento-team-name">{abbreviateName(displayName)}</span>
+                      <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
                       {chipLabel && (
                         <span
                           className="league-standings-bento-chip-badge"

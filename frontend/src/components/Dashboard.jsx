@@ -16,6 +16,11 @@ const GAMEWEEK_VIEWS = [
   { id: 'defcon', label: 'DEFCON', disabled: false },
 ]
 
+const RESEARCH_VIEWS = [
+  { id: 'price-changes', label: 'Price Changes', disabled: false },
+  { id: 'schedule', label: 'Schedule', disabled: false },
+]
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -26,6 +31,13 @@ export default function Dashboard() {
   const leagueId = config?.leagueId ?? null
   const [gameweekDropdownOpen, setGameweekDropdownOpen] = useState(false)
   const gameweekDropdownRef = useRef(null)
+  const gameweekCloseTimeoutRef = useRef(null)
+  const [researchDropdownOpen, setResearchDropdownOpen] = useState(false)
+  const researchDropdownRef = useRef(null)
+  const researchCloseTimeoutRef = useRef(null)
+
+  const hasHover = () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
+  const HOVER_LEAVE_MS = 180
 
   const gameweekView = searchParams.get('view') || 'defcon'
   const isOnGameweek = location.pathname === '/gameweek'
@@ -49,6 +61,17 @@ export default function Dashboard() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [gameweekDropdownOpen])
+
+  useEffect(() => {
+    if (!researchDropdownOpen) return
+    const handleClickOutside = (e) => {
+      if (researchDropdownRef.current && !researchDropdownRef.current.contains(e.target)) {
+        setResearchDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [researchDropdownOpen])
 
   const { data: managerRow } = useQuery({
     queryKey: ['manager-name', managerId],
@@ -88,6 +111,17 @@ export default function Dashboard() {
     setGameweekDropdownOpen(false)
   }
 
+  const researchView = searchParams.get('view') || 'price-changes'
+  const isOnResearch = location.pathname === '/research'
+  const setResearchView = (view) => {
+    if (isOnResearch) {
+      setSearchParams({ view }, { replace: true })
+    } else {
+      navigate(`/research?view=${view}`)
+    }
+    setResearchDropdownOpen(false)
+  }
+
   return (
     <div className="dashboard">
       <header className="dashboard-header">
@@ -108,7 +142,25 @@ export default function Dashboard() {
           const isDisabled = !['home', 'mini-league', 'gameweek', 'research'].includes(page.id)
           if (page.id === 'gameweek') {
             return (
-              <div key={page.id} className="nav-item-gameweek-wrap" ref={gameweekDropdownRef}>
+              <div
+                key={page.id}
+                className="nav-item-gameweek-wrap"
+                ref={gameweekDropdownRef}
+                onMouseEnter={() => {
+                  if (gameweekCloseTimeoutRef.current) {
+                    clearTimeout(gameweekCloseTimeoutRef.current)
+                    gameweekCloseTimeoutRef.current = null
+                  }
+                  if (hasHover()) setGameweekDropdownOpen(true)
+                }}
+                onMouseLeave={() => {
+                  if (!hasHover()) return
+                  gameweekCloseTimeoutRef.current = setTimeout(() => {
+                    setGameweekDropdownOpen(false)
+                    gameweekCloseTimeoutRef.current = null
+                  }, HOVER_LEAVE_MS)
+                }}
+              >
                 <button
                   type="button"
                   className={`tracking-mode-button nav-item-gameweek-trigger ${currentPage.id === 'gameweek' ? 'active' : ''}`}
@@ -121,8 +173,8 @@ export default function Dashboard() {
                   aria-label="Gameweek view"
                 >
                   <span>Gameweek</span>
-                  <ChevronDown
-                    size={16}
+                    <ChevronDown
+                    size={12}
                     strokeWidth={2}
                     className={`nav-item-gameweek-chevron ${gameweekDropdownOpen ? 'nav-item-gameweek-chevron--open' : ''}`}
                     aria-hidden
@@ -162,14 +214,69 @@ export default function Dashboard() {
           }
           if (page.id === 'research') {
             return (
-              <button
+              <div
                 key={page.id}
-                className={`tracking-mode-button ${currentPage.id === 'research' ? 'active' : ''}`}
-                onClick={() => !isDisabled && navigate('/research')}
-                disabled={isDisabled}
+                className="nav-item-gameweek-wrap"
+                ref={researchDropdownRef}
+                onMouseEnter={() => {
+                  if (researchCloseTimeoutRef.current) {
+                    clearTimeout(researchCloseTimeoutRef.current)
+                    researchCloseTimeoutRef.current = null
+                  }
+                  if (hasHover()) setResearchDropdownOpen(true)
+                }}
+                onMouseLeave={() => {
+                  if (!hasHover()) return
+                  researchCloseTimeoutRef.current = setTimeout(() => {
+                    setResearchDropdownOpen(false)
+                    researchCloseTimeoutRef.current = null
+                  }, HOVER_LEAVE_MS)
+                }}
               >
-                Research
-              </button>
+                <button
+                  type="button"
+                  className={`tracking-mode-button nav-item-gameweek-trigger ${currentPage.id === 'research' ? 'active' : ''}`}
+                  onClick={() => {
+                    setResearchDropdownOpen((open) => !open)
+                  }}
+                  disabled={isDisabled}
+                  aria-expanded={researchDropdownOpen}
+                  aria-haspopup="listbox"
+                  aria-label="Research"
+                >
+                  <span>Research</span>
+                  <ChevronDown
+                    size={12}
+                    strokeWidth={2}
+                    className={`nav-item-gameweek-chevron ${researchDropdownOpen ? 'nav-item-gameweek-chevron--open' : ''}`}
+                    aria-hidden
+                  />
+                </button>
+                {researchDropdownOpen && (
+                  <div
+                    className="nav-item-gameweek-panel nav-item-gameweek-panel--open"
+                    role="listbox"
+                    aria-label="Research"
+                  >
+                    {RESEARCH_VIEWS.map((view) => (
+                      <button
+                        key={view.id}
+                        type="button"
+                        role="option"
+                        aria-selected={currentPage.id === 'research' && researchView === view.id}
+                        className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                        onClick={() => {
+                          if (view.disabled) return
+                          setResearchView(view.id)
+                        }}
+                        disabled={view.disabled}
+                      >
+                        {view.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )
           }
           return (

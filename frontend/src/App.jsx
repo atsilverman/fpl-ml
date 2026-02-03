@@ -20,7 +20,7 @@ function App() {
         <ConfigurationProvider>
           <BentoOrderProvider>
           <ToastProvider>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <Routes>
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/welcome" element={<OnboardingPage />} />

@@ -283,6 +283,11 @@
   color: var(--text-secondary);
 }
 
+.modal-option-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .modal-option-arrow {
   font-size: 18px;
   color: var(--text-secondary);

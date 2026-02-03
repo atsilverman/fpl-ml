@@ -1,6 +1,65 @@
 .research-page {
-  padding: 20px;
+  padding: 12px;
   color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.research-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Schedule card must not clip: allow it to grow and show all teams */
+.research-schedule-card.research-card {
+  overflow: visible;
+}
+
+.research-card:hover {
+  border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+
+/* Schedule card: all teams in one container, horizontal scroll for gameweeks only; tighter padding so table is wider */
+/* Override bento-card-chart-2x4 fixed height so card grows to fit all teams (no cropping) */
+.research-schedule-card.bento-card-chart-2x4 {
+  height: auto;
+  min-height: 400px;
+  max-height: none;
+  overflow: visible;
+  /* Prevent layout containment from collapsing table columns; table needs normal block layout */
+  contain: none;
+}
+
+.research-schedule-card {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 12px;
+  gap: 6px;
+  min-height: 400px;
+  overflow: visible;
+}
+
+.research-schedule-card .research-page-card-header {
+  flex-shrink: 0;
+  padding: 6px 0 0;
+}
+
+.research-schedule-content {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
 }
 
 /* Card header: title (bento font) + source link, inside the card */

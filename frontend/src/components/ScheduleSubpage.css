@@ -1,0 +1,478 @@
+/* Schedule table: rows = teams, columns = gameweeks; cell = opponent (badge + abbreviation). Aligns with bento-card themes. */
+
+.schedule-subpage {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-primary);
+}
+
+/* Header with title + single icon (like gw-top-points expand icon in bento) */
+.schedule-subpage-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0 0;
+}
+
+.schedule-subpage-title {
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Last matchup button – same look as chart-filter-btn chart-filter-btn-icon (PerformanceChart) */
+.schedule-reverse-toggle {
+  flex-shrink: 0;
+  padding: 0 10px;
+  min-height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.schedule-reverse-toggle:hover {
+  background: var(--bg-card);
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.schedule-reverse-toggle--on {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.schedule-reverse-toggle--on:hover {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.schedule-reverse-toggle-svg {
+  width: 11px;
+  height: 11px;
+}
+
+.schedule-loading,
+.schedule-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 24px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.schedule-scroll-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  margin-top: 6px;
+}
+
+.schedule-scroll-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-scroll-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.schedule-scroll-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.schedule-table {
+  display: table;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  table-layout: fixed;
+}
+
+.schedule-table thead {
+  display: table-header-group;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-table tbody {
+  display: table-row-group;
+}
+
+.schedule-table tr {
+  display: table-row;
+}
+
+.schedule-table th,
+.schedule-table td {
+  display: table-cell;
+}
+
+.schedule-th {
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  vertical-align: middle;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-th-team {
+  text-align: center;
+  min-width: 44px;
+  position: sticky;
+  left: 0;
+  z-index: 11;
+  background: var(--bg-secondary);
+  box-shadow: 2px 0 0 var(--border-color);
+}
+
+.schedule-th-gw {
+  min-width: 56px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.schedule-row {
+  background: var(--bg-primary);
+}
+
+.schedule-cell {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-weight: 500;
+  font-size: 11px;
+  vertical-align: middle;
+  min-width: 56px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+/* Fixed height so row doesn't grow when reverse scoreline is shown; content centered (keep display: table-cell so table layout is preserved) */
+.schedule-cell:not(.schedule-cell-team):not(.schedule-cell-empty) {
+  height: 54px;
+  min-height: 54px;
+  padding: 6px 10px;
+  vertical-align: middle;
+  text-align: center;
+}
+
+.schedule-cell-empty {
+  min-height: 54px;
+}
+
+.schedule-table tbody tr:last-child .schedule-cell {
+  border-bottom: none;
+}
+
+.schedule-cell-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  box-shadow: 2px 0 0 var(--border-color);
+}
+
+.schedule-cell-team {
+  text-align: center;
+  min-width: 44px;
+  vertical-align: middle;
+  /* Subtle team column background to differentiate from GW columns; theme-aware like other bentos */
+  background: var(--bg-secondary);
+}
+
+.schedule-cell-empty {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.schedule-cell-opponent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.schedule-cell-team .schedule-cell-opponent {
+  justify-content: center;
+}
+
+.schedule-cell-badge-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.schedule-cell-badge {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.schedule-cell-badge-placeholder {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+}
+
+.schedule-cell-abbr {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+/* GW columns: abbreviation only — home = caps, away = lowercase */
+.schedule-cell-abbr-only {
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.schedule-cell-home {
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.schedule-cell-away {
+  color: var(--text-secondary);
+  text-transform: lowercase;
+}
+
+/* Reverse fixture result: colorize cell (green win, red loss, grey draw) */
+.schedule-cell-reverse-win {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 18%, var(--bg-primary)) !important;
+}
+
+.schedule-cell-reverse-loss {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 18%, var(--bg-primary)) !important;
+}
+
+.schedule-cell-reverse-draw {
+  background: color-mix(in srgb, var(--text-secondary) 14%, var(--bg-primary)) !important;
+}
+
+.schedule-cell-clickable {
+  cursor: pointer;
+}
+
+.schedule-cell-clickable:hover {
+  filter: brightness(0.97);
+}
+
+/* Last meeting popup – styled like matchup card (matchup-card-main + details) */
+.schedule-matchup-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001; /* above toast (10000) so popup is always visible */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.schedule-matchup-popup {
+  width: 100%;
+  max-width: min(90vw, 560px);
+  max-height: min(85vh, 80vh);
+  min-height: 280px; /* prevent flex collapse so content is always visible */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+@media (min-width: 768px) {
+  .schedule-matchup-popup {
+    max-width: min(92vw, 780px);
+  }
+}
+
+.schedule-matchup-popup-inner {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 200px; /* ensure content box is visible even when empty */
+  overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 8px;
+  background: var(--bg-card);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.schedule-matchup-popup-card {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Don't use .matchup-card.final orange styling in schedule popup – use theme default */
+.schedule-matchup-popup .matchup-card.final {
+  border-color: var(--border-color);
+}
+
+.schedule-matchup-popup .matchup-card.final .matchup-card-status {
+  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
+  color: var(--text-secondary);
+}
+
+.schedule-matchup-popup .matchup-card-main {
+  cursor: default;
+}
+
+/* Theme-aware defaults in schedule popup (no blue accent) */
+.schedule-matchup-popup .matchup-card-score-num--h2h {
+  color: var(--text-primary);
+}
+
+.schedule-matchup-popup .matchup-card-status--h2h {
+  background: color-mix(in srgb, var(--text-secondary) 14%, transparent);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.schedule-matchup-popup .matchup-card-details--h2h .matchup-detail-table-wrap {
+  border: 1px solid var(--border-color);
+}
+
+.schedule-matchup-popup-loading {
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.schedule-matchup-popup-loading-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.schedule-matchup-popup-close-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.schedule-matchup-popup-close-btn:hover {
+  background: var(--bg-card);
+}
+
+
+/* Reverse fixture: clock icon + score on press (second half only) */
+/* Wrapper so abbr + score stack and center without making td display:flex (preserves table layout) */
+.schedule-cell-opponent-content {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.schedule-cell-opponent-inner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.schedule-cell-abbr-display {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.schedule-cell-reverse-score {
+  display: block;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  opacity: 0.9;
+  white-space: nowrap;
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+/* Opponent difficulty (FPL strength 1–5): green = easier, red = harder; theme-aware */
+.schedule-cell-difficulty-1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 14%, var(--bg-primary));
+}
+.schedule-cell-difficulty-2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 7%, var(--bg-primary));
+}
+.schedule-cell-difficulty-3 {
+  /* neutral – keep default */
+}
+.schedule-cell-difficulty-4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 7%, var(--bg-primary));
+}
+.schedule-cell-difficulty-5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 14%, var(--bg-primary));
+}
+
+@media (max-width: 768px) {
+  .schedule-th-team,
+  .schedule-cell-team {
+    min-width: 42px;
+  }
+
+  .schedule-th-gw,
+  .schedule-cell {
+    min-width: 48px;
+  }
+
+  .schedule-cell-badge-slot,
+  .schedule-cell-badge,
+  .schedule-cell-badge-placeholder {
+    width: 22px;
+    height: 22px;
+  }
+
+  .schedule-cell-abbr {
+    font-size: 12px;
+  }
+}

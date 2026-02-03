@@ -201,6 +201,7 @@ async def populate_teams(fpl_client: FPLAPIClient, db_client: SupabaseClient):
             "team_id": team["id"],
             "team_name": team.get("name", ""),
             "short_name": team.get("short_name", ""),
+            "strength": team.get("strength"),
             "updated_at": datetime.now(timezone.utc).isoformat()
         }
         teams_data.append(team_data)

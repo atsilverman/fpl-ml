@@ -15,17 +15,18 @@ import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import './MatchesSubpage.css'
 
 /**
- * Fixture status: Final only when gameweek data_checked (FPL confirmed at end of GW).
- * Finished (provisional) = match done (finished_provisional) but bonus/data not yet confirmed.
+ * Fixture status: Final = match-level finished === true (FPL confirmed; reddish/orange).
+ * Provisional = finished_provisional === true but finished === false (yellowish; label "Finished").
  */
-function getFixtureStatus(fixture, dataChecked = false) {
+function getFixtureStatus(fixture, _dataChecked = false) {
   if (!fixture) return 'scheduled'
   const started = Boolean(fixture.started)
+  const finished = Boolean(fixture.finished)
   const finishedProvisional = Boolean(fixture.finished_provisional)
   if (!started) return 'scheduled'
   if (started && !finishedProvisional) return 'live'
-  if (started && finishedProvisional && dataChecked) return 'final'
-  if (started && finishedProvisional && !dataChecked) return 'provisional'
+  if (started && finished) return 'final'
+  if (started && finishedProvisional && !finished) return 'provisional'
   return 'scheduled'
 }
 
@@ -45,6 +46,19 @@ const STAT_KEYS = [
   { key: 'expected_goals_conceded', col: 'expected_goals_conceded' }
 ]
 
+/** Column config for sortable matchup detail table headers (order matches table) */
+const SORT_COLUMNS = [
+  { key: 'player_name', col: 'player_name', label: 'Player', type: 'string' },
+  { key: 'minutes', col: 'minutes', label: 'MP', type: 'number' },
+  { key: 'points', col: 'points', label: 'PTS', type: 'number' },
+  ...STAT_KEYS.map(({ key, col }) => ({
+    key,
+    col,
+    label: key === 'goals' ? 'G' : key === 'assists' ? 'A' : key === 'clean_sheets' ? 'CS' : key === 'saves' ? 'S' : key === 'bps' ? 'BPS' : key === 'bonus' ? 'B' : key === 'defensive_contribution' ? 'DEF' : key === 'yellow_cards' ? 'YC' : key === 'red_cards' ? 'RC' : key === 'expected_goals' ? 'xG' : key === 'expected_assists' ? 'xA' : key === 'expected_goal_involvements' ? 'xGI' : key === 'expected_goals_conceded' ? 'xGC' : key,
+    type: 'number'
+  }))
+]
+
 const EXPECTED_STAT_KEYS = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
 
 function formatExpected(v) {
@@ -53,14 +67,48 @@ function formatExpected(v) {
   return n.toFixed(2)
 }
 
-function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false }) {
+export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, onTableAreaClick }) {
+  const [sortKey, setSortKey] = useState('points')
+  const [sortDir, setSortDir] = useState('asc')
   /* Always hide 0 minutes / DNP players in matchup card (any state or H2H view) */
-  const displayedPlayers = players?.length
+  const filteredPlayers = players?.length
     ? players.filter(p => p.minutes != null && Number(p.minutes) > 0)
     : (players ?? [])
+  const displayedPlayers = useMemo(() => {
+    if (!filteredPlayers.length) return []
+    const col = SORT_COLUMNS.find(c => c.key === sortKey)?.col ?? 'points'
+    const type = SORT_COLUMNS.find(c => c.key === sortKey)?.type ?? 'number'
+    const mult = sortDir === 'asc' ? 1 : -1
+    return [...filteredPlayers].sort((a, b) => {
+      const aVal = a[col] ?? (type === 'string' ? '' : 0)
+      const bVal = b[col] ?? (type === 'string' ? '' : 0)
+      if (type === 'string') {
+        return mult * (String(aVal).localeCompare(String(bVal), undefined, { numeric: true }) || 0)
+      }
+      const an = Number(aVal) || 0
+      const bn = Number(bVal) || 0
+      if (bn !== an) return mult * (bn - an)
+      return mult * ((a.player_name || '').localeCompare(b.player_name || ''))
+    })
+  }, [filteredPlayers, sortKey, sortDir])
+  const handleSort = (key) => {
+    if (key === sortKey) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    else {
+      setSortKey(key)
+      const colConfig = SORT_COLUMNS.find(c => c.key === key)
+      setSortDir(colConfig?.type === 'string' ? 'asc' : 'desc')
+    }
+  }
   if (!displayedPlayers.length) {
     return (
-      <div className="matchup-detail-table-wrap">
+      <div
+        className={`matchup-detail-table-wrap${onTableAreaClick ? ' matchup-detail-table-wrap--tap-to-close' : ''}`}
+        onClick={onTableAreaClick ? (e) => { e.stopPropagation(); onTableAreaClick() } : undefined}
+        role={onTableAreaClick ? 'button' : undefined}
+        tabIndex={onTableAreaClick ? 0 : undefined}
+        onKeyDown={onTableAreaClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTableAreaClick() } } : undefined}
+        aria-label={onTableAreaClick ? 'Tap to close details' : undefined}
+      >
         {!hideHeader && (
           <div className="matchup-detail-table-header">
             {teamShortName && (
@@ -122,7 +170,14 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
   }
 
   return (
-    <div className="matchup-detail-table-wrap">
+    <div
+      className={`matchup-detail-table-wrap${onTableAreaClick ? ' matchup-detail-table-wrap--tap-to-close' : ''}`}
+      onClick={onTableAreaClick ? (e) => { e.stopPropagation(); onTableAreaClick() } : undefined}
+      role={onTableAreaClick ? 'button' : undefined}
+      tabIndex={onTableAreaClick ? 0 : undefined}
+      onKeyDown={onTableAreaClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTableAreaClick() } } : undefined}
+      aria-label={onTableAreaClick ? 'Tap to close details' : undefined}
+    >
       {!hideHeader && (
         <div className="matchup-detail-table-header">
           {teamShortName && (
@@ -135,22 +190,41 @@ function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, owned
         <table className="matchup-detail-table">
           <thead>
             <tr>
-              <th className="matchup-detail-th matchup-detail-th-player">Player</th>
-              <th className="matchup-detail-th matchup-detail-th-mins">MP</th>
-              <th className="matchup-detail-th matchup-detail-th-pts">PTS</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">G</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">A</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">CS</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">S</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">BPS</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">B</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">DEF</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">YC</th>
-              <th className="matchup-detail-th matchup-detail-th-stat">RC</th>
-              <th className="matchup-detail-th matchup-detail-th-stat" title="Expected goals">xG</th>
-              <th className="matchup-detail-th matchup-detail-th-stat" title="Expected assists">xA</th>
-              <th className="matchup-detail-th matchup-detail-th-stat" title="Expected goal involvements">xGI</th>
-              <th className="matchup-detail-th matchup-detail-th-stat" title="Expected goals conceded">xGC</th>
+              {SORT_COLUMNS.map(({ key, label, type }) => {
+                const isPlayer = key === 'player_name'
+                const isMins = key === 'minutes'
+                const isPts = key === 'points'
+                const isStat = !isPlayer && !isMins && !isPts
+                const isActive = sortKey === key
+                const thClass = [
+                  'matchup-detail-th',
+                  'matchup-detail-th-sortable',
+                  isPlayer && 'matchup-detail-th-player',
+                  isMins && 'matchup-detail-th-mins',
+                  isPts && 'matchup-detail-th-pts',
+                  isStat && 'matchup-detail-th-stat',
+                  isActive && 'matchup-detail-th-sorted'
+                ].filter(Boolean).join(' ')
+                const title = key === 'expected_goals' ? 'Expected goals' : key === 'expected_assists' ? 'Expected assists' : key === 'expected_goal_involvements' ? 'Expected goal involvements' : key === 'expected_goals_conceded' ? 'Expected goals conceded' : `Sort by ${label}`
+                return (
+                  <th key={key} className={thClass}>
+                    <button
+                      type="button"
+                      className="matchup-detail-th-sort-btn"
+                      onClick={(e) => { e.stopPropagation(); handleSort(key) }}
+                      title={title}
+                      aria-label={`Sort by ${label}${isActive ? `, ${sortDir === 'desc' ? 'descending' : 'ascending'}` : ''}`}
+                    >
+                      <span className="matchup-detail-th-label">{label}</span>
+                      {isActive && (
+                        <span className="matchup-detail-th-sort-icon" aria-hidden>
+                          {sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                        </span>
+                      )}
+                    </button>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -249,16 +323,25 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   )
   const fixtureStatus = getFixtureStatus(fixture, dataChecked)
   const useH2HStats = isSecondHalf && fixtureStatus === 'scheduled' && expanded
+  const fetchReverseStats = useH2HStats && !!lastH2H?.fpl_fixture_id && !!lastH2H?.gameweek
+  const { homePlayers: reverseHomePlayers, awayPlayers: reverseAwayPlayers, loading: reverseStatsLoading } = useFixturePlayerStats(
+    lastH2H?.fpl_fixture_id ?? null,
+    lastH2H?.gameweek ?? null,
+    lastH2H?.home_team_id ?? null,
+    lastH2H?.away_team_id ?? null,
+    !!fetchReverseStats
+  )
   const h2hStats = lastH2HPlayerStatsByFixture[fpl_fixture_id]
-  // Last meeting had opposite home/away; map to current fixture so left = current home, right = current away
+  const reverseStats = (reverseHomePlayers?.length || reverseAwayPlayers?.length) ? { homePlayers: reverseHomePlayers ?? [], awayPlayers: reverseAwayPlayers ?? [] } : null
+  const h2hPlayerSource = useH2HStats ? (h2hStats || reverseStats) : null
   const lastHadSameHome = lastH2H != null && lastH2H.home_team_id === home_team_id
-  const displayHomePlayers = useH2HStats && h2hStats
-    ? (lastHadSameHome ? (h2hStats.homePlayers ?? []) : (h2hStats.awayPlayers ?? []))
+  const displayHomePlayers = h2hPlayerSource
+    ? (lastHadSameHome ? (h2hPlayerSource.homePlayers ?? []) : (h2hPlayerSource.awayPlayers ?? []))
     : homePlayers
-  const displayAwayPlayers = useH2HStats && h2hStats
-    ? (lastHadSameHome ? (h2hStats.awayPlayers ?? []) : (h2hStats.homePlayers ?? []))
+  const displayAwayPlayers = h2hPlayerSource
+    ? (lastHadSameHome ? (h2hPlayerSource.awayPlayers ?? []) : (h2hPlayerSource.homePlayers ?? []))
     : awayPlayers
-  const displayStatsLoading = useH2HStats ? lastH2HPlayerStatsLoading : statsLoading
+  const displayStatsLoading = useH2HStats ? (h2hStats ? lastH2HPlayerStatsLoading : reverseStatsLoading) : statsLoading
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
   const mergedPlayersByPoints = useMemo(() => {
     if (!isMobile || !displayHomePlayers?.length && !displayAwayPlayers?.length) return []
@@ -324,7 +407,14 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
       style={{ cursor: cardClickExpands && !expanded ? 'pointer' : 'default' }}
       onClick={() => cardClickExpands && !expanded && onToggle()}
     >
-      <div className="matchup-card-main">
+      <div
+        className={`matchup-card-main${expanded ? ' matchup-card-main--tap-to-close' : ''}`}
+        onClick={expanded ? (e) => { e.stopPropagation(); onToggle() } : undefined}
+        role={expanded ? 'button' : undefined}
+        tabIndex={expanded ? 0 : undefined}
+        onKeyDown={expanded ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle() } } : undefined}
+        aria-label={expanded ? 'Tap to close details' : undefined}
+      >
         <div className="matchup-card-headline">
           <span className="matchup-card-home">
             {headlineLeftTeam?.short_name && (
@@ -436,6 +526,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     hideHeader
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    onTableAreaClick={onToggle}
                   />
                 </div>
               ) : (
@@ -447,6 +538,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     ownedPlayerIds={ownedPlayerIds}
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    onTableAreaClick={onToggle}
                   />
                   <MatchPlayerTable
                     players={displayAwayPlayers}
@@ -455,6 +547,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     ownedPlayerIds={ownedPlayerIds}
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    onTableAreaClick={onToggle}
                   />
                 </div>
               )}
@@ -499,7 +592,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 }
 
 export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false } = {}) {
-  const { gameweek, loading: gwLoading, dataChecked } = useGameweekData()
+  const [matchupsAnchor, setMatchupsAnchor] = useState('current')
+  const { gameweek, loading: gwLoading, dataChecked } = useGameweekData(matchupsAnchor)
   const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
   const { lastH2HPlayerStatsByFixture, loading: lastH2HPlayerStatsLoading } = useLastH2HPlayerStats(gameweek, showH2H && isSecondHalf)
@@ -564,6 +658,10 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   }, [showH2H])
 
   useEffect(() => {
+    setExpandedId(null)
+  }, [matchupsAnchor])
+
+  useEffect(() => {
     if (showH2H && !prevShowH2HRef.current && firstScheduledRef.current) {
       firstScheduledRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
@@ -582,15 +680,39 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
 
   return (
     <div className="matches-subpage">
+      <div className="matches-subpage-header" role="group" aria-label="Matchups view">
+        <div className="matches-anchor-toggle" role="group" aria-label="Gameweek">
+          <button
+            type="button"
+            className={`matches-anchor-btn ${matchupsAnchor === 'current' ? 'matches-anchor-btn--active' : ''}`}
+            onClick={() => setMatchupsAnchor('current')}
+            aria-pressed={matchupsAnchor === 'current'}
+            aria-label="Current gameweek"
+          >
+            Current
+          </button>
+          <button
+            type="button"
+            className={`matches-anchor-btn ${matchupsAnchor === 'next' ? 'matches-anchor-btn--active' : ''}`}
+            onClick={() => setMatchupsAnchor('next')}
+            aria-pressed={matchupsAnchor === 'next'}
+            aria-label="Next gameweek"
+          >
+            Next
+          </button>
+        </div>
+      </div>
       {fixturesLoading ? (
         <div className="matches-subpage-loading">
           <div className="skeleton-text" />
         </div>
       ) : !fixtures?.length ? (
-        <div className="matches-subpage-empty">No fixtures for this gameweek</div>
+        <div className="matches-subpage-empty">
+          {matchupsAnchor === 'current' ? 'No fixtures for current gameweek' : 'No fixtures for next gameweek'}
+        </div>
       ) : (
         <>
-          {!toggleBonus && (
+          {!toggleBonus && matchupsAnchor === 'current' && (
           <div className={`gw-top-points-card ${isTopPerformersExpanded ? 'gw-top-points-card--expanded' : 'gw-top-points-card--collapsed'}`}>
             <div className="gw-top-points-content">
               <div

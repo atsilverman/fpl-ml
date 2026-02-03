@@ -64,6 +64,9 @@ class RefreshOrchestrator:
         # Rank monitoring: after last game of match day, poll FPL every 15 min for up to 5 hours
         self._rank_monitor_window_end: Optional[datetime] = None
         self._rank_monitor_day_started: Optional[date] = None  # date we started window for
+        # Hourly refresh: refresh all managers' overall_rank and gameweek_rank every 60 minutes
+        self._last_hourly_rank_refresh_time: Optional[datetime] = None
+        self._hourly_rank_refresh_interval_seconds: int = 3600  # 1 hour
         
     async def initialize(self):
         """Initialize orchestrator and clients."""
@@ -1399,6 +1402,20 @@ class RefreshOrchestrator:
         """Slow loop: manager points + MVs every full_refresh_interval_live when in live. Runs in parallel with fast loop."""
         while self.running:
             try:
+                # Hourly: refresh all configured managers' overall_rank and gameweek_rank (simple, no rank-change detection)
+                now_utc = datetime.now(timezone.utc)
+                if self.current_gameweek:
+                    should_hourly = (
+                        self._last_hourly_rank_refresh_time is None
+                        or (now_utc - self._last_hourly_rank_refresh_time).total_seconds() >= self._hourly_rank_refresh_interval_seconds
+                    )
+                    if should_hourly:
+                        logger.info("Hourly rank refresh: refreshing all managers (overall_rank, gameweek_rank)", extra={"gameweek": self.current_gameweek})
+                        try:
+                            await self._refresh_manager_points(force_all_managers=True)
+                            self._last_hourly_rank_refresh_time = now_utc
+                        except Exception as e:
+                            logger.warning("Hourly rank refresh failed", extra={"gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
                 # End of gameday (fixtures table: all finished_provisional): capture rank update, refresh all managers
                 if self.current_gameweek:
                     await self._check_ranks_final_and_refresh()
@@ -1409,6 +1426,28 @@ class RefreshOrchestrator:
                         self.db_client.refresh_materialized_views_for_live()
                     except Exception as e:
                         logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
+                # IDLE: sync auto-sub flags to manager_picks so UI shows sub indicators
+                # (pegged to player match finished, not gated by live/bonus state)
+                if self.current_state == RefreshState.IDLE and self.current_gameweek:
+                    try:
+                        manager_ids = self._get_tracked_manager_ids()
+                        if manager_ids:
+                            for manager_id in manager_ids:
+                                try:
+                                    self.manager_refresher.sync_auto_sub_flags_to_picks(
+                                        manager_id, self.current_gameweek
+                                    )
+                                except Exception as e:
+                                    logger.debug(
+                                        "Auto-sub sync failed for manager",
+                                        extra={"manager_id": manager_id, "gameweek": self.current_gameweek, "error": str(e)},
+                                    )
+                    except Exception as e:
+                        logger.warning(
+                            "Auto-sub sync (IDLE) failed",
+                            extra={"gameweek": self.current_gameweek, "error": str(e)},
+                            exc_info=True,
+                        )
                 # Record slow cycle completion for frontend lag monitoring (every iteration, including idle)
                 try:
                     self.db_client.insert_refresh_event("slow")

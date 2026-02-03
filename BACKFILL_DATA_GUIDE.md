@@ -87,6 +87,15 @@ Requires:
   - Includes: player_in_id, player_out_id, gameweek
   - Note: This is typically populated during live refresh, but may need backfilling for historical data
 
+### Last H2H / Reverse Fixture Player Stats
+
+The Schedule subpage and Matches subpage (H2H toggle) show "last meeting" player stats from past fixtures. By default we only have stats for players who were in manager picks or had minutes when the live refresh ran, so you may see only ~13–15 players per fixture.
+
+- **`player_gameweek_stats`** (per fixture) - Full squads for each finished fixture
+  - Script: `backfill_fixture_player_stats.py` refreshes stats for **all players in both teams** for every finished fixture in the given gameweeks, so last-H2H views show the full 22+ players.
+- **`mv_last_h2h_player_stats`** - Materialized view used by the frontend for last meeting data
+  - Refreshed automatically at the end of `backfill_fixture_player_stats.py`, or run `SELECT refresh_all_materialized_views();`
+
 ## Individual Backfill Scripts
 
 If you need to backfill specific data types:
@@ -118,6 +127,26 @@ python backend/scripts/backfill_manager_history.py --manager-id 344182
 # Backfill specific gameweeks
 python backend/scripts/backfill_manager_history.py --gameweeks 1,2,3,4,5
 ```
+
+### Fixture Player Stats (Last H2H / reverse fixtures)
+
+Backfill full squads for every finished fixture so "last meeting" tables show all players who played (e.g. Brighton v Crystal Palace GW25 with 22+ players instead of ~13).
+
+```bash
+# Backfill all finished fixtures for gameweeks 1..current
+python backend/scripts/backfill_fixture_player_stats.py
+
+# Only GW25 (e.g. Brighton v Palace)
+python backend/scripts/backfill_fixture_player_stats.py --gameweeks 25
+
+# Range GW20–25
+python backend/scripts/backfill_fixture_player_stats.py --gameweeks 20-25
+
+# Dry run (list fixtures and player counts, no API calls)
+python backend/scripts/backfill_fixture_player_stats.py --gameweeks 25 --dry-run
+```
+
+After running, the script refreshes materialized views (including `mv_last_h2h_player_stats`). If you only backfill specific gameweeks, run `refresh_views.py` or `SELECT refresh_all_materialized_views();` so the H2H view is up to date.
 
 ### Refresh Materialized Views
 

@@ -91,6 +91,84 @@ class ManagerDataRefresher:
         
         return False
     
+    def sync_auto_sub_flags_to_picks(
+        self,
+        manager_id: int,
+        gameweek: int,
+    ) -> None:
+        """
+        Sync inferred auto-sub state to manager_picks so the UI shows sub indicators
+        proactively (when a starter is confirmed 0 mins + match finished).
+        Called after refreshing manager points in LIVE_MATCHES/BONUS_PENDING so flags
+        stay in sync with calculated points without waiting for the TRANSFER_DEADLINE batch.
+        """
+        try:
+            picks_result = self.db_client.client.table("manager_picks").select(
+                "player_id, position, is_captain, is_vice_captain, multiplier, "
+                "was_auto_subbed_out, was_auto_subbed_in, auto_sub_replaced_player_id"
+            ).eq("manager_id", manager_id).eq("gameweek", gameweek).order(
+                "position", desc=False
+            ).execute()
+            picks_rows = picks_result.data if picks_result.data else []
+            if not picks_rows:
+                return
+            picks_for_inference = [
+                {"player_id": row["player_id"], "position": row["position"]}
+                for row in picks_rows
+            ]
+            automatic_subs = self.points_calculator.infer_automatic_subs_from_db(
+                gameweek, picks_for_inference
+            )
+            subbed_out: Set[int] = set()
+            replaced_player_by_sub_in: Dict[int, int] = {}
+            for sub in automatic_subs:
+                out_id = sub.get("element_out")
+                in_id = sub.get("element_in")
+                if out_id is not None and in_id is not None:
+                    subbed_out.add(out_id)
+                    replaced_player_by_sub_in[in_id] = out_id
+            now_iso = datetime.now(timezone.utc).isoformat()
+            for row in picks_rows:
+                player_id = row["player_id"]
+                was_out = player_id in subbed_out
+                was_in = player_id in replaced_player_by_sub_in
+                replaced_id = replaced_player_by_sub_in.get(player_id)
+                if (
+                    row.get("was_auto_subbed_out") == was_out
+                    and row.get("was_auto_subbed_in") == was_in
+                    and row.get("auto_sub_replaced_player_id") == replaced_id
+                ):
+                    continue
+                pick_data = {
+                    "manager_id": manager_id,
+                    "gameweek": gameweek,
+                    "player_id": player_id,
+                    "position": row["position"],
+                    "is_captain": row.get("is_captain", False),
+                    "is_vice_captain": row.get("is_vice_captain", False),
+                    "multiplier": row.get("multiplier", 1),
+                    "was_auto_subbed_out": was_out,
+                    "was_auto_subbed_in": was_in,
+                    "auto_sub_replaced_player_id": replaced_id,
+                    "updated_at": now_iso,
+                }
+                self.db_client.upsert_manager_pick(pick_data)
+            if automatic_subs:
+                logger.debug(
+                    "Synced auto-sub flags to manager_picks",
+                    extra={
+                        "manager_id": manager_id,
+                        "gameweek": gameweek,
+                        "count": len(automatic_subs),
+                    },
+                )
+        except Exception as e:
+            logger.warning(
+                "Failed to sync auto-sub flags to manager_picks",
+                extra={"manager_id": manager_id, "gameweek": gameweek, "error": str(e)},
+                exc_info=True,
+            )
+    
     async def refresh_manager_picks(
         self,
         manager_id: int,
@@ -156,6 +234,25 @@ class ManagerDataRefresher:
             # Store picks
             picks = picks_data.get("picks", [])
             automatic_subs = picks_data.get("automatic_subs", [])
+            # When FPL API has not yet returned automatic_subs (e.g. match just finished),
+            # infer from DB so UI can show auto-sub indicators and flags stay in sync with points
+            if not automatic_subs and picks:
+                picks_for_inference = [
+                    {"player_id": p["element"], "position": p["position"]}
+                    for p in picks
+                ]
+                automatic_subs = self.points_calculator.infer_automatic_subs_from_db(
+                    gameweek, picks_for_inference
+                )
+                if automatic_subs:
+                    logger.debug(
+                        "Inferred automatic_subs from DB (API had none)",
+                        extra={
+                            "manager_id": manager_id,
+                            "gameweek": gameweek,
+                            "count": len(automatic_subs),
+                        },
+                    )
             active_chip = picks_data.get("active_chip")
             
             for pick in picks:
@@ -703,6 +800,11 @@ class ManagerDataRefresher:
             self.db_client.upsert_manager_gameweek_history(history_data)
             if overall_rank is not None or gameweek_rank is not None:
                 self.db_client.update_gameweek_fpl_ranks_updated(gameweek, True)
+            
+            # Sync inferred auto-sub flags to manager_picks so UI shows sub indicators
+            # proactively (when starter 0 mins + match finished), not only after deadline batch
+            if not is_finished:
+                self.sync_auto_sub_flags_to_picks(manager_id, gameweek)
             
             logger.debug("Refreshed manager gameweek history", extra={
                 "manager_id": manager_id,
