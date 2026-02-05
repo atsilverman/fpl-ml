@@ -1,41 +1,36 @@
 import { CircleArrowUp, CircleArrowDown } from 'lucide-react'
-import { usePriceChangePredictions } from '../hooks/usePriceChangePredictions'
+import { usePlayerPriceChangesLatest } from '../hooks/usePlayerPriceChangesLatest'
 import { usePlayerTeamMap } from '../hooks/usePlayerTeamMap'
 import './PriceChangesSubpage.css'
 
-function formatCapturedAt(iso) {
-  if (!iso) return null
-  const d = new Date(iso)
-  const now = new Date()
-  const diffMs = now - d
-  const diffMins = Math.floor(diffMs / 60000)
-  const diffHours = Math.floor(diffMs / 3600000)
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins} min ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+function formatSnapshotDate(isoDate) {
+  if (!isoDate) return null
+  const d = new Date(isoDate + 'Z')
+  const today = new Date()
+  if (d.toDateString() === today.toDateString()) return 'Today'
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function PriceChangesSubpage({ showCard = true }) {
-  const { rises, falls, capturedAt, loading, error } = usePriceChangePredictions()
+  const { rises, falls, snapshotDate, loading, error } = usePlayerPriceChangesLatest()
   const { getTeamForPlayer } = usePlayerTeamMap()
 
   const content = (
     <div className="price-changes-content">
       {error ? (
-        <div className="price-changes-error">Failed to load price change predictions.</div>
+        <div className="price-changes-error">Failed to load price changes.</div>
       ) : (
         <>
-          {capturedAt && (
-            <p className="price-changes-updated" aria-live="polite">
-              Updated {formatCapturedAt(capturedAt)}
+          {snapshotDate && (
+            <p className="price-changes-snapshot-date" aria-live="polite">
+              {formatSnapshotDate(snapshotDate)}
             </p>
           )}
           <div className="price-changes-columns-wrapper">
         <div className="price-changes-column price-changes-column-rise">
           <div className="price-changes-column-header">
             <span className="price-changes-column-title price-changes-column-title-rise">
-              <CircleArrowUp size={12} strokeWidth={2} aria-hidden /> Predicted Rise
+              <CircleArrowUp size={12} strokeWidth={2} aria-hidden /> Rise
             </span>
           </div>
           {loading ? (
@@ -73,7 +68,7 @@ export default function PriceChangesSubpage({ showCard = true }) {
         <div className="price-changes-column price-changes-column-fall">
           <div className="price-changes-column-header">
             <span className="price-changes-column-title price-changes-column-title-fall">
-              <CircleArrowDown size={12} strokeWidth={2} aria-hidden /> Predicted Fall
+              <CircleArrowDown size={12} strokeWidth={2} aria-hidden /> Fall
             </span>
           </div>
           {loading ? (

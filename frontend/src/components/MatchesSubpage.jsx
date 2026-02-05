@@ -682,6 +682,11 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
     <div className="matches-subpage">
       <div className="matches-subpage-header" role="group" aria-label="Matchups view">
         <div className="matches-anchor-toggle" role="group" aria-label="Gameweek">
+          <div
+            className="matches-anchor-slider"
+            style={{ transform: matchupsAnchor === 'next' ? 'translateX(100%)' : 'translateX(0)' }}
+            aria-hidden
+          />
           <button
             type="button"
             className={`matches-anchor-btn ${matchupsAnchor === 'current' ? 'matches-anchor-btn--active' : ''}`}

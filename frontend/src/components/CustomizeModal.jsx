@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
+import { useConfiguration } from '../contexts/ConfigurationContext'
+import { useScheduleData } from '../hooks/useScheduleData'
+import { useToast } from '../contexts/ToastContext'
+import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './ConfigurationModal.css'
 import './CustomizeModal.css'
 
@@ -19,29 +23,22 @@ const BENTO_LABELS = {
 
 export default function CustomizeModal({ isOpen, onClose }) {
   const { cardOrder, setCardOrder, isCardVisible, setCardVisible } = useBentoOrder()
+  const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
+  const { scheduleMatrix, teamMap, loading: scheduleLoading } = useScheduleData()
+  const { toast } = useToast()
   const [draggedId, setDraggedId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
-  const [hasChanges, setHasChanges] = useState(false)
-  const [savedJustNow, setSavedJustNow] = useState(false)
+  const [layoutExpanded, setLayoutExpanded] = useState(false)
+  const [difficultyExpanded, setDifficultyExpanded] = useState(false)
+  const teamIds = scheduleMatrix?.teamIds ?? []
+  const mapForRow = teamMap ?? {}
 
   useEffect(() => {
     if (isOpen) {
-      setHasChanges(false)
-      setSavedJustNow(false)
+      setLayoutExpanded(false)
+      setDifficultyExpanded(false)
     }
   }, [isOpen])
-
-  const handleSave = () => {
-    if (!hasChanges) return
-    setHasChanges(false)
-    setSavedJustNow(true)
-  }
-
-  useEffect(() => {
-    if (!savedJustNow) return
-    const t = setTimeout(() => setSavedJustNow(false), 1500)
-    return () => clearTimeout(t)
-  }, [savedJustNow])
 
   const handleDragStart = (e, id) => {
     setDraggedId(id)
@@ -87,12 +84,10 @@ export default function CustomizeModal({ isOpen, onClose }) {
     next.splice(toIndex, 0, dragId)
     setCardOrder(next)
     setDraggedId(null)
-    setHasChanges(true)
   }
 
   const handleToggleVisible = (id) => {
     setCardVisible(id, !isCardVisible(id))
-    setHasChanges(true)
   }
 
   if (!isOpen) return null
@@ -108,67 +103,130 @@ export default function CustomizeModal({ isOpen, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="modal-header">
-          <h2>Customize layout</h2>
+          <h2>Customize</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             ×
           </button>
         </div>
 
         <div className="modal-body">
-          <p className="customize-modal-description">
-            Drag rows to change the order of bentos on the home page.
-          </p>
-          <div
-            className="customize-rows"
-            onDragLeave={handleDragLeave}
-          >
-            {orderedRows.map(({ id, label }) => (
+          <section className="customize-section customize-section-layout" aria-labelledby="customize-layout-heading">
+            <button
+              type="button"
+              className="customize-section-toggle"
+              onClick={() => setLayoutExpanded((e) => !e)}
+              aria-expanded={layoutExpanded}
+              aria-controls="customize-layout-content"
+              id="customize-layout-heading"
+            >
+              <span className="customize-section-toggle-label">Layout</span>
+              {layoutExpanded ? (
+                <ChevronUp size={18} strokeWidth={2} aria-hidden />
+              ) : (
+                <ChevronDown size={18} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+            <div
+              id="customize-layout-content"
+              className="customize-section-content"
+              hidden={!layoutExpanded}
+            >
+              <p className="customize-section-subtitle">
+                Drag rows to reorder bentos on the home page. Use the switch to show or hide each card.
+              </p>
               <div
-                key={id}
-                className={`customize-row ${draggedId === id ? 'customize-row-dragging' : ''} ${dragOverId === id ? 'customize-row-drag-over' : ''}`}
-                draggable
-                onDragStart={(e) => handleDragStart(e, id)}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e) => handleDragOver(e, id)}
-                onDrop={(e) => handleDrop(e, id)}
+                className="customize-rows"
+                onDragLeave={handleDragLeave}
               >
-                <span className="customize-row-handle" aria-hidden>
-                  <GripVertical size={18} strokeWidth={1.5} />
-                </span>
-                <span className="customize-row-label">{label}</span>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isCardVisible(id)}
-                  className={`customize-row-slider ${isCardVisible(id) ? 'customize-row-slider-on' : 'customize-row-slider-off'}`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    e.preventDefault()
-                    handleToggleVisible(id)
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  aria-label={isCardVisible(id) ? 'Hide on home' : 'Show on home'}
-                  title={isCardVisible(id) ? 'On – visible on home' : 'Off – hidden on home'}
-                >
-                  <span className="customize-row-slider-track">
-                    <span className="customize-row-slider-thumb" />
-                  </span>
-                </button>
+                {orderedRows.map(({ id, label }) => (
+                  <div
+                    key={id}
+                    className={`customize-row ${draggedId === id ? 'customize-row-dragging' : ''} ${dragOverId === id ? 'customize-row-drag-over' : ''}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, id)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, id)}
+                    onDrop={(e) => handleDrop(e, id)}
+                  >
+                    <span className="customize-row-handle" aria-hidden>
+                      <GripVertical size={18} strokeWidth={1.5} />
+                    </span>
+                    <span className="customize-row-label">{label}</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isCardVisible(id)}
+                      className={`customize-row-slider ${isCardVisible(id) ? 'customize-row-slider-on' : 'customize-row-slider-off'}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        e.preventDefault()
+                        handleToggleVisible(id)
+                      }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      aria-label={isCardVisible(id) ? 'Hide on home' : 'Show on home'}
+                      title={isCardVisible(id) ? 'On – visible on home' : 'Off – hidden on home'}
+                    >
+                      <span className="customize-row-slider-track">
+                        <span className="customize-row-slider-thumb" />
+                      </span>
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          </section>
+
+          <section className="customize-section customize-section-difficulty" aria-labelledby="customize-difficulty-heading">
+            <button
+              type="button"
+              className="customize-section-toggle"
+              onClick={() => setDifficultyExpanded((e) => !e)}
+              aria-expanded={difficultyExpanded}
+              aria-controls="customize-difficulty-content"
+              id="customize-difficulty-heading"
+            >
+              <span className="customize-section-toggle-label">Schedule Difficulty</span>
+              {difficultyExpanded ? (
+                <ChevronUp size={18} strokeWidth={2} aria-hidden />
+              ) : (
+                <ChevronDown size={18} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+            <div
+              id="customize-difficulty-content"
+              className="customize-section-content"
+              hidden={!difficultyExpanded}
+            >
+              {scheduleLoading ? (
+                <p className="customize-section-loading">Loading teams…</p>
+              ) : (
+                <ScheduleDifficultyCustomizer
+                  embedded
+                  teamIds={teamIds}
+                  teamMap={mapForRow}
+                  savedOverridesByStat={{
+                    strength: config?.teamStrengthOverrides ?? null,
+                    attack: config?.teamAttackOverrides ?? null,
+                    defence: config?.teamDefenceOverrides ?? null,
+                  }}
+                  onSave={({ strength, attack, defence }) => {
+                    if (strength != null) saveTeamStrengthOverrides(strength)
+                    if (attack != null) saveTeamAttackOverrides(attack)
+                    if (defence != null) saveTeamDefenceOverrides(defence)
+                    toast('Custom difficulty saved')
+                  }}
+                  onResetStat={(statId) => {
+                    if (statId === 'strength') resetTeamStrengthOverrides()
+                    else if (statId === 'attack') resetTeamAttackOverrides()
+                    else if (statId === 'defence') resetTeamDefenceOverrides()
+                  }}
+                />
+              )}
+            </div>
+          </section>
         </div>
 
         <div className="modal-footer customize-modal-footer">
-          <button
-            type="button"
-            className="modal-button modal-button-save"
-            onClick={handleSave}
-            disabled={!hasChanges && !savedJustNow}
-            aria-live="polite"
-          >
-            {savedJustNow ? 'Saved' : 'Save'}
-          </button>
           <button type="button" className="modal-button modal-button-cancel" onClick={onClose}>
             Done
           </button>

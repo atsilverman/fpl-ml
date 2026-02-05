@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useConfiguration } from '../contexts/ConfigurationContext'
 import './ConfigurationModal.css'
 
 export default function ConfigurationModal({ isOpen, onClose, onSave, currentConfig }) {
+  const { config, saveTeamStrengthOverrides, resetTeamStrengthOverrides } = useConfiguration()
   const [step, setStep] = useState(1)
   const [selectedLeague, setSelectedLeague] = useState(null)
   const [selectedManagerId, setSelectedManagerId] = useState(null)
@@ -22,6 +24,32 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
     },
     enabled: isOpen,
     staleTime: 300000, // Cache for 5 minutes
+  })
+
+  // Fetch teams for step 3 (strength sliders); shares cache with useScheduleData
+  const { data: teams = [], isLoading: teamsLoading } = useQuery({
+    queryKey: ['teams', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('team_id, short_name, team_name, strength')
+        .order('team_id', { ascending: true })
+      if (error) {
+        const isMissingColumn = error.code === 'PGRST204' || error.status === 400 || error.message?.includes('strength')
+        if (isMissingColumn) {
+          const { data: fallback, error: err2 } = await supabase
+            .from('teams')
+            .select('team_id, short_name, team_name')
+            .order('team_id', { ascending: true })
+          if (err2) throw err2
+          return (fallback ?? []).map((t) => ({ ...t, strength: null }))
+        }
+        throw error
+      }
+      return data ?? []
+    },
+    enabled: isOpen,
+    staleTime: 5 * 60 * 1000,
   })
 
   // Fetch managers for selected league
@@ -96,6 +124,33 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
   const handleBack = () => {
     setStep(1)
     setSelectedManagerId(null)
+  }
+
+  const handleBackFromStrength = () => setStep(2)
+
+  const getEffectiveStrength = (teamId, apiStrength) => {
+    const overrides = config?.teamStrengthOverrides
+    if (!overrides) return apiStrength != null ? Math.min(5, Math.max(1, apiStrength)) : null
+    const v = overrides[String(teamId)] ?? overrides[teamId]
+    return v != null ? Math.min(5, Math.max(1, Number(v))) : (apiStrength != null ? Math.min(5, Math.max(1, apiStrength)) : null)
+  }
+
+  const handleStrengthChange = (teamId, newValue) => {
+    const apiStrength = teams.find((t) => t.team_id === teamId)?.strength
+    const num = Math.min(5, Math.max(1, Number(newValue)))
+    const overrides = config?.teamStrengthOverrides || {}
+    if (num === (apiStrength != null ? Math.min(5, Math.max(1, apiStrength)) : null)) {
+      const next = { ...overrides }
+      delete next[String(teamId)]
+      delete next[teamId]
+      saveTeamStrengthOverrides(Object.keys(next).length ? next : null)
+    } else {
+      saveTeamStrengthOverrides({ ...overrides, [teamId]: num })
+    }
+  }
+
+  const handleResetStrength = () => {
+    resetTeamStrengthOverrides()
   }
 
   if (!isOpen) return null
@@ -178,6 +233,46 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
               )}
             </div>
           )}
+
+          {step === 3 && (
+            <div className="modal-step">
+              <h3>Team strength (difficulty)</h3>
+              <p className="modal-step-description">
+                1 = easiest opponent, 5 = hardest. Used for schedule cell colors. Sign in to save.
+              </p>
+              <button className="modal-back" onClick={handleBackFromStrength}>
+                ← Back to Manager
+              </button>
+              <button type="button" className="config-strength-reset" onClick={handleResetStrength}>
+                Reset to FPL defaults
+              </button>
+              {teamsLoading ? (
+                <div className="modal-loading">Loading teams...</div>
+              ) : (
+                <div className="config-strength-list">
+                  {teams.map((team) => {
+                    const effective = getEffectiveStrength(team.team_id, team.strength)
+                    return (
+                      <div key={team.team_id} className="config-strength-row">
+                        <label className="config-strength-label">
+                          <span className="config-strength-name">{team.short_name ?? team.team_name ?? team.team_id}</span>
+                          <span className="config-strength-value">{effective ?? '–'}</span>
+                        </label>
+                        <input
+                          type="range"
+                          min={1}
+                          max={5}
+                          value={effective ?? 3}
+                          onChange={(e) => handleStrengthChange(team.team_id, e.target.value)}
+                          className="config-strength-slider"
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">
@@ -185,8 +280,18 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
             Cancel
           </button>
           {step === 2 && selectedManagerId && (
-            <button className="modal-button modal-button-save" onClick={handleSave}>
-              Save Configuration
+            <>
+              <button className="modal-button modal-button-secondary" onClick={() => setStep(3)}>
+                Next: Team strength
+              </button>
+              <button className="modal-button modal-button-save" onClick={handleSave}>
+                Save Configuration
+              </button>
+            </>
+          )}
+          {step === 3 && (
+            <button className="modal-button modal-button-save" onClick={onClose}>
+              Done
             </button>
           )}
         </div>

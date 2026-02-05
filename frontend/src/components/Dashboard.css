@@ -75,15 +75,15 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 4px;
-  height: 28px;
+  padding: 0 10px 0 6px;
+  height: 36px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg-card);
   color: var(--text-primary);
   cursor: pointer;
   transition: border-color 0.2s ease, background 0.2s ease;
-  max-width: 180px;
+  max-width: 200px;
 }
 
 .header-user-account:hover {
@@ -93,13 +93,14 @@
 
 .header-user-avatar-wrap {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--bg-secondary);
 }
 
 .header-user-avatar-img {

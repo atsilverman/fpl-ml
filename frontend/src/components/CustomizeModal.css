@@ -20,6 +20,13 @@
   min-height: 0;
 }
 
+@media (min-width: 768px) {
+  .customize-modal-content {
+    max-width: 480px;
+    max-height: min(640px, 88vh);
+  }
+}
+
 .customize-modal-content .modal-header {
   padding: 14px 18px;
   flex-shrink: 0;
@@ -161,4 +168,249 @@ html[data-theme="dark"] .customize-row-slider-off .customize-row-slider-track {
 html[data-theme="dark"] .customize-row-slider-thumb {
   background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+/* Section spacing: bento list vs schedule difficulty */
+.customize-section {
+  margin-bottom: 16px;
+}
+
+.customize-section:last-child {
+  margin-bottom: 0;
+}
+
+/* Schedule difficulty: expand/collapse row – same visual language as bento rows */
+.customize-section-difficulty {
+  margin-top: 4px;
+}
+
+.customize-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.customize-section-toggle:hover {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+.customize-section-toggle:focus-visible {
+  outline: none;
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px var(--shadow-accent-blue-subtle, rgba(59, 130, 246, 0.2));
+}
+
+.customize-section-toggle[aria-expanded="true"] {
+  border-radius: 8px 8px 0 0;
+  border-bottom-color: transparent;
+}
+
+.customize-section-toggle-label {
+  flex: 1;
+}
+
+.customize-section-toggle svg {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.customize-section-content {
+  padding: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  overflow: hidden;
+}
+
+.customize-section-content[hidden] {
+  display: none;
+}
+
+.customize-section-content:not([hidden]) {
+  padding: 12px 18px 16px;
+}
+
+.customize-section-subtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.customize-section-loading {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  padding: 8px 0;
+}
+
+/* Schedule Difficulty section: same structure as Layout – subtitle, toolbar, rows, Save */
+.customize-difficulty-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.customize-difficulty-toolbar .schedule-customizer-stat-tabs {
+  border-bottom: none;
+  padding: 0;
+}
+
+.customize-difficulty-reset {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.customize-difficulty-reset:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.customize-difficulty-row {
+  cursor: default;
+  user-select: none;
+}
+
+.customize-difficulty-badge {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.customize-difficulty-badge-placeholder {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.customize-difficulty-slider-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.customize-difficulty-ghost-dot {
+  position: absolute;
+  left: var(--ghost-pct, 0%);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+html[data-theme="dark"] .customize-difficulty-ghost-dot {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.customize-difficulty-slider {
+  flex: 1;
+  min-width: 0;
+  height: 10px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.customize-difficulty-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+.customize-difficulty-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .customize-difficulty-slider::-webkit-slider-thumb,
+html[data-theme="dark"] .customize-difficulty-slider::-moz-range-thumb {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.customize-difficulty-pill {
+  flex-shrink: 0;
+  min-width: 28px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.customize-difficulty-pill--1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 48%, var(--border-color));
+}
+.customize-difficulty-pill--2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 7%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 20%, var(--border-color));
+}
+.customize-difficulty-pill--4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 7%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 20%, var(--border-color));
+}
+.customize-difficulty-pill--5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 48%, var(--border-color));
+}
+
+.customize-section-content .modal-button-save {
+  margin-top: 12px;
+  width: 100%;
 }

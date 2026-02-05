@@ -28,6 +28,28 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
+.research-card.price-changes-card:hover {
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+/* Price changes card: same bento size as schedule so the card is visible */
+.research-card.price-changes-card.bento-card-chart-2x4 {
+  height: auto;
+  min-height: 400px;
+  overflow: visible;
+  /* Override .bento-card initial opacity:0 so the card is visible (animation may not run outside home grid) */
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+/* Let the price-changes subpage fill the card body below the header */
+.research-card.price-changes-card .price-changes-subpage {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* Schedule card: all teams in one container, horizontal scroll for gameweeks only; tighter padding so table is wider */
 /* Override bento-card-chart-2x4 fixed height so card grows to fit all teams (no cropping) */
 .research-schedule-card.bento-card-chart-2x4 {
@@ -42,15 +64,16 @@
 .research-schedule-card {
   display: flex;
   flex-direction: column;
-  padding: 10px 12px 12px;
+  padding: 20px;
   gap: 6px;
   min-height: 400px;
   overflow: visible;
 }
 
+/* Title positioned like home bento .bento-card-label (same card padding) */
 .research-schedule-card .research-page-card-header {
   flex-shrink: 0;
-  padding: 6px 0 0;
+  padding: 0;
 }
 
 .research-schedule-content {

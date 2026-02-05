@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ConfigurationProvider } from './contexts/ConfigurationContext'
 import { BentoOrderProvider } from './contexts/BentoOrderContext'
 import { ToastProvider } from './contexts/ToastContext'
+import ScrollToTop from './components/ScrollToTop'
 import Dashboard from './components/Dashboard'
 import HomePage from './components/HomePage'
 import MiniLeaguePage from './components/MiniLeaguePage'
@@ -18,23 +19,24 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <ConfigurationProvider>
-          <BentoOrderProvider>
           <ToastProvider>
-          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-            <Routes>
-              <Route path="/auth/callback" element={<AuthCallback />} />
-              <Route path="/welcome" element={<OnboardingPage />} />
-              <Route path="/" element={<Dashboard />}>
-                <Route index element={<HomePage />} />
-                <Route path="mini-league" element={<MiniLeaguePage />} />
-                <Route path="gameweek" element={<GameweekPage />} />
-                <Route path="research" element={<ResearchPage />} />
-                <Route path="live" element={<LivePage />} />
-              </Route>
-            </Routes>
-          </Router>
+            <BentoOrderProvider>
+              <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+                <ScrollToTop />
+                <Routes>
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+                  <Route path="/welcome" element={<OnboardingPage />} />
+                  <Route path="/" element={<Dashboard />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="mini-league" element={<MiniLeaguePage />} />
+                    <Route path="gameweek" element={<GameweekPage />} />
+                    <Route path="research" element={<ResearchPage />} />
+                    <Route path="live" element={<LivePage />} />
+                  </Route>
+                </Routes>
+              </Router>
+            </BentoOrderProvider>
           </ToastProvider>
-          </BentoOrderProvider>
         </ConfigurationProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -353,8 +353,8 @@
 }
 
 .gameweek-points-team-badge {
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -571,8 +571,8 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-opponent-badge {
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
   object-fit: contain;
 }
 
@@ -836,13 +836,13 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
 
   .gameweek-points-team-badge {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .gameweek-points-opponent-badge {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 }
 
@@ -966,13 +966,13 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-team-badge {
-    width: 17px;
-    height: 17px;
+    width: 21px;
+    height: 21px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-opponent-badge {
-    width: 17px;
-    height: 17px;
+    width: 21px;
+    height: 21px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-td-stat {

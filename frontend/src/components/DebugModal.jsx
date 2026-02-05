@@ -165,7 +165,7 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Attribute verification (vs FPL API)</h3>
-            <p className="debug-modal-verify-intro">Manager {VERIFY_MANAGER_ID} (check)</p>
+            <p className="debug-modal-verify-intro">Manager {VERIFY_MANAGER_ID} (check). Requires Edge Function <code>debug-verify-manager</code> to be deployed.</p>
             <button
               type="button"
               className="debug-modal-verify-button"

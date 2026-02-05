@@ -29,7 +29,12 @@ export function useVerifyManagerAttributes(managerId = DEFAULT_MANAGER_ID) {
         setData(result ?? { manager_id: managerId, gameweek: null, attributes: [] })
       }
     } catch (e) {
-      setError(e?.message ?? String(e))
+      const msg = e?.message ?? String(e)
+      const isFetchError = /failed to send a request to the edge function/i.test(msg)
+      const hint = isFetchError
+        ? ' The debug-verify-manager Edge Function may not be deployed. Deploy with: supabase functions deploy debug-verify-manager'
+        : ''
+      setError(msg + hint)
       setData(null)
     } finally {
       setLoading(false)

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { ClockFading } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
+import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useFixturePlayerStats } from '../hooks/useFixturePlayerStats'
 import { useToast } from '../contexts/ToastContext'
 import { abbreviateTeamName } from '../utils/formatDisplay'
@@ -10,11 +11,34 @@ import { MatchPlayerTable } from './MatchesSubpage'
 import './MatchesSubpage.css'
 import './ScheduleSubpage.css'
 
-function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick }) {
+function getEffectiveStrength(apiStrength, overrides, teamId) {
+  const override = overrides && teamId != null ? overrides[String(teamId)] ?? overrides[teamId] : undefined
+  const raw = override != null ? Number(override) : apiStrength
+  if (raw == null || Number.isNaN(raw)) return null
+  return Math.min(5, Math.max(1, raw))
+}
+
+function getBaseDifficultyByDimension(opponent, dimension) {
+  if (dimension === 'attack') return opponent.attackDifficulty ?? opponent.strength
+  if (dimension === 'defence') return opponent.defenceDifficulty ?? opponent.strength
+  return opponent.difficulty ?? opponent.strength
+}
+
+function getOverridesByDimension(overridesMap, dimension) {
+  if (dimension === 'attack') return overridesMap?.attack ?? null
+  if (dimension === 'defence') return overridesMap?.defence ?? null
+  return overridesMap?.overall ?? null
+}
+
+function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension }) {
   if (!opponent) return <td className="schedule-cell schedule-cell-empty">—</td>
   const short = opponent.short_name ?? '?'
   const display = opponent.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
-  const strength = opponent.strength
+  const baseDifficulty = getBaseDifficultyByDimension(opponent, difficultyDimension)
+  const overrides = getOverridesByDimension(difficultyOverridesByDimension, difficultyDimension)
+  const strength = useCustomDifficulty
+    ? getEffectiveStrength(baseDifficulty, overrides, opponent.team_id)
+    : (baseDifficulty != null ? Math.min(5, Math.max(1, baseDifficulty)) : null)
   const difficultyClass =
     strength != null && strength >= 1 && strength <= 5
       ? `schedule-cell-difficulty-${strength}`
@@ -55,6 +79,11 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
       <span className="schedule-cell-opponent-content">
         <span className="schedule-cell-opponent-inner">
           <span className="schedule-cell-abbr-display">{display}</span>
+          {opponent.isHome && (
+            <svg className="schedule-cell-home-indicator" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
+              <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
+            </svg>
+          )}
         </span>
         {showReverseScores && canShowReverse && (
           <span className="schedule-cell-reverse-score" aria-live="polite">
@@ -68,12 +97,21 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
 export default function ScheduleSubpage() {
   const { scheduleMatrix, gameweeks, loading, teamMap, nextGwId } = useScheduleData()
+  const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
   const { teamIds, getOpponent } = scheduleMatrix
   const mapForRow = teamMap || {}
+  const difficultyOverridesByDimension = useMemo(() => ({
+    overall: config?.teamStrengthOverrides ?? null,
+    attack: config?.teamAttackOverrides ?? null,
+    defence: config?.teamDefenceOverrides ?? null,
+  }), [config?.teamStrengthOverrides, config?.teamAttackOverrides, config?.teamDefenceOverrides])
   const { lastH2HMap, isSecondHalf, loading: lastH2HLoading } = useLastH2H(nextGwId ?? undefined)
   const { toast } = useToast()
+  const [difficultySource, setDifficultySource] = useState('fpl')
+  const [difficultyDimension, setDifficultyDimension] = useState('overall')
   const [showReverseScores, setShowReverseScores] = useState(false)
   const [popupCell, setPopupCell] = useState(null)
+  const useCustomDifficulty = difficultySource === 'custom'
   const POPUP_MOBILE_BREAKPOINT = 640
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= POPUP_MOBILE_BREAKPOINT)
 
@@ -159,22 +197,82 @@ export default function ScheduleSubpage() {
     <div className="schedule-subpage">
       <header className="schedule-subpage-header research-page-card-header">
         <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-        {isSecondHalf && (
-          <button
-            type="button"
-            className={`schedule-reverse-toggle ${showReverseScores ? 'schedule-reverse-toggle--on' : ''}`}
-            onClick={() => {
-              const next = !showReverseScores
-              setShowReverseScores(next)
-              setTimeout(() => toast(next ? 'Showing last H2H' : 'Hiding last H2H'), 0)
-            }}
-            aria-pressed={showReverseScores}
-            aria-label={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
-            title={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
-          >
-            <ClockFading className="schedule-reverse-toggle-svg" size={11} strokeWidth={1.5} aria-hidden />
-          </button>
-        )}
+        <div className="schedule-header-filters-wrap">
+          <div className="schedule-filter-row" role="group" aria-label="Schedule filters">
+            <div className="schedule-filter-group-with-label">
+              <div className="schedule-filter-group" role="group" aria-label="Difficulty source">
+                <button
+                  type="button"
+                  className={`schedule-filter-btn ${difficultySource === 'fpl' ? 'schedule-filter-btn--active' : ''}`}
+                  onClick={() => setDifficultySource('fpl')}
+                  aria-pressed={difficultySource === 'fpl'}
+                  aria-label="FPL difficulty"
+                >
+                  FPL
+                </button>
+                <button
+                  type="button"
+                  className={`schedule-filter-btn ${difficultySource === 'custom' ? 'schedule-filter-btn--active' : ''}`}
+                  onClick={() => setDifficultySource('custom')}
+                  aria-pressed={difficultySource === 'custom'}
+                  aria-label="Custom difficulty"
+                >
+                  Custom
+                </button>
+              </div>
+            </div>
+            <span className="schedule-filter-sep" aria-hidden />
+            <div className="schedule-filter-group-with-label">
+              <div className="schedule-filter-group" role="group" aria-label="Difficulty dimension">
+                <button
+                  type="button"
+                  className={`schedule-filter-btn ${difficultyDimension === 'overall' ? 'schedule-filter-btn--active' : ''}`}
+                  onClick={() => setDifficultyDimension('overall')}
+                  aria-pressed={difficultyDimension === 'overall'}
+                >
+                  Overall
+                </button>
+                <button
+                  type="button"
+                  className={`schedule-filter-btn ${difficultyDimension === 'attack' ? 'schedule-filter-btn--active' : ''}`}
+                  onClick={() => setDifficultyDimension('attack')}
+                  aria-pressed={difficultyDimension === 'attack'}
+                >
+                  Attack
+                </button>
+                <button
+                  type="button"
+                  className={`schedule-filter-btn ${difficultyDimension === 'defence' ? 'schedule-filter-btn--active' : ''}`}
+                  onClick={() => setDifficultyDimension('defence')}
+                  aria-pressed={difficultyDimension === 'defence'}
+                >
+                  Defence
+                </button>
+              </div>
+            </div>
+            {isSecondHalf && (
+              <>
+                <span className="schedule-filter-sep" aria-hidden />
+                <div className="schedule-filter-actions">
+                  <button
+                    type="button"
+                    className={`schedule-filter-btn schedule-filter-btn-icon ${showReverseScores ? 'schedule-filter-btn--active' : ''}`}
+                    onClick={() => {
+                      const next = !showReverseScores
+                      setShowReverseScores(next)
+                      setTimeout(() => toast(next ? 'Showing last H2H' : 'Hiding last H2H'), 0)
+                    }}
+                    aria-pressed={showReverseScores}
+                    aria-label={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
+                    title={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
+                  >
+                    <ClockFading size={11} strokeWidth={1.5} aria-hidden />
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </header>
       <div className="research-schedule-content">
       <div className="schedule-scroll-wrap">
@@ -211,6 +309,7 @@ export default function ScheduleSubpage() {
                           <span className="schedule-cell-badge-placeholder" aria-hidden />
                         )}
                       </span>
+                      <span className="schedule-cell-team-name">{team?.team_name ?? short}</span>
                     </span>
                   </td>
                   {gameweeks.map((gw) => {
@@ -224,6 +323,9 @@ export default function ScheduleSubpage() {
                         lastH2H={lastH2H}
                         showReverseScores={showReverseScores}
                         onMatchupClick={handleMatchupClick}
+                        difficultyOverridesByDimension={difficultyOverridesByDimension}
+                        useCustomDifficulty={useCustomDifficulty}
+                        difficultyDimension={difficultyDimension}
                       />
                     )
                   })}
@@ -331,6 +433,7 @@ export default function ScheduleSubpage() {
         </div>,
         document.body
       )}
+
     </div>
   )
 }

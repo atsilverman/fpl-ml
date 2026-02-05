@@ -1,0 +1,353 @@
+/* Schedule difficulty customizer – standalone panel or embedded in Customize modal */
+
+.schedule-customizer-overlay {
+  z-index: 10002;
+}
+
+.schedule-customizer-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: min(90vw, 420px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.schedule-customizer-panel--embedded {
+  box-shadow: none;
+  border-radius: 0;
+  max-width: none;
+  max-height: none;
+  border: none;
+  background: transparent;
+}
+
+.schedule-customizer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-customizer-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.schedule-customizer-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.schedule-customizer-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.schedule-customizer-stat-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 20px 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.schedule-customizer-panel--embedded .schedule-customizer-stat-tabs {
+  padding: 4px 0 8px;
+}
+
+.schedule-customizer-stat-tab {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.schedule-customizer-stat-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.schedule-customizer-stat-tab--active {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.schedule-customizer-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.schedule-customizer-panel--embedded .schedule-customizer-body {
+  padding: 0;
+  max-height: 50vh;
+  background: transparent;
+}
+
+.schedule-customizer-description-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.schedule-customizer-description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.schedule-customizer-baseline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.schedule-customizer-baseline-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.schedule-customizer-baseline-btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.schedule-customizer-baseline-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.schedule-customizer-baseline-btn--active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+
+.schedule-customizer-reset {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.schedule-customizer-reset:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+
+.schedule-customizer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.schedule-customizer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.schedule-customizer-badge {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.schedule-customizer-badge-placeholder {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+}
+
+.schedule-customizer-slider-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.schedule-customizer-ghost-dot {
+  position: absolute;
+  left: var(--ghost-pct, 0%);
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+html[data-theme="dark"] .schedule-customizer-ghost-dot {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.schedule-customizer-slider {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 10px;
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.schedule-customizer-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+.schedule-customizer-slider::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+html[data-theme="dark"] .schedule-customizer-slider::-webkit-slider-thumb,
+html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.schedule-customizer-value-pill {
+  flex-shrink: 0;
+  min-width: 28px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.schedule-customizer-value-pill--1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 48%, var(--border-color));
+}
+.schedule-customizer-value-pill--2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 7%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 20%, var(--border-color));
+}
+.schedule-customizer-value-pill--3 {
+  /* neutral */
+}
+.schedule-customizer-value-pill--4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 7%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 20%, var(--border-color));
+}
+.schedule-customizer-value-pill--5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 48%, var(--border-color));
+}
+
+.schedule-customizer-embedded-actions {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.schedule-customizer-embedded-actions .schedule-customizer-btn--save {
+  width: 100%;
+}
+
+.schedule-customizer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.schedule-customizer-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.schedule-customizer-btn--cancel {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.schedule-customizer-btn--cancel:hover {
+  background: var(--bg-card);
+}
+
+.schedule-customizer-btn--save {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.schedule-customizer-btn--save:hover {
+  filter: brightness(1.05);
+}

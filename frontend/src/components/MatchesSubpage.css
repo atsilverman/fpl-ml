@@ -17,40 +17,59 @@
 }
 
 .matches-anchor-toggle {
+  position: relative;
   display: inline-flex;
   align-items: stretch;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   background: var(--bg-secondary);
+  min-height: 36px;
 }
+
+/* Sliding pill – 2px inset so it aligns inside the toggle with buttons */
+.matches-anchor-slider {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 6px;
+  background: var(--accent-blue);
+  transition: transform 0.2s ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .matches-anchor-btn {
-  padding: 6px 14px;
-  min-height: 28px;
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 16px;
+  min-height: 34px;
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.35px;
   border: none;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 .matches-anchor-btn:hover {
   color: var(--text-primary);
-  background: var(--bg-card);
 }
 .matches-anchor-btn--active {
-  background: var(--accent-blue);
   color: white;
 }
 .matches-anchor-btn--active:hover {
-  background: var(--accent-blue);
   color: white;
-}
-.matches-anchor-btn:not(:last-child) {
-  border-right: 1px solid var(--border-color);
 }
 
 .matches-subpage-title {
@@ -191,22 +210,22 @@ html[data-theme="dark"] .gw-top-points-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
   flex-shrink: 0;
 }
 
 .gw-top-points-badge {
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
   flex-shrink: 0;
   object-fit: contain;
 }
 
 .gw-top-points-badge-placeholder {
   display: block;
-  width: 18px;
-  height: 18px;
+  width: 23px;
+  height: 23px;
   flex-shrink: 0;
 }
 
@@ -491,8 +510,8 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 
 .matchup-card-badge {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -702,8 +721,8 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 
 .matchup-detail-table-badge {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
@@ -862,8 +881,8 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 
 .matchup-detail-player-badge {
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
   object-fit: contain;
   flex-shrink: 0;
 }

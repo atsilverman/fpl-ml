@@ -8,7 +8,7 @@ const ConfigurationContext = createContext()
 
 export function ConfigurationProvider({ children }) {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const prevConfigRef = useRef(null)
   const isInitialMount = useRef(true)
   const migrationAttemptedRef = useRef(false)
@@ -41,6 +41,8 @@ export function ConfigurationProvider({ children }) {
   // Load configuration from Supabase for authenticated users
   useEffect(() => {
     const loadUserConfig = async () => {
+      // Don't conclude "no config" until auth has resolved (avoids flash of login/welcome)
+      if (authLoading) return
       if (!user) {
         setLoading(false)
         return
@@ -49,7 +51,7 @@ export function ConfigurationProvider({ children }) {
       try {
         const { data, error } = await supabase
           .from('user_configurations')
-          .select('manager_id, league_id')
+          .select('manager_id, league_id, team_strength_overrides, team_attack_overrides, team_defence_overrides')
           .eq('user_id', user.id)
           .single()
 
@@ -63,7 +65,10 @@ export function ConfigurationProvider({ children }) {
           // User has config in Supabase, use it
           setConfig({
             managerId: data.manager_id,
-            leagueId: data.league_id
+            leagueId: data.league_id,
+            teamStrengthOverrides: data.team_strength_overrides ?? null,
+            teamAttackOverrides: data.team_attack_overrides ?? null,
+            teamDefenceOverrides: data.team_defence_overrides ?? null,
           })
         } else if (config && !migrationAttemptedRef.current) {
           // User just signed in and has localStorage config, migrate it to Supabase (once)
@@ -75,6 +80,9 @@ export function ConfigurationProvider({ children }) {
                 user_id: user.id,
                 manager_id: config.managerId,
                 league_id: config.leagueId,
+                team_strength_overrides: config.teamStrengthOverrides ?? null,
+                team_attack_overrides: config.teamAttackOverrides ?? null,
+                team_defence_overrides: config.teamDefenceOverrides ?? null,
                 updated_at: new Date().toISOString()
               }, {
                 onConflict: 'user_id'
@@ -91,7 +99,7 @@ export function ConfigurationProvider({ children }) {
     }
 
     loadUserConfig()
-  }, [user])
+  }, [user, authLoading])
 
   // Reset migration flag when user changes
   useEffect(() => {
@@ -121,6 +129,9 @@ export function ConfigurationProvider({ children }) {
               user_id: user.id,
               manager_id: config.managerId,
               league_id: config.leagueId,
+              team_strength_overrides: config.teamStrengthOverrides ?? null,
+              team_attack_overrides: config.teamAttackOverrides ?? null,
+              team_defence_overrides: config.teamDefenceOverrides ?? null,
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id'
@@ -198,14 +209,54 @@ export function ConfigurationProvider({ children }) {
   const openConfigModal = () => setConfigModalOpen(true)
   const handleConfigSave = ({ leagueId, managerId }) => {
     updateConfig({
+      ...config,
       leagueId: parseInt(leagueId),
       managerId: parseInt(managerId)
     })
     setConfigModalOpen(false)
   }
 
+  const saveTeamStrengthOverrides = (overrides) => {
+    setConfig((prev) => ({ ...prev, teamStrengthOverrides: overrides }))
+  }
+  const saveTeamAttackOverrides = (overrides) => {
+    setConfig((prev) => ({ ...prev, teamAttackOverrides: overrides }))
+  }
+  const saveTeamDefenceOverrides = (overrides) => {
+    setConfig((prev) => ({ ...prev, teamDefenceOverrides: overrides }))
+  }
+  const resetTeamStrengthOverrides = () => {
+    setConfig((prev) => ({ ...prev, teamStrengthOverrides: null }))
+  }
+  const resetTeamAttackOverrides = () => {
+    setConfig((prev) => ({ ...prev, teamAttackOverrides: null }))
+  }
+  const resetTeamDefenceOverrides = () => {
+    setConfig((prev) => ({ ...prev, teamDefenceOverrides: null }))
+  }
+  const resetAllDifficultyOverrides = () => {
+    setConfig((prev) => ({
+      ...prev,
+      teamStrengthOverrides: null,
+      teamAttackOverrides: null,
+      teamDefenceOverrides: null,
+    }))
+  }
+
   return (
-    <ConfigurationContext.Provider value={{ config, updateConfig, openConfigModal, loading }}>
+    <ConfigurationContext.Provider value={{
+      config,
+      updateConfig,
+      openConfigModal,
+      loading,
+      saveTeamStrengthOverrides,
+      saveTeamAttackOverrides,
+      saveTeamDefenceOverrides,
+      resetTeamStrengthOverrides,
+      resetTeamAttackOverrides,
+      resetTeamDefenceOverrides,
+      resetAllDifficultyOverrides,
+    }}>
       {children}
       <ConfigurationModal
         isOpen={configModalOpen}
@@ -217,10 +268,27 @@ export function ConfigurationProvider({ children }) {
   )
 }
 
+const defaultConfigContext = {
+  config: null,
+  updateConfig: () => {},
+  openConfigModal: () => {},
+  loading: true,
+  saveTeamStrengthOverrides: () => {},
+  saveTeamAttackOverrides: () => {},
+  saveTeamDefenceOverrides: () => {},
+  resetTeamStrengthOverrides: () => {},
+  resetTeamAttackOverrides: () => {},
+  resetTeamDefenceOverrides: () => {},
+  resetAllDifficultyOverrides: () => {},
+}
+
 export function useConfiguration() {
   const context = useContext(ConfigurationContext)
   if (!context) {
-    throw new Error('useConfiguration must be used within ConfigurationProvider')
+    if (import.meta.env.DEV) {
+      console.warn('useConfiguration used outside ConfigurationProvider (e.g. during HMR). Using default.')
+    }
+    return defaultConfigContext
   }
   return context
 }

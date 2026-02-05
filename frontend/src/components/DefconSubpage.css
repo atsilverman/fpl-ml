@@ -361,8 +361,8 @@
 }
 
 .defcon-matchup-badge {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
 
@@ -415,8 +415,8 @@
 }
 
 .defcon-badge {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -630,8 +630,8 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-badge {
-    width: 28px;
-    height: 28px;
+    width: 35px;
+    height: 35px;
   }
 
   .defcon-player-info {

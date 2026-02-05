@@ -26,7 +26,7 @@ export default function Dashboard() {
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const { config, openConfigModal, loading: configLoading } = useConfiguration()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
   const [gameweekDropdownOpen, setGameweekDropdownOpen] = useState(false)
@@ -42,14 +42,17 @@ export default function Dashboard() {
   const gameweekView = searchParams.get('view') || 'defcon'
   const isOnGameweek = location.pathname === '/gameweek'
   const [toggleBonus, setToggleBonus] = useState(false)
+  const [showH2H, setShowH2H] = useState(false)
   const [debugModalOpen, setDebugModalOpen] = useState(false)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
 
   useEffect(() => {
+    // Wait for auth to resolve before redirecting (prevents flash of login screen when already signed in)
+    if (authLoading) return
     if (!configLoading && config == null) {
       navigate('/welcome', { replace: true })
     }
-  }, [configLoading, config, navigate])
+  }, [authLoading, configLoading, config, navigate])
 
   useEffect(() => {
     if (!gameweekDropdownOpen) return
@@ -314,7 +317,7 @@ export default function Dashboard() {
       </header>
 
       <main className="dashboard-content">
-        <Outlet context={{ toggleBonus, setToggleBonus, showH2H: false, setShowH2H: () => {}, openDebugModal: () => setDebugModalOpen(true) }} />
+        <Outlet context={{ toggleBonus, setToggleBonus, showH2H, setShowH2H, openDebugModal: () => setDebugModalOpen(true) }} />
       </main>
       <DebugModal isOpen={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
       <AccountModal isOpen={accountModalOpen} onClose={() => setAccountModalOpen(false)} />

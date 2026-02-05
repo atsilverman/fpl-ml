@@ -14,12 +14,6 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.price-changes-card:hover {
-  border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 }
 
 .price-changes-content {
@@ -35,6 +29,13 @@
   font-size: 12px;
   color: var(--text-secondary);
   margin: 0 0 4px 0;
+}
+
+.price-changes-snapshot-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.85;
+  margin: 0 0 6px 0;
 }
 
 .price-changes-error {
@@ -114,22 +115,22 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
 }
 
 .price-changes-badge {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   object-fit: contain;
 }
 
 .price-changes-badge-placeholder {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
 }
 
@@ -221,7 +222,7 @@ html[data-theme="dark"] .price-changes-column-price {
   .price-changes-badge-slot,
   .price-changes-badge,
   .price-changes-badge-placeholder {
-    width: 18px;
-    height: 18px;
+    width: 23px;
+    height: 23px;
   }
 }

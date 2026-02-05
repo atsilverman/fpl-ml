@@ -394,6 +394,22 @@ class RefreshOrchestrator:
                     "total_managers": total_players,
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 })
+
+            # Upsert teams (names + all strength fields for schedule and future use)
+            for team in bootstrap.get("teams", []):
+                self.db_client.upsert_team({
+                    "team_id": team["id"],
+                    "team_name": team.get("name", ""),
+                    "short_name": team.get("short_name", ""),
+                    "strength": team.get("strength"),
+                    "strength_overall_home": team.get("strength_overall_home"),
+                    "strength_overall_away": team.get("strength_overall_away"),
+                    "strength_attack_home": team.get("strength_attack_home"),
+                    "strength_attack_away": team.get("strength_attack_away"),
+                    "strength_defence_home": team.get("strength_defence_home"),
+                    "strength_defence_away": team.get("strength_defence_away"),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                })
             
             logger.debug("Refreshed gameweeks", extra={
                 "gameweeks_count": len(events)
