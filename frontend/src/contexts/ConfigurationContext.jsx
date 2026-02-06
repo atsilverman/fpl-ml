@@ -10,11 +10,10 @@ export function ConfigurationProvider({ children }) {
   const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const prevConfigRef = useRef(null)
-  const configRef = useRef(config)
+  const configRef = useRef(null)
   const isInitialMount = useRef(true)
   const migrationAttemptedRef = useRef(false)
   const prevUserRef = useRef(user)
-  configRef.current = config
   const [loading, setLoading] = useState(true)
   const [configModalOpen, setConfigModalOpen] = useState(false)
 
@@ -39,6 +38,7 @@ export function ConfigurationProvider({ children }) {
     }
     return null
   })
+  configRef.current = config
 
   // Load configuration from Supabase for authenticated users
   useEffect(() => {
