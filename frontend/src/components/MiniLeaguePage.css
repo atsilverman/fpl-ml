@@ -189,6 +189,11 @@
   font-weight: 600;
 }
 
+.league-ownership-filter-hint strong.league-ownership-filter-hint-count {
+  color: var(--accent-blue, #3b82f6);
+  font-weight: 800;
+}
+
 @media (max-width: 768px) {
   .league-ownership-search-container {
     max-width: none;
@@ -456,6 +461,18 @@
   letter-spacing: 0.02em;
 }
 
+/* Configured owner (you) indicator — distinct from chip badges */
+.league-standings-bento-you-badge {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
+  letter-spacing: 0.02em;
+}
+
 /* Header: column widths from colgroup */
 .league-standings-page .league-standings-bento-table th {
   vertical-align: middle;
@@ -567,6 +584,28 @@
 }
 .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-selected td {
   background: var(--bg-secondary);
+}
+
+/* Ownership search: highlight managers who own selected player(s) — same accent as nav .tracking-mode-button.active */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-primary));
+}
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td.league-standings-bento-team {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-primary));
+}
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
+  border-left: 3px solid var(--accent-blue, #3b82f6);
+  box-shadow: 0 0 6px rgba(59, 130, 246, 0.25);
+}
+
+/* Ownership search: demote rows that don't own selected player(s) — show all, grey out non-owners */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted td {
+  background: var(--bg-secondary);
+  opacity: 0.5;
+  color: var(--text-secondary);
+}
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
+  opacity: 0.75;
 }
 
 /* Manager detail modal: same layout and UI as GW Points expanded card */

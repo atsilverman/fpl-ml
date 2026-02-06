@@ -43,6 +43,7 @@ logs/
 
 # Supabase
 .supabase/
+supabase/.temp/
 
 # Test outputs and generated files
 standings_output/

@@ -216,11 +216,12 @@ export default function MiniLeaguePage() {
     return [...rows].sort(cmp)
   }, [standings, liveStatusByManager, sort.column, sort.dir])
 
-  const displayRows = useMemo(() => {
-    if (selectedPlayers.length === 0 || ownershipLoading) return sortedRows
-    const set = new Set(managerIdsOwningAny)
-    return sortedRows.filter((r) => set.has(r.manager_id))
-  }, [sortedRows, selectedPlayers.length, managerIdsOwningAny, ownershipLoading])
+  const displayRows = sortedRows
+
+  const managerIdsOwningAnySet = useMemo(
+    () => new Set(managerIdsOwningAny),
+    [managerIdsOwningAny]
+  )
 
   const handleSelectPlayer = useCallback((player) => {
     setSelectedPlayers((prev) =>
@@ -367,14 +368,14 @@ export default function MiniLeaguePage() {
           )}
           {selectedPlayers.length > 0 && !ownershipLoading && (
             <p className="league-ownership-filter-hint">
-              Showing {displayRows.length} (of {standings.length}) manager{displayRows.length !== 1 ? 's' : ''} who own {selectedPlayers.length === 1 ? (
+              <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
                 <strong>{selectedPlayers[0].web_name}</strong>
               ) : (
                 <>
                   <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
                 </>
               )}{' '}
-              this gameweek
+              this gameweek; others dimmed
             </p>
           )}
         </div>
@@ -469,11 +470,13 @@ export default function MiniLeaguePage() {
                 const activeChip = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)
                 const chipLabel = activeChip ? (CHIP_LABELS[activeChip] ?? activeChip) : null
                 const chipColor = activeChip ? (CHIP_COLORS[activeChip] ?? 'var(--text-secondary)') : null
+                const ownsSelected = selectedPlayers.length > 0 && !ownershipLoading && managerIdsOwningAnySet.has(s.manager_id)
+                const isDemoted = selectedPlayers.length > 0 && !ownershipLoading && !ownsSelected
 
                 return (
                   <tr
                     key={s.manager_id}
-                    className={`league-standings-bento-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''}`}
+                    className={`league-standings-bento-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''} ${ownsSelected ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
                     onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -500,6 +503,11 @@ export default function MiniLeaguePage() {
                     </td>
                     <td className="league-standings-bento-team" title={displayName}>
                       <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
+                      {isCurrentUser && (
+                        <span className="league-standings-bento-you-badge" title="Configured owner (you)">
+                          You
+                        </span>
+                      )}
                       {chipLabel && (
                         <span
                           className="league-standings-bento-chip-badge"

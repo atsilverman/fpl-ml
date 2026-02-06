@@ -44,6 +44,25 @@
   animation: none;
 }
 
+/* Under construction banner above price changes bento card */
+.price-changes-under-construction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fef9c3;
+  color: #854d0e;
+  font-size: 13px;
+  font-weight: 500;
+  flex-shrink: 0;
+  border: 1px solid #facc15;
+  border-radius: 8px;
+}
+.price-changes-under-construction svg {
+  flex-shrink: 0;
+  color: #854d0e;
+}
+
 /* Let the price-changes subpage fill the card body below the header */
 .research-card.price-changes-card .price-changes-subpage {
   flex: 1 1 auto;

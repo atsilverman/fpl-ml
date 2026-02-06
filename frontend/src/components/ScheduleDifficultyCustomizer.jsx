@@ -135,7 +135,8 @@ export default function ScheduleDifficultyCustomizer({
             const apiValue = team[effectiveDefaultKey] ?? team.strength
             const defaultNum = apiValue != null ? Math.min(5, Math.max(1, apiValue)) : 3
             const effective = getEffectiveValue(team.team_id, apiValue)
-            const ghostPct = ((defaultNum - 1) / 4) * 100
+            /* 0–1 fraction so CSS can align ghost with native thumb range (thumb is inset by half-width) */
+            const ghostFraction = (defaultNum - 1) / 4
             const shortName = team.short_name ?? ''
             return (
               <div key={team.team_id} className="schedule-customizer-row">
@@ -152,7 +153,7 @@ export default function ScheduleDifficultyCustomizer({
                 )}
                 <div
                   className="schedule-customizer-slider-wrap"
-                  style={{ '--ghost-pct': `${ghostPct}%` }}
+                  style={{ '--ghost-pct': ghostFraction }}
                 >
                   <span className="schedule-customizer-ghost-dot" aria-hidden />
                   <input
@@ -211,7 +212,8 @@ export default function ScheduleDifficultyCustomizer({
             const apiValue = team[effectiveDefaultKey] ?? team.strength
             const defaultNum = apiValue != null ? Math.min(5, Math.max(1, apiValue)) : 3
             const effective = getEffectiveValue(team.team_id, apiValue)
-            const ghostPct = ((defaultNum - 1) / 4) * 100
+            /* 0–1 fraction so CSS can align ghost with native thumb range (thumb is inset by half-width) */
+            const ghostFraction = (defaultNum - 1) / 4
             const shortName = team.short_name ?? ''
             return (
               <div key={team.team_id} className="customize-row customize-difficulty-row">
@@ -228,7 +230,7 @@ export default function ScheduleDifficultyCustomizer({
                 )}
                 <div
                   className="customize-difficulty-slider-wrap"
-                  style={{ '--ghost-pct': `${ghostPct}%` }}
+                  style={{ '--ghost-pct': ghostFraction }}
                 >
                   <span className="customize-difficulty-ghost-dot" aria-hidden />
                   <input

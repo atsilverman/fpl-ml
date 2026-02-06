@@ -1,4 +1,5 @@
 import { useSearchParams } from 'react-router-dom'
+import { Construction } from 'lucide-react'
 import PriceChangesSubpage from './PriceChangesSubpage'
 import ScheduleSubpage from './ScheduleSubpage'
 import './HomePage.css'
@@ -14,21 +15,27 @@ export default function ResearchPage() {
   return (
     <div className="research-page">
       {view === 'price-changes' && (
-        <div className="research-card price-changes-card bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
-          <header className="research-page-card-header">
-            <span className="research-page-card-title">Price Changes</span>
-            <a
-              href="https://t.co/KBHo75dwC5"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="research-page-source"
-              aria-label="Source: LiveFPL"
-            >
-              Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
-            </a>
-          </header>
-          <PriceChangesSubpage showCard={false} />
-        </div>
+        <>
+          <div className="price-changes-under-construction" aria-label="Under construction">
+            <Construction size={18} strokeWidth={2} aria-hidden />
+            <span>Under construction</span>
+          </div>
+          <div className="research-card price-changes-card bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
+            <header className="research-page-card-header">
+              <span className="research-page-card-title">Price Changes</span>
+              <a
+                href="https://t.co/KBHo75dwC5"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="research-page-source"
+                aria-label="Source: LiveFPL"
+              >
+                Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
+              </a>
+            </header>
+            <PriceChangesSubpage showCard={false} />
+          </div>
+        </>
       )}
 
       {view === 'schedule' && (

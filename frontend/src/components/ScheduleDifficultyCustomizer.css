@@ -212,9 +212,10 @@
   align-items: center;
 }
 
+/* Match native range thumb range: thumb center runs from 6px to (100% - 6px) for 12px thumb */
 .schedule-customizer-ghost-dot {
   position: absolute;
-  left: var(--ghost-pct, 0%);
+  left: calc(6px + (100% - 12px) * var(--ghost-pct, 0));
   top: 50%;
   transform: translate(-50%, -50%);
   width: 12px;
