@@ -742,8 +742,23 @@ class ManagerDataRefresher:
 
             # Team value and bank: for current gameweek prefer entry endpoint (last_deadline_value/bank)
             # so we get the latest value after price changes; fallback to history then existing.
-            _team_value = gw_history.get("value")
-            _bank = gw_history.get("bank")
+            # FPL API returns value in tenths (e.g. 1005 = £100.5m); sometimes returns float (100.5) - normalize to int tenths.
+            def _to_tenths(v):
+                if v is None:
+                    return None
+                try:
+                    n = float(v)
+                    if n <= 0:
+                        return None
+                    # If value looks like "full" units (e.g. 100.5 for £100.5m), convert to tenths
+                    if n < 200 and isinstance(v, float):
+                        return int(round(n * 10))
+                    return int(round(n))
+                except (TypeError, ValueError):
+                    return None
+
+            _team_value = _to_tenths(gw_history.get("value"))
+            _bank = _to_tenths(gw_history.get("bank"))
             is_current_gw = False
             try:
                 gw_row = self.db_client.client.table("gameweeks").select("is_current").eq("id", gameweek).limit(1).execute().data
@@ -754,9 +769,9 @@ class ManagerDataRefresher:
                 try:
                     entry = await self.fpl_client.get_entry(manager_id)
                     if entry.get("last_deadline_value") is not None:
-                        _team_value = entry["last_deadline_value"]
+                        _team_value = _to_tenths(entry["last_deadline_value"])
                     if entry.get("last_deadline_bank") is not None:
-                        _bank = entry["last_deadline_bank"]
+                        _bank = _to_tenths(entry["last_deadline_bank"])
                 except Exception as e:
                     logger.debug("get_entry for team value failed", extra={"manager_id": manager_id, "error": str(e)})
             if _team_value is None:
@@ -775,8 +790,6 @@ class ManagerDataRefresher:
                 "gameweek_points": gameweek_points,
                 "transfer_cost": transfer_cost,
                 "total_points": current_total,
-                "team_value_tenths": _team_value,
-                "bank_tenths": _bank,
                 "overall_rank": overall_rank,
                 "overall_rank_change": overall_rank_change,
                 "gameweek_rank": gameweek_rank,
@@ -784,7 +797,12 @@ class ManagerDataRefresher:
                 "active_chip": _chip,
                 "updated_at": datetime.now(timezone.utc).isoformat()
             }
-            
+            # Only set team value/bank when we have a value (don't overwrite with None)
+            if _team_value is not None:
+                history_data["team_value_tenths"] = _team_value
+            if _bank is not None:
+                history_data["bank_tenths"] = _bank
+
             # Preserve baseline columns if they exist (don't overwrite with None)
             if baseline_total is not None:
                 history_data["baseline_total_points"] = baseline_total
@@ -872,8 +890,8 @@ class ManagerDataRefresher:
                     "existing_rank": history[0].get("mini_league_rank")  # Current stored rank
                 })
             
-            # Sort by total points descending, then by manager_id ascending for consistent tie-breaking
-            manager_totals.sort(key=lambda x: (x["total_points"], -x["manager_id"]), reverse=True)
+            # Sort by total points descending, then manager_id ascending (matches mv_mini_league_standings tie-break)
+            manager_totals.sort(key=lambda x: (-x["total_points"], x["manager_id"]))
             
             # Update ranks with proper tie handling
             # When managers have the same total_points, they get the same rank

@@ -11,7 +11,7 @@ export function useGameweekData(anchor = 'current') {
     queryFn: async () => {
       const { data: row, error: err } = await supabase
         .from('gameweeks')
-        .select('id, name, is_current, finished, data_checked, fpl_ranks_updated')
+        .select('id, name, is_current, finished, data_checked, fpl_ranks_updated, release_time')
         .eq(isNext ? 'is_next' : 'is_current', true)
         .single()
 
@@ -26,6 +26,7 @@ export function useGameweekData(anchor = 'current') {
     gameweek: data?.id ?? null,
     dataChecked: data?.data_checked ?? false,
     fplRanksUpdated: data?.fpl_ranks_updated ?? false,
+    releaseTime: data?.release_time ?? null,
     loading: isLoading,
     error
   }

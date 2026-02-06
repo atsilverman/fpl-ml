@@ -363,6 +363,68 @@ class RefreshOrchestrator:
         
         return False
     
+    async def _wait_for_new_gameweek_release(self) -> None:
+        """
+        After deadline batch: wait for FPL to release the new gameweek (release_time),
+        then refresh gameweeks until the next GW becomes is_current so we stop showing last week's data.
+        """
+        # Get the gameweek that is currently "next" (will become current when FPL releases)
+        next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+        if not next_gws:
+            logger.debug("No is_next gameweek for release wait")
+            return
+        next_gw = next_gws[0]
+        next_gw_id = next_gw["id"]
+        release_time_raw = next_gw.get("release_time")
+        now_utc = datetime.now(timezone.utc)
+
+        # If FPL provides release_time and it's in the future, wait until then (cap 60 min)
+        if release_time_raw:
+            try:
+                release_dt = datetime.fromisoformat(
+                    release_time_raw.replace("Z", "+00:00")
+                )
+                if release_dt.tzinfo is None:
+                    release_dt = release_dt.replace(tzinfo=timezone.utc)
+                if now_utc < release_dt:
+                    wait_sec = (release_dt - now_utc).total_seconds()
+                    max_wait = 3600  # 60 min
+                    wait_sec = min(wait_sec, max_wait)
+                    logger.info(
+                        "Waiting for FPL gameweek release",
+                        extra={
+                            "next_gameweek": next_gw_id,
+                            "release_time": release_time_raw,
+                            "wait_seconds": int(wait_sec),
+                        },
+                    )
+                    await asyncio.sleep(wait_sec)
+            except (ValueError, TypeError) as e:
+                logger.debug("Could not parse release_time", extra={"release_time": release_time_raw, "error": str(e)})
+
+        # Poll refresh until the next gameweek is current (FPL has flipped is_current)
+        poll_interval = 60  # seconds
+        max_polls = 30  # ~30 min max
+        for attempt in range(max_polls):
+            await self._refresh_gameweeks()
+            current_gws = self.db_client.get_gameweeks(gameweek_id=next_gw_id, limit=1)
+            if current_gws and current_gws[0].get("is_current"):
+                logger.info(
+                    "New gameweek is current after release wait",
+                    extra={"gameweek": next_gw_id, "attempts": attempt + 1},
+                )
+                return
+            if attempt < max_polls - 1:
+                logger.debug(
+                    "New gameweek not yet current, re-polling",
+                    extra={"next_gameweek": next_gw_id, "attempt": attempt + 1},
+                )
+                await asyncio.sleep(poll_interval)
+        logger.warning(
+            "New gameweek still not current after polling",
+            extra={"next_gameweek": next_gw_id, "max_polls": max_polls},
+        )
+
     async def _refresh_gameweeks(self) -> Optional[Dict[str, Any]]:
         """Refresh gameweeks table. Returns bootstrap for reuse (e.g. player refresh)."""
         try:
@@ -370,10 +432,14 @@ class RefreshOrchestrator:
             events = bootstrap.get("events", [])
             
             for event in events:
+                # release_time: when FPL releases this gameweek (new GW goes live); used post-deadline
+                raw_release = event.get("release_time")
+                release_time = raw_release if raw_release else None
                 gameweek_data = {
                     "id": event["id"],
                     "name": event["name"],
                     "deadline_time": event["deadline_time"],
+                    "release_time": release_time,
                     "is_current": event.get("is_current", False),
                     "is_previous": event.get("is_previous", False),
                     "is_next": event.get("is_next", False),
@@ -873,24 +939,36 @@ class RefreshOrchestrator:
                 if batch_num + batch_size < len(manager_ids):
                     await asyncio.sleep(2.0)
             
-            # Recalculate mini-league ranks after points update
-            # Get all leagues
-            leagues_result = self.db_client.client.table("mini_leagues").select(
-                "league_id"
-            ).execute()
-            
-            for league in leagues_result.data:
-                try:
-                    await self.manager_refresher.calculate_mini_league_ranks(
-                        league["league_id"],
-                        self.current_gameweek
-                    )
-                except Exception as e:
-                    logger.error("League ranks failed", extra={
-                        "league_id": league["league_id"],
-                        "gameweek": self.current_gameweek,
-                        "error": str(e)
-                    }, exc_info=True)
+            # Recalculate mini-league ranks only when at least one fixture has started (or GW finished).
+            # Before any kickoff, ranks stay at deadline order; recalc would use same totals but can overwrite.
+            any_fixture_started = False
+            try:
+                fixtures = self.db_client.client.table("fixtures").select("started").eq(
+                    "gameweek", self.current_gameweek
+                ).execute().data
+                any_fixture_started = any(f.get("started", False) for f in (fixtures or []))
+            except Exception:
+                pass
+            if any_fixture_started:
+                leagues_result = self.db_client.client.table("mini_leagues").select(
+                    "league_id"
+                ).execute()
+                for league in leagues_result.data:
+                    try:
+                        await self.manager_refresher.calculate_mini_league_ranks(
+                            league["league_id"],
+                            self.current_gameweek
+                        )
+                    except Exception as e:
+                        logger.error("League ranks failed", extra={
+                            "league_id": league["league_id"],
+                            "gameweek": self.current_gameweek,
+                            "error": str(e)
+                        }, exc_info=True)
+            else:
+                logger.debug("Skipping league rank recalc (no fixture started)", extra={
+                    "gameweek": self.current_gameweek
+                })
             
         except Exception as e:
             logger.error("Manager points refresh failed", extra={
@@ -1127,11 +1205,18 @@ class RefreshOrchestrator:
                 gameweeks = self.db_client.get_gameweeks(is_current=True, limit=1)
                 if gameweeks:
                     current_gw = gameweeks[0]
+                    # Ensure we know which GW we're waiting for (we only ever pass is_current to detector)
+                    if self.next_gameweek_id_before_deadline is None:
+                        self.next_gameweek_id_before_deadline = current_gw.get("id")
                     status_changed = self._detect_gameweek_status_change(current_gw)
-                    # Run batch: on first status change, or again within window so we capture late-arriving transfers
+                    # Run batch: on status change, or first time we haven't run yet this deadline, or again within window
                     should_run_batch = False
                     is_first_in_window = False
                     if status_changed and not self.deadline_refresh_completed:
+                        should_run_batch = True
+                        is_first_in_window = True
+                    elif not self.deadline_refresh_completed and self._deadline_batch_first_run_time is None:
+                        # First time in TRANSFER_DEADLINE: run so we capture picks/transfers (don't rely on status_changed which needs prev state)
                         should_run_batch = True
                         is_first_in_window = True
                     elif not self.deadline_refresh_completed and self._deadline_batch_first_run_time is not None:
@@ -1326,6 +1411,14 @@ class RefreshOrchestrator:
                                                 "gameweek": self.current_gameweek,
                                                 "error": str(e)
                                             }, exc_info=True)
+                                    # Wait for FPL to release new gameweek so we stop showing last week's data
+                                    try:
+                                        await self._wait_for_new_gameweek_release()
+                                    except Exception as e:
+                                        logger.warning("Wait for new gameweek release failed", extra={
+                                            "gameweek": self.current_gameweek,
+                                            "error": str(e)
+                                        }, exc_info=True)
                                 # Refresh ML Top Transfers MV after every batch so UI gets data when transfers endpoint updates
                                 try:
                                     self.db_client.refresh_league_transfer_aggregation()
