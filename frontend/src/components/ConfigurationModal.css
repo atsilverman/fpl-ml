@@ -71,11 +71,6 @@
   line-height: 1;
 }
 
-.modal-close:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-}
-
 .modal-body {
   padding: 24px;
   overflow-y: auto;
@@ -136,12 +131,6 @@
   max-width: 280px;
 }
 
-.modal-auth-google:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
 .modal-auth-google-icon {
   flex-shrink: 0;
 }
@@ -186,12 +175,6 @@
   transition: all 0.2s ease;
 }
 
-.modal-auth-signout:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border-color: var(--accent-blue);
-}
-
 .modal-step h3 {
   font-size: 18px;
   font-weight: 600;
@@ -216,11 +199,6 @@
   cursor: pointer;
   transition: all 0.2s ease;
   margin-bottom: 20px;
-}
-
-.modal-back:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
 }
 
 .modal-loading,
@@ -251,12 +229,6 @@
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
-}
-
-.modal-option:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-  transform: translateX(2px);
 }
 
 .modal-option.selected {
@@ -325,32 +297,16 @@
   border-color: var(--border-color);
 }
 
-.modal-button-cancel:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-}
-
 .modal-button-save {
   background: var(--accent-blue);
   color: white;
   border-color: var(--accent-blue);
 }
 
-.modal-button-save:hover {
-  background: #2563eb;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px var(--shadow-accent-blue-subtle);
-}
-
 .modal-button-secondary {
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
-}
-
-.modal-button-secondary:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
 }
 
 .config-strength-reset {
@@ -363,11 +319,6 @@
   border-radius: 6px;
   color: var(--text-secondary);
   cursor: pointer;
-}
-
-.config-strength-reset:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
 }
 
 .config-strength-list {

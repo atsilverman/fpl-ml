@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { config, openConfigModal, loading: configLoading } = useConfiguration()
   const { user, loading: authLoading } = useAuth()
+  const isSignedIn = !!user
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
   const [gameweekDropdownOpen, setGameweekDropdownOpen] = useState(false)
@@ -49,10 +50,11 @@ export default function Dashboard() {
   useEffect(() => {
     // Wait for auth to resolve before redirecting (prevents flash of login screen when already signed in)
     if (authLoading) return
-    if (!configLoading && config == null) {
+    // Only send to configure-manager (welcome) when not signed in and no config; signed-in users go straight to dashboard
+    if (!configLoading && config == null && !isSignedIn) {
       navigate('/welcome', { replace: true })
     }
-  }, [authLoading, configLoading, config, navigate])
+  }, [authLoading, configLoading, config, isSignedIn, navigate])
 
   useEffect(() => {
     if (!gameweekDropdownOpen) return
