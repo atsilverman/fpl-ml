@@ -181,6 +181,14 @@
   gap: 6px;
 }
 
+.header-configure-note {
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+
 .header-config-icon {
   flex-shrink: 0;
   display: flex;

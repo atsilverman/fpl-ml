@@ -10,9 +10,11 @@ export function ConfigurationProvider({ children }) {
   const queryClient = useQueryClient()
   const { user, loading: authLoading } = useAuth()
   const prevConfigRef = useRef(null)
+  const configRef = useRef(config)
   const isInitialMount = useRef(true)
   const migrationAttemptedRef = useRef(false)
   const prevUserRef = useRef(user)
+  configRef.current = config
   const [loading, setLoading] = useState(true)
   const [configModalOpen, setConfigModalOpen] = useState(false)
 
@@ -70,25 +72,28 @@ export function ConfigurationProvider({ children }) {
             teamAttackOverrides: data.team_attack_overrides ?? null,
             teamDefenceOverrides: data.team_defence_overrides ?? null,
           })
-        } else if (config && !migrationAttemptedRef.current) {
-          // User just signed in and has localStorage config, migrate it to Supabase (once)
-          migrationAttemptedRef.current = true
-          try {
-            await supabase
+        } else if (!migrationAttemptedRef.current) {
+          // User just signed in: migrate current config (localStorage or initial) to Supabase (once)
+          const toMigrate = configRef.current
+          if (toMigrate?.managerId != null && toMigrate?.leagueId != null) {
+            migrationAttemptedRef.current = true
+            const { error: upsertError } = await supabase
               .from('user_configurations')
               .upsert({
                 user_id: user.id,
-                manager_id: config.managerId,
-                league_id: config.leagueId,
-                team_strength_overrides: config.teamStrengthOverrides ?? null,
-                team_attack_overrides: config.teamAttackOverrides ?? null,
-                team_defence_overrides: config.teamDefenceOverrides ?? null,
+                manager_id: toMigrate.managerId,
+                league_id: toMigrate.leagueId,
+                team_strength_overrides: toMigrate.teamStrengthOverrides ?? null,
+                team_attack_overrides: toMigrate.teamAttackOverrides ?? null,
+                team_defence_overrides: toMigrate.teamDefenceOverrides ?? null,
                 updated_at: new Date().toISOString()
               }, {
                 onConflict: 'user_id'
               })
-          } catch (migrateError) {
-            console.error('Error migrating config to Supabase:', migrateError)
+            if (upsertError) {
+              console.error('Error migrating config to Supabase:', upsertError)
+              migrationAttemptedRef.current = false
+            }
           }
         }
       } catch (error) {
