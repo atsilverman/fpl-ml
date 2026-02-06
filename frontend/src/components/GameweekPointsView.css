@@ -584,6 +584,16 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   margin-left: 2px;
 }
 
+/* Invisible placeholder when away so badge alignment matches home rows */
+.gameweek-points-home-indicator-filler {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 2px;
+  visibility: hidden;
+}
+
 .gameweek-points-td-pts {
   font-weight: 700;
   font-variant-numeric: tabular-nums;

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { ClockFading } from 'lucide-react'
+import { ClockFading, Filter } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -110,7 +110,9 @@ export default function ScheduleSubpage() {
   const [difficultySource, setDifficultySource] = useState('fpl')
   const [difficultyDimension, setDifficultyDimension] = useState('overall')
   const [showReverseScores, setShowReverseScores] = useState(false)
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
   const [popupCell, setPopupCell] = useState(null)
+  const filterPopoverRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
   const POPUP_MOBILE_BREAKPOINT = 640
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= POPUP_MOBILE_BREAKPOINT)
@@ -167,6 +169,20 @@ export default function ScheduleSubpage() {
     }
   }, [popupCell])
 
+  useEffect(() => {
+    if (!filterPopoverOpen) return
+    const handleClickOutside = (e) => {
+      if (
+        filterPopoverRef.current && !filterPopoverRef.current.contains(e.target) &&
+        !e.target.closest('.schedule-filter-icon-btn')
+      ) {
+        setFilterPopoverOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [filterPopoverOpen])
+
   const handleMatchupClick = (rowTeamId, opponentTeamId) => {
     setPopupCell({ rowTeamId, opponentTeamId })
   }
@@ -174,9 +190,19 @@ export default function ScheduleSubpage() {
   if (loading) {
     return (
       <div className="schedule-subpage">
-        <header className="schedule-subpage-header research-page-card-header">
-          <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-        </header>
+        <div className="schedule-header-with-filter">
+          <header className="schedule-subpage-header research-page-card-header">
+            <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
+            <button
+              type="button"
+              className="schedule-filter-icon-btn"
+              disabled
+              aria-label="Schedule view options (unavailable while loading)"
+            >
+              <Filter size={14} strokeWidth={2} aria-hidden />
+            </button>
+          </header>
+        </div>
         <div className="schedule-loading">Loading schedule…</div>
       </div>
     )
@@ -185,22 +211,47 @@ export default function ScheduleSubpage() {
   if (!gameweeks?.length) {
     return (
       <div className="schedule-subpage">
-        <header className="schedule-subpage-header research-page-card-header">
-          <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-        </header>
+        <div className="schedule-header-with-filter">
+          <header className="schedule-subpage-header research-page-card-header">
+            <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
+            <button
+              type="button"
+              className="schedule-filter-icon-btn"
+              aria-label="Schedule view options"
+              aria-expanded={false}
+            >
+              <Filter size={14} strokeWidth={2} aria-hidden />
+            </button>
+          </header>
+        </div>
         <div className="schedule-empty">No upcoming gameweeks (is_next and beyond).</div>
       </div>
     )
   }
 
+  const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
+
   return (
     <div className="schedule-subpage">
-      <header className="schedule-subpage-header research-page-card-header">
-        <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-        <div className="schedule-header-filters-wrap">
-          <div className="schedule-filter-row" role="group" aria-label="Schedule filters">
-            <div className="schedule-filter-group-with-label">
-              <div className="schedule-filter-group" role="group" aria-label="Difficulty source">
+      <div className="schedule-header-with-filter">
+        <header className="schedule-subpage-header research-page-card-header">
+          <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
+          <button
+            type="button"
+            className={`schedule-filter-icon-btn ${filterPopoverOpen || hasActiveScheduleFilters ? 'schedule-filter-icon-btn--active' : ''}`}
+            onClick={() => setFilterPopoverOpen((open) => !open)}
+            aria-label="Schedule view options"
+            aria-expanded={filterPopoverOpen}
+            aria-haspopup="dialog"
+          >
+            <Filter size={14} strokeWidth={2} aria-hidden />
+          </button>
+        </header>
+        {filterPopoverOpen && (
+          <div className="schedule-filter-popover" ref={filterPopoverRef} role="dialog" aria-label="Schedule view options">
+            <div className="schedule-filter-popover-section">
+              <span className="schedule-filter-popover-label">Difficulty source</span>
+              <div className="schedule-filter-popover-buttons">
                 <button
                   type="button"
                   className={`schedule-filter-btn ${difficultySource === 'fpl' ? 'schedule-filter-btn--active' : ''}`}
@@ -221,9 +272,9 @@ export default function ScheduleSubpage() {
                 </button>
               </div>
             </div>
-            <span className="schedule-filter-sep" aria-hidden />
-            <div className="schedule-filter-group-with-label">
-              <div className="schedule-filter-group" role="group" aria-label="Difficulty dimension">
+            <div className="schedule-filter-popover-section">
+              <span className="schedule-filter-popover-label">Dimension</span>
+              <div className="schedule-filter-popover-buttons">
                 <button
                   type="button"
                   className={`schedule-filter-btn ${difficultyDimension === 'overall' ? 'schedule-filter-btn--active' : ''}`}
@@ -251,9 +302,9 @@ export default function ScheduleSubpage() {
               </div>
             </div>
             {isSecondHalf && (
-              <>
-                <span className="schedule-filter-sep" aria-hidden />
-                <div className="schedule-filter-actions">
+              <div className="schedule-filter-popover-section">
+                <span className="schedule-filter-popover-label">Last H2H</span>
+                <div className="schedule-filter-popover-buttons">
                   <button
                     type="button"
                     className={`schedule-filter-btn schedule-filter-btn-icon ${showReverseScores ? 'schedule-filter-btn--active' : ''}`}
@@ -269,11 +320,11 @@ export default function ScheduleSubpage() {
                     <ClockFading size={11} strokeWidth={1.5} aria-hidden />
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
-        </div>
-      </header>
+        )}
+      </div>
       <div className="research-schedule-content">
       <div className="schedule-scroll-wrap">
         <table className="schedule-table">

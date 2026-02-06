@@ -51,9 +51,10 @@ export function ConfigurationProvider({ children }) {
       }
 
       try {
+        // Select only base columns so prod works before migrations 037/038 (team_*_overrides) are applied
         const { data, error } = await supabase
           .from('user_configurations')
-          .select('manager_id, league_id, team_strength_overrides, team_attack_overrides, team_defence_overrides')
+          .select('manager_id, league_id')
           .eq('user_id', user.id)
           .single()
 
@@ -64,13 +65,13 @@ export function ConfigurationProvider({ children }) {
         }
 
         if (data && data.manager_id && data.league_id) {
-          // User has config in Supabase, use it
+          // User has config in Supabase, use it (overrides stay null until migrations 037/038 applied)
           setConfig({
             managerId: data.manager_id,
             leagueId: data.league_id,
-            teamStrengthOverrides: data.team_strength_overrides ?? null,
-            teamAttackOverrides: data.team_attack_overrides ?? null,
-            teamDefenceOverrides: data.team_defence_overrides ?? null,
+            teamStrengthOverrides: null,
+            teamAttackOverrides: null,
+            teamDefenceOverrides: null,
           })
         } else if (!migrationAttemptedRef.current) {
           // User just signed in: migrate current config (localStorage or initial) to Supabase (once)
@@ -83,9 +84,6 @@ export function ConfigurationProvider({ children }) {
                 user_id: user.id,
                 manager_id: toMigrate.managerId,
                 league_id: toMigrate.leagueId,
-                team_strength_overrides: toMigrate.teamStrengthOverrides ?? null,
-                team_attack_overrides: toMigrate.teamAttackOverrides ?? null,
-                team_defence_overrides: toMigrate.teamDefenceOverrides ?? null,
                 updated_at: new Date().toISOString()
               }, {
                 onConflict: 'user_id'
@@ -134,9 +132,6 @@ export function ConfigurationProvider({ children }) {
               user_id: user.id,
               manager_id: config.managerId,
               league_id: config.leagueId,
-              team_strength_overrides: config.teamStrengthOverrides ?? null,
-              team_attack_overrides: config.teamAttackOverrides ?? null,
-              team_defence_overrides: config.teamDefenceOverrides ?? null,
               updated_at: new Date().toISOString()
             }, {
               onConflict: 'user_id'

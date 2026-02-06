@@ -375,7 +375,7 @@ export default function MiniLeaguePage() {
                   <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
                 </>
               )}{' '}
-              this gameweek; others dimmed
+              this gameweek
             </p>
           )}
         </div>

@@ -80,10 +80,11 @@
   contain: none;
 }
 
+/* Same left/right padding as .research-page-card-header (14px) so the Schedule title aligns with Price Changes title */
 .research-schedule-card {
   display: flex;
   flex-direction: column;
-  padding: 20px;
+  padding: 12px 14px 20px 14px;
   gap: 6px;
   min-height: 400px;
   overflow: visible;

@@ -61,6 +61,7 @@ export function useDefconGameweekPlayers() {
         const isLive = stat.started === true && !matchComplete
         // When gameweek is data_checked, treat all finished matches as final (green check, not grey)
         const matchProvisional = gwDataChecked ? false : (stat.match_finished_provisional === true)
+        const matchConfirmed = stat.match_finished === true
         const percent = threshold >= 999 ? 0 : Math.min(100, Math.round((defcon / threshold) * 100))
         return {
           player_id: p.fpl_player_id,
@@ -72,6 +73,7 @@ export function useDefconGameweekPlayers() {
           threshold,
           match_complete: matchComplete,
           match_provisional: matchProvisional,
+          match_confirmed: matchConfirmed,
           is_live: isLive,
           percent,
         }

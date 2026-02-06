@@ -11,7 +11,7 @@ import './DefconSubpage.css'
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
 function DefconRow({ player }) {
-  const { web_name, team_short_name, defcon, threshold, position, is_live } = player
+  const { web_name, team_short_name, defcon, threshold, position, is_live, match_provisional, match_confirmed } = player
   const isGk = threshold >= 999
   const denomDisplay = isGk ? '—' : threshold
   const numDisplay = isGk ? 0 : (defcon ?? 0)
@@ -20,6 +20,14 @@ function DefconRow({ player }) {
   const positionLabel = POSITION_LABELS[position] ?? '—'
   const fractionTitle = isGk ? 'Goalkeepers cannot earn DEFCON (no threshold)' : undefined
   const defconAchieved = !isGk && defcon >= threshold
+
+  const statusDot = is_live
+    ? { className: 'defcon-status-dot defcon-status-dot--live', title: 'Live', ariaLabel: 'Live' }
+    : match_provisional
+      ? { className: 'defcon-status-dot defcon-status-dot--provisional', title: 'Match finished (provisional, stats may update)', ariaLabel: 'Provisional' }
+      : match_confirmed
+        ? { className: 'defcon-status-dot defcon-status-dot--complete', title: 'Match finished (confirmed)', ariaLabel: 'Confirmed' }
+        : null
 
   return (
     <div className={`defcon-row-card${defconAchieved ? ' defcon-row-card--achieved' : ''}`}>
@@ -34,12 +42,12 @@ function DefconRow({ player }) {
       <div className="defcon-player-info">
         <div className="defcon-name-row">
           <span className="defcon-name">{web_name}</span>
-          {is_live && (
+          {statusDot && (
             <span className="defcon-status-dot-wrap" aria-hidden>
               <span
-                className="defcon-status-dot defcon-status-dot--live"
-                title="Live"
-                aria-label="Live"
+                className={statusDot.className}
+                title={statusDot.title}
+                aria-label={statusDot.ariaLabel}
               />
             </span>
           )}

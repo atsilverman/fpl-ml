@@ -206,10 +206,12 @@
   min-width: 6px;
   min-height: 6px;
   border-radius: 50%;
+  display: inline-block;
 }
 
+/* Match finished (confirmed) – same as other pages (e.g. Schedule/Matches Final) */
 .defcon-subpage .gw-legend-popup-dot--complete {
-  background: var(--accent-green, #10b981);
+  background: #c2410c;
 }
 
 .defcon-subpage .gw-legend-popup-dot--provisional {
@@ -405,6 +407,7 @@
 
 .defcon-row-card--achieved {
   border: 1px solid var(--accent-green);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .defcon-row {
@@ -463,9 +466,9 @@
   animation: defcon-provisional-pulse 2s ease-in-out infinite;
 }
 
-/* Complete = data_checked (same as matches Final – GW confirmed) */
+/* Complete = match finished (FPL confirmed), same color as other pages */
 .defcon-status-dot--complete {
-  background: #059669;
+  background: #c2410c;
 }
 
 .defcon-name {
