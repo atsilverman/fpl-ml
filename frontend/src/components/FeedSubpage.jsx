@@ -55,7 +55,7 @@ function eventLabel(event) {
   }
 }
 
-function FeedEventCard({ event, playerName, teamShortName, position, impact }) {
+function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, position, impact }) {
   const { label, delta } = eventLabel(event)
   const isPositive = event.points_delta > 0
   const isNegative = event.points_delta < 0
@@ -79,7 +79,11 @@ function FeedEventCard({ event, playerName, teamShortName, position, impact }) {
           />
         )}
         <div className="feed-event-card__player-info">
-          <span className="feed-event-card__player-name">{playerName ?? `Player ${event.player_id}`}</span>
+          {playerNameLoading ? (
+            <span className="feed-event-card__player-name feed-event-card__player-name--loading" aria-hidden> </span>
+          ) : (
+            <span className="feed-event-card__player-name">{playerName ?? `Player ${event.player_id}`}</span>
+          )}
           {positionLabel != null && (
             <span className={`feed-event-card__position-badge feed-event-card__position-badge--${position}`}>
               {positionLabel}
@@ -174,7 +178,7 @@ export default function FeedSubpage({ isActive = true }) {
 
   const playerIds = useMemo(() => [...new Set((sortedEvents || []).map((e) => e.player_id))], [sortedEvents])
 
-  const { data: playersMap = {} } = useQuery({
+  const { data: playersMap = {}, isLoading: playersLoading } = useQuery({
     queryKey: ['players-feed', playerIds],
     queryFn: async () => {
       if (playerIds.length === 0) return {}
@@ -381,13 +385,9 @@ export default function FeedSubpage({ isActive = true }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const loading = gwLoading || eventsLoading
+  const loading = gwLoading || eventsLoading || (playerIds.length > 0 && playersLoading)
   if (loading) {
-    return (
-      <div className="feed-subpage">
-        <div className="feed-subpage-loading">Loading…</div>
-      </div>
-    )
+    return <div className="feed-subpage" />
   }
 
   if (eventsError) {
@@ -587,11 +587,13 @@ export default function FeedSubpage({ isActive = true }) {
             const teamShortName = player?.team_id != null ? teamsMap[player.team_id] : null
             const playerName = player?.web_name ?? null
             const position = player?.position ?? null
+            const playerNameLoading = playersLoading && playerName == null
             return (
               <FeedEventCard
                 key={event.id}
                 event={event}
                 playerName={playerName}
+                playerNameLoading={playerNameLoading}
                 teamShortName={teamShortName}
                 position={position}
                 impact={impactByEventId[event.id]}

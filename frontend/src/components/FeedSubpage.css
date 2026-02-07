@@ -62,6 +62,24 @@
   text-overflow: ellipsis;
 }
 
+.feed-event-card__player-name--loading {
+  min-width: 4em;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary, rgba(0, 0, 0, 0.08)) 0%,
+    var(--bg-secondary) 50%,
+    var(--bg-tertiary, rgba(0, 0, 0, 0.08)) 100%
+  );
+  background-size: 200% 100%;
+  animation: feed-event-card__player-name-shimmer 0.9s ease-in-out infinite;
+  border-radius: 3px;
+}
+
+@keyframes feed-event-card__player-name-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .feed-event-card__position-badge {
   display: inline-block;
   width: fit-content;

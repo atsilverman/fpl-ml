@@ -622,6 +622,7 @@ class PlayerDataRefresher:
                     existing_stat.get("bonus", 0)
                     if match_finished
                     else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
+                )
                 existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
                 # So total_points_after in feed reflects effective total (base + provisional when live)
                 base_total = stats.get("total_points", 0)
