@@ -510,6 +510,10 @@ class RefreshOrchestrator:
             for fixture in fixtures:
                 gameweek_id = fixture.get("event")
                 fixtures_by_id[fixture["id"]] = fixture
+                # FPL can return null for started/finished before kickoff; normalize so DB and UI stay consistent
+                started = fixture.get("started")
+                finished = fixture.get("finished")
+                finished_provisional = fixture.get("finished_provisional")
                 fixture_data = {
                     "fpl_fixture_id": fixture["id"],
                     "gameweek": gameweek_id,
@@ -517,10 +521,10 @@ class RefreshOrchestrator:
                     "away_team_id": fixture["team_a"],
                     "home_score": fixture.get("team_h_score"),
                     "away_score": fixture.get("team_a_score"),
-                    "started": fixture.get("started", False),
-                    "finished": fixture.get("finished", False),
-                    "finished_provisional": fixture.get("finished_provisional", False),
-                    "minutes": fixture.get("minutes", 0),
+                    "started": bool(started) if started is not None else False,
+                    "finished": bool(finished) if finished is not None else False,
+                    "finished_provisional": bool(finished_provisional) if finished_provisional is not None else False,
+                    "minutes": fixture.get("minutes", 0) or 0,
                     "kickoff_time": fixture.get("kickoff_time"),
                     # deadline_time comes from gameweeks table, not fixtures API
                     "deadline_time": deadline_time_map.get(gameweek_id),
@@ -1116,6 +1120,11 @@ class RefreshOrchestrator:
     async def _fast_cycle(self):
         """Execute fast refresh cycle (gameweeks, state, fixtures, players when live). No manager points or MVs in live - those run in slow loop."""
         try:
+            # Heartbeat at start so "Since backend" stays current when cycle runs (even if cycle later blocks)
+            try:
+                self.db_client.insert_refresh_event("fast")
+            except Exception as ev:
+                logger.debug("Refresh event (start) insert failed", extra={"path": "fast", "error": str(ev)})
             # Phase 1: Always refresh foundational tables first (reuse bootstrap for player refresh)
             bootstrap = await self._refresh_gameweeks()
             
