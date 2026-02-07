@@ -35,7 +35,8 @@ export function useLeagueActiveChips(gameweek) {
 
       const map = {}
       ;(rows || []).forEach(row => {
-        map[row.manager_id] = row.active_chip ?? null
+        const chip = row.active_chip != null ? String(row.active_chip).toLowerCase() : null
+        map[row.manager_id] = chip
       })
       return map
     },

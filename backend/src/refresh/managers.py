@@ -783,7 +783,8 @@ class ManagerDataRefresher:
             if is_finished:
                 _chip = active_chip
             else:
-                _chip = existing.get("active_chip")
+                # For live gameweeks, use API active_chip when available so chip is persisted after deadline
+                _chip = active_chip if active_chip is not None else existing.get("active_chip")
             history_data = {
                 "manager_id": manager_id,
                 "gameweek": gameweek,

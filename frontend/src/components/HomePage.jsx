@@ -241,7 +241,7 @@ export default function HomePage() {
       label: 'Transfers',
       value: managerData != null
         ? (managerData.activeChip === 'wildcard' || managerData.activeChip === 'freehit')
-          ? 'n/a'
+          ? '—'
           : `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
         : undefined,
       size: '1x1',
@@ -542,7 +542,7 @@ export default function HomePage() {
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'transfers' && isTransfersExpanded) || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
-              style={{ '--animation-delay': `${index * 0.1}s` }}
+              style={{ '--animation-delay': `${index * 0.04}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}
               onExpandClick={
@@ -567,7 +567,7 @@ export default function HomePage() {
                 cardId === 'captain' ? handleCaptainCollapseClick :
                 undefined
               }
-              gameweek={cardId === 'chips' ? gameweek : undefined}
+              gameweek={cardId === 'chips' || cardId === 'transfers' ? gameweek : undefined}
               leagueChipData={cardId === 'chips' ? leagueChipData : undefined}
               leagueChipsLoading={cardId === 'chips' ? leagueChipsLoading : undefined}
               chartData={chartDataToUse}

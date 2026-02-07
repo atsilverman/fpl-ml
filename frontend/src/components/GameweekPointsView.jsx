@@ -4,6 +4,7 @@ import './GameweekPointsView.css'
 import { formatNumber } from '../utils/formatNumbers'
 import { ArrowDownRight, ArrowUpRight, HelpCircle, ArrowDown, ArrowUp } from 'lucide-react'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
+import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 
 const IMPACT_TOOLTIP = 'Importance: your share of this player\'s points vs the rest of your mini-league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than league average; negative = others gain more.'
 
@@ -26,6 +27,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
   const impactIconRef = useRef(null)
   const [sortColumn, setSortColumn] = useState(null)
   const [sortDirection, setSortDirection] = useState('desc')
+  const scrollableRef = useRef(null)
+  useAxisLockedScroll(scrollableRef)
 
   const updatePopupPlacement = () => {
     if (!impactIconRef.current) return
@@ -289,6 +292,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           </div>
           <span className="gameweek-points-col-sep" aria-hidden />
         </td>
+        <td
+            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
+            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
+          >
+            {isTop10Pts ? (
+              <span
+                className="gameweek-points-player-points-badge rank-highlight"
+                title="Top 10 in GW for points"
+              >
+                {formatNumber(ptsDisplay)}
+              </span>
+            ) : (
+              formatNumber(ptsDisplay)
+            )}
+          </td>
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchStartedOrFinished ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
@@ -341,21 +359,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             '–'
           )}
         </td>
-        <td
-            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
-            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
-          >
-            {isTop10Pts ? (
-              <span
-                className="gameweek-points-player-points-badge rank-highlight"
-                title="Top 10 in GW for points"
-              >
-                {formatNumber(ptsDisplay)}
-              </span>
-            ) : (
-              formatNumber(ptsDisplay)
-            )}
-          </td>
         <td className="gameweek-points-td gameweek-points-td-impact">
           {hasImpact ? (
             <div className="gameweek-points-impact-cell" title={IMPACT_TOOLTIP}>
@@ -392,7 +395,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   return (
     <div className="gameweek-points-view">
-      <div className="gameweek-points-scrollable">
+      <div ref={scrollableRef} className="gameweek-points-scrollable">
         <div className="gameweek-points-box-content">
           <table className="gameweek-points-table">
             <thead>
@@ -411,6 +414,15 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   <span className="gameweek-points-col-sep" aria-hidden />
                 </th>
                 <th
+                  className={`gameweek-points-th gameweek-points-th-pts gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
+                  onClick={() => handleSort('points')}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('points') } }}
+                  role="button"
+                  tabIndex={0}
+                  aria-sort={sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
+                  title="Sort by points"
+                >PTS{sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                <th
                   className={`gameweek-points-th gameweek-points-th-mins gameweek-points-th-sortable${sortColumn === 'minutes' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
                   onClick={() => handleSort('minutes')}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('minutes') } }}
@@ -428,15 +440,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   aria-sort={sortColumn === 'opp' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
                   title="Sort by opponent"
                 >OPP{sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
-                <th
-                  className={`gameweek-points-th gameweek-points-th-pts gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('points')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('points') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by points"
-                >PTS{sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-impact gameweek-points-th-impact--has-popup gameweek-points-th-sortable${sortColumn === 'impact' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
                   onClick={() => handleSort('impact')}

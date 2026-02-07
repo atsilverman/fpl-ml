@@ -25,7 +25,7 @@ export function useDefconGameweekPlayers() {
 
       const { data: statsRows, error: statsError } = await supabase
         .from('player_gameweek_stats')
-        .select('player_id, defensive_contribution, started, match_finished, match_finished_provisional')
+        .select('player_id, fixture_id, defensive_contribution, started, match_finished, match_finished_provisional')
         .eq('gameweek', gw)
 
       if (statsError) throw statsError
@@ -33,16 +33,30 @@ export function useDefconGameweekPlayers() {
 
       const playerIds = [...new Set(statsRows.map(r => r.player_id))]
 
-      const { data: playerRows, error: playerError } = await supabase
-        .from('players')
-        .select('fpl_player_id, web_name, position, team_id, teams(short_name)')
-        .in('fpl_player_id', playerIds)
+      const [playerResult, fixturesResult] = await Promise.all([
+        supabase
+          .from('players')
+          .select('fpl_player_id, web_name, position, team_id, teams(short_name)')
+          .in('fpl_player_id', playerIds),
+        supabase
+          .from('fixtures')
+          .select('fpl_fixture_id, finished, finished_provisional')
+          .eq('gameweek', gw),
+      ])
+      const { data: playerRows, error: playerError } = playerResult
+      const { data: fixtureRows, error: fixtureError } = fixturesResult
 
       if (playerError) throw playerError
+      if (fixtureError) throw fixtureError
+
+      const fixturesById = Object.fromEntries(
+        (fixtureRows || []).map((f) => [f.fpl_fixture_id, f])
+      )
 
       const statsByPlayer = {}
       statsRows.forEach(r => {
         statsByPlayer[r.player_id] = {
+          fixture_id: r.fixture_id ?? null,
           defcon: r.defensive_contribution ?? 0,
           started: r.started ?? false,
           match_finished: r.match_finished ?? false,
@@ -54,14 +68,18 @@ export function useDefconGameweekPlayers() {
         .filter(p => (p.position ?? 1) !== 1) // hide GK from DEFCON page
         .map(p => {
         const stat = statsByPlayer[p.fpl_player_id] ?? {}
+        const fixture = stat.fixture_id != null ? fixturesById[stat.fixture_id] : null
+        // Use fixture table when available (same source as GameweekPointsView / debug panel) so status matches "game finished"
+        const matchFinished = fixture != null ? Boolean(fixture.finished) : (stat.match_finished === true)
+        const matchFinishedProvisional = fixture != null ? Boolean(fixture.finished_provisional) : (stat.match_finished_provisional === true)
         const defcon = stat.defcon ?? 0
         const position = p.position ?? 1
         const threshold = DEFCON_THRESHOLD_BY_POSITION[position] ?? 999
-        const matchComplete = stat.match_finished === true || stat.match_finished_provisional === true
+        const matchComplete = matchFinished || matchFinishedProvisional
         const isLive = stat.started === true && !matchComplete
         // When gameweek is data_checked, treat all finished matches as final (green check, not grey)
-        const matchProvisional = gwDataChecked ? false : (stat.match_finished_provisional === true)
-        const matchConfirmed = stat.match_finished === true
+        const matchProvisional = gwDataChecked ? false : (matchFinishedProvisional && !matchFinished)
+        const matchConfirmed = matchFinished
         const percent = threshold >= 999 ? 0 : Math.min(100, Math.round((defcon / threshold) * 100))
         return {
           player_id: p.fpl_player_id,

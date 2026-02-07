@@ -12,6 +12,7 @@ import BpsLeadersChart from './BpsLeadersChart'
 import { ChevronDown, ChevronUp, MoveDiagonal, Minimize2 } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
+import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MatchesSubpage.css'
 
 /**
@@ -70,6 +71,8 @@ function formatExpected(v) {
 export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, onTableAreaClick }) {
   const [sortKey, setSortKey] = useState('points')
   const [sortDir, setSortDir] = useState('asc')
+  const tableScrollRef = useRef(null)
+  useAxisLockedScroll(tableScrollRef)
   /* Always hide 0 minutes / DNP players in matchup card (any state or H2H view) */
   const filteredPlayers = players?.length
     ? players.filter(p => p.minutes != null && Number(p.minutes) > 0)
@@ -186,7 +189,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
           <span className="matchup-detail-table-title">{teamName || 'Team'}</span>
         </div>
       )}
-      <div className="matchup-detail-table-scroll">
+      <div ref={tableScrollRef} className="matchup-detail-table-scroll">
         <table className="matchup-detail-table">
           <thead>
             <tr>

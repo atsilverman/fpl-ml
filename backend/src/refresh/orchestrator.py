@@ -1162,6 +1162,13 @@ class RefreshOrchestrator:
                     fixtures_by_gameweek=fixtures_by_gameweek,
                 )
             
+            # Record fast refresh after core work (gameweeks, fixtures, players) so debug panel
+            # updates even when this cycle is stuck in a long block (e.g. TRANSFER_DEADLINE batch).
+            try:
+                self.db_client.insert_refresh_event("fast")
+            except Exception as ev:
+                logger.debug("Refresh event insert failed", extra={"path": "fast", "error": str(ev)})
+            
             if self.current_state == RefreshState.PRICE_WINDOW:
                 await self._refresh_prices()
             

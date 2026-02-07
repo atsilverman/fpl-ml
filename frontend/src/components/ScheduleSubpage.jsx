@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
+import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
 import { ClockFading, Filter } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
@@ -131,6 +132,8 @@ export default function ScheduleSubpage() {
   )
 
   const popupRef = useRef(null)
+  const scheduleScrollRef = useRef(null)
+  useAxisLockedScroll(scheduleScrollRef)
   const homeTeam = reverseHomeId != null ? mapForRow[reverseHomeId] : null
   const awayTeam = reverseAwayId != null ? mapForRow[reverseAwayId] : null
   const mergedPopupPlayers = useMemo(() => {
@@ -326,7 +329,7 @@ export default function ScheduleSubpage() {
         )}
       </div>
       <div className="research-schedule-content">
-      <div className="schedule-scroll-wrap">
+      <div ref={scheduleScrollRef} className="schedule-scroll-wrap">
         <table className="schedule-table">
           <thead>
             <tr>

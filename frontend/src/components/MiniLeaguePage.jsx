@@ -10,9 +10,12 @@ import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { usePlayerImpactForManager } from '../hooks/usePlayerImpact'
 import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
 import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
+import { useManagerDataForManager } from '../hooks/useManagerData'
+import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
+import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
 import './GameweekPointsView.css'
@@ -20,11 +23,12 @@ import './GameweekPointsView.css'
 const SORT_COLUMNS = ['rank', 'manager', 'total', 'gw', 'left', 'live']
 const DEFAULT_SORT = { column: 'total', dir: 'desc' }
 const MANAGER_TEAM_NAME_MAX_LENGTH = 15
+const MANAGER_TEAM_NAME_MAX_LENGTH_TRANSFERS_VIEW = 20
 const MANAGER_ABBREV_MAX_WIDTH = 400
 
-function abbreviateName(name) {
+function abbreviateName(name, maxLength = MANAGER_TEAM_NAME_MAX_LENGTH) {
   if (!name || typeof name !== 'string') return name ?? ''
-  return name.length > MANAGER_TEAM_NAME_MAX_LENGTH ? name.slice(0, MANAGER_TEAM_NAME_MAX_LENGTH) + '..' : name
+  return name.length > maxLength ? name.slice(0, maxLength) + '..' : name
 }
 
 function SortTriangle({ direction }) {
@@ -56,6 +60,14 @@ const CHIP_COLORS = {
   '3xc': '#f97316'
 }
 
+/** Display label for active chip badge: WC1/WC2 for wildcard by gameweek, else short label. Normalizes chip to lowercase for lookup. */
+function getChipDisplayLabel(activeChip, gameweek) {
+  const chip = typeof activeChip === 'string' ? activeChip.toLowerCase() : null
+  if (!chip) return null
+  if (chip === 'wildcard') return gameweek != null && gameweek <= 19 ? 'WC1' : 'WC2'
+  return CHIP_LABELS[chip] ?? chip
+}
+
 const POSITION_ABBREV = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
 export default function MiniLeaguePage() {
@@ -80,8 +92,15 @@ export default function MiniLeaguePage() {
   const [selectedManagerName, setSelectedManagerName] = useState('')
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
+  const [showTransfersView, setShowTransfersView] = useState(false)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
+  const standingsTableScrollRef = useRef(null)
+  const transfersTableScrollRef = useRef(null)
+  const managerDetailModalBodyRef = useRef(null)
+  useAxisLockedScroll(standingsTableScrollRef)
+  useAxisLockedScroll(transfersTableScrollRef)
+  useAxisLockedScroll(managerDetailModalBodyRef)
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MANAGER_ABBREV_MAX_WIDTH - 1}px)`)
@@ -97,6 +116,8 @@ export default function MiniLeaguePage() {
   const { hasLiveGames } = useLiveGameweekStatus(gameweek)
   const { inPlay: selectedManagerInPlay } = useManagerLiveStatus(selectedManagerId, gameweek)
   const isSelectedManagerLiveUpdating = hasLiveGames && (selectedManagerInPlay ?? 0) > 0
+  const { managerData: selectedManagerSummary, loading: selectedManagerSummaryLoading } = useManagerDataForManager(selectedManagerId)
+  const { transfers: selectedManagerTransfers, loading: selectedManagerTransfersLoading } = useTransferImpactsForManager(selectedManagerId, gameweek)
   const isViewingAnotherManager = selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) !== Number(currentManagerId)
   const ownedByYouPlayerIds = isViewingAnotherManager && configuredManagerPlayers?.length
     ? new Set(configuredManagerPlayers.map((p) => p.player_id))
@@ -216,6 +237,9 @@ export default function MiniLeaguePage() {
     return [...rows].sort(cmp)
   }, [standings, liveStatusByManager, sort.column, sort.dir])
 
+  const leagueManagerIds = useMemo(() => sortedRows.map((r) => r.manager_id), [sortedRows])
+  const { transfersByManager, loading: leagueTransfersLoading } = useLeagueTransferImpacts(leagueManagerIds, gameweek)
+
   const displayRows = sortedRows
 
   const managerIdsOwningAnySet = useMemo(
@@ -269,8 +293,9 @@ export default function MiniLeaguePage() {
   return (
     <div className="mini-league-page">
       <div className="league-standings-bento league-standings-page">
-        <div className="league-ownership-search-container" ref={searchContainerRef}>
-          <div className="league-ownership-search-bar">
+        <div className="league-standings-toolbar">
+          <div className="league-ownership-search-container" ref={searchContainerRef}>
+            <div className="league-ownership-search-bar">
             <Search className="league-ownership-search-icon" size={16} aria-hidden />
             <input
               type="text"
@@ -378,8 +403,20 @@ export default function MiniLeaguePage() {
               this gameweek
             </p>
           )}
+          </div>
+          <button
+            type="button"
+            className={`league-transfers-view-toggle ${showTransfersView ? 'active' : ''}`}
+            onClick={() => setShowTransfersView((v) => !v)}
+            aria-pressed={showTransfersView}
+            aria-label={showTransfersView ? 'Show league table' : 'Show league transfers table'}
+            title={showTransfersView ? 'Show league table' : 'Show league transfers'}
+          >
+            <ArrowLeftRight size={11} strokeWidth={1.5} aria-hidden />
+          </button>
         </div>
-        <div className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
+        <div ref={standingsTableScrollRef} className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
+          {!showTransfersView ? (
           <table className="league-standings-bento-table">
             <colgroup>
               <col style={{ width: '14%' }} />
@@ -467,11 +504,13 @@ export default function MiniLeaguePage() {
                 const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
                 const leftToPlay = liveStatusLoading ? null : (s._leftToPlay ?? null)
                 const inPlay = liveStatusLoading ? null : (s._inPlay ?? null)
-                const activeChip = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)
+                const activeChipRaw = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)
+                const activeChip = typeof activeChipRaw === 'string' ? activeChipRaw.toLowerCase() : activeChipRaw
                 const chipLabel = activeChip ? (CHIP_LABELS[activeChip] ?? activeChip) : null
                 const chipColor = activeChip ? (CHIP_COLORS[activeChip] ?? 'var(--text-secondary)') : null
                 const ownsSelected = selectedPlayers.length > 0 && !ownershipLoading && managerIdsOwningAnySet.has(s.manager_id)
                 const isDemoted = selectedPlayers.length > 0 && !ownershipLoading && !ownsSelected
+                const isSearchMode = searchQuery.trim().length >= 2
 
                 return (
                   <tr
@@ -503,7 +542,7 @@ export default function MiniLeaguePage() {
                     </td>
                     <td className="league-standings-bento-team" title={displayName}>
                       <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
-                      {isCurrentUser && (
+                      {isCurrentUser && isSearchMode && (
                         <span className="league-standings-bento-you-badge" title="Configured owner (you)">
                           You
                         </span>
@@ -512,7 +551,7 @@ export default function MiniLeaguePage() {
                         <span
                           className="league-standings-bento-chip-badge"
                           style={{ backgroundColor: chipColor }}
-                          title={activeChip}
+                          title={activeChip && gameweek != null ? `${activeChip} (GW ${gameweek})` : activeChip}
                         >
                           {chipLabel}
                         </span>
@@ -531,6 +570,142 @@ export default function MiniLeaguePage() {
               })}
             </tbody>
           </table>
+          ) : (
+          <div ref={transfersTableScrollRef} className="league-transfers-table-wrap">
+            <table className="league-transfers-table league-transfers-table-cols">
+              <colgroup>
+                <col className="league-transfers-col-rank" />
+                <col className="league-transfers-col-manager" />
+                <col className="league-transfers-col-transfers" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="league-transfers-th-rank league-standings-bento-rank">
+                    <button
+                      type="button"
+                      className="league-standings-sort-header"
+                      onClick={() => handleSort('rank')}
+                      aria-sort={sort.column === 'rank' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                    >
+                      Rank
+                      <span className="league-standings-sort-triangle-slot">{sort.column === 'rank' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                    </button>
+                  </th>
+                  <th className="league-transfers-th-manager league-standings-bento-team">
+                    <button
+                      type="button"
+                      className="league-standings-sort-header"
+                      onClick={() => handleSort('manager')}
+                      aria-sort={sort.column === 'manager' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                    >
+                      Manager
+                      <span className="league-standings-sort-triangle-slot">{sort.column === 'manager' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                    </button>
+                  </th>
+                  <th className="league-transfers-th-transfers">Transfers</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leagueTransfersLoading ? (
+                  <tr><td colSpan={3} className="league-transfers-loading">Loading transfers…</td></tr>
+                ) : (
+                  displayRows.map((s) => {
+                    const rank = s._rank
+                    const change = s._rankChange != null ? s._rankChange : null
+                    const displayName = s._displayName
+                    const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
+                    const transfers = transfersByManager[Number(s.manager_id)] ?? []
+                    const transferViewChipRaw = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)
+                    const transferViewChip = typeof transferViewChipRaw === 'string' ? transferViewChipRaw.toLowerCase() : transferViewChipRaw
+                    const transferViewChipLabel = transferViewChip ? (CHIP_LABELS[transferViewChip] ?? transferViewChip) : null
+                    const transferViewChipColor = transferViewChip ? (CHIP_COLORS[transferViewChip] ?? 'var(--text-secondary)') : null
+                    return (
+                      <tr
+                        key={s.manager_id}
+                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''}`}
+                        onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleManagerRowClick(s.manager_id, displayName, s.manager_name)
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        title={`View GW points for ${displayName}`}
+                      >
+                        <td className="league-transfers-cell-rank league-standings-bento-rank">
+                          <span className="league-standings-bento-rank-inner">
+                            <span className="league-standings-bento-rank-value">{rank}</span>
+                            {change !== null && change !== 0 ? (
+                              <span className={`league-standings-bento-change-badge ${change > 0 ? 'positive' : 'negative'}`}>
+                                {Math.abs(change) >= 2
+                                  ? (change > 0 ? <ChevronsUp size={12} /> : <ChevronsDown size={12} />)
+                                  : (change > 0 ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}{' '}
+                                {Math.abs(change)}
+                              </span>
+                            ) : null}
+                          </span>
+                        </td>
+                        <td className="league-transfers-cell-manager league-standings-bento-team" title={displayName}>
+                          <div className="league-transfers-cell-manager-inner">
+                            <span className="league-transfers-cell-manager-name-line">
+                              <span className="league-standings-bento-team-name">{abbreviateName(displayName, MANAGER_TEAM_NAME_MAX_LENGTH_TRANSFERS_VIEW)}</span>
+                              {isCurrentUser && <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>}
+                            </span>
+                            {transferViewChipLabel && (
+                              <span
+                                className="league-standings-bento-chip-badge"
+                                style={{ backgroundColor: transferViewChipColor }}
+                                title={transferViewChip && gameweek != null ? `${transferViewChip} (GW ${gameweek})` : transferViewChip}
+                              >
+                                {transferViewChipLabel}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="league-transfers-cell-transfers">
+                          {transfers.length > 0 ? (
+                            <div className="league-transfers-list-scroll">
+                              <div className="bento-card-transfers-list">
+                                {transfers.map((t, i) => (
+                                  <div key={i} className="bento-card-transfer-item">
+                                    <span className="bento-card-transfer-out">{t.playerOutName}</span>
+                                    <span className="bento-card-transfer-arrow">→</span>
+                                    <span className="bento-card-transfer-in">{t.playerInName}</span>
+                                    {t.pointImpact != null && (
+                                      <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
+                                        {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                                {transfers.length > 1 && (() => {
+                                  const net = transfers.reduce((sum, t) => sum + (t.pointImpact ?? 0), 0)
+                                  const netClass = net > 0 ? 'positive' : net < 0 ? 'negative' : 'neutral'
+                                  return (
+                                    <div className="league-transfers-net-row">
+                                      <span className="league-transfers-net-label">Net</span>
+                                      <span className={`league-transfers-net-badge league-transfers-net-badge--${netClass}`}>
+                                        {net >= 0 ? '+' : ''}{net}
+                                      </span>
+                                    </div>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="league-transfers-empty">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+          )}
         </div>
       </div>
 
@@ -641,15 +816,65 @@ export default function MiniLeaguePage() {
                 </button>
               </div>
             </div>
-            <div className="manager-detail-modal-body bento-card-chart">
-              <GameweekPointsView
-                data={selectedManagerPlayers || []}
-                loading={selectedManagerPlayersLoading || selectedManagerImpactLoading}
-                top10ByStat={top10ByStat}
-                impactByPlayerId={selectedManagerImpact ?? {}}
-                isLiveUpdating={isSelectedManagerLiveUpdating}
-                ownedByYouPlayerIds={ownedByYouPlayerIds}
-              />
+            <div ref={managerDetailModalBodyRef} className="manager-detail-modal-body bento-card-chart">
+              <div className="manager-detail-modal-chart-wrap">
+                <GameweekPointsView
+                  data={selectedManagerPlayers || []}
+                  loading={selectedManagerPlayersLoading || selectedManagerImpactLoading}
+                  top10ByStat={top10ByStat}
+                  impactByPlayerId={selectedManagerImpact ?? {}}
+                  isLiveUpdating={isSelectedManagerLiveUpdating}
+                  ownedByYouPlayerIds={ownedByYouPlayerIds}
+                />
+              </div>
+              <div className="manager-detail-transfers-section">
+                <div className="manager-detail-transfers-bento bento-card bento-card-animate">
+                  <span className="bento-card-label manager-detail-transfers-label">Transfers made</span>
+                  {selectedManagerSummaryLoading || selectedManagerTransfersLoading ? (
+                    <div className="bento-card-value loading">...</div>
+                  ) : (
+                    <>
+                      <div className="manager-detail-transfers-summary">
+                        <span className="manager-detail-transfers-summary-text">
+                          {selectedManagerSummary != null
+                            ? `${selectedManagerSummary.transfersMade} of ${selectedManagerSummary.freeTransfersAvailable}`
+                            : '—'}
+                        </span>
+                        {(() => {
+                          const chip = selectedManagerSummary?.activeChip != null ? String(selectedManagerSummary.activeChip).toLowerCase() : null
+                          const label = chip ? getChipDisplayLabel(selectedManagerSummary.activeChip, gameweek) : null
+                          const color = chip ? (CHIP_COLORS[chip] ?? 'var(--text-secondary)') : null
+                          return label ? (
+                            <span
+                              className="manager-detail-transfers-chip-badge"
+                              style={{ backgroundColor: color, color: '#fff' }}
+                              title={chip}
+                            >
+                              {label}
+                            </span>
+                          ) : null
+                        })()}
+                      </div>
+                      {selectedManagerTransfers?.length > 0 ? (
+                        <div className="manager-detail-transfers-list">
+                          {selectedManagerTransfers.map((t, i) => (
+                            <div key={i} className="bento-card-transfer-item">
+                              <span className="bento-card-transfer-out">{t.playerOutName}</span>
+                              <span className="bento-card-transfer-arrow">→</span>
+                              <span className="bento-card-transfer-in">{t.playerInName}</span>
+                              {t.pointImpact != null && (
+                                <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
+                                  {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

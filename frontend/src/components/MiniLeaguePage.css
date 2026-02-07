@@ -5,7 +5,59 @@
   margin: 0 auto;
 }
 
+/* Toolbar: search + transfers view toggle — same row on mobile and desktop */
+.league-standings-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: nowrap;
+}
+
+.league-transfers-view-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 5px;
+  background: var(--bg-card, #fff);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+}
+
+.league-transfers-view-toggle:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.league-transfers-view-toggle.active {
+  background: var(--accent-blue, #3b82f6);
+  color: #fff;
+  border-color: var(--accent-blue, #3b82f6);
+}
+
+.league-transfers-view-toggle.active:hover {
+  background: var(--accent-blue, #2563eb);
+  color: #fff;
+  border-color: var(--accent-blue, #2563eb);
+}
+
 /* League ownership search: bar above table */
+.league-standings-toolbar .league-ownership-search-container {
+  margin-bottom: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .league-ownership-search-container {
   position: relative;
   margin-bottom: 10px;
@@ -316,12 +368,311 @@
   opacity: 0.65;
 }
 
-/* Table: fixed layout with colgroup widths (14% rank, 30% manager, 14% each total/gw/left/live) */
+/* League transfers table (when transfers view toggle is on) — stacked list like BentoCard; no horizontal scroll, fit container */
+.league-transfers-table-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  background: var(--bg-primary);
+}
+
+.league-transfers-table {
+  table-layout: fixed;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border-collapse: collapse;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.league-transfers-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.league-transfers-table thead tr {
+  height: 44px;
+  min-height: 44px;
+}
+
+.league-transfers-table th {
+  padding: 6px 8px;
+  height: 44px;
+  min-height: 44px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+/* Transfer view: rank same as standings; manager wider, transfers narrower by same amount */
+.league-transfers-table-cols .league-transfers-col-rank { width: 14%; }
+.league-transfers-table-cols .league-transfers-col-manager { width: 35%; }
+.league-transfers-table-cols .league-transfers-col-transfers { width: 51%; }
+
+.league-transfers-table .league-transfers-th-rank {
+  padding: 6px 8px;
+  padding-left: 10px;
+  text-align: left;
+}
+
+.league-transfers-table .league-transfers-th-rank .league-standings-sort-header {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.league-transfers-table .league-transfers-th-manager {
+  min-width: 0;
+  position: sticky;
+  left: 0;
+  background: var(--bg-secondary);
+  z-index: 2;
+}
+
+.league-transfers-table .league-transfers-th-transfers {
+  min-width: 0;
+}
+
+.league-transfers-table tbody tr {
+  border-bottom: 1px solid var(--border-color);
+  min-height: 36px;
+}
+
+.league-transfers-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+/* Fixed 36px base row to match non-transfer view; transfers cell can grow for multi-line content */
+.league-transfers-table .league-transfers-row td {
+  padding: 6px 8px;
+  vertical-align: top;
+  background: var(--bg-primary);
+  min-height: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.league-transfers-table .league-transfers-cell-transfers {
+  vertical-align: top;
+  min-height: 36px;
+  height: auto;
+  box-sizing: border-box;
+}
+
+.league-transfers-table .league-transfers-cell-rank {
+  vertical-align: top;
+}
+
+.league-transfers-table .league-transfers-row.league-standings-bento-row-you td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+}
+
+.league-transfers-table .league-transfers-cell-rank {
+  padding: 6px 8px;
+  padding-left: 10px;
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+.league-transfers-table .league-transfers-cell-rank .league-standings-bento-rank-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.league-transfers-cell-manager {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Transfer view: stretch manager cell to full row height (match rank and transfers columns); content aligned to top */
+.league-transfers-table .league-transfers-cell-manager {
+  display: table-cell;
+  vertical-align: top;
+  overflow: hidden;
+  /* Override base .league-transfers-cell-manager { background: inherit } so this cell uses the same background as other tds (fixes darker block in dark mode) */
+  background: var(--bg-primary);
+}
+
+.league-transfers-table .league-transfers-cell-manager-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.league-transfers-table .league-transfers-cell-manager-name-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.league-transfers-table .league-transfers-cell-manager-inner .league-standings-bento-team-name {
+  display: inline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.league-transfers-table .league-transfers-cell-manager .league-standings-bento-team-name {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-transfers-table .league-standings-bento-you-badge {
+  display: none;
+}
+
+.league-transfers-table .league-transfers-row.league-standings-bento-row-you .league-transfers-cell-manager {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+}
+
+.league-transfers-cell-transfers {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.league-transfers-list-scroll {
+  min-height: 20px;
+  overflow-x: hidden;
+}
+
+.league-transfers-cell-transfers .bento-card-transfers-list {
+  gap: 2px;
+}
+
+/* Match standings text scale: 10px in transfer view (BentoCard uses 11px by default) */
+.league-transfers-table .bento-card-transfer-item {
+  font-size: 10px;
+  line-height: 1.2;
+  padding: 1px 0;
+  min-width: 0;
+  gap: 4px;
+}
+
+/* Align first transfer line with manager name (no extra top padding on first item) */
+.league-transfers-table .bento-card-transfers-list .bento-card-transfer-item:first-child {
+  padding-top: 0;
+}
+
+/* Truncate long transfer in/out names so content fits container width */
+.league-transfers-table .bento-card-transfer-out,
+.league-transfers-table .bento-card-transfer-in {
+  min-width: 0;
+  max-width: 5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.league-transfers-table .bento-card-transfer-delta {
+  font-size: 9px;
+  margin-left: auto;
+}
+
+/* Net total row when manager has >1 transfer */
+.league-transfers-net-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-color);
+  min-height: 20px;
+}
+
+.league-transfers-net-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-right: auto;
+}
+
+.league-transfers-net-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 1.5em;
+  text-align: center;
+  border: 2px solid transparent;
+}
+
+.league-transfers-net-badge--positive {
+  color: #fff;
+  background: var(--accent-green, #10b981);
+  border-color: #047857;
+}
+
+.league-transfers-net-badge--negative {
+  color: #fff;
+  background: var(--accent-red, #ef4444);
+  border-color: #b91c1c;
+}
+
+.league-transfers-net-badge--neutral {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, #e5e7eb);
+  border-color: var(--text-tertiary, rgba(128, 128, 128, 0.5));
+}
+
+html[data-theme="dark"] .league-transfers-net-badge--positive {
+  background: var(--accent-green, #059669);
+  border-color: #065f46;
+}
+
+html[data-theme="dark"] .league-transfers-net-badge--negative {
+  background: var(--accent-red, #dc2626);
+  border-color: #991b1b;
+}
+
+html[data-theme="dark"] .league-transfers-net-badge--neutral {
+  background: var(--bg-tertiary, #374151);
+  border-color: #4b5563;
+}
+
+.league-transfers-empty {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.league-transfers-loading {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 24px !important;
+}
+
+/* Table: fixed layout with colgroup widths (14% rank, 30% manager, 14% each total/gw/left/live); match transfer view text/header scale */
 .league-standings-page .league-standings-bento-table {
   table-layout: fixed;
   width: 100%;
   min-width: 420px;
   border-collapse: collapse;
+  font-size: 10px;
+  line-height: 1.2;
 }
 .league-standings-page .league-standings-bento-table thead {
   position: sticky;
@@ -331,18 +682,24 @@
   border-bottom: 1px solid var(--border-color);
 }
 .league-standings-page .league-standings-bento-table thead tr {
+  height: 44px;
   min-height: 44px;
 }
 .league-standings-page .league-standings-bento-table th {
   background: var(--bg-secondary);
+  height: 44px;
   min-height: 44px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  padding: 6px 8px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  line-height: 1.2;
+  box-sizing: border-box;
 }
 .league-standings-page .league-standings-bento-table td {
   border-bottom: none; /* only use tr border so one flush line per row; overrides shared BentoCard rule */
   box-sizing: border-box;
   font-size: 10px;
+  line-height: 1.2;
   overflow: hidden;
   vertical-align: middle;
   background: var(--bg-primary);
@@ -367,6 +724,8 @@
   min-height: 36px;
   height: 36px;
   box-sizing: border-box;
+  font-size: 10px;
+  line-height: 1.2;
 }
 
 /* Column widths set via colgroup (14% rank, 30% manager, 14% each total/gw/left/live) */
@@ -473,9 +832,10 @@
   letter-spacing: 0.02em;
 }
 
-/* Header: column widths from colgroup */
+/* Header: column widths from colgroup (match transfer view header scale) */
 .league-standings-page .league-standings-bento-table th {
   vertical-align: middle;
+  font-size: 10px;
   line-height: 1.2;
   white-space: nowrap;
   letter-spacing: 0.5px;
@@ -485,6 +845,7 @@
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-rank {
   text-align: left;
+  padding-left: 10px;
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-team {
   text-align: left;
@@ -634,6 +995,7 @@
   border-radius: 12px;
   width: 100%;
   max-width: min(90vw, 900px);
+  min-height: min(70vh, 500px);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -707,7 +1069,7 @@
 }
 .manager-detail-modal-body {
   padding: 12px 16px 16px;
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -715,6 +1077,99 @@
 }
 .manager-detail-modal-body.bento-card-chart {
   margin-top: 0;
+}
+
+/* Chart area: cap height so transfers section stays visible; table scrolls inside; match width of transfers section */
+.manager-detail-modal-chart-wrap {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-height: min(42vh, 320px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.manager-detail-transfers-section {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+  margin-top: 12px;
+}
+
+/* Bento-style container for Transfers made (matches home bento cards) */
+.manager-detail-transfers-bento {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Override home grid bento styles when used inside modal */
+  height: auto;
+  min-height: 0;
+  grid-column: unset;
+  grid-row: unset;
+  opacity: 1;
+  animation: none;
+}
+
+.manager-detail-transfers-section .manager-detail-transfers-label,
+.manager-detail-transfers-section .bento-card-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.manager-detail-transfers-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.manager-detail-transfers-summary-text {
+  flex-shrink: 0;
+}
+
+.manager-detail-transfers-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.manager-detail-transfers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.manager-detail-transfers-list .bento-card-transfer-item {
+  padding: 2px 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Legend: "Name" (green) = Owned by you */

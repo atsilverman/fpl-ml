@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -107,4 +108,97 @@ export function useTransferImpacts(gameweek = null) {
   })
 
   return { transfers, loading: isLoading, error }
+}
+
+/**
+ * Fetches transfer impacts for an arbitrary manager (e.g. for league page manager detail popup).
+ */
+export function useTransferImpactsForManager(managerId, gameweek) {
+  const { data: transfers = [], isLoading, error } = useQuery({
+    queryKey: ['transfer-impacts-for-manager', managerId, gameweek],
+    queryFn: async () => {
+      if (!managerId || !gameweek) return []
+
+      const { data, error } = await supabase
+        .from('mv_manager_transfer_impacts')
+        .select('player_in_name, player_out_name, point_impact, transfer_time')
+        .eq('manager_id', managerId)
+        .eq('gameweek', gameweek)
+        .order('transfer_time', { ascending: true })
+
+      if (error) throw error
+
+      if (data?.length > 0) {
+        return data.map((row) => ({
+          playerInName: row.player_in_name ?? 'Unknown',
+          playerOutName: row.player_out_name ?? 'Unknown',
+          pointImpact: row.point_impact != null ? row.point_impact : null,
+        }))
+      }
+
+      return fetchTransferImpactsFromPicksDiff(managerId, gameweek)
+    },
+    enabled: !!managerId && !!gameweek,
+    staleTime: 60000,
+  })
+
+  return { transfers, loading: isLoading, error }
+}
+
+/**
+ * Fetches transfer impacts for all given managers in a gameweek.
+ * Returns a map managerId -> array of { playerOutName, playerInName, pointImpact }.
+ */
+export function useLeagueTransferImpacts(managerIds, gameweek) {
+  const ids = useMemo(() => (Array.isArray(managerIds) ? managerIds.filter(Boolean) : []), [managerIds])
+  const { data: rows = [], isLoading, error } = useQuery({
+    queryKey: ['league-transfer-impacts', ids, gameweek],
+    queryFn: async () => {
+      if (ids.length === 0 || !gameweek) return []
+
+      const { data, error: err } = await supabase
+        .from('mv_manager_transfer_impacts')
+        .select('manager_id, player_in_name, player_out_name, point_impact, transfer_time')
+        .in('manager_id', ids)
+        .eq('gameweek', gameweek)
+        .order('transfer_time', { ascending: true })
+
+      if (err) throw err
+
+      if (data?.length > 0) return data
+
+      // Fallback: MV often has no rows when manager_transfers not backfilled; derive from picks diff
+      const results = await Promise.all(
+        ids.map((managerId) => fetchTransferImpactsFromPicksDiff(managerId, gameweek))
+      )
+      return results.flatMap((transfers, i) =>
+        (transfers || []).map((t) => ({
+          manager_id: ids[i],
+          player_in_name: t.playerInName,
+          player_out_name: t.playerOutName,
+          point_impact: t.pointImpact,
+          transfer_time: null,
+        }))
+      )
+    },
+    enabled: ids.length > 0 && !!gameweek,
+    staleTime: 60000,
+  })
+
+  const transfersByManager = useMemo(() => {
+    const map = {}
+    ids.forEach((id) => { map[Number(id)] = [] })
+    rows.forEach((row) => {
+      const mid = row.manager_id != null ? Number(row.manager_id) : null
+      if (mid == null || !(mid in map)) return
+      map[mid].push({
+        playerOutName: row.player_out_name ?? 'Unknown',
+        playerInName: row.player_in_name ?? 'Unknown',
+        pointImpact: row.point_impact != null ? row.point_impact : null,
+      })
+    })
+    return map
+  }, [ids, rows])
+
+  return { transfersByManager, loading: isLoading, error }
 }

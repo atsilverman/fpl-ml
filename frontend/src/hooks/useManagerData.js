@@ -99,12 +99,67 @@ export function useManagerData() {
         leagueRankChange: leagueRankChange,
         transfersMade: history?.transfers_made ?? 0,
         freeTransfersAvailable,
-        activeChip: history?.active_chip ?? null,
+        activeChip: history?.active_chip != null ? String(history.active_chip).toLowerCase() : null,
       }
     },
     enabled: !!MANAGER_ID && !!gameweek, // Only run if we have manager ID and gameweek
     staleTime: 30000, // Cache for 30 seconds
     refetchInterval: 30000, // Poll every 30 seconds (automatic background refetch)
+  })
+
+  return { managerData, loading: isLoading, error }
+}
+
+/**
+ * Fetches manager summary for an arbitrary manager (e.g. for league page manager detail popup).
+ * Returns transfersMade, freeTransfersAvailable, activeChip for the current gameweek.
+ */
+export function useManagerDataForManager(managerId) {
+  const { gameweek } = useGameweekData()
+
+  const { data: managerData, isLoading, error } = useQuery({
+    queryKey: ['manager-for-popup', managerId, gameweek],
+    queryFn: async () => {
+      if (!managerId || !gameweek) return null
+
+      const [currRes, prevRes] = await Promise.all([
+        supabase
+          .from('manager_gameweek_history')
+          .select('transfers_made, transfer_cost, active_chip')
+          .eq('manager_id', managerId)
+          .eq('gameweek', gameweek)
+          .single(),
+        supabase
+          .from('manager_gameweek_history')
+          .select('transfers_made')
+          .eq('manager_id', managerId)
+          .eq('gameweek', gameweek - 1)
+          .single(),
+      ])
+
+      const history = currRes.data
+      const historyError = currRes.error
+      const prevHistory = prevRes.data
+
+      if (historyError && historyError.code !== 'PGRST116') throw historyError
+
+      const chipFromActiveChip = history?.active_chip === 'wildcard' || history?.active_chip === 'freehit'
+      const chipFromZeroCost = (history?.transfers_made ?? 0) > 2 && (history?.transfer_cost ?? 0) === 0
+      const isChipFreeTransfers = chipFromActiveChip || chipFromZeroCost
+      const freeTransfersAvailable = isChipFreeTransfers
+        ? (history?.transfers_made ?? 0)
+        : gameweek === 1
+          ? 1
+          : (prevHistory?.transfers_made === 0 ? 2 : 1)
+
+      return {
+        transfersMade: history?.transfers_made ?? 0,
+        freeTransfersAvailable,
+        activeChip: history?.active_chip != null ? String(history.active_chip).toLowerCase() : null,
+      }
+    },
+    enabled: !!managerId && !!gameweek,
+    staleTime: 30000,
   })
 
   return { managerData, loading: isLoading, error }

@@ -471,6 +471,13 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   }
 }
 
+/* Match finished (confirmed) – same as Defcon/Schedule/Matches final */
+.gw-legend-popup-complete-dot {
+  background: #c2410c;
+  animation: none;
+  box-shadow: none;
+}
+
 .gw-legend-popup-provisional-dot {
   background: #FFB404;
   box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
@@ -816,6 +823,11 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   /* kept for value styling; value lives inside -value-wrap */
 }
 
+.bento-card-transfers-value-wrap .bento-card-transfers-value-muted {
+  color: rgba(229, 231, 235, 1);
+  font-weight: 500;
+}
+
 .bento-card-transfers-chip-badge {
   font-size: 10px;
   font-weight: 600;
@@ -823,6 +835,25 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   letter-spacing: 0.04em;
   color: var(--text-secondary);
   opacity: 0.9;
+}
+
+.bento-card-transfers-chip-badge--colored {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  opacity: 1;
+}
+
+/* Wrapper for scroll area + optional scroll hint (chevron when > 3 transfers) */
+.bento-card-transfers-list-wrap {
+  flex: 1 1 0;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
 }
 
 /* Scroll wrapper: takes row height, scrolls when list overflows; scrollbar hidden */
@@ -838,6 +869,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 .bento-card-transfers-list-scroll::-webkit-scrollbar {
   display: none;
+}
+
+/* Subtle chevron at bottom when > 3 transfers to indicate scroll for more */
+.bento-card-transfers-scroll-hint {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.6));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.bento-card-transfers-scroll-hint svg {
+  flex-shrink: 0;
 }
 
 /* List content: grows with items, no overflow (parent scrolls) */
@@ -974,6 +1023,20 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
   display: none;
 }
 
+.transfers-summary-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.transfers-summary-header-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
 .transfers-summary-columns-wrapper {
   display: flex;
   flex-direction: row;
@@ -993,11 +1056,11 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
 
 .transfers-summary-column-header {
   flex-shrink: 0;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .transfers-summary-column-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1014,19 +1077,19 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
 .transfers-summary-column-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .transfers-summary-column-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-primary);
-  padding: 6px 10px;
-  min-height: 36px;
+  padding: 4px 8px;
+  min-height: 28px;
   box-sizing: border-box;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .transfers-summary-column-out .transfers-summary-column-item {
@@ -1041,14 +1104,14 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 23px;
-  height: 23px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
 .transfers-summary-badge {
-  width: 23px;
-  height: 23px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   object-fit: contain;
 }

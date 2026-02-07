@@ -25,6 +25,20 @@ const SECOND_HALF_CHIP_COLUMNS = [
 const POPUP_GAP = 6
 const POPUP_PAD = 8
 
+const CHIP_DISPLAY = {
+  wildcard: { label: (gw) => (gw != null && gw <= 19 ? 'WC1' : 'WC2'), color: '#8b5cf6' },
+  freehit: { label: () => 'FH', color: '#3b82f6' },
+  bboost: { label: () => 'BB', color: '#06b6d4' },
+  '3xc': { label: () => 'TC', color: '#f97316' }
+}
+
+function getChipBadgeInfo(activeChip, gameweek) {
+  const chip = typeof activeChip === 'string' ? activeChip.toLowerCase() : null
+  if (!chip || !CHIP_DISPLAY[chip]) return null
+  const info = CHIP_DISPLAY[chip]
+  return { label: typeof info.label === 'function' ? info.label(gameweek) : info.label, color: info.color }
+}
+
 function formatDeadlineGw(iso) {
   if (!iso) return '—'
   try {
@@ -394,6 +408,12 @@ export default function BentoCard({
                       </div>
                       <div className="gw-legend-popup-row">
                         <span className="gw-legend-popup-live-dot-wrap">
+                          <span className="gw-legend-popup-live-dot gw-legend-popup-complete-dot" aria-hidden />
+                        </span>
+                        <span className="gw-legend-popup-text">Match finished (confirmed)</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-live-dot-wrap">
                           <span className="gw-legend-popup-live-dot gw-legend-popup-provisional-dot" aria-hidden />
                         </span>
                         <span className="gw-legend-popup-text">Provisional (stats may update)</span>
@@ -533,29 +553,42 @@ export default function BentoCard({
       ) : isTransfers && value !== undefined && !isExpanded ? (
         <div className="bento-card-transfers-row">
           <div className="bento-card-transfers-value-wrap">
-            <div className="bento-card-value bento-card-transfers-value">{value}</div>
-            {(transfersSummary?.activeChip === 'wildcard' || transfersSummary?.activeChip === 'freehit') && (
-              <div className="bento-card-transfers-chip-badge">
-                {transfersSummary.activeChip === 'wildcard' ? 'Wildcard' : 'Free Hit'}
-              </div>
-            )}
+            <div className={`bento-card-value bento-card-transfers-value${value === '—' ? ' bento-card-transfers-value-muted' : ''}`}>{value}</div>
+            {(() => {
+              const chipBadge = getChipBadgeInfo(transfersSummary?.activeChip ?? null, gameweek)
+              return chipBadge ? (
+                <div
+                  className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
+                  style={{ backgroundColor: chipBadge.color, color: '#fff' }}
+                >
+                  {chipBadge.label}
+                </div>
+              ) : null
+            })()}
           </div>
           {transfersSummary?.transfers?.length > 0 ? (
-            <div className="bento-card-transfers-list-scroll">
-              <div className="bento-card-transfers-list">
-                {transfersSummary.transfers.map((t, i) => (
-                  <div key={i} className="bento-card-transfer-item">
-                    <span className="bento-card-transfer-out">{t.playerOutName}</span>
-                    <span className="bento-card-transfer-arrow">→</span>
-                    <span className="bento-card-transfer-in">{t.playerInName}</span>
-                    {t.pointImpact != null && (
-                      <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
-                        {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
-                      </span>
-                    )}
-                  </div>
-                ))}
+            <div className="bento-card-transfers-list-wrap">
+              <div className="bento-card-transfers-list-scroll">
+                <div className="bento-card-transfers-list">
+                  {transfersSummary.transfers.map((t, i) => (
+                    <div key={i} className="bento-card-transfer-item">
+                      <span className="bento-card-transfer-out">{t.playerOutName}</span>
+                      <span className="bento-card-transfer-arrow">→</span>
+                      <span className="bento-card-transfer-in">{t.playerInName}</span>
+                      {t.pointImpact != null && (
+                        <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
+                          {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
+              {transfersSummary.transfers.length > 3 && (
+                <div className="bento-card-transfers-scroll-hint" aria-hidden title="Scroll to view all transfers">
+                  <ChevronDown size={14} strokeWidth={2} />
+                </div>
+              )}
             </div>
           ) : null}
         </div>
@@ -654,9 +687,25 @@ export default function BentoCard({
       {isExpanded && id === 'transfers' && (() => {
         const outList = leagueTopTransfersOut || []
         const inList = leagueTopTransfersIn || []
+        const expandedChipBadge = getChipBadgeInfo(transfersSummary?.activeChip ?? null, gameweek)
         return (
           <div className="transfers-summary-card">
             <div className="transfers-summary-content">
+              {(transfersSummary != null || expandedChipBadge) && (
+                <div className="transfers-summary-header-row">
+                  {transfersSummary != null && (
+                    <span className="transfers-summary-header-value">{transfersSummary.used} of {transfersSummary.available}</span>
+                  )}
+                  {expandedChipBadge && (
+                    <span
+                      className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
+                      style={{ backgroundColor: expandedChipBadge.color, color: '#fff' }}
+                    >
+                      {expandedChipBadge.label}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className="transfers-summary-columns-wrapper">
                 <div className="transfers-summary-column transfers-summary-column-out">
                   <div className="transfers-summary-column-header">

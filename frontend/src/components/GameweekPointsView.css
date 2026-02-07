@@ -57,12 +57,12 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky player header (corner): top + left; z above header row and body player column */
+/* Sticky player header (corner): top + left; z above header row and body player column. Subtle fill to differentiate from data columns. */
 .gameweek-points-table thead .gameweek-points-th-player {
   position: sticky;
   left: 0;
   z-index: 11;
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 75%, var(--bg-primary));
   padding-left: 16px;
 }
 
@@ -287,12 +287,12 @@
   font-size: 8px;
 }
 
-/* Player column – sticky on horizontal scroll; z below thead so header always wins when scrolling vertically */
+/* Player column – sticky on horizontal scroll; z below thead so header always wins when scrolling vertically. Very subtle fill to differentiate from data columns. */
 .gameweek-points-td-player-fixed {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: var(--bg-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 14%, var(--bg-primary));
   min-width: 0;
   overflow: visible;
 }
@@ -550,8 +550,9 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 
 /* DNP and 0 pts – more subtle so they don’t compete with real data */
 /* Muted value only – do not change cell background */
+.gameweek-points-cell-muted,
 .gameweek-points-td.gameweek-points-cell-muted {
-  color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+  color: color-mix(in srgb, var(--text-secondary) 24%, var(--bg-primary));
 }
 
 /* Provisional bonus / live scoring */
@@ -988,4 +989,147 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   .home-page .bento-card-chart-2x4 .gameweek-points-td-stat {
     font-size: 9px;
   }
+}
+
+/* Manager detail modal: compact table so more fits; stays within scrollable area; match width of transfers section */
+.manager-detail-modal-chart-wrap .gameweek-points-view {
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-scrollable {
+  min-height: 0;
+  min-width: 0;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-table {
+  font-size: 10px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th {
+  height: 26px;
+  font-size: 8px;
+  padding: 6px 6px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-player {
+  min-width: 90px;
+  padding-left: 8px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-mins,
+.manager-detail-modal-chart-wrap .gameweek-points-td-mins {
+  width: 48px;
+  min-width: 48px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-opp,
+.manager-detail-modal-chart-wrap .gameweek-points-td-opp,
+.manager-detail-modal-chart-wrap .gameweek-points-th-pts,
+.manager-detail-modal-chart-wrap .gameweek-points-td-pts {
+  width: 40px;
+  min-width: 40px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-impact {
+  min-width: 56px;
+  width: 56px;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-td-impact {
+  min-width: 56px;
+  width: 56px;
+  padding: 4px 4px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-impact-bar-wrap {
+  height: 6px;
+  border-radius: 3px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-impact-bar {
+  border-radius: 3px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-impact-value {
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-stat,
+.manager-detail-modal-chart-wrap .gameweek-points-td-stat {
+  min-width: 36px;
+  width: 36px;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-th-stat {
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-td {
+  padding: 4px 6px;
+  font-size: 9px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-player-info-cell {
+  padding-left: 4px;
+  gap: 4px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-team-badge {
+  width: 18px;
+  height: 18px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-player-name-text {
+  font-size: 9px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-captain-badge-inline {
+  font-size: 6px;
+  min-width: 14px;
+  height: 11px;
+  padding: 0 3px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-assistant-badge-inline {
+  font-size: 6px;
+  min-width: 14px;
+  height: 11px;
+  padding: 0 3px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-opponent-badge {
+  width: 18px;
+  height: 18px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-mins-dnp-badge {
+  width: 12px;
+  height: 12px;
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-mins-upcoming {
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-mins-upcoming-time {
+  font-size: 6px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-player-points-badge {
+  min-width: 20px;
+  padding: 1px 4px;
+  font-size: 9px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-td-stat {
+  font-size: 8px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-legend {
+  margin-top: 6px;
+  padding: 4px 0 2px 0;
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-legend-badge {
+  min-width: 18px;
+  height: 12px;
+  padding: 0 3px;
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-legend-scroll-hint {
+  font-size: 7px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-autosub-icon {
+  min-width: 12px;
+  width: 12px;
+  height: 12px;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-home-indicator-filler {
+  width: 8px;
+  height: 8px;
 }
