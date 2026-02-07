@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown } from 'lucide-react'
+import { Pencil, ChevronDown, House, TableProperties, FlaskConical } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -14,12 +14,43 @@ const GAMEWEEK_VIEWS = [
   { id: 'matches', label: 'Matches', disabled: false },
   { id: 'bonus', label: 'Bonus', disabled: false },
   { id: 'defcon', label: 'DEFCON', disabled: false },
+  { id: 'feed', label: 'Feed', disabled: false },
 ]
 
 const RESEARCH_VIEWS = [
-  { id: 'price-changes', label: 'Price Changes', disabled: false },
+  { id: 'price-changes', label: 'Price Changes', disabled: false, disabledOnLocalhost: true },
   { id: 'schedule', label: 'Schedule', disabled: false },
 ]
+
+/* Soccer ball icon (no Lucide equivalent); matches lucide size/stroke usage */
+function SoccerBallIcon({ size = 20, strokeWidth = 2, className, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+      {...props}
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      <path d="M2 12h20" />
+    </svg>
+  )
+}
+
+const NAV_ICONS = {
+  home: House,
+  'mini-league': TableProperties,
+  gameweek: SoccerBallIcon,
+  research: FlaskConical,
+}
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -180,7 +211,13 @@ export default function Dashboard() {
                   aria-haspopup="listbox"
                   aria-label="Gameweek view"
                 >
-                  <span>Gameweek</span>
+                  <span className="nav-button-icon" aria-hidden>
+                    {(() => {
+                      const Icon = NAV_ICONS.gameweek
+                      return <Icon size={20} strokeWidth={2} />
+                    })()}
+                  </span>
+                  <span className="nav-button-label">Gameweek</span>
                     <ChevronDown
                     size={12}
                     strokeWidth={2}
@@ -252,7 +289,10 @@ export default function Dashboard() {
                   aria-haspopup="listbox"
                   aria-label="Research"
                 >
-                  <span>Research</span>
+                  <span className="nav-button-icon" aria-hidden>
+                    <NAV_ICONS.research size={20} strokeWidth={2} />
+                  </span>
+                  <span className="nav-button-label">Research</span>
                   <ChevronDown
                     size={12}
                     strokeWidth={2}
@@ -266,35 +306,43 @@ export default function Dashboard() {
                     role="listbox"
                     aria-label="Research"
                   >
-                    {RESEARCH_VIEWS.map((view) => (
-                      <button
-                        key={view.id}
-                        type="button"
-                        role="option"
-                        aria-selected={currentPage.id === 'research' && researchView === view.id}
-                        className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
-                        onClick={() => {
-                          if (view.disabled) return
-                          setResearchView(view.id)
-                        }}
-                        disabled={view.disabled}
-                      >
-                        {view.label}
-                      </button>
-                    ))}
+                    {RESEARCH_VIEWS.map((view) => {
+                      const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
+                      return (
+                        <button
+                          key={view.id}
+                          type="button"
+                          role="option"
+                          aria-selected={currentPage.id === 'research' && researchView === view.id}
+                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                          onClick={() => {
+                            if (isDisabled) return
+                            setResearchView(view.id)
+                          }}
+                          disabled={isDisabled}
+                        >
+                          {view.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             )
           }
+          const Icon = NAV_ICONS[page.id]
           return (
             <button
               key={page.id}
               className={`tracking-mode-button ${currentPage.id === page.id ? 'active' : ''}`}
               onClick={() => !isDisabled && navigate(page.path)}
               disabled={isDisabled}
+              aria-label={page.label}
             >
-              {page.label}
+              <span className="nav-button-icon" aria-hidden>
+                {Icon && <Icon size={20} strokeWidth={2} />}
+              </span>
+              <span className="nav-button-label">{page.label}</span>
             </button>
           )
         })}

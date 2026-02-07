@@ -39,7 +39,7 @@
 
 .gameweek-swipe-track {
   display: flex;
-  width: 300%;
+  width: 400%;
   min-height: 100%;
   will-change: transform;
   transition: transform 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -50,8 +50,15 @@
 }
 
 .gameweek-subpage {
-  flex: 0 0 33.33333%;
-  width: 33.33333%;
+  flex: 0 0 25%;
+  width: 25%;
   min-height: 200px;
   overflow: auto;
+}
+
+/* Mobile: no slide animation when changing subpage (instant switch) */
+@media (max-width: 768px) {
+  .gameweek-swipe-track {
+    transition: none;
+  }
 }

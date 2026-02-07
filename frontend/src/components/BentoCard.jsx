@@ -519,7 +519,7 @@ export default function BentoCard({
                         <th>started</th>
                         <th>finished</th>
                         <th>prov</th>
-                        <th>min</th>
+                        <th title="Match clock (max MP from player stats; aligned with GW points / matchup)">clock</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -529,7 +529,7 @@ export default function BentoCard({
                           <td><GwDebugBadge value={f.started} /></td>
                           <td><GwDebugBadge value={f.finished} /></td>
                           <td><GwDebugBadge value={f.finished_provisional} /></td>
-                          <td>{f.minutes != null ? `${f.minutes}'` : '—'}</td>
+                          <td>{f.clock_minutes != null ? `${f.clock_minutes}'` : '—'}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -24,6 +24,7 @@ export function useGameweekData(anchor = 'current') {
 
   return {
     gameweek: data?.id ?? null,
+    isCurrent: data?.is_current ?? false,
     dataChecked: data?.data_checked ?? false,
     fplRanksUpdated: data?.fpl_ranks_updated ?? false,
     releaseTime: data?.release_time ?? null,

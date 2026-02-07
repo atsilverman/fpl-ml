@@ -7,7 +7,7 @@ Handles refreshing player stats, prices, and fixtures data.
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Dict, List, Set, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
@@ -98,7 +98,225 @@ class PlayerDataRefresher:
         
         # DEF/GK: just CBI + tackles
         return cbit_total
-    
+
+    # DEFCON thresholds by position (1=GK, 2=DEF, 3=MID, 4=FWD). GK 999 = never achieve.
+    _DEFCON_THRESHOLDS = {1: 999, 2: 10, 3: 12, 4: 12}
+
+    def _feed_events_from_deltas(
+        self,
+        existing_stat: Dict[str, Any],
+        new_stats: Dict[str, Any],
+        gameweek: int,
+        player_id: int,
+        fixture_id: Optional[int],
+        position: int,
+        occurred_at: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Compare previous vs new stats and return point-impacting feed events.
+        Only emits when a stat change actually changes FPL points.
+        """
+        events: List[Dict[str, Any]] = []
+        total_after = new_stats.get("total_points", 0)
+
+        def _old(key: str, default: int = 0) -> int:
+            v = existing_stat.get(key, default)
+            return int(v) if v is not None else default
+
+        def _new(key: str, default: int = 0) -> int:
+            v = new_stats.get(key, default)
+            return int(v) if v is not None else default
+
+        # Goal: +4 FWD, +5 MID, +6 DEF/GK
+        goal_pts = {1: 6, 2: 6, 3: 5, 4: 4}.get(position, 4)
+        if _new("goals_scored") > _old("goals_scored"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "goal",
+                "points_delta": goal_pts,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("assists") > _old("assists"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "assist",
+                "points_delta": 3,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("own_goals") > _old("own_goals"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "own_goal",
+                "points_delta": -2,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("penalties_missed") > _old("penalties_missed"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "penalty_missed",
+                "points_delta": -2,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("penalties_saved") > _old("penalties_saved"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "penalty_saved",
+                "points_delta": 5,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        old_bonus = _old("bonus")
+        new_bonus = _new("bonus")
+        if new_bonus != old_bonus:
+            delta = new_bonus - old_bonus
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "bonus_change",
+                "points_delta": delta,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": {"from_bonus": old_bonus, "to_bonus": new_bonus},
+            })
+
+        if _new("yellow_cards") > _old("yellow_cards"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "yellow_card",
+                "points_delta": -1,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("red_cards") > _old("red_cards"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "red_card",
+                "points_delta": -3,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        if _new("clean_sheets") > _old("clean_sheets"):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "clean_sheet",
+                "points_delta": 1,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        # Saves: +1 pt per 3 saves
+        old_save_pts = _old("saves") // 3
+        new_save_pts = _new("saves") // 3
+        for _ in range(new_save_pts - old_save_pts):
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "saves_point",
+                "points_delta": 1,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        # Goals conceded (GK): -1 per 2 goals
+        if position == 1:
+            old_penalty = _old("goals_conceded") // 2
+            new_penalty = _new("goals_conceded") // 2
+            for _ in range(new_penalty - old_penalty):
+                events.append({
+                    "gameweek": gameweek,
+                    "player_id": player_id,
+                    "fixture_id": fixture_id,
+                    "event_type": "goals_conceded",
+                    "points_delta": -1,
+                    "total_points_after": total_after,
+                    "occurred_at": occurred_at,
+                    "metadata": None,
+                })
+
+        # DEFCON: +2 when crossing threshold, -2 when dropping below
+        threshold = self._DEFCON_THRESHOLDS.get(position, 999)
+        old_dc = _old("defensive_contribution")
+        new_dc = _new("defensive_contribution")
+        old_achieved = old_dc >= threshold
+        new_achieved = new_dc >= threshold
+        if not old_achieved and new_achieved:
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "defcon_achieved",
+                "points_delta": 2,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+        elif old_achieved and not new_achieved:
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "defcon_removed",
+                "points_delta": -2,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        # 60+ minutes: +1 pt when crossing 60
+        old_mins = _old("minutes")
+        new_mins = _new("minutes")
+        if old_mins < 60 <= new_mins:
+            events.append({
+                "gameweek": gameweek,
+                "player_id": player_id,
+                "fixture_id": fixture_id,
+                "event_type": "sixty_plus_minutes",
+                "points_delta": 1,
+                "total_points_after": total_after,
+                "occurred_at": occurred_at,
+                "metadata": None,
+            })
+
+        return events
+
     async def refresh_player_gameweek_stats(
         self,
         gameweek: int,
@@ -195,10 +413,15 @@ class PlayerDataRefresher:
                         except Exception as e:
                             logger.warning("Upsert player failed", extra={"player_id": player_id, "error": str(e)})
         
-        # Get existing player_gameweek_stats for fixture context
+        # Get existing player_gameweek_stats for fixture context and for feed-event deltas.
         # (live endpoint doesn't have fixture_id, opponent_team, etc.)
-        # If live_only, also fetch expected/ICT stats to preserve them
-        select_fields = "player_id, fixture_id, opponent_team_id, was_home, kickoff_time, team_id"
+        # Include stat fields so _feed_events_from_deltas sees previous values and only emits on real change.
+        select_fields = (
+            "player_id, fixture_id, opponent_team_id, was_home, kickoff_time, team_id, "
+            "minutes, goals_scored, assists, own_goals, penalties_missed, penalties_saved, "
+            "bonus, provisional_bonus, yellow_cards, red_cards, clean_sheets, saves, goals_conceded, "
+            "defensive_contribution, total_points"
+        )
         if live_only:
             select_fields += ", expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, influence, creativity, threat, ict_index"
         
@@ -214,6 +437,8 @@ class PlayerDataRefresher:
         if live_data:
             live_elements = {elem["id"]: elem for elem in live_data.get("elements", [])}
             batch_stats = []
+            feed_events: List[Dict[str, Any]] = []
+            occurred_at = datetime.now(timezone.utc).isoformat()
 
             # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (MP > 45 = second half)
             fixture_players: Dict[int, List[Dict]] = {}
@@ -386,9 +611,40 @@ class PlayerDataRefresher:
                 stats_data["ict_index"] = _expected_or_existing("ict_index", existing_ict_index)
                 
                 batch_stats.append(stats_data)
+
+                # Feed events: compare previous vs new; use effective bonus (BPS provisional when live, confirmed when finished)
+                effective_new_bonus = (
+                    bonus
+                    if (match_finished or bonus > 0)
+                    else provisional_bonus_val
+                )
+                effective_old_bonus = (
+                    existing_stat.get("bonus", 0)
+                    if match_finished
+                    else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
+                existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
+                # So total_points_after in feed reflects effective total (base + provisional when live)
+                base_total = stats.get("total_points", 0)
+                effective_total = base_total + (effective_new_bonus - bonus)
+                stats_for_feed = {**stats, "bonus": effective_new_bonus, "total_points": effective_total}
+                events_for_player = self._feed_events_from_deltas(
+                    existing_stat_for_feed,
+                    stats_for_feed,
+                    gameweek,
+                    player_id,
+                    fixture_id,
+                    position,
+                    occurred_at,
+                )
+                feed_events.extend(events_for_player)
             
             if batch_stats:
                 self.db_client.upsert_player_gameweek_stats(batch_stats)
+            if feed_events:
+                try:
+                    self.db_client.insert_feed_events(feed_events)
+                except Exception as e:
+                    logger.warning("Feed events insert failed", extra={"gameweek": gameweek, "count": len(feed_events), "error": str(e)})
         
         else:
             # Fallback to element-summary calls when /event/{gw}/live is unavailable
@@ -399,6 +655,19 @@ class PlayerDataRefresher:
                 })
             else:
                 logger.warning("Live data unavailable, using element-summary", extra={"gameweek": gameweek})
+            
+            # Load existing stats with stat fields so we can emit feed events from deltas
+            existing_stat_fields = (
+                "player_id, fixture_id, goals_scored, assists, minutes, bonus, own_goals, "
+                "penalties_missed, penalties_saved, yellow_cards, red_cards, defensive_contribution, "
+                "clean_sheets, saves, goals_conceded, total_points"
+            )
+            existing_stats_full = self.db_client.client.table("player_gameweek_stats").select(
+                existing_stat_fields
+            ).eq("gameweek", gameweek).in_("player_id", list(active_player_ids)).execute().data
+            existing_stats_by_player = {s["player_id"]: s for s in (existing_stats_full or [])}
+            feed_events: List[Dict[str, Any]] = []
+            occurred_at = datetime.now(timezone.utc).isoformat()
             
             # Refresh players in batches to avoid overwhelming API
             batch_size = 10
@@ -502,6 +771,35 @@ class PlayerDataRefresher:
                     }
                     
                     batch_stats.append(stats_data)
+                    
+                    # Feed events: compare existing vs new and emit point-impacting events
+                    existing_stat = existing_stats_by_player.get(player_id, {})
+                    new_stats_for_feed = {
+                        "goals_scored": gw_data.get("goals_scored", 0),
+                        "assists": gw_data.get("assists", 0),
+                        "minutes": gw_data.get("minutes", 0),
+                        "bonus": bonus,
+                        "total_points": gw_data.get("total_points", 0),
+                        "own_goals": gw_data.get("own_goals", 0),
+                        "penalties_missed": gw_data.get("penalties_missed", 0),
+                        "penalties_saved": gw_data.get("penalties_saved", 0),
+                        "yellow_cards": gw_data.get("yellow_cards", 0),
+                        "red_cards": gw_data.get("red_cards", 0),
+                        "defensive_contribution": defcon,
+                        "clean_sheets": gw_data.get("clean_sheets", 0),
+                        "saves": gw_data.get("saves", 0),
+                        "goals_conceded": gw_data.get("goals_conceded", 0),
+                    }
+                    events_for_player = self._feed_events_from_deltas(
+                        existing_stat,
+                        new_stats_for_feed,
+                        gameweek,
+                        player_id,
+                        fixture_id,
+                        position,
+                        occurred_at,
+                    )
+                    feed_events.extend(events_for_player)
                 
                 if batch_stats:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)
@@ -509,6 +807,12 @@ class PlayerDataRefresher:
                 # Small delay between batches
                 if i + batch_size < len(player_list):
                     await asyncio.sleep(0.5)
+            
+            if feed_events:
+                try:
+                    self.db_client.insert_feed_events(feed_events)
+                except Exception as e:
+                    logger.warning("Feed events insert failed (element-summary path)", extra={"gameweek": gameweek, "count": len(feed_events), "error": str(e)})
         
         logger.info("Player stats done", extra={"gameweek": gameweek, "count": len(active_player_ids)})
     

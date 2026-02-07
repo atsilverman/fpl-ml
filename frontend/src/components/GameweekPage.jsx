@@ -1,9 +1,10 @@
 import { useSearchParams, useOutletContext } from 'react-router-dom'
 import DefconSubpage from './DefconSubpage'
+import FeedSubpage from './FeedSubpage'
 import MatchesSubpage from './MatchesSubpage'
 import './GameweekPage.css'
 
-const GAMEWEEK_VIEW_ORDER = ['matches', 'bonus', 'defcon']
+const GAMEWEEK_VIEW_ORDER = ['matches', 'bonus', 'defcon', 'feed']
 const viewToIndex = (v) => {
   const i = GAMEWEEK_VIEW_ORDER.indexOf(v)
   return i >= 0 ? i : GAMEWEEK_VIEW_ORDER.indexOf('defcon')
@@ -18,8 +19,8 @@ export default function GameweekPage() {
 
   const pageIndex = viewToIndex(view)
 
-  /* Track is 300% wide (3 panels); translateX % is relative to track, so one panel = 100/3 % */
-  const percentPerPanel = 100 / 3
+  /* Track is 400% wide (4 panels); translateX % is relative to track, so one panel = 25% */
+  const percentPerPanel = 100 / 4
   const translatePercent = -(pageIndex * percentPerPanel)
 
   return (
@@ -41,7 +42,10 @@ export default function GameweekPage() {
             <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={true} showH2H={showH2H} setShowH2H={setShowH2H} />
           </div>
           <div className="gameweek-subpage gameweek-subpage-defcon">
-            <DefconSubpage />
+            <DefconSubpage isActive={view === 'defcon'} />
+          </div>
+          <div className="gameweek-subpage gameweek-subpage-feed">
+            <FeedSubpage isActive={view === 'feed'} />
           </div>
         </div>
       </div>

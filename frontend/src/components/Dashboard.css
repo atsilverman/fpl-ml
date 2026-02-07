@@ -326,6 +326,12 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
 }
 
+/* Desktop: show label only (icons hidden until mobile) */
+.page-selector-bottom .tracking-mode-button .nav-button-icon,
+.page-selector-bottom .nav-item-gameweek-trigger .nav-button-icon {
+  display: none;
+}
+
 .tracking-mode-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -752,6 +758,18 @@
     letter-spacing: 0.02em;
     border-radius: 8px;
     justify-content: center;
+  }
+
+  /* Mobile: icon only, hide text labels */
+  .page-selector-bottom .tracking-mode-button .nav-button-label,
+  .page-selector-bottom .nav-item-gameweek-trigger .nav-button-label {
+    display: none;
+  }
+
+  .page-selector-bottom .tracking-mode-button .nav-button-icon,
+  .page-selector-bottom .nav-item-gameweek-trigger .nav-button-icon {
+    display: block;
+    flex-shrink: 0;
   }
 
   .nav-item-gameweek-wrap {

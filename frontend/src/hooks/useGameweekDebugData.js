@@ -44,10 +44,28 @@ export function useGameweekDebugData() {
       if (teamsErr) throw teamsErr
       const teamMap = {}
       ;(teams || []).forEach(t => { teamMap[t.team_id] = t.short_name })
+
+      // Align fixture "clock" with player MP: use max(minutes) from player_gameweek_stats so debug matches GW points / matchup tables
+      const { data: pgsRows } = await supabase
+        .from('player_gameweek_stats')
+        .select('fixture_id, minutes')
+        .eq('gameweek', gameweek)
+        .not('fixture_id', 'is', null)
+      const maxMinutesByFixture = {}
+      ;(pgsRows || []).forEach((r) => {
+        const fid = r.fixture_id
+        const m = r.minutes ?? 0
+        if (maxMinutesByFixture[fid] == null || m > maxMinutesByFixture[fid]) {
+          maxMinutesByFixture[fid] = m
+        }
+      })
+
       return fix.map(f => ({
         ...f,
         home_short: teamMap[f.home_team_id] ?? '?',
         away_short: teamMap[f.away_team_id] ?? '?',
+        // Match clock = max player minutes for this fixture (same source as GW points / matchup MP)
+        clock_minutes: maxMinutesByFixture[f.fpl_fixture_id] ?? f.minutes ?? null,
       }))
     },
     enabled: !!gameweek,
