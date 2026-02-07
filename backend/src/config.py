@@ -35,8 +35,9 @@ class Config:
     
     # Refresh Intervals (in seconds)
     gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "45"))
-    # Fast loop (gameweeks + fixtures + players) during live matches
+    # Fast loop (gameweeks + fixtures + players); shorter during live so minutes/points stay current
     fast_loop_interval: int = int(os.getenv("FAST_LOOP_INTERVAL", "15"))
+    fast_loop_interval_live: int = int(os.getenv("FAST_LOOP_INTERVAL_LIVE", "10"))
     # Kickoff window: use short interval when now is within N minutes of any fixture kickoff (multi-day GW: Sat–Mon)
     kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
     # Post-deadline: wait N seconds after gameweek status change before batch refresh (lets API endpoints settle)

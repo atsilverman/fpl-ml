@@ -199,6 +199,29 @@ class SupabaseClient:
             "occurred_at": datetime.now(timezone.utc).isoformat(),
         }).execute()
 
+    def insert_feed_events(self, events: List[Dict[str, Any]]):
+        """
+        Bulk-insert gameweek feed events (point-impacting timeline events).
+        Each dict: gameweek, player_id, fixture_id?, event_type, points_delta, total_points_after, occurred_at, metadata?.
+        """
+        if not events:
+            return
+        rows = []
+        for e in events:
+            row = {
+                "gameweek": e["gameweek"],
+                "player_id": e["player_id"],
+                "fixture_id": e.get("fixture_id"),
+                "event_type": e["event_type"],
+                "points_delta": e["points_delta"],
+                "total_points_after": e["total_points_after"],
+                "occurred_at": e["occurred_at"],
+            }
+            if e.get("metadata") is not None:
+                row["metadata"] = e["metadata"]
+            rows.append(row)
+        self.client.table("gameweek_feed_events").insert(rows).execute()
+
     def upsert_player(self, player_data: Dict[str, Any]):
         """
         Upsert a player.
@@ -248,16 +271,19 @@ class SupabaseClient:
         fpl_fixture_id: int,
         home_score: Optional[int],
         away_score: Optional[int],
+        minutes: Optional[int] = None,
     ):
         """
-        Update only home_score and away_score for a fixture (e.g. from event-live).
-        Used during live matches so the matches page stays in sync with GW points.
+        Update home_score, away_score and optionally minutes for a fixture (e.g. from event-live).
+        Used during live matches so the matches page stays in sync with GW points and match clock.
         """
         payload = {
             "home_score": home_score,
             "away_score": away_score,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
+        if minutes is not None:
+            payload["minutes"] = minutes
         result = self.client.table("fixtures").update(payload).eq(
             "fpl_fixture_id", fpl_fixture_id
         ).execute()

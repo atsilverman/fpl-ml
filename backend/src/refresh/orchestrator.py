@@ -664,8 +664,9 @@ class RefreshOrchestrator:
         fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]],
     ) -> None:
         """
-        Update fixture home_score/away_score from event-live (same source as GW points).
-        Keeps matches page in sync with GW points when FPL fixtures API lags behind event-live.
+        Update fixture home_score, away_score and minutes from event-live (same source as GW points).
+        Keeps matches page in sync with GW points and match clock; event-live minutes are often
+        more current than the /fixtures/ API, so we derive fixture minutes as max player minutes.
         """
         if not bootstrap or not fixtures_by_gameweek or not live_data.get("elements"):
             return
@@ -678,20 +679,27 @@ class RefreshOrchestrator:
                 continue
             home_goals = 0
             away_goals = 0
+            max_minutes = 0
             for elem in live_data.get("elements", []):
                 pid = elem.get("id")
                 stats = elem.get("stats") or {}
                 goals = stats.get("goals_scored", 0) or 0
+                mins = stats.get("minutes", 0) or 0
                 team_id = player_team.get(pid)
                 if team_id == team_h:
                     home_goals += goals
+                    if mins > max_minutes:
+                        max_minutes = mins
                 elif team_id == team_a:
                     away_goals += goals
+                    if mins > max_minutes:
+                        max_minutes = mins
             try:
                 self.db_client.update_fixture_scores(
                     fpl_fixture_id,
                     home_score=home_goals,
                     away_score=away_goals,
+                    minutes=max_minutes if max_minutes > 0 else None,
                 )
             except Exception as e:
                 logger.warning(
@@ -1510,11 +1518,11 @@ class RefreshOrchestrator:
                 if self.current_state == RefreshState.TRANSFER_DEADLINE:
                     await asyncio.sleep(60)
                 elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
-                    await asyncio.sleep(self.config.fast_loop_interval)
+                    await asyncio.sleep(self.config.fast_loop_interval_live)
                 else:
                     # Idle: use short interval when within kickoff window or past kickoff (likely live, DB may be stale)
                     if self._is_in_kickoff_window() or self._is_likely_live_window():
-                        await asyncio.sleep(self.config.fast_loop_interval)
+                        await asyncio.sleep(self.config.fast_loop_interval_live)
                     else:
                         await asyncio.sleep(self.config.gameweeks_refresh_interval)
             except asyncio.CancelledError:

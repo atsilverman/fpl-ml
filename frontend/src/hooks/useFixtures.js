@@ -1,7 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useRefreshState } from './useRefreshState'
 
 export function useFixtures(gameweek) {
+  const { state } = useRefreshState()
+  const isLive = state === 'live_matches' || state === 'bonus_pending'
+
   const { data: fixtures = [], isLoading, error } = useQuery({
     queryKey: ['fixtures', gameweek],
     queryFn: async () => {
@@ -17,8 +21,8 @@ export function useFixtures(gameweek) {
       return data || []
     },
     enabled: !!gameweek, // Only run if we have a gameweek
-    staleTime: 30000, // Shared data - cache for 30 seconds
-    refetchInterval: 30000, // Poll every 30 seconds (automatic background refetch)
+    staleTime: isLive ? 15000 : 30000, // Shorter when live so minutes/score stay current
+    refetchInterval: isLive ? 15000 : 30000, // Poll every 15s when live, 30s otherwise
     refetchIntervalInBackground: true,
   })
 
