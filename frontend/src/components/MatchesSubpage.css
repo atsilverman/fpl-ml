@@ -186,16 +186,16 @@
 .gw-top-points-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .gw-top-points-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 11px;
   color: var(--text-primary);
-  padding: 6px 10px;
+  padding: 3px 8px;
   min-height: 36px;
   box-sizing: border-box;
   border-radius: 6px;
@@ -210,22 +210,22 @@ html[data-theme="dark"] .gw-top-points-item {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 23px;
-  height: 23px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
 .gw-top-points-badge {
-  width: 23px;
-  height: 23px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
   object-fit: contain;
 }
 
 .gw-top-points-badge-placeholder {
   display: block;
-  width: 23px;
-  height: 23px;
+  width: 18px;
+  height: 18px;
   flex-shrink: 0;
 }
 
@@ -241,8 +241,8 @@ html[data-theme="dark"] .gw-top-points-item {
 .gw-top-points-name {
   min-width: 0;
   font-weight: 500;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -253,11 +253,11 @@ html[data-theme="dark"] .gw-top-points-item {
   flex-shrink: 0;
   display: inline-block;
   width: fit-content;
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 600;
   letter-spacing: 0.05em;
-  padding: 2px 4px;
-  border-radius: 3px;
+  padding: 1px 3px;
+  border-radius: 2px;
   text-transform: uppercase;
   line-height: 1.2;
 }
@@ -294,13 +294,13 @@ html[data-theme="dark"] .gw-top-points-position:not([class*="gw-top-points-posit
 
 .gw-top-points-pill {
   font-weight: 600;
-  font-size: 12px;
-  line-height: 1.3;
+  font-size: 11px;
+  line-height: 1.2;
   color: var(--text-primary);
   flex-shrink: 0;
   background: var(--bg-secondary);
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
   border: 1px solid var(--border-color);
 }
 
@@ -311,9 +311,9 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 .gw-top-points-loading,
 .gw-top-points-empty {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
-  padding: 8px 0;
+  padding: 4px 0;
 }
 
 /* GW Top Performers: swipe wrapper + page dots */

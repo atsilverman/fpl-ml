@@ -10,10 +10,11 @@ import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { usePlayerImpactForManager } from '../hooks/usePlayerImpact'
 import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
 import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
-import { useManagerDataForManager } from '../hooks/useManagerData'
+import { useManagerData, useManagerDataForManager } from '../hooks/useManagerData'
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
+import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
@@ -93,6 +94,7 @@ export default function MiniLeaguePage() {
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const [showTransfersView, setShowTransfersView] = useState(false)
+  const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
   const standingsTableScrollRef = useRef(null)
@@ -118,6 +120,8 @@ export default function MiniLeaguePage() {
   const isSelectedManagerLiveUpdating = hasLiveGames && (selectedManagerInPlay ?? 0) > 0
   const { managerData: selectedManagerSummary, loading: selectedManagerSummaryLoading } = useManagerDataForManager(selectedManagerId)
   const { transfers: selectedManagerTransfers, loading: selectedManagerTransfersLoading } = useTransferImpactsForManager(selectedManagerId, gameweek)
+  const { managerData: configuredManagerData } = useManagerData()
+  const { transfersOut: leagueTopTransfersOut, transfersIn: leagueTopTransfersIn, loading: leagueTopTransfersLoading } = useLeagueTopTransfers(LEAGUE_ID, gameweek)
   const isViewingAnotherManager = selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) !== Number(currentManagerId)
   const ownedByYouPlayerIds = isViewingAnotherManager && configuredManagerPlayers?.length
     ? new Set(configuredManagerPlayers.map((p) => p.player_id))
@@ -415,6 +419,118 @@ export default function MiniLeaguePage() {
             <ArrowLeftRight size={11} strokeWidth={1.5} aria-hidden />
           </button>
         </div>
+        {showTransfersView && (() => {
+          const outList = leagueTopTransfersOut || []
+          const inList = leagueTopTransfersIn || []
+          const transfersSummary = configuredManagerData != null
+            ? {
+                used: configuredManagerData.transfersMade ?? 0,
+                available: configuredManagerData.freeTransfersAvailable ?? 0,
+                activeChip: configuredManagerData.activeChip ?? null,
+              }
+            : null
+          const chipLabel = transfersSummary?.activeChip != null ? getChipDisplayLabel(transfersSummary.activeChip, gameweek) : null
+          const chipColor = transfersSummary?.activeChip != null ? (CHIP_COLORS[String(transfersSummary.activeChip).toLowerCase()] ?? 'var(--text-secondary)') : null
+          return (
+            <div className="league-page-transfers-summary">
+              <div className={`transfers-summary-card ${transfersSummaryExpanded ? 'transfers-summary-card--expanded' : 'transfers-summary-card--collapsed'}`}>
+                <div
+                  className="league-page-transfers-summary-header"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setTransfersSummaryExpanded((v) => !v)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTransfersSummaryExpanded((v) => !v); } }}
+                  aria-expanded={transfersSummaryExpanded}
+                  aria-label={transfersSummaryExpanded ? 'Collapse League Transfers' : 'Expand League Transfers'}
+                >
+                  <span className="league-page-transfers-summary-title">League Transfers</span>
+                  <span className="league-page-transfers-summary-expand-icon" title={transfersSummaryExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                    {transfersSummaryExpanded ? (
+                      <Minimize2 className="league-page-transfers-summary-expand-icon-svg" size={11} strokeWidth={1.5} />
+                    ) : (
+                      <MoveDiagonal className="league-page-transfers-summary-expand-icon-svg" size={11} strokeWidth={1.5} />
+                    )}
+                  </span>
+                </div>
+                {transfersSummaryExpanded && (
+                  <div className="league-page-transfers-summary-content-wrap">
+                    <div className="transfers-summary-content">
+                      {chipLabel && (
+                        <div className="transfers-summary-header-row">
+                          <span
+                            className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
+                            style={{ backgroundColor: chipColor, color: '#fff' }}
+                          >
+                            {chipLabel}
+                          </span>
+                        </div>
+                      )}
+                      <div className="transfers-summary-columns-wrapper">
+                        <div className="transfers-summary-column transfers-summary-column-out">
+                          <div className="transfers-summary-column-header">
+                            <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
+                          </div>
+                          {leagueTopTransfersLoading ? (
+                            <div className="transfers-summary-loading">Loading...</div>
+                          ) : outList.length === 0 ? (
+                            <div className="transfers-summary-empty">No data</div>
+                          ) : (
+                            <div className="transfers-summary-column-list">
+                              {outList.map((row, i) => (
+                                <div key={i} className="transfers-summary-column-item">
+                                  <span className="transfers-summary-badge-slot">
+                                    {row.teamShortName ? (
+                                      <img src={`/badges/${row.teamShortName}.svg`} alt="" className="transfers-summary-badge" />
+                                    ) : (
+                                      <span className="transfers-summary-badge-placeholder" aria-hidden />
+                                    )}
+                                  </span>
+                                  <span className="transfers-summary-column-name">{row.playerName}</span>
+                                  <span className="transfers-summary-column-count">{row.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="transfers-summary-column transfers-summary-column-in">
+                          <div className="transfers-summary-column-header">
+                            <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
+                          </div>
+                          {leagueTopTransfersLoading ? (
+                            <div className="transfers-summary-loading">Loading...</div>
+                          ) : inList.length === 0 ? (
+                            <div className="transfers-summary-empty">No data</div>
+                          ) : (
+                            <div className="transfers-summary-column-list">
+                              {inList.map((row, i) => (
+                                <div key={i} className="transfers-summary-column-item">
+                                  <span className="transfers-summary-badge-slot">
+                                    {row.teamShortName ? (
+                                      <img src={`/badges/${row.teamShortName}.svg`} alt="" className="transfers-summary-badge" />
+                                    ) : (
+                                      <span className="transfers-summary-badge-placeholder" aria-hidden />
+                                    )}
+                                  </span>
+                                  <span className="transfers-summary-column-name">{row.playerName}</span>
+                                  <span className="transfers-summary-column-count">{row.count}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {!leagueTopTransfersLoading && (outList.length + inList.length) > 8 && (
+                      <div className="league-page-transfers-summary-scroll-hint" aria-hidden title="Scroll to view all">
+                        <ChevronDown size={14} strokeWidth={2} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })()}
         <div ref={standingsTableScrollRef} className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
           {!showTransfersView ? (
           <table className="league-standings-bento-table">

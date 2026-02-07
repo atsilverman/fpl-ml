@@ -322,7 +322,7 @@ export default function Dashboard() {
       </header>
 
       <main className="dashboard-content">
-        <Outlet context={{ toggleBonus, setToggleBonus, showH2H, setShowH2H, openDebugModal: () => setDebugModalOpen(true) }} />
+        <Outlet context={{ toggleBonus, setToggleBonus, showH2H, setShowH2H, setGameweekView, openDebugModal: () => setDebugModalOpen(true) }} />
       </main>
       <DebugModal isOpen={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
       <AccountModal isOpen={accountModalOpen} onClose={() => setAccountModalOpen(false)} />

@@ -293,12 +293,7 @@ export default function HomePage() {
       return 'bento-card-chart-2x4'
     }
     
-    // Transfers card 2x3 when expanded
-    if (id === 'transfers' && isTransfersExpanded) {
-      return 'bento-card-chart-large'
-    }
-
-    // Transfers card: 2x1 when there's something to show (transfers, wildcard/free hit, or list from picks diff); else 1x1
+    // Transfers card: 2x1 when there's something to show (transfers, wildcard/free hit, or list from picks diff); else 1x1 (no expand)
     if (id === 'transfers') {
       const hasTransfers = (managerData?.transfersMade ?? 0) > 0
       const usedWildcardOrFreeHit = managerData?.activeChip === 'wildcard' || managerData?.activeChip === 'freehit'
@@ -541,7 +536,7 @@ export default function HomePage() {
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
-              isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'transfers' && isTransfersExpanded) || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
+              isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
               style={{ '--animation-delay': `${index * 0.04}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}
@@ -550,7 +545,6 @@ export default function HomePage() {
                 cardId === 'team-value' ? handleTeamValueExpandClick :
                 cardId === 'total-points' ? handlePlayerPerformanceExpand :
                 cardId === 'gw-points' ? handleGwPointsExpandClick :
-                cardId === 'transfers' ? handleTransfersExpandClick :
                 cardId === 'chips' ? handleChipsExpandClick :
                 cardId === 'league-rank' ? handleLeagueRankExpandClick :
                 cardId === 'captain' ? handleCaptainExpandClick :
@@ -561,7 +555,6 @@ export default function HomePage() {
                 cardId === 'team-value' ? handleTeamValueCollapseClick :
                 cardId === 'total-points' ? handlePlayerPerformanceCollapse :
                 cardId === 'gw-points' ? handleGwPointsCollapseClick :
-                cardId === 'transfers' ? handleTransfersCollapseClick :
                 cardId === 'chips' ? handleChipsCollapseClick :
                 cardId === 'league-rank' ? handleLeagueRankCollapseClick :
                 cardId === 'captain' ? handleCaptainCollapseClick :

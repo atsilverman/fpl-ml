@@ -280,7 +280,7 @@ export default function BentoCard({
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
-  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'transfers' || id === 'chips' || id === 'league-rank' || id === 'captain'
+  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'chips' || id === 'league-rank' || id === 'captain'
   const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
 
   const handleStateDebugClick = (e) => {
@@ -683,95 +683,6 @@ export default function BentoCard({
           />
         </div>
       )}
-      
-      {isExpanded && id === 'transfers' && (() => {
-        const outList = leagueTopTransfersOut || []
-        const inList = leagueTopTransfersIn || []
-        const expandedChipBadge = getChipBadgeInfo(transfersSummary?.activeChip ?? null, gameweek)
-        return (
-          <div className="transfers-summary-card">
-            <div className="transfers-summary-content">
-              {(transfersSummary != null || expandedChipBadge) && (
-                <div className="transfers-summary-header-row">
-                  {transfersSummary != null && (
-                    <span className="transfers-summary-header-value">{transfersSummary.used} of {transfersSummary.available}</span>
-                  )}
-                  {expandedChipBadge && (
-                    <span
-                      className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
-                      style={{ backgroundColor: expandedChipBadge.color, color: '#fff' }}
-                    >
-                      {expandedChipBadge.label}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className="transfers-summary-columns-wrapper">
-                <div className="transfers-summary-column transfers-summary-column-out">
-                  <div className="transfers-summary-column-header">
-                    <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
-                  </div>
-                  {leagueTopTransfersLoading ? (
-                    <div className="transfers-summary-loading">Loading...</div>
-                  ) : outList.length === 0 ? (
-                    <div className="transfers-summary-empty">No data</div>
-                  ) : (
-                    <div className="transfers-summary-column-list">
-                      {outList.map((row, i) => (
-                        <div key={i} className="transfers-summary-column-item">
-                          <span className="transfers-summary-badge-slot">
-                            {row.teamShortName ? (
-                              <img
-                                src={`/badges/${row.teamShortName}.svg`}
-                                alt=""
-                                className="transfers-summary-badge"
-                              />
-                            ) : (
-                              <span className="transfers-summary-badge-placeholder" aria-hidden />
-                            )}
-                          </span>
-                          <span className="transfers-summary-column-name">{row.playerName}</span>
-                          <span className="transfers-summary-column-count">{row.count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="transfers-summary-column transfers-summary-column-in">
-                  <div className="transfers-summary-column-header">
-                    <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
-                  </div>
-                  {leagueTopTransfersLoading ? (
-                    <div className="transfers-summary-loading">Loading...</div>
-                  ) : inList.length === 0 ? (
-                    <div className="transfers-summary-empty">No data</div>
-                  ) : (
-                    <div className="transfers-summary-column-list">
-                      {inList.map((row, i) => (
-                        <div key={i} className="transfers-summary-column-item">
-                          <span className="transfers-summary-badge-slot">
-                            {row.teamShortName ? (
-                              <img
-                                src={`/badges/${row.teamShortName}.svg`}
-                                alt=""
-                                className="transfers-summary-badge"
-                              />
-                            ) : (
-                              <span className="transfers-summary-badge-placeholder" aria-hidden />
-                            )}
-                          </span>
-                          <span className="transfers-summary-column-name">{row.playerName}</span>
-                          <span className="transfers-summary-column-count">{row.count}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })()}
       
       {isChips && !isExpanded && (
         <div className="chips-pages-wrapper">

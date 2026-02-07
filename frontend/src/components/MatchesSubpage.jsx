@@ -609,7 +609,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
     return new Set(currentGameweekPlayers.map(p => Number(p.player_id)).filter(Boolean))
   }, [currentGameweekPlayers])
   const [expandedId, setExpandedId] = useState(null)
-  const [isTopPerformersExpanded, setIsTopPerformersExpanded] = useState(true)
+  const [isTopPerformersExpanded, setIsTopPerformersExpanded] = useState(false)
   const [performerPageIndex, setPerformerPageIndex] = useState(0)
   const performerSwipeStart = useRef(null)
   const firstScheduledRef = useRef(null)
