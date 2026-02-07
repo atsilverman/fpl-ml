@@ -464,6 +464,11 @@
   line-height: 1.2;
 }
 
+/* When 0 or 1 transfer, middle-align all cell content (rank, rank change, manager, in/out, points delta) */
+.league-transfers-table .league-transfers-row--single-or-none td {
+  vertical-align: middle;
+}
+
 .league-transfers-table .league-transfers-cell-transfers {
   vertical-align: top;
   min-height: 36px;
@@ -471,8 +476,17 @@
   box-sizing: border-box;
 }
 
+.league-transfers-table .league-transfers-row--single-or-none .league-transfers-cell-transfers {
+  vertical-align: middle;
+}
+
 .league-transfers-table .league-transfers-cell-rank {
   vertical-align: top;
+}
+
+.league-transfers-table .league-transfers-row--single-or-none .league-transfers-cell-rank,
+.league-transfers-table .league-transfers-row--single-or-none .league-transfers-cell-manager {
+  vertical-align: middle;
 }
 
 .league-transfers-table .league-transfers-row.league-standings-bento-row-you td {
@@ -1079,14 +1093,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   margin-top: 0;
 }
 
-/* Chart area: cap height so transfers section stays visible; table scrolls inside; match width of transfers section */
+/* Chart area: natural height so all players visible; modal body scrolls to show players + transfers */
 .manager-detail-modal-chart-wrap {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   width: 100%;
   min-width: 0;
-  min-height: 0;
-  max-height: min(42vh, 320px);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }

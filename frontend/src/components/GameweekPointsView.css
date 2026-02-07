@@ -991,18 +991,31 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
 }
 
-/* Manager detail modal: compact table so more fits; stays within scrollable area; match width of transfers section */
+/* Manager detail modal: full-height table (no internal scroll); modal body scrolls to show all players + transfers */
 .manager-detail-modal-chart-wrap .gameweek-points-view {
+  height: auto;
   min-height: 0;
   min-width: 0;
   width: 100%;
+  overflow: visible;
+  flex: 0 0 auto;
 }
 .manager-detail-modal-chart-wrap .gameweek-points-scrollable {
+  flex: none;
   min-height: 0;
   min-width: 0;
+  overflow: visible;
 }
 .manager-detail-modal-chart-wrap .gameweek-points-table {
   font-size: 10px;
+}
+/* Manager modal: header scrolls with content (no sticky) */
+.manager-detail-modal-chart-wrap .gameweek-points-table thead {
+  position: static;
+}
+.manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
+  position: static;
+  left: auto;
 }
 .manager-detail-modal-chart-wrap .gameweek-points-th {
   height: 26px;

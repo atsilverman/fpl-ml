@@ -619,10 +619,11 @@ export default function MiniLeaguePage() {
                     const transferViewChip = typeof transferViewChipRaw === 'string' ? transferViewChipRaw.toLowerCase() : transferViewChipRaw
                     const transferViewChipLabel = transferViewChip ? (CHIP_LABELS[transferViewChip] ?? transferViewChip) : null
                     const transferViewChipColor = transferViewChip ? (CHIP_COLORS[transferViewChip] ?? 'var(--text-secondary)') : null
+                    const hasSingleOrNoTransfers = transfers.length <= 1
                     return (
                       <tr
                         key={s.manager_id}
-                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''}`}
+                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''}`}
                         onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -869,6 +870,18 @@ export default function MiniLeaguePage() {
                               )}
                             </div>
                           ))}
+                          {selectedManagerTransfers.length > 1 && (() => {
+                            const net = selectedManagerTransfers.reduce((sum, t) => sum + (t.pointImpact ?? 0), 0)
+                            const netClass = net > 0 ? 'positive' : net < 0 ? 'negative' : 'neutral'
+                            return (
+                              <div className="league-transfers-net-row">
+                                <span className="league-transfers-net-label">Net</span>
+                                <span className={`league-transfers-net-badge league-transfers-net-badge--${netClass}`}>
+                                  {net >= 0 ? '+' : ''}{net}
+                                </span>
+                              </div>
+                            )
+                          })()}
                         </div>
                       ) : null}
                     </>
