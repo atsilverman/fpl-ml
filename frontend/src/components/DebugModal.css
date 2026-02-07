@@ -62,9 +62,11 @@ html[data-theme="dark"] .debug-modal-state-button {
   cursor: pointer;
 }
 
-.debug-modal-state-info:hover {
-  color: var(--text-primary);
-  background: var(--bg-tertiary);
+@media (hover: hover) {
+  .debug-modal-state-info:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
 }
 
 .debug-modal-state-dl {
@@ -144,9 +146,11 @@ html[data-theme="dark"] .debug-modal-state-button {
   margin-bottom: 10px;
 }
 
-.debug-modal-verify-button:hover:not(:disabled) {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
+@media (hover: hover) {
+  .debug-modal-verify-button:hover:not(:disabled) {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+  }
 }
 
 .debug-modal-verify-button:disabled {

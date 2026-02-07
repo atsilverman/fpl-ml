@@ -49,9 +49,11 @@
   color: var(--text-primary, #333);
 }
 
-.auth-button-signin:hover {
-  background: var(--bg-secondary, #f8f9fa);
-  border-color: var(--border-color, #e5e7eb);
+@media (hover: hover) {
+  .auth-button-signin:hover {
+    background: var(--bg-secondary, #f8f9fa);
+    border-color: var(--border-color, #e5e7eb);
+  }
 }
 
 .auth-button-signout {
@@ -60,8 +62,10 @@
   padding: 0 8px;
 }
 
-.auth-button-signout:hover {
-  background: var(--bg-primary, #e8eaed);
+@media (hover: hover) {
+  .auth-button-signout:hover {
+    background: var(--bg-primary, #e8eaed);
+  }
 }
 
 .auth-google-icon {
@@ -91,8 +95,10 @@
     border-color: var(--border-color, #444);
   }
 
-  .auth-button-signin:hover {
-    background: var(--bg-secondary, #3d3d3d);
+  @media (hover: hover) {
+    .auth-button-signin:hover {
+      background: var(--bg-secondary, #3d3d3d);
+    }
   }
 
   .auth-button-signout {
@@ -100,7 +106,9 @@
     color: var(--text-secondary, #b0b0b0);
   }
 
-  .auth-button-signout:hover {
-    background: var(--bg-primary, #4d4d4d);
+  @media (hover: hover) {
+    .auth-button-signout:hover {
+      background: var(--bg-primary, #4d4d4d);
+    }
   }
 }

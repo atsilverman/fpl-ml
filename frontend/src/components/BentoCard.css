@@ -160,13 +160,14 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   transition: opacity 0.2s ease;
 }
 
-.settings-bento-button:hover .settings-icon {
-  opacity: 0.85;
-}
-
-.settings-bento-button:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
+@media (hover: hover) {
+  .settings-bento-button:hover .settings-icon {
+    opacity: 0.85;
+  }
+  .settings-bento-button:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+  }
 }
 
 .stale-indicator {
@@ -257,10 +258,12 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.bento-card-info-icon:hover {
-  opacity: 1;
-  background-color: var(--bg-card);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .bento-card-info-icon:hover {
+    opacity: 1;
+    background-color: var(--bg-card);
+    border-color: var(--text-secondary);
+  }
 }
 
 .bento-card-info-icon .bento-card-expand-icon-svg {
@@ -307,10 +310,12 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   opacity: 0.85;
 }
 
-.bento-card-expand-icon--collapse:hover {
-  background: var(--collapse-badge-bg);
-  border-color: var(--collapse-icon-color);
-  opacity: 1;
+@media (hover: hover) {
+  .bento-card-expand-icon--collapse:hover {
+    background: var(--collapse-badge-bg);
+    border-color: var(--collapse-icon-color);
+    opacity: 1;
+  }
 }
 
 /* When GW legend popup is open: grey out collapse (minimize) so users close via (i) or tap outside */
@@ -319,20 +324,19 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   opacity: 0.4;
   cursor: default;
 }
-.bento-card-expand-icon--legend-open:hover {
-  opacity: 0.4;
-}
-
-.bento-card:hover .bento-card-expand-icon:not(.bento-card-expand-icon--collapse) {
-  opacity: 0.7;
-}
-
-.bento-card-expand-icon:hover {
-  opacity: 1;
-}
-
-.bento-card-expand-icon:not(.bento-card-expand-icon--collapse):hover {
-  background-color: var(--bg-secondary);
+@media (hover: hover) {
+  .bento-card-expand-icon--legend-open:hover {
+    opacity: 0.4;
+  }
+  .bento-card:hover .bento-card-expand-icon:not(.bento-card-expand-icon--collapse) {
+    opacity: 0.7;
+  }
+  .bento-card-expand-icon:hover {
+    opacity: 1;
+  }
+  .bento-card-expand-icon:not(.bento-card-expand-icon--collapse):hover {
+    background-color: var(--bg-secondary);
+  }
 }
 
 /* GW points legend popup (i button): opens down and to the left of the upper-right badge */
@@ -992,9 +996,11 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.transfers-summary-show-toggle:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover, rgba(128, 128, 128, 0.08));
+@media (hover: hover) {
+  .transfers-summary-show-toggle:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover, rgba(128, 128, 128, 0.08));
+  }
 }
 
 .transfers-summary-content {

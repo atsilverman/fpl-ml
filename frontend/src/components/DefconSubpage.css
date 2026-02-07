@@ -92,8 +92,10 @@
   cursor: pointer;
 }
 
-.defcon-search-suggestion:hover {
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .defcon-search-suggestion:hover {
+    background: var(--bg-secondary);
+  }
 }
 
 /* Backdrop when info or filter popup is open */
@@ -122,9 +124,11 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-.defcon-info-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .defcon-info-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
 }
 
 /* DEFCON info popup: same format as GW legend (BentoCard), so it uses .gw-legend-popup classes.
@@ -264,9 +268,11 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-.defcon-filter-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .defcon-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
 }
 
 .defcon-filter-btn--active {
@@ -290,6 +296,17 @@
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
   z-index: 60;
+}
+
+/* Mobile: use more screen width for filter popup */
+@media (max-width: 768px) {
+  .defcon-filter-popup {
+    left: 0;
+    right: 0;
+    width: 100%;
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+  }
 }
 
 @media (min-width: 400px) {
@@ -351,9 +368,11 @@
   transition: border-color 0.15s, background 0.15s;
 }
 
-.defcon-matchup-btn:hover {
-  background: var(--bg-card);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .defcon-matchup-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--text-secondary);
+  }
 }
 
 .defcon-matchup-btn--active {

@@ -23,14 +23,15 @@
   overflow: visible;
 }
 
-.research-card:hover {
-  border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-}
-
-.research-card.price-changes-card:hover {
-  border-color: var(--border-color);
-  box-shadow: none;
+@media (hover: hover) {
+  .research-card:hover {
+    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
+  .research-card.price-changes-card:hover {
+    border-color: var(--border-color);
+    box-shadow: none;
+  }
 }
 
 /* Price changes card: same bento size as schedule so the card is visible */
@@ -137,8 +138,10 @@
   transition: color 0.15s ease;
 }
 
-.research-page-source:hover {
-  color: var(--text-primary);
+@media (hover: hover) {
+  .research-page-source:hover {
+    color: var(--text-primary);
+  }
 }
 
 .research-page-source-logo {

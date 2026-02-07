@@ -63,10 +63,12 @@
   transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
-.header-user-button:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
+@media (hover: hover) {
+  .header-user-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
 }
 
 /* Account (signed in): avatar + name */
@@ -86,9 +88,11 @@
   max-width: 200px;
 }
 
-.header-user-account:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
+@media (hover: hover) {
+  .header-user-account:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
 }
 
 .header-user-avatar-wrap {
@@ -137,9 +141,11 @@
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.header-login-google:hover {
-  background: var(--bg-secondary);
-  border-color: var(--border-color);
+@media (hover: hover) {
+  .header-login-google:hover {
+    background: var(--bg-secondary);
+    border-color: var(--border-color);
+  }
 }
 
 .header-google-icon {
@@ -153,8 +159,10 @@
   display: inline-block;
 }
 
-.header-title-link:hover h1 {
-  opacity: 0.9;
+@media (hover: hover) {
+  .header-title-link:hover h1 {
+    opacity: 0.9;
+  }
 }
 
 .dashboard-header h1 {
@@ -205,9 +213,11 @@
   transition: color 0.2s ease, opacity 0.2s ease;
 }
 
-.header-config-icon:hover {
-  color: var(--accent-blue);
-  opacity: 0.85;
+@media (hover: hover) {
+  .header-config-icon:hover {
+    color: var(--accent-blue);
+    opacity: 0.85;
+  }
 }
 
 .header-config-icon:focus-visible {
@@ -262,16 +272,18 @@
 }
 
 /* No hover effect on header/bottom page selector */
-.page-selector-bottom .tracking-mode-button:hover {
-  background: transparent;
-}
-.page-selector-bottom .tracking-mode-button:not(.active):hover {
-  color: var(--text-secondary);
-}
-.page-selector-bottom .tracking-mode-button.active:hover {
-  background: var(--accent-blue);
-  color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
+@media (hover: hover) {
+  .page-selector-bottom .tracking-mode-button:hover {
+    background: transparent;
+  }
+  .page-selector-bottom .tracking-mode-button:not(.active):hover {
+    color: var(--text-secondary);
+  }
+  .page-selector-bottom .tracking-mode-button.active:hover {
+    background: var(--accent-blue);
+    color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
+  }
 }
 
 .tracking-mode-toggle {
@@ -301,9 +313,11 @@
   gap: 4px;
 }
 
-.tracking-mode-button:hover {
-  color: var(--text-primary);
-  background: var(--bg-card);
+@media (hover: hover) {
+  .tracking-mode-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+  }
 }
 
 .tracking-mode-button.active {
@@ -319,9 +333,11 @@
   pointer-events: none;
 }
 
-.tracking-mode-button:disabled:hover {
-  color: var(--text-secondary);
-  background: transparent;
+@media (hover: hover) {
+  .tracking-mode-button:disabled:hover {
+    color: var(--text-secondary);
+    background: transparent;
+  }
 }
 
 /* Gameweek / Research nav item: dropdown (same size as other nav buttons) */
@@ -403,9 +419,11 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.nav-item-gameweek-option:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .nav-item-gameweek-option:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .nav-item-gameweek-option--active {
@@ -435,9 +453,11 @@
   justify-content: center;
 }
 
-.account-button:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .account-button:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .dashboard-content {
@@ -531,10 +551,12 @@
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.dashboard-toggle-bonus-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
-  background: var(--bg-card);
+@media (hover: hover) {
+  .dashboard-toggle-bonus-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--bg-card);
+  }
 }
 
 .dashboard-toggle-bonus-btn--on,
@@ -558,10 +580,12 @@
   transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
 }
 
-.dashboard-toggle-h2h-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
-  background: var(--bg-card);
+@media (hover: hover) {
+  .dashboard-toggle-h2h-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--bg-card);
+  }
 }
 
 .dashboard-toggle-h2h-btn--on,
@@ -676,8 +700,8 @@
 
   .dashboard-content {
     padding-top: 72px;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
     padding-bottom: 58px;
     scroll-margin-top: 72px;
   }

@@ -33,10 +33,12 @@
   box-sizing: border-box;
 }
 
-.league-transfers-view-toggle:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .league-transfers-view-toggle:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
 }
 
 .league-transfers-view-toggle.active {
@@ -45,10 +47,12 @@
   border-color: var(--accent-blue, #3b82f6);
 }
 
-.league-transfers-view-toggle.active:hover {
-  background: var(--accent-blue, #2563eb);
-  color: #fff;
-  border-color: var(--accent-blue, #2563eb);
+@media (hover: hover) {
+  .league-transfers-view-toggle.active:hover {
+    background: var(--accent-blue, #2563eb);
+    color: #fff;
+    border-color: var(--accent-blue, #2563eb);
+  }
 }
 
 /* Transfers summary (0 of X, →OUT / ←IN) when transfer mode is on – below toolbar, above table */
@@ -70,9 +74,11 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.league-page-transfers-summary .transfers-summary-card:hover {
-  border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+@media (hover: hover) {
+  .league-page-transfers-summary .transfers-summary-card:hover {
+    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  }
 }
 
 .league-page-transfers-summary .transfers-summary-card--collapsed {
@@ -129,8 +135,10 @@
   border-radius: 4px;
 }
 
-.league-page-transfers-summary-expand-icon:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .league-page-transfers-summary-expand-icon:hover {
+    opacity: 1;
+  }
 }
 
 .league-page-transfers-summary-expand-icon-svg {
@@ -145,9 +153,11 @@
   opacity: 0.85;
 }
 
-.league-page-transfers-summary .transfers-summary-card--expanded .league-page-transfers-summary-expand-icon:hover {
-  border-color: var(--collapse-icon-color, #64748b);
-  opacity: 1;
+@media (hover: hover) {
+  .league-page-transfers-summary .transfers-summary-card--expanded .league-page-transfers-summary-expand-icon:hover {
+    border-color: var(--collapse-icon-color, #64748b);
+    opacity: 1;
+  }
 }
 
 /* Wrapper for scrollable content + scroll hint (chevron when content overflows) */
@@ -311,9 +321,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.league-ownership-clear-all:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .league-ownership-clear-all:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .league-ownership-player-badge {
@@ -347,9 +359,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.league-ownership-clear:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .league-ownership-clear:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .league-ownership-autocomplete {
@@ -385,10 +399,15 @@
   border-bottom: none;
 }
 
-.league-ownership-autocomplete-item:hover,
 .league-ownership-autocomplete-item:focus {
   background: var(--bg-secondary);
   outline: none;
+}
+@media (hover: hover) {
+  .league-ownership-autocomplete-item:hover {
+    background: var(--bg-secondary);
+    outline: none;
+  }
 }
 
 .league-ownership-autocomplete-item.league-ownership-autocomplete-loading,
@@ -458,9 +477,11 @@
   transition: all 0.2s;
 }
 
-.refresh-button:hover:not(:disabled) {
-  background: var(--bg-secondary);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .refresh-button:hover:not(:disabled) {
+    background: var(--bg-secondary);
+    border-color: var(--text-secondary);
+  }
 }
 
 .refresh-button:disabled {
@@ -505,8 +526,10 @@
   border-bottom: none;
 }
 
-.standings-table tbody tr:hover {
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .standings-table tbody tr:hover {
+    background: var(--bg-secondary);
+  }
 }
 
 .standings-table .positive {
@@ -1107,8 +1130,10 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   text-align: inherit;
   -webkit-tap-highlight-color: transparent;
 }
-.league-standings-page .league-standings-sort-header:hover {
-  color: var(--text-primary);
+@media (hover: hover) {
+  .league-standings-page .league-standings-sort-header:hover {
+    color: var(--text-primary);
+  }
 }
 .league-standings-page .league-standings-sort-header:focus-visible {
   outline: 2px solid var(--border-color, #ccc);
@@ -1128,9 +1153,13 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   flex-shrink: 0;
   color: var(--text-secondary);
 }
-.league-standings-page .league-standings-sort-header:hover .league-standings-sort-triangle,
 .league-standings-page .league-standings-sort-header:focus-visible .league-standings-sort-triangle {
   color: var(--text-primary);
+}
+@media (hover: hover) {
+  .league-standings-page .league-standings-sort-header:hover .league-standings-sort-triangle {
+    color: var(--text-primary);
+  }
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header,
 .league-standings-page .league-standings-bento-table th.league-standings-bento-gw .league-standings-sort-header,
@@ -1193,8 +1222,10 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   opacity: 0.5;
   color: var(--text-secondary);
 }
-.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
-  opacity: 0.75;
+@media (hover: hover) {
+  .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
+    opacity: 0.75;
+  }
 }
 
 /* Manager detail modal: same layout and UI as GW Points expanded card */
@@ -1291,9 +1322,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   border-radius: 6px;
   transition: color 0.2s, background 0.2s;
 }
-.manager-detail-modal-close:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .manager-detail-modal-close:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
 }
 .manager-detail-modal-body {
   padding: 12px 16px 16px;

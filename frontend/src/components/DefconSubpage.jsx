@@ -96,7 +96,7 @@ export default function DefconSubpage() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showFilterPopup, setShowFilterPopup] = useState(false)
   const [showInfoPopup, setShowInfoPopup] = useState(false)
-  /** Section 1: scope — all players, owned only, or live only */
+  /** Section 1: ownership — all, owned only, not owned, or live only */
   const [scopeFilter, setScopeFilter] = useState('owned')
   /** Section 2: position — all, DEF (2), MID (3), FWD (4) */
   const [positionFilter, setPositionFilter] = useState('all')
@@ -149,7 +149,7 @@ export default function DefconSubpage() {
   }, [fixtures, teamsMap])
 
   const filterSummaryText = useMemo(() => {
-    const scopeLabel = scopeFilter === 'all' ? 'All' : scopeFilter === 'owned' ? 'Owned' : 'Live'
+    const scopeLabel = scopeFilter === 'all' ? 'All' : scopeFilter === 'owned' ? 'Owned' : scopeFilter === 'not-owned' ? 'Not owned' : 'Live'
     const positionLabel = positionFilter === 'all' ? 'All positions' : (positionFilter === 2 ? 'DEF' : positionFilter === 3 ? 'MID' : 'FWD')
     let matchupLabel = 'All matchups'
     if (scopeFilter !== 'live' && matchupFilter !== 'all') {
@@ -182,6 +182,8 @@ export default function DefconSubpage() {
     }
     if (scopeFilter === 'owned' && managerId && ownedPlayerIdSet.size > 0) {
       list = list.filter(p => ownedPlayerIdSet.has(p.player_id))
+    } else if (scopeFilter === 'not-owned') {
+      list = list.filter(p => !ownedPlayerIdSet.has(p.player_id))
     } else if (scopeFilter === 'live') {
       list = list.filter(p => p.is_live)
     }
@@ -347,7 +349,7 @@ export default function DefconSubpage() {
       {showFilterPopup && (
         <div className="defcon-filter-popup" ref={filterPopupRef} role="dialog" aria-label="DEFCON filters">
           <div className="defcon-filter-section">
-            <div className="defcon-filter-section-title">Scope</div>
+            <div className="defcon-filter-section-title">Ownership</div>
             <div className="defcon-filter-buttons">
               <button
                 type="button"
@@ -362,6 +364,13 @@ export default function DefconSubpage() {
                 onClick={() => setScopeFilter('owned')}
               >
                 Owned
+              </button>
+              <button
+                type="button"
+                className={`defcon-matchup-btn ${scopeFilter === 'not-owned' ? 'defcon-matchup-btn--active' : ''}`}
+                onClick={() => setScopeFilter('not-owned')}
+              >
+                Not owned
               </button>
             </div>
           </div>

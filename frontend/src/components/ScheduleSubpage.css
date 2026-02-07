@@ -52,9 +52,11 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-.schedule-filter-icon-btn:hover:not(:disabled) {
-  color: var(--text-primary);
-  border-color: var(--text-secondary);
+@media (hover: hover) {
+  .schedule-filter-icon-btn:hover:not(:disabled) {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
 }
 
 .schedule-filter-icon-btn--active {
@@ -179,10 +181,12 @@
   flex-shrink: 0;
 }
 
-.schedule-filter-btn:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .schedule-filter-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+  }
 }
 
 .schedule-filter-btn--active {
@@ -191,10 +195,12 @@
   color: white;
 }
 
-.schedule-filter-btn--active:hover {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
-  color: white;
+@media (hover: hover) {
+  .schedule-filter-btn--active:hover {
+    background: var(--accent-blue);
+    border-color: var(--accent-blue);
+    color: white;
+  }
 }
 
 .schedule-filter-sep {
@@ -319,9 +325,11 @@
   border-radius: 6px;
 }
 
-.schedule-customizer-close:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .schedule-customizer-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .schedule-customizer-stat-tabs {
@@ -344,9 +352,11 @@
   cursor: pointer;
 }
 
-.schedule-customizer-stat-tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-secondary);
+@media (hover: hover) {
+  .schedule-customizer-stat-tab:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
 }
 
 .schedule-customizer-stat-tab--active {
@@ -388,10 +398,12 @@
   cursor: pointer;
 }
 
-.schedule-customizer-reset:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border-color: var(--accent-blue);
+@media (hover: hover) {
+  .schedule-customizer-reset:hover {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--accent-blue);
+  }
 }
 
 .schedule-customizer-list {
@@ -549,8 +561,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: var(--text-primary);
 }
 
-.schedule-customizer-btn--cancel:hover {
-  background: var(--bg-card);
+@media (hover: hover) {
+  .schedule-customizer-btn--cancel:hover {
+    background: var(--bg-card);
+  }
 }
 
 .schedule-customizer-btn--save {
@@ -559,8 +573,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: white;
 }
 
-.schedule-customizer-btn--save:hover {
-  filter: brightness(1.05);
+@media (hover: hover) {
+  .schedule-customizer-btn--save:hover {
+    filter: brightness(1.05);
+  }
 }
 
 .schedule-loading,
@@ -801,8 +817,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   cursor: pointer;
 }
 
-.schedule-cell-clickable:hover {
-  filter: brightness(0.97);
+@media (hover: hover) {
+  .schedule-cell-clickable:hover {
+    filter: brightness(0.97);
+  }
 }
 
 /* Last meeting popup – styled like matchup card (matchup-card-main + details) */
@@ -926,8 +944,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: var(--text-primary);
   cursor: pointer;
 }
-.schedule-matchup-popup-close-btn:hover {
-  background: var(--bg-card);
+@media (hover: hover) {
+  .schedule-matchup-popup-close-btn:hover {
+    background: var(--bg-card);
+  }
 }
 
 

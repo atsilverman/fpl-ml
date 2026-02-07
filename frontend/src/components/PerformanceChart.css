@@ -76,10 +76,12 @@
   box-sizing: border-box;
 }
 
-.chart-filter-btn:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .chart-filter-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+  }
 }
 
 .chart-filter-btn.active {
@@ -136,12 +138,14 @@
   transition: r 0.12s ease;
 }
 
-.data-point:hover {
-  r: 6 !important;
-}
+@media (hover: hover) {
+  .data-point:hover {
+    r: 6 !important;
+  }
 
-.chip-point:hover {
-  r: 8 !important;
+  .chip-point:hover {
+    r: 8 !important;
+  }
 }
 
 /* Responsive adjustments */

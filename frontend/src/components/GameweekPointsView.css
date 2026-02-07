@@ -83,8 +83,10 @@
   cursor: pointer;
   user-select: none;
 }
-.gameweek-points-th-sortable:hover {
-  color: var(--text-primary);
+@media (hover: hover) {
+  .gameweek-points-th-sortable:hover {
+    color: var(--text-primary);
+  }
 }
 .gameweek-points-th-sort-icon {
   margin-left: 4px;
@@ -159,8 +161,10 @@
   line-height: 1;
   border-radius: 2px;
 }
-.gameweek-points-th-impact-icon-wrap:hover {
-  color: var(--text-primary);
+@media (hover: hover) {
+  .gameweek-points-th-impact-icon-wrap:hover {
+    color: var(--text-primary);
+  }
 }
 .gameweek-points-th-impact-icon-wrap:focus-visible {
   outline: 2px solid var(--accent-green, #10b981);

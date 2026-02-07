@@ -99,7 +99,9 @@ export default function GameweekPage() {
   }, [isDragging, handlePointerUp, handlePointerMove])
 
   const width = containerWidthRef.current || 1
-  const translatePercent = -(pageIndex * 100) + (width ? (dragOffset / width) * 100 : 0)
+  /* Track is 300% wide (3 panels); translateX % is relative to track, so one panel = 100/3 % */
+  const percentPerPanel = 100 / 3
+  const translatePercent = -(pageIndex * percentPerPanel) + (width ? (dragOffset / width) * percentPerPanel : 0)
 
   return (
     <div className="gameweek-page">

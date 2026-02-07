@@ -60,10 +60,12 @@
   letter-spacing: 0.5px;
 }
 
-.total-points-chart__btn:hover {
-  background: var(--bg-card);
-  border-color: var(--accent-blue);
-  color: var(--text-primary);
+@media (hover: hover) {
+  .total-points-chart__btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+  }
 }
 
 .total-points-chart__btn.active {
@@ -248,8 +250,10 @@
   transition: opacity 0.2s;
 }
 
-.total-points-chart__gantt-legend-icon:hover {
-  opacity: 1;
+@media (hover: hover) {
+  .total-points-chart__gantt-legend-icon:hover {
+    opacity: 1;
+  }
 }
 
 .total-points-chart__gantt-legend {
