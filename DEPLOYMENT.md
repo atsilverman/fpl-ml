@@ -150,10 +150,13 @@ sudo journalctl -u fpl-refresh.service -f
 ### 2. Run Migrations
 
 1. Go to SQL Editor in Supabase dashboard
-2. Run migrations in order:
+2. Run migrations in order (001 through 043). For a minimal list, at least:
    - `backend/supabase/migrations/001_create_tables.sql`
    - `backend/supabase/migrations/002_create_materialized_views.sql`
    - `backend/supabase/migrations/003_create_refresh_functions.sql`
+   - … (004–041 as needed for existing features)
+   - **Feed:** `backend/supabase/migrations/042_gameweek_feed_events.sql`
+   - **Price changes by date:** `backend/supabase/migrations/043_player_price_changes_by_date.sql`
 
 ### 3. Configure RLS (if needed)
 

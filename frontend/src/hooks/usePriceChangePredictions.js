@@ -28,7 +28,7 @@ export function usePriceChangePredictions() {
         .maybeSingle()
 
       if (err) throw err
-      if (!row) return { rises: [], falls: [], capturedAt: null }
+      if (!row) return { rises: [], falls: [], capturedAt: null, hasLatestRow: false }
 
       const rises = (row.rises ?? []).map(mapRow)
       const falls = (row.falls ?? []).map(mapRow)
@@ -36,6 +36,7 @@ export function usePriceChangePredictions() {
         rises,
         falls,
         capturedAt: row.captured_at ?? null,
+        hasLatestRow: true,
       }
     },
     staleTime: POLL_MS,
@@ -46,6 +47,7 @@ export function usePriceChangePredictions() {
     rises: data?.rises ?? [],
     falls: data?.falls ?? [],
     capturedAt: data?.capturedAt ?? null,
+    hasLatestRow: data?.hasLatestRow ?? false,
     loading: isLoading,
     error,
   }

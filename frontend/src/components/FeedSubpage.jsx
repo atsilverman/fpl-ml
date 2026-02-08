@@ -1,6 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Filter } from 'lucide-react'
+import { Filter, HelpCircle } from 'lucide-react'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -10,6 +11,12 @@ import { supabase } from '../lib/supabase'
 import './FeedSubpage.css'
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
+
+const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
+
+const POPUP_PADDING = 12
+const POPUP_MAX_WIDTH = 320
+const POPUP_MIN_WIDTH = 260
 
 function eventLabel(event) {
   const { event_type, points_delta, metadata } = event
@@ -130,10 +137,14 @@ export default function FeedSubpage({ isActive = true }) {
   const [scopeFilter, setScopeFilter] = useState('all')
   const [positionFilter, setPositionFilter] = useState('all')
   const [matchupFilter, setMatchupFilter] = useState('all')
+  const [showImpactPopup, setShowImpactPopup] = useState(false)
+  const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
   const prevActiveRef = useRef(false)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const filterPopupRef = useRef(null)
+  const impactPopupRef = useRef(null)
+  const impactIconRef = useRef(null)
 
   const { data: events = [], isLoading: eventsLoading, error: eventsError } = useQuery({
     queryKey: ['gameweek-feed-events', gameweek],
@@ -385,6 +396,50 @@ export default function FeedSubpage({ isActive = true }) {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const updateImpactPopupPlacement = () => {
+    if (!impactIconRef.current) return
+    const rect = impactIconRef.current.getBoundingClientRect()
+    const viewportW = window.innerWidth
+    const viewportH = window.innerHeight
+    const width = Math.min(POPUP_MAX_WIDTH, Math.max(POPUP_MIN_WIDTH, viewportW - POPUP_PADDING * 2))
+    const gap = 6
+    const estimatedPopupH = 120
+    const spaceBelow = viewportH - rect.bottom - gap
+    const spaceAbove = rect.top - gap
+    const preferBelow = spaceBelow >= estimatedPopupH || spaceBelow >= spaceAbove
+    const top = preferBelow ? rect.bottom + gap : rect.top - gap - estimatedPopupH
+    let left = rect.left + rect.width / 2 - width / 2
+    if (left < POPUP_PADDING) left = POPUP_PADDING
+    if (left + width > viewportW - POPUP_PADDING) left = viewportW - width - POPUP_PADDING
+    setPopupPlacement({ top, left, width })
+  }
+
+  useEffect(() => {
+    if (!showImpactPopup) return
+    const handleClickOutside = (e) => {
+      if (
+        impactPopupRef.current && !impactPopupRef.current.contains(e.target) &&
+        impactIconRef.current && !impactIconRef.current.contains(e.target)
+      ) {
+        setShowImpactPopup(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showImpactPopup])
+
+  useLayoutEffect(() => {
+    if (!showImpactPopup || !impactIconRef.current) return
+    updateImpactPopupPlacement()
+    const onScrollOrResize = () => updateImpactPopupPlacement()
+    window.addEventListener('scroll', onScrollOrResize, true)
+    window.addEventListener('resize', onScrollOrResize)
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true)
+      window.removeEventListener('resize', onScrollOrResize)
+    }
+  }, [showImpactPopup])
+
   const loading = gwLoading || eventsLoading || (playerIds.length > 0 && playersLoading)
   if (loading) {
     return <div className="feed-subpage" />
@@ -581,7 +636,50 @@ export default function FeedSubpage({ isActive = true }) {
       ) : filteredEvents.length === 0 ? (
         <div className="feed-subpage-empty">No events match the current filters.</div>
       ) : (
-        <div className="feed-event-list" role="list">
+        <>
+          <div className="feed-event-list__header" aria-hidden="true">
+            <div className="feed-event-list__header-player">Player</div>
+            <div className="feed-event-list__header-event">Event</div>
+            <div className="feed-event-list__header-impact feed-event-list__header-impact--has-popup">
+              <span className="feed-event-list__header-impact-label">Impact</span>
+              <button
+                type="button"
+                ref={impactIconRef}
+                className="feed-event-list__header-impact-icon-wrap"
+                onClick={(e) => {
+                  e.preventDefault()
+                  const next = !showImpactPopup
+                  if (next) updateImpactPopupPlacement()
+                  setShowImpactPopup(next)
+                }}
+                title="What is Impact?"
+                aria-expanded={showImpactPopup}
+                aria-haspopup="dialog"
+              >
+                <HelpCircle size={12} className="feed-event-list__header-impact-icon" aria-hidden />
+              </button>
+              {showImpactPopup &&
+                createPortal(
+                  <div
+                    ref={impactPopupRef}
+                    className="feed-impact-popup feed-impact-popup--portal"
+                    role="dialog"
+                    aria-label="Impact explained"
+                    style={{
+                      position: 'fixed',
+                      top: popupPlacement.top,
+                      left: popupPlacement.left,
+                      width: popupPlacement.width
+                    }}
+                  >
+                    <div className="feed-impact-popup__title">Impact</div>
+                    <p className="feed-impact-popup__text">{IMPACT_TOOLTIP}</p>
+                  </div>,
+                  document.body
+                )}
+            </div>
+          </div>
+          <div className="feed-event-list" role="list">
           {filteredEvents.map((event) => {
             const player = playersMap[event.player_id]
             const teamShortName = player?.team_id != null ? teamsMap[player.team_id] : null
@@ -600,7 +698,8 @@ export default function FeedSubpage({ isActive = true }) {
               />
             )
           })}
-        </div>
+          </div>
+        </>
       )}
     </div>
   )

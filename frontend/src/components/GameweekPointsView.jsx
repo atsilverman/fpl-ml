@@ -6,7 +6,7 @@ import { ArrowDownRight, ArrowUpRight, HelpCircle, ArrowDown, ArrowUp } from 'lu
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 
-const IMPACT_TOOLTIP = 'Importance: your share of this player\'s points vs the rest of your mini-league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than league average; negative = others gain more.'
+const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
 
 const PLAYER_NAME_MAX_LENGTH = 15
 

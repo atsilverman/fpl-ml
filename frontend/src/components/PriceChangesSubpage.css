@@ -37,6 +37,33 @@
   border-top: 1px solid var(--border-color);
 }
 
+.price-changes-daily-bentos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.price-changes-bento-day {
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+html[data-theme="dark"] .price-changes-bento-day {
+  background: var(--bg-secondary);
+}
+
+.price-changes-day-heading {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 2px 0;
+}
+
 .price-changes-section-label {
   font-size: 12px;
   font-weight: 600;
@@ -57,6 +84,20 @@
   color: var(--text-secondary);
   opacity: 0.85;
   margin: 0 0 6px 0;
+}
+
+.price-changes-empty-capture-note {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+.price-changes-empty-capture-note code {
+  font-size: 10px;
+  padding: 0 4px;
+  background: var(--bg-secondary, rgba(0,0,0,0.06));
+  border-radius: 3px;
 }
 
 .price-changes-error {

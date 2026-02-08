@@ -46,3 +46,4 @@ Use this Shortcut to send screenshot OCR text to the Price Changes ingest API. R
 - **“No JSON object” / 500:** The OCR text might be empty or the LLM failed. Check Edge Function logs in Supabase Dashboard.
 - **401 Unauthorized:** The `Authorization` or `x-api-key` value must match `PRICE_CHANGES_INGEST_SECRET`.
 - **Empty rises/falls:** The source image may be unclear; try a cleaner screenshot or check that the text extracted in step 2 looks correct.
+- **Predictions not showing in the app:** (1) The app and the Shortcut must use the **same Supabase project**. (2) In the Shortcut, the request body must be JSON with key `text` set to the output of "Extract Text from Image" (not the image). (3) The Price Changes screen shows "Last capture: …" even when the last capture had no rises/falls. (4) For quick UI testing, set `VITE_PRICE_CHANGES_POLL_MS=1000` in the frontend `.env` to poll every second.

@@ -1,5 +1,5 @@
 import { CircleArrowUp, CircleArrowDown } from 'lucide-react'
-import { usePlayerPriceChangesLatest } from '../hooks/usePlayerPriceChangesLatest'
+import { usePlayerPriceChangesByDate } from '../hooks/usePlayerPriceChangesByDate'
 import { usePriceChangePredictions } from '../hooks/usePriceChangePredictions'
 import { usePlayerTeamMap } from '../hooks/usePlayerTeamMap'
 import './PriceChangesSubpage.css'
@@ -78,11 +78,12 @@ function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) {
 }
 
 export default function PriceChangesSubpage({ showCard = true }) {
-  const { rises: actualRises, falls: actualFalls, snapshotDate, loading: actualLoading, error: actualError } = usePlayerPriceChangesLatest()
-  const { rises: predRises, falls: predFalls, capturedAt, loading: predLoading, error: predError } = usePriceChangePredictions()
+  const { byDate, loading: actualLoading, error: actualError } = usePlayerPriceChangesByDate()
+  const { rises: predRises, falls: predFalls, capturedAt, hasLatestRow, loading: predLoading, error: predError } = usePriceChangePredictions()
   const { getTeamForPlayer } = usePlayerTeamMap()
 
   const hasPredictions = (predRises?.length ?? 0) > 0 || (predFalls?.length ?? 0) > 0
+  const showPredictionsSection = hasLatestRow || hasPredictions
   const error = actualError ?? predError
 
   const content = (
@@ -91,13 +92,19 @@ export default function PriceChangesSubpage({ showCard = true }) {
         <div className="price-changes-error">Failed to load price changes.</div>
       ) : (
         <>
-          {hasPredictions && (
+          {showPredictionsSection && (
             <section className="price-changes-section" aria-labelledby="price-changes-predictions-heading">
               <h3 id="price-changes-predictions-heading" className="price-changes-section-label">Predictions (from screenshot)</h3>
               {capturedAt && (
                 <p className="price-changes-snapshot-date" aria-live="polite">
                   {formatCapturedAt(capturedAt)}
+                  {!hasPredictions && (
+                    <span className="price-changes-empty-capture-note"> — No rises/falls in last capture. Check Shortcut sends OCR text as <code>text</code> and source has clear rise/fall sections.</span>
+                  )}
                 </p>
+              )}
+              {!capturedAt && !predLoading && (
+                <p className="price-changes-snapshot-date">No screenshot data yet. Use the iOS Shortcut to send a price-change screenshot; ensure the Shortcut uses the same Supabase project as this app.</p>
               )}
               <PriceChangeColumns
                 rises={predRises}
@@ -107,19 +114,27 @@ export default function PriceChangesSubpage({ showCard = true }) {
               />
             </section>
           )}
-          <section className="price-changes-section" aria-labelledby="price-changes-actual-heading">
-            <h3 id="price-changes-actual-heading" className="price-changes-section-label">Actual</h3>
-            {snapshotDate && (
-              <p className="price-changes-snapshot-date" aria-live="polite">
-                {formatSnapshotDate(snapshotDate)}
-              </p>
+          <section className="price-changes-section price-changes-section-actual" aria-labelledby="price-changes-actual-heading">
+            <h3 id="price-changes-actual-heading" className="price-changes-section-label">Actual by day</h3>
+            {actualLoading ? (
+              <div className="price-changes-loading">Loading…</div>
+            ) : byDate.length === 0 ? (
+              <p className="price-changes-snapshot-date">No snapshot data yet. Price changes are recorded after the daily deadline window.</p>
+            ) : (
+              <div className="price-changes-daily-bentos">
+                {byDate.map(({ date, rises, falls }) => (
+                  <div key={date} className="price-changes-bento-day">
+                    <h4 className="price-changes-day-heading">{formatSnapshotDate(date)}</h4>
+                    <PriceChangeColumns
+                      rises={rises}
+                      falls={falls}
+                      loading={false}
+                      getTeamForPlayer={getTeamForPlayer}
+                    />
+                  </div>
+                ))}
+              </div>
             )}
-            <PriceChangeColumns
-              rises={actualRises}
-              falls={actualFalls}
-              loading={actualLoading}
-              getTeamForPlayer={getTeamForPlayer}
-            />
           </section>
         </>
       )}
