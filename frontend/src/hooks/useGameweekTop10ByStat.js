@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from './useGameweekData'
+import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 
 /**
  * For each stat column, returns the set of player_id that are in the top 10 for that stat in the gameweek.
  * Used so the green "top 10" badge is only shown when the player is actually top 10 for that specific column.
+ * For pts we use effective_total_points when present (total_points + provisional_bonus when bonus not confirmed)
+ * so the badge matches the displayed points during live/provisional scoring.
  */
 function computeTop10ByStat(rows) {
   const out = {
@@ -26,7 +29,7 @@ function computeTop10ByStat(rows) {
   if (!rows || rows.length === 0) return out
 
   const keyToCol = {
-    pts: 'total_points',
+    pts: 'effective_total_points',
     goals: 'goals_scored',
     assists: 'assists',
     clean_sheets: 'clean_sheets',
@@ -48,8 +51,12 @@ function computeTop10ByStat(rows) {
     const col = keyToCol[statKey]
     const desc = !lowerIsBetter.has(statKey)
     const sorted = [...rows].sort((a, b) => {
-      const av = Number(a[col]) || 0
-      const bv = Number(b[col]) || 0
+      const av = statKey === 'pts'
+        ? (Number(a.effective_total_points) || Number(a.total_points) || 0)
+        : (Number(a[col]) || 0)
+      const bv = statKey === 'pts'
+        ? (Number(b.effective_total_points) || Number(b.total_points) || 0)
+        : (Number(b[col]) || 0)
       return desc ? bv - av : av - bv
     })
     const top10 = sorted.slice(0, 10)
@@ -67,6 +74,9 @@ function computeTop10ByStat(rows) {
  */
 export function useGameweekTop10ByStat() {
   const { gameweek, loading: gwLoading } = useGameweekData()
+  const { state: refreshState } = useRefreshState()
+
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
 
   const { data: top10ByStat, isLoading } = useQuery({
     queryKey: ['gameweek-top10-by-stat', gameweek],
@@ -76,7 +86,7 @@ export function useGameweekTop10ByStat() {
       const { data, error } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'player_id, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+          'player_id, total_points, bonus_status, provisional_bonus, bonus, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
         )
         .eq('gameweek', gameweek)
 
@@ -85,10 +95,24 @@ export function useGameweekTop10ByStat() {
         return computeTop10ByStat([])
       }
 
-      return computeTop10ByStat(data || [])
+      const rows = (data || []).map((row) => {
+        const totalPoints = Number(row.total_points) || 0
+        const bonusStatus = row.bonus_status ?? 'provisional'
+        const officialBonus = Number(row.bonus) ?? 0
+        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+        const provisionalBonus = Number(row.provisional_bonus) || 0
+        const effective_total_points = isBonusConfirmed
+          ? totalPoints
+          : totalPoints + provisionalBonus
+        return { ...row, effective_total_points }
+      })
+
+      return computeTop10ByStat(rows)
     },
     enabled: !!gameweek && !gwLoading,
-    staleTime: 60 * 1000
+    staleTime: isLive ? 25 * 1000 : 60 * 1000,
+    refetchInterval: isLive ? 25 * 1000 : false,
+    refetchIntervalInBackground: true
   })
 
   return {

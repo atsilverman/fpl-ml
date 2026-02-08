@@ -119,6 +119,8 @@ export default function BentoCard({
   leagueChipsLoading = false,
   leagueStandings = null,
   leagueStandingsLoading = false,
+  currentManagerGwPoints = null,
+  currentManagerTotalPoints = null,
   captainName = null,
   viceCaptainName = null,
   leagueCaptainData = null,
@@ -213,15 +215,19 @@ export default function BentoCard({
   const isTransfersExpanded = id === 'transfers' && isExpanded
   const overallRankBorderClass =
     id === 'overall-rank' && change != null && change !== 0
-      ? change > 0
-        ? 'bento-card-overall-rank-border-positive'
-        : 'bento-card-overall-rank-border-negative'
+      ? isStale
+        ? 'bento-card-rank-border-stale'
+        : change > 0
+          ? 'bento-card-overall-rank-border-positive'
+          : 'bento-card-overall-rank-border-negative'
       : null
   const leagueRankBorderClass =
     id === 'league-rank' && change != null && change !== 0
-      ? change > 0
-        ? 'bento-card-league-rank-border-positive'
-        : 'bento-card-league-rank-border-negative'
+      ? isStale
+        ? 'bento-card-rank-border-stale'
+        : change > 0
+          ? 'bento-card-league-rank-border-positive'
+          : 'bento-card-league-rank-border-negative'
       : null
   const cardClasses = [
     'bento-card',
@@ -766,6 +772,8 @@ export default function BentoCard({
                     const change = s.calculated_rank_change != null ? s.calculated_rank_change : (s.mini_league_rank_change != null ? s.mini_league_rank_change : null)
                     const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
                     const isCurrentUser = currentManagerId != null && s.manager_id === currentManagerId
+                    const gwDisplay = isCurrentUser && currentManagerGwPoints != null ? currentManagerGwPoints : s.gameweek_points
+                    const totalDisplay = isCurrentUser && currentManagerTotalPoints != null ? currentManagerTotalPoints : s.total_points
                     return (
                       <tr key={s.manager_id} className={isCurrentUser ? 'league-standings-bento-row-you' : ''}>
                         <td className="league-standings-bento-rank">
@@ -782,8 +790,8 @@ export default function BentoCard({
                           </span>
                         </td>
                         <td className="league-standings-bento-team" title={displayName}>{displayName}</td>
-                        <td className={`league-standings-bento-total ${(s.total_points ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{s.total_points ?? '—'}</td>
-                        <td className={`league-standings-bento-gw ${(s.gameweek_points ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{s.gameweek_points ?? '—'}</td>
+                        <td className={`league-standings-bento-total ${(totalDisplay ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{totalDisplay ?? '—'}</td>
+                        <td className={`league-standings-bento-gw ${(gwDisplay ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{gwDisplay ?? '—'}</td>
                       </tr>
                     )
                   })}

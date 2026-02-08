@@ -122,6 +122,23 @@ export default function MiniLeaguePage() {
   const { transfers: selectedManagerTransfers, loading: selectedManagerTransfersLoading } = useTransferImpactsForManager(selectedManagerId, gameweek)
   const { managerData: configuredManagerData } = useManagerData()
   const { transfersOut: leagueTopTransfersOut, transfersIn: leagueTopTransfersIn, loading: leagueTopTransfersLoading } = useLeagueTopTransfers(LEAGUE_ID, gameweek)
+
+  // GW points for configured manager: same source as home bento (live sum from players when available, else history)
+  const currentManagerGwPoints = useMemo(() => {
+    if (!configuredManagerPlayers?.length) return configuredManagerData?.gameweekPoints ?? null
+    const starters = configuredManagerPlayers.filter((p) => p.position >= 1 && p.position <= 11)
+    let total = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
+    const subbedOut = configuredManagerPlayers.find((p) => p.was_auto_subbed_out)
+    const subbedIn = configuredManagerPlayers.find((p) => p.was_auto_subbed_in)
+    if (subbedOut && subbedIn) {
+      total = total - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    }
+    const transferCost = configuredManagerData?.transferCost ?? 0
+    return total - transferCost
+  }, [configuredManagerPlayers, configuredManagerData?.transferCost])
+  const currentManagerGwPointsDisplay = currentManagerGwPoints != null ? currentManagerGwPoints : (configuredManagerData?.gameweekPoints ?? 0)
+  const currentManagerTotalPointsDisplay = (configuredManagerData?.previousGameweekTotalPoints ?? 0) + currentManagerGwPointsDisplay
+
   const isViewingAnotherManager = selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) !== Number(currentManagerId)
   const ownedByYouPlayerIds = isViewingAnotherManager && configuredManagerPlayers?.length
     ? new Set(configuredManagerPlayers.map((p) => p.player_id))
@@ -210,13 +227,16 @@ export default function MiniLeaguePage() {
       const liveStatus = liveStatusByManager[s.manager_id]
       const leftToPlay = liveStatus?.left_to_play ?? null
       const inPlay = liveStatus?.in_play ?? null
+      const isYou = currentManagerId != null && s.manager_id === currentManagerId
       return {
         ...s,
         _rank: rank,
         _rankChange: rankChange,
         _displayName: displayName,
         _leftToPlay: leftToPlay,
-        _inPlay: inPlay
+        _inPlay: inPlay,
+        _totalForSort: isYou ? currentManagerTotalPointsDisplay : (s.total_points ?? 0),
+        _gwForSort: isYou ? currentManagerGwPointsDisplay : (s.gameweek_points ?? 0)
       }
     })
     const mult = sort.dir === 'asc' ? 1 : -1
@@ -227,9 +247,9 @@ export default function MiniLeaguePage() {
         case 'manager':
           return mult * (a._displayName || '').localeCompare(b._displayName || '')
         case 'total':
-          return mult * ((a.total_points ?? 0) - (b.total_points ?? 0))
+          return mult * ((a._totalForSort ?? 0) - (b._totalForSort ?? 0))
         case 'gw':
-          return mult * ((a.gameweek_points ?? 0) - (b.gameweek_points ?? 0))
+          return mult * ((a._gwForSort ?? 0) - (b._gwForSort ?? 0))
         case 'left':
           return mult * ((a._leftToPlay ?? -1) - (b._leftToPlay ?? -1))
         case 'live':
@@ -239,7 +259,7 @@ export default function MiniLeaguePage() {
       }
     }
     return [...rows].sort(cmp)
-  }, [standings, liveStatusByManager, sort.column, sort.dir])
+  }, [standings, liveStatusByManager, sort.column, sort.dir, currentManagerId, currentManagerTotalPointsDisplay, currentManagerGwPointsDisplay])
 
   const leagueManagerIds = useMemo(() => sortedRows.map((r) => r.manager_id), [sortedRows])
   const { transfersByManager, loading: leagueTransfersLoading } = useLeagueTransferImpacts(leagueManagerIds, gameweek)
@@ -673,8 +693,12 @@ export default function MiniLeaguePage() {
                         </span>
                       )}
                     </td>
-                    <td className={`league-standings-bento-total ${(s.total_points ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{s.total_points ?? '—'}</td>
-                    <td className={`league-standings-bento-gw ${(s.gameweek_points ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{s.gameweek_points ?? '—'}</td>
+                    <td className={`league-standings-bento-total ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerTotalPointsDisplay : s.total_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                      {currentManagerId != null && s.manager_id === currentManagerId ? (currentManagerTotalPointsDisplay ?? '—') : (s.total_points ?? '—')}
+                    </td>
+                    <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                      {currentManagerId != null && s.manager_id === currentManagerId ? (currentManagerGwPointsDisplay ?? '—') : (s.gameweek_points ?? '—')}
+                    </td>
                     <td className={`league-standings-bento-left-to-play ${leftToPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
                       {leftToPlay !== null && leftToPlay !== undefined ? leftToPlay : '—'}
                     </td>

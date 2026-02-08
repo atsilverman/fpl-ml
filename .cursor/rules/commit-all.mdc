@@ -1,0 +1,11 @@
+---
+description: When user says "commit", commit all missing code and server code
+alwaysApply: true
+---
+
+# Commit = all missing + server code
+
+When the user says "commit":
+- Stage and commit **all** uncommitted changes in the repo (frontend, backend/server, and any other project code).
+- Do not leave any modified project files uncommitted unless the user explicitly asks to exclude something.
+- Use a descriptive commit message; ask for one if the change set is large or unclear.

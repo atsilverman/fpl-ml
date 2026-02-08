@@ -86,6 +86,12 @@
   border-color: #ef4444;
 }
 
+/* Overall/league rank when stale: yellow border to match ! indicator */
+.bento-card.bento-card-rank-border-stale {
+  border-width: 1px;
+  border-color: #E7AD10;
+}
+
 @keyframes bentoCardFadeIn {
   from {
     opacity: 0;

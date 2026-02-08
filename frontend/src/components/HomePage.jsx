@@ -593,6 +593,8 @@ export default function HomePage() {
               leagueStandings={cardId === 'league-rank' ? leagueStandings : undefined}
               leagueStandingsLoading={cardId === 'league-rank' ? leagueStandingsLoading : undefined}
               currentManagerId={cardId === 'overall-rank' || cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
+              currentManagerGwPoints={cardId === 'league-rank' ? (gwPointsFromPlayers != null ? gwPointsFromPlayers : (managerData?.gameweekPoints ?? 0)) : undefined}
+              currentManagerTotalPoints={cardId === 'league-rank' ? (totalPointsFromPlayers != null ? totalPointsFromPlayers : (managerData?.totalPoints ?? 0)) : undefined}
               captainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_captain)?.player_name ?? null) : undefined}
               viceCaptainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
               leagueCaptainData={cardId === 'captain' ? leagueCaptainData : undefined}
