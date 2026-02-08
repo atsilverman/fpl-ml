@@ -5,14 +5,13 @@ import { Filter, HelpCircle } from 'lucide-react'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeagueGameweekPicks } from '../hooks/useLeagueGameweekPicks'
 import { supabase } from '../lib/supabase'
 import './FeedSubpage.css'
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
-const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
+const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the league average (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the league average; negative = the league gains more on average.'
 
 const POPUP_PADDING = 12
 const POPUP_MAX_WIDTH = 320
@@ -108,7 +107,7 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
           {delta}
         </span>
       </div>
-      <div className="feed-event-card__impact" title="League impact: net pts vs top third of your league">
+      <div className="feed-event-card__impact" title="League impact: net pts vs league average">
         <span className="feed-event-card__impact-label">Impact</span>
         <span
           className={`feed-event-card__impact-value ${
@@ -128,7 +127,6 @@ export default function FeedSubpage({ isActive = true }) {
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
 
-  const { standings = [] } = useMiniLeagueStandings(gameweek)
   const { picks: leaguePicks, managerCount } = useLeagueGameweekPicks(leagueId, gameweek)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -266,26 +264,19 @@ export default function FeedSubpage({ isActive = true }) {
     return map
   }, [managerPicksRaw])
 
-  const topThirdManagerIds = useMemo(() => {
-    if (!standings.length) return new Set()
-    const n = Math.max(1, Math.ceil(standings.length / 3))
-    return new Set(standings.slice(0, n).map((s) => s.manager_id))
-  }, [standings])
-
   const impactByEventId = useMemo(() => {
     const out = {}
-    if (!leagueId || !gameweek || managerId == null || topThirdManagerIds.size === 0 || !sortedEvents?.length) {
+    if (!leagueId || !gameweek || managerId == null || !managerCount || !sortedEvents?.length) {
       return out
     }
-    const topThirdPicks = leaguePicks.filter((p) => topThirdManagerIds.has(p.manager_id))
     for (const event of sortedEvents) {
       const { id, player_id, points_delta } = event
       const ourMult = viewerMultiplierByPlayerId[player_id] ?? 0
       const ourPoints = points_delta * ourMult
-      const topThirdForPlayer = topThirdPicks.filter((p) => p.player_id === player_id)
-      const topThirdSum = topThirdForPlayer.reduce((s, p) => s + points_delta * (p.multiplier ?? 1), 0)
-      const topThirdAvg = topThirdManagerIds.size > 0 ? topThirdSum / topThirdManagerIds.size : 0
-      const impact = ourPoints - topThirdAvg
+      const leaguePicksForPlayer = leaguePicks.filter((p) => p.player_id === player_id)
+      const leagueSum = leaguePicksForPlayer.reduce((s, p) => s + points_delta * (p.multiplier ?? 1), 0)
+      const leagueAvg = leagueSum / managerCount
+      const impact = ourPoints - leagueAvg
       out[id] = Math.round(impact * 10) / 10
     }
     return out
@@ -294,7 +285,7 @@ export default function FeedSubpage({ isActive = true }) {
     gameweek,
     managerId,
     leaguePicks,
-    topThirdManagerIds,
+    managerCount,
     sortedEvents,
     viewerMultiplierByPlayerId
   ])
