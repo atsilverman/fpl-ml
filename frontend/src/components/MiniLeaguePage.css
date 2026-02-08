@@ -1281,7 +1281,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 6px 10px 8px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
@@ -1289,26 +1289,33 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   min-width: 0;
 }
 .manager-detail-modal-title {
-  font-size: 16px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  letter-spacing: 0.2px;
 }
 .manager-detail-modal-subtitle {
-  font-size: 12px;
+  font-size: 9px;
   font-weight: 400;
   color: var(--text-secondary);
-  margin: 4px 0 0;
+  margin: 2px 0 0;
   line-height: 1.2;
 }
 .manager-detail-modal-header-actions {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
 }
 .manager-detail-modal-legend-icon {
   flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+.manager-detail-modal-legend-icon .bento-card-expand-icon-svg {
+  width: 9px;
+  height: 9px;
 }
 .manager-detail-modal-legend-popup {
   position: absolute;
@@ -1321,12 +1328,16 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 6px;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 4px;
   transition: color 0.2s, background 0.2s;
+}
+.manager-detail-modal-close svg {
+  width: 16px;
+  height: 16px;
 }
 @media (hover: hover) {
   .manager-detail-modal-close:hover {
@@ -1335,7 +1346,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   }
 }
 .manager-detail-modal-body {
-  padding: 12px 16px 16px;
+  padding: 8px 12px 12px;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -1346,13 +1357,24 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   margin-top: 0;
 }
 
-/* Chart area: natural height so all players visible; modal body scrolls to show players + transfers */
+/* Chart area: same height as home GW points bento; internal scroll like bento */
 .manager-detail-modal-chart-wrap {
   flex: 0 0 auto;
   width: 100%;
   min-width: 0;
+  height: 452px;
+  min-height: 452px;
+  max-height: 452px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+@media (max-height: 600px) {
+  .manager-detail-modal-chart-wrap {
+    height: 360px;
+    min-height: 360px;
+    max-height: 360px;
+  }
 }
 
 .manager-detail-transfers-section {

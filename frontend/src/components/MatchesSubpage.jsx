@@ -596,6 +596,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 
 export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false } = {}) {
   const [matchupsAnchor, setMatchupsAnchor] = useState('current')
+  const { gameweek: currentGameweekId } = useGameweekData('current')
   const { gameweek, loading: gwLoading, dataChecked } = useGameweekData(matchupsAnchor)
   const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
@@ -695,9 +696,9 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             className={`matches-anchor-btn ${matchupsAnchor === 'current' ? 'matches-anchor-btn--active' : ''}`}
             onClick={() => setMatchupsAnchor('current')}
             aria-pressed={matchupsAnchor === 'current'}
-            aria-label="Current gameweek"
+            aria-label={currentGameweekId != null ? `Gameweek ${currentGameweekId}` : 'Current gameweek'}
           >
-            Current
+            {currentGameweekId != null ? `GW${currentGameweekId}` : 'Current'}
           </button>
           <button
             type="button"

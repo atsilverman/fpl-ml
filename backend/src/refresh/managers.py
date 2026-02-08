@@ -256,14 +256,21 @@ class ManagerDataRefresher:
             active_chip = picks_data.get("active_chip")
             
             for pick in picks:
+                is_captain = pick.get("is_captain", False)
+                raw_mult = pick.get("multiplier", 1)
+                # Ensure captain/triple-captain multiplier is set even if API omits it
+                if raw_mult == 1 and is_captain:
+                    multiplier = 3 if active_chip == "3xc" else 2
+                else:
+                    multiplier = raw_mult if raw_mult in (1, 2, 3) else 1
                 pick_data = {
                     "manager_id": manager_id,
                     "gameweek": gameweek,
                     "player_id": pick["element"],
                     "position": pick["position"],
-                    "is_captain": pick.get("is_captain", False),
+                    "is_captain": is_captain,
                     "is_vice_captain": pick.get("is_vice_captain", False),
-                    "multiplier": pick.get("multiplier", 1),
+                    "multiplier": multiplier,
                     "was_auto_subbed_out": False,
                     "was_auto_subbed_in": False,
                     "auto_sub_replaced_player_id": None,

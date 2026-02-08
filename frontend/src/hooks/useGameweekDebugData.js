@@ -70,6 +70,7 @@ export function useGameweekDebugData() {
     },
     enabled: !!gameweek,
     staleTime: 15000,
+    refetchInterval: 30000, // Poll so fixture state (finished/provisional/live) stays in sync with backend
   })
 
   return {

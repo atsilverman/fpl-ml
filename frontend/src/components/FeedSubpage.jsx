@@ -65,6 +65,7 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
   const { label, delta } = eventLabel(event)
   const isPositive = event.points_delta > 0
   const isNegative = event.points_delta < 0
+  const isReversed = event.metadata?.reversed === true
   const positionLabel = position != null ? (POSITION_LABELS[position] ?? '—') : null
 
   const impactDisplay = impact != null
@@ -74,7 +75,7 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
   const impactIsNegative = impact != null && impact < 0
 
   return (
-    <article className="feed-event-card">
+    <article className={`feed-event-card${isReversed ? ' feed-event-card--reversed' : ''}`}>
       <div className="feed-event-card__player">
         {teamShortName && (
           <img
@@ -135,6 +136,7 @@ export default function FeedSubpage({ isActive = true }) {
   const [scopeFilter, setScopeFilter] = useState('all')
   const [positionFilter, setPositionFilter] = useState('all')
   const [matchupFilter, setMatchupFilter] = useState('all')
+  const [sortBy, setSortBy] = useState('time')
   const [showImpactPopup, setShowImpactPopup] = useState(false)
   const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
   const prevActiveRef = useRef(false)
@@ -242,7 +244,7 @@ export default function FeedSubpage({ isActive = true }) {
       if (Number.isNaN(mid)) return []
       const { data, error } = await supabase
         .from('manager_picks')
-        .select('player_id, position, multiplier')
+        .select('player_id, position, multiplier, is_captain')
         .eq('manager_id', mid)
         .eq('gameweek', gameweek)
       if (error) throw error
@@ -258,8 +260,13 @@ export default function FeedSubpage({ isActive = true }) {
   const viewerMultiplierByPlayerId = useMemo(() => {
     const map = {}
     managerPicksRaw.forEach((p) => {
-      const mult = p.position <= 11 ? (p.multiplier ?? 1) : 0
-      map[p.player_id] = mult
+      const pid = p.player_id
+      const mult = p.position > 11 ? 0 : (p.multiplier ?? 1) === 1 && p.is_captain ? 2 : (p.multiplier ?? 1)
+      map[pid] = mult
+      if (pid != null) {
+        map[Number(pid)] = mult
+        map[String(pid)] = mult
+      }
     })
     return map
   }, [managerPicksRaw])
@@ -269,11 +276,20 @@ export default function FeedSubpage({ isActive = true }) {
     if (!leagueId || !gameweek || managerId == null || !managerCount || !sortedEvents?.length) {
       return out
     }
+    const mid = Number(managerId)
     for (const event of sortedEvents) {
       const { id, player_id, points_delta } = event
-      const ourMult = viewerMultiplierByPlayerId[player_id] ?? 0
+      let ourMult = viewerMultiplierByPlayerId[player_id] ?? viewerMultiplierByPlayerId[Number(player_id)] ?? viewerMultiplierByPlayerId[String(player_id)] ?? 0
+      if (ourMult === 0 && leaguePicks.length > 0) {
+        const viewerPick = leaguePicks.find(
+          (p) => (Number(p.manager_id) === mid || p.manager_id === managerId) && (p.player_id === player_id || Number(p.player_id) === Number(player_id))
+        )
+        if (viewerPick) ourMult = viewerPick.multiplier ?? 1
+      }
       const ourPoints = points_delta * ourMult
-      const leaguePicksForPlayer = leaguePicks.filter((p) => p.player_id === player_id)
+      const leaguePicksForPlayer = leaguePicks.filter(
+        (p) => p.player_id === player_id || Number(p.player_id) === Number(player_id)
+      )
       const leagueSum = leaguePicksForPlayer.reduce((s, p) => s + points_delta * (p.multiplier ?? 1), 0)
       const leagueAvg = leagueSum / managerCount
       const impact = ourPoints - leagueAvg
@@ -309,8 +325,9 @@ export default function FeedSubpage({ isActive = true }) {
       const m = matchups.find(mu => Number(mu.fixtureId) === fid)
       if (m) matchupLabel = `${m.homeShort ?? '?'} v ${m.awayShort ?? '?'}`
     }
-    return `${scopeLabel} · ${positionLabel} · ${matchupLabel}`
-  }, [scopeFilter, positionFilter, matchupFilter, matchups])
+    const sortLabel = sortBy === 'time' ? 'Time (newest)' : sortBy === 'impact_positive' ? 'Impact (+)' : 'Impact (−)'
+    return `${scopeLabel} · ${positionLabel} · ${matchupLabel} · ${sortLabel}`
+  }, [scopeFilter, positionFilter, matchupFilter, matchups, sortBy])
 
   const suggestions = useMemo(() => {
     const events = sortedEvents || []
@@ -359,6 +376,25 @@ export default function FeedSubpage({ isActive = true }) {
     return list
   }, [sortedEvents, searchQuery, scopeFilter, positionFilter, matchupFilter, managerId, ownedPlayerIdSet, playersMap, teamsMap])
 
+  const sortedFilteredEvents = useMemo(() => {
+    const list = filteredEvents || []
+    if (sortBy === 'impact_positive') {
+      return [...list].sort((a, b) => {
+        const impactA = impactByEventId[a.id] ?? -Infinity
+        const impactB = impactByEventId[b.id] ?? -Infinity
+        return impactB - impactA
+      })
+    }
+    if (sortBy === 'impact_negative') {
+      return [...list].sort((a, b) => {
+        const impactA = impactByEventId[a.id] ?? Infinity
+        const impactB = impactByEventId[b.id] ?? Infinity
+        return impactA - impactB
+      })
+    }
+    return list
+  }, [filteredEvents, sortBy, impactByEventId])
+
   useEffect(() => {
     if (isActive && !prevActiveRef.current) {
       setSearchQuery('')
@@ -367,6 +403,7 @@ export default function FeedSubpage({ isActive = true }) {
       setScopeFilter('all')
       setPositionFilter('all')
       setMatchupFilter('all')
+      setSortBy('time')
     }
     prevActiveRef.current = isActive
   }, [isActive])
@@ -460,7 +497,7 @@ export default function FeedSubpage({ isActive = true }) {
     )
   }
 
-  const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all'
+  const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || sortBy !== 'time'
   const showBackdrop = showFilterPopup
 
   return (
@@ -554,6 +591,32 @@ export default function FeedSubpage({ isActive = true }) {
                   </div>
                 </div>
                 <div className="feed-filter-section">
+                  <div className="feed-filter-section-title">Sort</div>
+                  <div className="feed-filter-buttons">
+                    <button
+                      type="button"
+                      className={`feed-matchup-btn ${sortBy === 'time' ? 'feed-matchup-btn--active' : ''}`}
+                      onClick={() => setSortBy('time')}
+                    >
+                      Time (newest)
+                    </button>
+                    <button
+                      type="button"
+                      className={`feed-matchup-btn ${sortBy === 'impact_positive' ? 'feed-matchup-btn--active' : ''}`}
+                      onClick={() => setSortBy('impact_positive')}
+                    >
+                      Impact (+)
+                    </button>
+                    <button
+                      type="button"
+                      className={`feed-matchup-btn ${sortBy === 'impact_negative' ? 'feed-matchup-btn--active' : ''}`}
+                      onClick={() => setSortBy('impact_negative')}
+                    >
+                      Impact (−)
+                    </button>
+                  </div>
+                </div>
+                <div className="feed-filter-section">
                   <div className="feed-filter-section-title">Position</div>
                   <div className="feed-filter-buttons">
                     <button
@@ -624,7 +687,7 @@ export default function FeedSubpage({ isActive = true }) {
       )}
       {sortedEvents.length === 0 ? (
         <div className="feed-subpage-empty">No events yet. Events appear during live gameweeks.</div>
-      ) : filteredEvents.length === 0 ? (
+      ) : sortedFilteredEvents.length === 0 ? (
         <div className="feed-subpage-empty">No events match the current filters.</div>
       ) : (
         <>
@@ -671,7 +734,7 @@ export default function FeedSubpage({ isActive = true }) {
             </div>
           </div>
           <div className="feed-event-list" role="list">
-          {filteredEvents.map((event) => {
+          {sortedFilteredEvents.map((event) => {
             const player = playersMap[event.player_id]
             const teamShortName = player?.team_id != null ? teamsMap[player.team_id] : null
             const playerName = player?.web_name ?? null

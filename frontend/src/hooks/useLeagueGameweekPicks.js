@@ -26,7 +26,7 @@ export function useLeagueGameweekPicks(leagueId, gameweek) {
 
       const { data: picks, error: picksError } = await supabase
         .from('manager_picks')
-        .select('manager_id, player_id, position, multiplier')
+        .select('manager_id, player_id, position, multiplier, is_captain')
         .in('manager_id', managerIds)
         .eq('gameweek', gameweek)
         .lte('position', 11)
@@ -34,11 +34,15 @@ export function useLeagueGameweekPicks(leagueId, gameweek) {
       if (picksError) throw picksError
 
       return {
-        picks: (picks || []).map((p) => ({
-          manager_id: p.manager_id,
-          player_id: p.player_id,
-          multiplier: p.multiplier ?? 1
-        })),
+        picks: (picks || []).map((p) => {
+          let mult = p.multiplier ?? 1
+          if (mult === 1 && p.is_captain) mult = 2
+          return {
+            manager_id: p.manager_id,
+            player_id: p.player_id,
+            multiplier: mult
+          }
+        }),
         managerCount
       }
     },

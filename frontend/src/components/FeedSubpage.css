@@ -156,6 +156,20 @@
   min-height: 48px;
 }
 
+/* Stat later ruled out (e.g. goal/assist disallowed): cross out and grey the existing row */
+.feed-event-card--reversed .feed-event-card__player-name,
+.feed-event-card--reversed .feed-event-card__event-label,
+.feed-event-card--reversed .feed-event-card__event-delta {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+  opacity: 0.75;
+}
+
+.feed-event-card--reversed .feed-event-card__event-delta--positive,
+.feed-event-card--reversed .feed-event-card__event-delta--negative {
+  color: var(--text-secondary);
+}
+
 .feed-event-card__player {
   display: flex;
   align-items: center;
@@ -246,7 +260,7 @@ html[data-theme="dark"] .feed-event-card__position-badge {
 }
 
 .feed-event-card__event-delta--negative {
-  color: var(--collapse-icon-color);
+  color: var(--accent-red, #ef4444);
 }
 
 .feed-event-card__impact {
@@ -279,7 +293,7 @@ html[data-theme="dark"] .feed-event-card__position-badge {
 }
 
 .feed-event-card__impact-value--negative {
-  background: var(--collapse-icon-color, #dc2626);
+  background: var(--accent-red, #ef4444);
   color: #fff;
 }
 

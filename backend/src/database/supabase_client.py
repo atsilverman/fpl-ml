@@ -222,6 +222,43 @@ class SupabaseClient:
             rows.append(row)
         self.client.table("gameweek_feed_events").insert(rows).execute()
 
+    def mark_feed_events_reversed(self, reversals: List[Dict[str, Any]]):
+        """
+        Mark the latest (by occurred_at, id) unreversed feed event for each
+        (gameweek, player_id, fixture_id, event_type) as reversed.
+        Used when a stat is removed (e.g. goal/assist ruled out); no new row is inserted.
+        """
+        if not reversals:
+            return
+        for r in reversals:
+            gameweek = r["gameweek"]
+            player_id = r["player_id"]
+            fixture_id = r.get("fixture_id")
+            event_type = r["event_type"]
+            q = (
+                self.client.table("gameweek_feed_events")
+                .select("id, metadata")
+                .eq("gameweek", gameweek)
+                .eq("player_id", player_id)
+                .eq("event_type", event_type)
+                .order("occurred_at", desc=True)
+                .order("id", desc=True)
+                .limit(50)
+            )
+            if fixture_id is not None:
+                q = q.eq("fixture_id", fixture_id)
+            else:
+                q = q.is_("fixture_id", "null")
+            result = q.execute()
+            rows = result.data or []
+            for row in rows:
+                if row.get("metadata") and row["metadata"].get("reversed"):
+                    continue
+                meta = dict(row["metadata"]) if row.get("metadata") else {}
+                meta["reversed"] = True
+                self.client.table("gameweek_feed_events").update({"metadata": meta}).eq("id", row["id"]).execute()
+                break
+
     def upsert_player(self, player_data: Dict[str, Any]):
         """
         Upsert a player.

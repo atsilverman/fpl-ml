@@ -7,7 +7,7 @@ Handles refreshing player stats, prices, and fixtures data.
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
@@ -111,12 +111,15 @@ class PlayerDataRefresher:
         fixture_id: Optional[int],
         position: int,
         occurred_at: str,
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
-        Compare previous vs new stats and return point-impacting feed events.
+        Compare previous vs new stats and return point-impacting feed events plus reversals.
         Only emits when a stat change actually changes FPL points.
+        Reversals (e.g. goal/assist ruled out) are returned so the caller can mark the
+        latest matching feed event as reversed (no separate removal row).
         """
         events: List[Dict[str, Any]] = []
+        reversals: List[Dict[str, Any]] = []  # {"gameweek", "player_id", "fixture_id", "event_type"}
         total_after = new_stats.get("total_points", 0)
 
         def _old(key: str, default: int = 0) -> int:
@@ -140,6 +143,14 @@ class PlayerDataRefresher:
                 "occurred_at": occurred_at,
                 "metadata": None,
             })
+        elif _new("goals_scored") < _old("goals_scored"):
+            for _ in range(_old("goals_scored") - _new("goals_scored")):
+                reversals.append({
+                    "gameweek": gameweek,
+                    "player_id": player_id,
+                    "fixture_id": fixture_id,
+                    "event_type": "goal",
+                })
 
         if _new("assists") > _old("assists"):
             events.append({
@@ -152,6 +163,14 @@ class PlayerDataRefresher:
                 "occurred_at": occurred_at,
                 "metadata": None,
             })
+        elif _new("assists") < _old("assists"):
+            for _ in range(_old("assists") - _new("assists")):
+                reversals.append({
+                    "gameweek": gameweek,
+                    "player_id": player_id,
+                    "fixture_id": fixture_id,
+                    "event_type": "assist",
+                })
 
         if _new("own_goals") > _old("own_goals"):
             events.append({
@@ -315,7 +334,7 @@ class PlayerDataRefresher:
                 "metadata": None,
             })
 
-        return events
+        return (events, reversals)
 
     async def refresh_player_gameweek_stats(
         self,
@@ -438,6 +457,7 @@ class PlayerDataRefresher:
             live_elements = {elem["id"]: elem for elem in live_data.get("elements", [])}
             batch_stats = []
             feed_events: List[Dict[str, Any]] = []
+            feed_reversals: List[Dict[str, Any]] = []
             occurred_at = datetime.now(timezone.utc).isoformat()
 
             # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (MP > 45 = second half)
@@ -628,7 +648,7 @@ class PlayerDataRefresher:
                 base_total = stats.get("total_points", 0)
                 effective_total = base_total + (effective_new_bonus - bonus)
                 stats_for_feed = {**stats, "bonus": effective_new_bonus, "total_points": effective_total}
-                events_for_player = self._feed_events_from_deltas(
+                events_for_player, reversals_for_player = self._feed_events_from_deltas(
                     existing_stat_for_feed,
                     stats_for_feed,
                     gameweek,
@@ -638,6 +658,7 @@ class PlayerDataRefresher:
                     occurred_at,
                 )
                 feed_events.extend(events_for_player)
+                feed_reversals.extend(reversals_for_player)
             
             if batch_stats:
                 self.db_client.upsert_player_gameweek_stats(batch_stats)
@@ -646,6 +667,11 @@ class PlayerDataRefresher:
                     self.db_client.insert_feed_events(feed_events)
                 except Exception as e:
                     logger.warning("Feed events insert failed", extra={"gameweek": gameweek, "count": len(feed_events), "error": str(e)})
+            if feed_reversals:
+                try:
+                    self.db_client.mark_feed_events_reversed(feed_reversals)
+                except Exception as e:
+                    logger.warning("Feed reversals update failed", extra={"gameweek": gameweek, "count": len(feed_reversals), "error": str(e)})
         
         else:
             # Fallback to element-summary calls when /event/{gw}/live is unavailable
@@ -668,6 +694,7 @@ class PlayerDataRefresher:
             ).eq("gameweek", gameweek).in_("player_id", list(active_player_ids)).execute().data
             existing_stats_by_player = {s["player_id"]: s for s in (existing_stats_full or [])}
             feed_events: List[Dict[str, Any]] = []
+            feed_reversals: List[Dict[str, Any]] = []
             occurred_at = datetime.now(timezone.utc).isoformat()
             
             # Refresh players in batches to avoid overwhelming API
@@ -791,7 +818,7 @@ class PlayerDataRefresher:
                         "saves": gw_data.get("saves", 0),
                         "goals_conceded": gw_data.get("goals_conceded", 0),
                     }
-                    events_for_player = self._feed_events_from_deltas(
+                    events_for_player, reversals_for_player = self._feed_events_from_deltas(
                         existing_stat,
                         new_stats_for_feed,
                         gameweek,
@@ -801,6 +828,7 @@ class PlayerDataRefresher:
                         occurred_at,
                     )
                     feed_events.extend(events_for_player)
+                    feed_reversals.extend(reversals_for_player)
                 
                 if batch_stats:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)
@@ -809,11 +837,59 @@ class PlayerDataRefresher:
                 if i + batch_size < len(player_list):
                     await asyncio.sleep(0.5)
             
+            # Compute and persist provisional_bonus for provisional fixtures (BPS rank 3/2/1)
+            # so the frontend can show correct points when bonus not yet in API
+            provisional_fixture_ids = [
+                fid for fid, f in fixtures_by_id.items()
+                if f.get("finished_provisional") and not f.get("finished")
+            ]
+            if provisional_fixture_ids:
+                try:
+                    rows = self.db_client.client.table("player_gameweek_stats").select(
+                        "*"
+                    ).eq("gameweek", gameweek).in_(
+                        "fixture_id", provisional_fixture_ids
+                    ).execute().data or []
+                    to_update = [
+                        r for r in rows
+                        if (r.get("bonus_status") == "provisional" and (r.get("bonus") or 0) == 0)
+                    ]
+                    if to_update:
+                        fixture_players: Dict[int, List[Dict]] = {}
+                        for r in to_update:
+                            fid = r.get("fixture_id")
+                            if fid not in fixture_players:
+                                fixture_players[fid] = []
+                            fixture_players[fid].append({
+                                "id": r["player_id"],
+                                "bps": r.get("bps") or 0
+                            })
+                        for r in to_update:
+                            fid = r.get("fixture_id")
+                            plist = fixture_players.get(fid, [])
+                            r["provisional_bonus"] = self._calculate_provisional_bonus(
+                                r["player_id"],
+                                r.get("bps") or 0,
+                                fid,
+                                plist,
+                            )
+                        self.db_client.upsert_player_gameweek_stats(to_update)
+                except Exception as e:
+                    logger.warning(
+                        "Provisional bonus update failed (element-summary path)",
+                        extra={"gameweek": gameweek, "error": str(e)}
+                    )
+            
             if feed_events:
                 try:
                     self.db_client.insert_feed_events(feed_events)
                 except Exception as e:
                     logger.warning("Feed events insert failed (element-summary path)", extra={"gameweek": gameweek, "count": len(feed_events), "error": str(e)})
+            if feed_reversals:
+                try:
+                    self.db_client.mark_feed_events_reversed(feed_reversals)
+                except Exception as e:
+                    logger.warning("Feed reversals update failed (element-summary path)", extra={"gameweek": gameweek, "count": len(feed_reversals), "error": str(e)})
         
         logger.info("Player stats done", extra={"gameweek": gameweek, "count": len(active_player_ids)})
     

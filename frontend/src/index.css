@@ -30,9 +30,9 @@ html[data-theme="dark"] {
   --gw-bench-fill-solid: #0f1329;
   --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 14%, var(--bg-primary) 86%);
   --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 14%, var(--bg-primary) 86%);
-  --collapse-icon-color: #f87171;
-  --collapse-badge-bg: rgba(248, 113, 113, 0.12);
-  --collapse-badge-border: rgba(248, 113, 113, 0.35);
+  --collapse-icon-color: #a0aec0;
+  --collapse-badge-bg: rgba(255, 255, 255, 0.06);
+  --collapse-badge-border: rgba(255, 255, 255, 0.12);
   /* Bonus BPS (3 / 2 / 1 pts) – single accent, three intensity levels */
   --bonus-1st: #3b82f6;
   --bonus-1st-fg: #fff;
@@ -70,9 +70,9 @@ html[data-theme="light"] {
   --gw-bench-fill-solid: #eef1f5;
   --gw-autosub-out-bg-solid: #fde8e8;
   --gw-autosub-in-bg-solid: #e6f7f2;
-  --collapse-icon-color: #dc2626;
-  --collapse-badge-bg: rgba(220, 38, 38, 0.08);
-  --collapse-badge-border: rgba(220, 38, 38, 0.3);
+  --collapse-icon-color: #64748b;
+  --collapse-badge-bg: rgba(0, 0, 0, 0.06);
+  --collapse-badge-border: rgba(0, 0, 0, 0.08);
   /* Bonus BPS (3 / 2 / 1 pts) – single accent; fg dark for contrast on light bars */
   --bonus-1st: #2563eb;
   --bonus-1st-fg: #0f172a;

@@ -17,10 +17,18 @@ const POPUP_MIN_WIDTH = 260
 export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [] }) {
   const { fixtures: debugFixtures = [] } = useGameweekDebugData()
   const fixtures = (fixturesProp != null && fixturesProp.length > 0) ? fixturesProp : debugFixtures
-  const fixturesById = useMemo(
-    () => Object.fromEntries((fixtures || []).map((f) => [f.fpl_fixture_id, f])),
-    [fixtures]
-  )
+  // Support lookup by number or string (Supabase/API can return either) so we always resolve fixture and use fixture table state
+  const fixturesById = useMemo(() => {
+    const map = {}
+    for (const f of fixtures || []) {
+      const id = f.fpl_fixture_id
+      if (id == null) continue
+      map[id] = f
+      map[Number(id)] = f
+      map[String(id)] = f
+    }
+    return map
+  }, [fixtures])
   const [showImpactPopup, setShowImpactPopup] = useState(false)
   const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
   const impactPopupRef = useRef(null)
@@ -186,16 +194,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
-    const matchStarted = Boolean(player.match_started)
-    // Use fixture table state when available (same source as debug panel) so dot matches "game finished"
-    const fixtureForPlayer = fixturesById && player.fixture_id != null ? fixturesById[player.fixture_id] : null
+    const fid = player.fixture_id != null ? player.fixture_id : null
+    const fixtureForPlayer = fixturesById && fid != null
+      ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)])
+      : null
+    // Prefer fixture table state (same source as debug panel) so provisional/live/finished matches backend
+    const matchStarted = fixtureForPlayer ? Boolean(fixtureForPlayer.started) : Boolean(player.match_started)
     const matchFinished = fixtureForPlayer ? Boolean(fixtureForPlayer.finished) : Boolean(player.match_finished)
     const matchFinishedProvisional = fixtureForPlayer ? Boolean(fixtureForPlayer.finished_provisional) : Boolean(player.match_finished_provisional)
     // Match "in the past" for mins column: started or finished (so DNP shows ! not kickoff for 0 mins when match is done)
     const matchStartedOrFinished = matchStarted || matchFinished || matchFinishedProvisional
     const isMatchLive = matchStarted && !matchFinished && !matchFinishedProvisional
     const isMatchProvisional = matchFinishedProvisional && !matchFinished
-    const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && (isMatchLive || isMatchProvisional || (isLiveUpdating && player.match_started === undefined))
+    const isBonusPending = isMatchProvisional && player.bonus_status === 'provisional'
+    // Only show status dot when match is not finished; never show live/provisional dot for finished matches
+    const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && !matchFinished && (isMatchLive || isMatchProvisional)
     // Don't show provisional dot when this player's bonus is already confirmed (e.g. from catch-up refresh)
     const minsDotProvisional = isMatchProvisional && !isMatchLive && player.bonus_status !== 'confirmed'
     const ptsDisplay = player.contributedPoints ?? player.points
@@ -220,8 +233,16 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       const showTop10Badge = statShowsTop10 && !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
       const showBadge = showDefconBadge || showSavesBadge || showTop10Badge || isProvisionalBonus
       const displayVal = expectedStatKeys.includes(statKey) ? formatExpected(value) : value
-      if (isZero) {
+      if (isZero && !isProvisionalBonus) {
         return <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted">{displayVal}</td>
+      }
+      if (isZero && isProvisionalBonus) {
+        const title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
+        return (
+          <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-provisional">
+            <span className="gameweek-points-player-points-badge gameweek-points-stat-provisional" title={title}>{displayVal}</span>
+          </td>
+        )
       }
       const badgeClass = [
         'gameweek-points-player-points-badge',
@@ -293,8 +314,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           <span className="gameweek-points-col-sep" aria-hidden />
         </td>
         <td
-            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? ' gameweek-points-cell-provisional' : ''}`}
-            title={player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 ? 'Includes provisional bonus (from BPS rank)' : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
+            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
+            title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
           >
             {isTop10Pts ? (
               <span
@@ -381,7 +402,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         {renderStatCell(player.clean_sheets ?? 0, 'clean_sheets')}
         {renderStatCell(player.saves ?? 0, 'saves')}
         {renderStatCell(player.bps ?? 0, 'bps')}
-        {renderStatCell(player.bonus ?? 0, 'bonus', { isProvisionalBonus: player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0 })}
+        {renderStatCell(player.bonus ?? 0, 'bonus', { isProvisionalBonus: (player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending })}
         {renderStatCell(player.defensive_contribution ?? 0, 'defensive_contribution')}
         {renderStatCell(player.yellow_cards ?? 0, 'yellow_cards')}
         {renderStatCell(player.red_cards ?? 0, 'red_cards')}
