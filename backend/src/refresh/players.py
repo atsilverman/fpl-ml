@@ -624,6 +624,7 @@ class PlayerDataRefresher:
                             existing_stat.get("bonus", 0)
                             if match_finished
                             else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
+                        )
                         existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
                         base_total = stats.get("total_points", 0)
                         effective_total = base_total + (effective_new_bonus - bonus)
@@ -927,7 +928,43 @@ class PlayerDataRefresher:
 
         except Exception as e:
             logger.error("Player prices failed", extra={"gameweek": gameweek, "error": str(e)}, exc_info=True)
-    
+
+    def sync_player_prices_from_bootstrap(self, bootstrap: Dict[str, Any], gameweek: int) -> None:
+        """
+        Upsert current prices for all players from bootstrap so player_prices always has
+        at least one row per player for the current gameweek. Called on every refresh cycle
+        so the UI can show current price even when the price-window refresh has not run.
+        """
+        if not gameweek:
+            return
+        try:
+            elements = bootstrap.get("elements", [])
+            today_iso = datetime.now(timezone.utc).date().isoformat()
+            for player in elements:
+                player_id = player.get("id")
+                if player_id is None:
+                    continue
+                current_price = player.get("now_cost", 0)
+                price_data = {
+                    "player_id": player_id,
+                    "gameweek": gameweek,
+                    "price_tenths": current_price,
+                    "price_change_tenths": 0,
+                    "recorded_at": datetime.now(timezone.utc).isoformat(),
+                    "recorded_date": today_iso,
+                }
+                self.db_client.upsert_player_price(price_data)
+            logger.debug(
+                "Player prices synced from bootstrap",
+                extra={"gameweek": gameweek, "count": len(elements)},
+            )
+        except Exception as e:
+            logger.warning(
+                "Sync player prices from bootstrap failed",
+                extra={"gameweek": gameweek, "error": str(e)},
+                exc_info=True,
+            )
+
     def get_active_player_ids(
         self,
         gameweek: int,
