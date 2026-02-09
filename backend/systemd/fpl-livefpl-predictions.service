@@ -1,5 +1,5 @@
 [Unit]
-Description=LiveFPL price predictions scrape (oneshot)
+Description=LiveFPL price predictions scrape (oneshot, runs from timer)
 After=network.target
 
 [Service]
@@ -8,6 +8,7 @@ User=fpl
 Group=fpl
 WorkingDirectory=/opt/fpl-refresh/backend
 Environment="PATH=/opt/fpl-refresh/venv/bin:/usr/local/bin:/usr/bin:/bin"
+# .env must contain SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_KEY)
 EnvironmentFile=/opt/fpl-refresh/.env
 ExecStart=/opt/fpl-refresh/venv/bin/python3 /opt/fpl-refresh/backend/scripts/refresh_livefpl_predictions.py
 StandardOutput=journal

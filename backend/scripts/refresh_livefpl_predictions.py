@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Scrape LiveFPL price predictor "Already reached target" (rises/falls) and insert
-into price_change_predictions. Run every 30 minutes (cron, launchd on macOS, or systemd on Linux).
+Scrape LiveFPL price predictor for "Already reached target" and "Projected to reach target"
+rows (rises/falls); merge and dedupe; insert into price_change_predictions.
+Schedule via systemd timer or cron every 30 minutes (see backend/systemd/README-scheduling.md).
 
 Usage:
     python3 scripts/refresh_livefpl_predictions.py
@@ -117,6 +118,19 @@ def _extract_players_from_cell(cell) -> list[dict]:
     return out
 
 
+def _merge_dedupe(players: list[dict]) -> list[dict]:
+    """Merge list of player dicts and dedupe by (player_name, team_id)."""
+    seen: set[tuple[str, int]] = set()
+    out = []
+    for p in players:
+        key = (p["player_name"], p["team_id"])
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(p)
+    return out
+
+
 def _fetch_team_short_names(client: SupabaseClient) -> dict[int, str]:
     """Return mapping team_id -> short_name from teams table."""
     try:
@@ -130,8 +144,8 @@ def _fetch_team_short_names(client: SupabaseClient) -> dict[int, str]:
 
 def scrape_livefpl() -> tuple[list[dict], list[dict]]:
     """
-    GET LiveFPL prices page and parse "Already reached target" row for rises and falls.
-    Returns (rises, falls), each list of { player_name, team_id, price }.
+    GET LiveFPL prices page; parse "Already reached target" and "Projected to reach target"
+    rows for rises and falls; merge and dedupe. Returns (rises, falls).
     """
     resp = httpx.get(
         LIVEFPL_URL,
@@ -143,33 +157,41 @@ def scrape_livefpl() -> tuple[list[dict], list[dict]]:
     text = resp.text
     soup = BeautifulSoup(text, "html.parser")
 
-    # Find the row that contains "Already reached target"
-    row = None
+    all_rises: list[dict] = []
+    all_falls: list[dict] = []
+
     for td in soup.find_all("td"):
-        if "Already reached target" in (td.get_text() or ""):
+        label = (td.get_text() or "").strip()
+        if "Already reached target" in label or "Projected to reach target" in label:
             row = td.find_parent("tr")
-            break
+            if row:
+                cells = row.find_all("td")
+                if len(cells) >= 3:
+                    r = _extract_players_from_cell(cells[1])
+                    f = _extract_players_from_cell(cells[2])
+                    all_rises.extend(r)
+                    all_falls.extend(f)
 
-    if row:
-        cells = row.find_all("td")
-        if len(cells) >= 3:
-            rises_with_team_id = _extract_players_from_cell(cells[1])
-            falls_with_team_id = _extract_players_from_cell(cells[2])
-            if rises_with_team_id or falls_with_team_id:
-                return rises_with_team_id, falls_with_team_id
+    if all_rises or all_falls:
+        return _merge_dedupe(all_rises), _merge_dedupe(all_falls)
 
-    # Fallback: parse raw text (e.g. server-rendered markdown-like or different HTML)
-    start = text.find("Already reached target")
-    if start == -1:
-        return [], []
-    end = text.find("Projected to reach target", start)
-    segment = text[start:end] if end != -1 else text[start:]
-    parts = segment.split("|", 2)
-    if len(parts) < 3:
-        return [], []
-    rises_with_team_id = _extract_players_from_text(parts[1])
-    falls_with_team_id = _extract_players_from_text(parts[2])
-    return rises_with_team_id, falls_with_team_id
+    # Fallback: parse raw text for both sections
+    for anchor in ("Already reached target", "Projected to reach target"):
+        start = text.find(anchor)
+        if start == -1:
+            continue
+        end = text.find("Others who will be close", start)
+        if end == -1:
+            end = text.find("|Player|", start)
+        segment = text[start:end] if end != -1 else text[start:]
+        rest = segment.split("|", 2)
+        if len(rest) >= 3:
+            r = _extract_players_from_text(rest[1])
+            f = _extract_players_from_text(rest[2])
+            all_rises.extend(r)
+            all_falls.extend(f)
+
+    return _merge_dedupe(all_rises), _merge_dedupe(all_falls)
 
 
 def main():

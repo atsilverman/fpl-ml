@@ -2,8 +2,8 @@
 Description=Run LiveFPL predictions scrape every 30 minutes
 
 [Timer]
+OnCalendar=*:00/30
 OnBootSec=2min
-OnUnitActiveSec=30min
 Persistent=yes
 
 [Install]

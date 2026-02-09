@@ -1634,7 +1634,13 @@ class RefreshOrchestrator:
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
                     )
-                    stdout, stderr = await proc.communicate()
+                    try:
+                        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
+                    except asyncio.TimeoutError:
+                        proc.kill()
+                        await proc.wait()
+                        logger.warning("LiveFPL predictions scrape timed out after 120s", extra={})
+                        stdout, stderr = b"", b""
                     if proc.returncode != 0:
                         logger.warning(
                             "LiveFPL predictions scrape failed",

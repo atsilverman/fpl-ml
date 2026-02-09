@@ -1,5 +1,53 @@
 # Scheduling the LiveFPL predictions scraper (every 30 min)
 
+**Production (Linux):** Use the **systemd timer** so the scraper runs every 30 minutes as a **self-sufficient job**. It does not depend on the main FPL refresh service; it runs independently and writes directly to Supabase.
+
+---
+
+## Production: self-sufficient scraper (systemd timer)
+
+On your production server (e.g. Digital Ocean droplet):
+
+1. **Copy the units** (after deploying code so the script exists on the server):
+
+   ```bash
+   sudo cp /opt/fpl-refresh/backend/systemd/fpl-livefpl-predictions.service \
+           /opt/fpl-refresh/backend/systemd/fpl-livefpl-predictions.timer \
+           /etc/systemd/system/
+   ```
+
+   If your app is not under `/opt/fpl-refresh`, edit the **service** file and set:
+   - `WorkingDirectory` = your backend directory (e.g. `/opt/fpl-refresh/backend`)
+   - `EnvironmentFile` = path to your `.env` (e.g. `/opt/fpl-refresh/.env`)
+   - `ExecStart` = full path to your venv Python and script (e.g. `/opt/fpl-refresh/venv/bin/python3 /opt/fpl-refresh/backend/scripts/refresh_livefpl_predictions.py`)
+
+2. **Ensure `.env` has** `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` (or `SUPABASE_KEY`). The script uses these to insert into `price_change_predictions`.
+
+3. **Reload and enable the timer**:
+
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now fpl-livefpl-predictions.timer
+   ```
+
+4. **Verify** the timer is active and next run time:
+
+   ```bash
+   systemctl list-timers fpl-livefpl-predictions.timer
+   ```
+
+5. **Logs** (journal):
+
+   ```bash
+   journalctl -u fpl-livefpl-predictions.service -f
+   ```
+
+   Or last run: `journalctl -u fpl-livefpl-predictions.service -n 50`
+
+The timer runs at **:00 and :30 past every hour**; first run is **2 minutes after boot**. No other service is required.
+
+---
+
 ## macOS (launchd)
 
 1. Copy the plist and fix the path:
@@ -21,13 +69,13 @@
 
 4. Logs: `/tmp/fpl-livefpl-predictions.log` and `/tmp/fpl-livefpl-predictions.err.log`
 
-## Linux (systemd)
+## Linux (systemd) — quick reference
 
-Only on a machine that has systemd (e.g. a Linux server, not macOS):
+From the repo root on the server (or use the Production section above for full steps):
 
 ```bash
 sudo cp backend/systemd/fpl-livefpl-predictions.service backend/systemd/fpl-livefpl-predictions.timer /etc/systemd/system/
-# Edit the service if your paths differ from /opt/fpl-refresh/backend
+# Edit the service if your paths differ from /opt/fpl-refresh
 sudo systemctl daemon-reload
 sudo systemctl enable --now fpl-livefpl-predictions.timer
 ```

@@ -4,14 +4,31 @@ import { usePriceChangePredictions } from '../hooks/usePriceChangePredictions'
 import { usePlayerTeamMap } from '../hooks/usePlayerTeamMap'
 import './PriceChangesSubpage.css'
 
+const CUTOFF_HOUR = 17
+const CUTOFF_MINUTE = 30
+
 function formatSnapshotDate(isoDate) {
   if (!isoDate) return null
   const [y, m, d] = isoDate.split('-').map(Number)
   const dObj = new Date(y, m - 1, d)
-  const today = new Date()
-  if (dObj.getFullYear() === today.getFullYear() && dObj.getMonth() === today.getMonth() && dObj.getDate() === today.getDate()) {
-    return 'Today'
-  }
+  const now = new Date()
+  const cutoff = new Date(now)
+  cutoff.setHours(CUTOFF_HOUR, CUTOFF_MINUTE, 0, 0)
+  const pastCutoff = now >= cutoff
+
+  const isToday =
+    dObj.getFullYear() === now.getFullYear() &&
+    dObj.getMonth() === now.getMonth() &&
+    dObj.getDate() === now.getDate()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday =
+    dObj.getFullYear() === yesterday.getFullYear() &&
+    dObj.getMonth() === yesterday.getMonth() &&
+    dObj.getDate() === yesterday.getDate()
+
+  if (isToday) return pastCutoff ? 'Today' : dObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  if (isYesterday) return 'Yesterday'
   return dObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
