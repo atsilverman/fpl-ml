@@ -907,6 +907,12 @@ class PlayerDataRefresher:
 
             # Last snapshot before today (same gameweek) for prior_price_tenths
             last_prices = self.db_client.get_last_known_prices(today_iso, gameweek)
+            prior_count = len(last_prices)
+            if prior_count == 0:
+                logger.warning(
+                    "No prior price snapshot for prior_price_tenths; Actual changes will be empty until we have a previous run",
+                    extra={"gameweek": gameweek, "today_iso": today_iso},
+                )
 
             price_changes = []
             for player in players:
@@ -938,7 +944,15 @@ class PlayerDataRefresher:
             if price_changes:
                 logger.info("Price changes", extra={"gameweek": gameweek, "count": len(price_changes)})
 
-            logger.info("Player prices done", extra={"gameweek": gameweek, "count": len(players)})
+            logger.info(
+                "Player prices done",
+                extra={
+                    "gameweek": gameweek,
+                    "count": len(players),
+                    "prior_snapshot_players": prior_count,
+                    "price_changes_detected": len(price_changes),
+                },
+            )
 
         except Exception as e:
             logger.error("Player prices failed", extra={"gameweek": gameweek, "error": str(e)}, exc_info=True)

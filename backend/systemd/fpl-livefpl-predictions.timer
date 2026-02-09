@@ -1,0 +1,10 @@
+[Unit]
+Description=Run LiveFPL predictions scrape every 30 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=30min
+Persistent=yes
+
+[Install]
+WantedBy=timers.target

@@ -388,17 +388,18 @@ class SupabaseClient:
         gameweek: int
     ) -> Dict[int, int]:
         """
-        Get each player's price from the most recent snapshot before before_date (same gameweek).
+        Get each player's price from the most recent snapshot before before_date.
+        Prefers same gameweek; if none (e.g. first day of new GW), uses previous gameweek.
         Used to set prior_price_tenths when writing the next snapshot (e.g. 5:40pm daily).
 
         Args:
             before_date: ISO date string (e.g. today); we take latest recorded_date < this.
-            gameweek: Gameweek to match.
+            gameweek: Gameweek to match (and fallback to gameweek - 1 if no same-GW snapshot).
 
         Returns:
             Dict mapping player_id -> price_tenths from that snapshot. Empty if no prior snapshot.
         """
-        # Latest recorded_date before before_date
+        # Try same gameweek first
         date_result = (
             self.client.table("player_prices")
             .select("recorded_date")
@@ -408,17 +409,41 @@ class SupabaseClient:
             .limit(1)
             .execute()
         )
+        if date_result.data and len(date_result.data) > 0:
+            last_date = date_result.data[0].get("recorded_date")
+            if last_date:
+                rows = (
+                    self.client.table("player_prices")
+                    .select("player_id, price_tenths")
+                    .eq("recorded_date", last_date)
+                    .eq("gameweek", gameweek)
+                    .execute()
+                )
+                return {r["player_id"]: r["price_tenths"] for r in (rows.data or [])}
+
+        # First day of gameweek: no prior snapshot for this GW; use previous gameweek's latest snapshot
+        prev_gw = gameweek - 1
+        if prev_gw < 1:
+            return {}
+        date_result = (
+            self.client.table("player_prices")
+            .select("recorded_date")
+            .lt("recorded_date", before_date)
+            .eq("gameweek", prev_gw)
+            .order("recorded_date", desc=True)
+            .limit(1)
+            .execute()
+        )
         if not date_result.data or len(date_result.data) == 0:
             return {}
         last_date = date_result.data[0].get("recorded_date")
         if not last_date:
             return {}
-        # All prices for that date and gameweek
         rows = (
             self.client.table("player_prices")
             .select("player_id, price_tenths")
             .eq("recorded_date", last_date)
-            .eq("gameweek", gameweek)
+            .eq("gameweek", prev_gw)
             .execute()
         )
         return {r["player_id"]: r["price_tenths"] for r in (rows.data or [])}
@@ -436,6 +461,15 @@ class SupabaseClient:
         ).execute()
         
         return result.data
+    
+    def clear_price_change_predictions(self) -> None:
+        """
+        Delete all rows from price_change_predictions. Call after the price change
+        window closes so the next scraper run (LiveFPL) fills fresh data for the new day.
+        """
+        self.client.table("price_change_predictions").delete().neq(
+            "id", "00000000-0000-0000-0000-000000000000"
+        ).execute()
     
     def upsert_team(self, team_data: Dict[str, Any]):
         """

@@ -52,8 +52,8 @@ export function usePlayerPriceChangesByDate() {
       const byDateList = Array.from(byDate.values()).sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
       )
-
-      return { byDate: byDateList }
+      // Only show the most recent day in Actual by day
+      return { byDate: byDateList.slice(0, 1) }
     },
     staleTime: REFETCH_MS,
     refetchInterval: REFETCH_MS,

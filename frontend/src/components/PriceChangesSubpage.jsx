@@ -6,10 +6,13 @@ import './PriceChangesSubpage.css'
 
 function formatSnapshotDate(isoDate) {
   if (!isoDate) return null
-  const d = new Date(isoDate + 'Z')
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const dObj = new Date(y, m - 1, d)
   const today = new Date()
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+  if (dObj.getFullYear() === today.getFullYear() && dObj.getMonth() === today.getMonth() && dObj.getDate() === today.getDate()) {
+    return 'Today'
+  }
+  return dObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function formatCapturedAt(isoString) {
@@ -86,44 +89,38 @@ export default function PriceChangesSubpage({ showCard = true }) {
   const showPredictionsSection = hasLatestRow || hasPredictions
   const error = actualError ?? predError
 
-  const content = (
-    <div className="price-changes-content">
-      {error ? (
-        <div className="price-changes-error">Failed to load price changes.</div>
-      ) : (
-        <>
-          {showPredictionsSection && (
-            <section className="price-changes-section" aria-labelledby="price-changes-predictions-heading">
-              <h3 id="price-changes-predictions-heading" className="price-changes-section-label">Predictions (from screenshot)</h3>
-              {capturedAt && (
-                <p className="price-changes-snapshot-date" aria-live="polite">
-                  {formatCapturedAt(capturedAt)}
-                  {!hasPredictions && (
-                    <span className="price-changes-empty-capture-note"> — No rises/falls in last capture. Check Shortcut sends OCR text as <code>text</code> and source has clear rise/fall sections.</span>
-                  )}
-                </p>
-              )}
-              {!capturedAt && !predLoading && (
-                <p className="price-changes-snapshot-date">No screenshot data yet. Use the iOS Shortcut to send a price-change screenshot; ensure the Shortcut uses the same Supabase project as this app.</p>
-              )}
-              <PriceChangeColumns
-                rises={predRises}
-                falls={predFalls}
-                loading={predLoading}
-                getTeamForPlayer={getTeamForPlayer}
-              />
-            </section>
+  const predictionsContent = showPredictionsSection && (
+    <div className="price-changes-bento-body" aria-labelledby="price-changes-predictions-heading">
+      {capturedAt && (
+        <p className="price-changes-snapshot-date" aria-live="polite">
+          {formatCapturedAt(capturedAt)}
+          {!hasPredictions && (
+            <span className="price-changes-empty-capture-note"> — No rises/falls in last update. Predictions refresh automatically every 30 minutes from LiveFPL.</span>
           )}
-          <section className="price-changes-section price-changes-section-actual" aria-labelledby="price-changes-actual-heading">
-            <h3 id="price-changes-actual-heading" className="price-changes-section-label">Actual by day</h3>
-            {actualLoading ? (
-              <div className="price-changes-loading">Loading…</div>
-            ) : byDate.length === 0 ? (
-              <p className="price-changes-snapshot-date">No snapshot data yet. Price changes are recorded after the daily deadline window.</p>
-            ) : (
-              <div className="price-changes-daily-bentos">
-                {byDate.map(({ date, rises, falls }) => (
-                  <div key={date} className="price-changes-bento-day">
+        </p>
+      )}
+      {!capturedAt && !predLoading && (
+        <p className="price-changes-snapshot-date">No prediction data yet. Predictions update automatically every 30 minutes from LiveFPL.</p>
+      )}
+      <PriceChangeColumns
+        rises={predRises}
+        falls={predFalls}
+        loading={predLoading}
+        getTeamForPlayer={getTeamForPlayer}
+      />
+    </div>
+  )
+
+  const actualContent = (
+    <div className="price-changes-bento-body" aria-labelledby="price-changes-actual-heading">
+      {actualLoading ? (
+        <div className="price-changes-loading">Loading…</div>
+      ) : byDate.length === 0 ? (
+        <p className="price-changes-snapshot-date">No snapshot data yet. Price changes are recorded after the daily deadline window.</p>
+      ) : (
+        <div className="price-changes-daily-bentos">
+          {byDate.map(({ date, rises, falls }) => (
+            <div key={date} className="price-changes-day-group">
                     <h4 className="price-changes-day-heading">{formatSnapshotDate(date)}</h4>
                     <PriceChangeColumns
                       rises={rises}
@@ -132,18 +129,69 @@ export default function PriceChangesSubpage({ showCard = true }) {
                       getTeamForPlayer={getTeamForPlayer}
                     />
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+          ))}
+        </div>
       )}
     </div>
   )
 
   if (!showCard) {
-    return <div className="price-changes-subpage">{content}</div>
+    return (
+      <div className="price-changes-bentos">
+        {error ? (
+          <div className="price-changes-bento bento-card bento-card-animate price-changes-bento-error">
+            <span className="bento-card-label">Price Changes</span>
+            <div className="price-changes-error">Failed to load price changes.</div>
+          </div>
+        ) : (
+          <>
+            {showPredictionsSection && (
+              <div className="price-changes-bento bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
+                <div className="price-changes-bento-label-row">
+                  <h2 id="price-changes-predictions-heading" className="bento-card-label">Predictions</h2>
+                  <a
+                    href="https://t.co/KBHo75dwC5"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="research-page-source"
+                    aria-label="Source: LiveFPL"
+                  >
+                    Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
+                  </a>
+                </div>
+                {predictionsContent}
+              </div>
+            )}
+            <div className="price-changes-bento bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
+              <h2 id="price-changes-actual-heading" className="bento-card-label">Actual by day</h2>
+              {actualContent}
+            </div>
+          </>
+        )}
+      </div>
+    )
   }
+
+  const content = (
+    <div className="price-changes-content">
+      {error ? (
+        <div className="price-changes-error">Failed to load price changes.</div>
+      ) : (
+        <>
+          {showPredictionsSection && (
+            <section className="price-changes-section" aria-labelledby="price-changes-predictions-heading">
+              <h3 id="price-changes-predictions-heading" className="price-changes-section-label">Predictions</h3>
+              {predictionsContent}
+            </section>
+          )}
+          <section className="price-changes-section price-changes-section-actual" aria-labelledby="price-changes-actual-heading">
+            <h3 id="price-changes-actual-heading" className="price-changes-section-label">Actual by day</h3>
+            {actualContent}
+          </section>
+        </>
+      )}
+    </div>
+  )
 
   return (
     <div className="price-changes-subpage">

@@ -1,0 +1,18 @@
+[Unit]
+Description=LiveFPL price predictions scrape (oneshot)
+After=network.target
+
+[Service]
+Type=oneshot
+User=fpl
+Group=fpl
+WorkingDirectory=/opt/fpl-refresh/backend
+Environment="PATH=/opt/fpl-refresh/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/opt/fpl-refresh/.env
+ExecStart=/opt/fpl-refresh/venv/bin/python3 /opt/fpl-refresh/backend/scripts/refresh_livefpl_predictions.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fpl-livefpl-predictions
+
+[Install]
+WantedBy=multi-user.target

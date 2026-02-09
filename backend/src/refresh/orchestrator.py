@@ -6,7 +6,9 @@ Manages state machine, dependency ordering, and refresh cadence.
 
 import asyncio
 import logging
+import subprocess
 from datetime import date, datetime, time, timezone, timedelta
+from pathlib import Path
 from enum import Enum
 from typing import Optional, List, Dict, Any
 
@@ -194,6 +196,11 @@ class RefreshOrchestrator:
         if not current_gw.get("is_current"):
             return RefreshState.OUTSIDE_GAMEWEEK
         
+        # Check price change window first: 6-minute window is time-critical; we must not miss it
+        # when we would otherwise be LIVE_MATCHES or BONUS_PENDING (e.g. match day, bonus not yet confirmed)
+        if self._is_price_change_window(datetime.now(timezone.utc)):
+            return RefreshState.PRICE_WINDOW
+        
         # Get fixtures for current gameweek
         fixtures = self.db_client.client.table("fixtures").select("*").eq(
             "gameweek", self.current_gameweek
@@ -214,10 +221,6 @@ class RefreshOrchestrator:
             for f in fixtures
         ):
             return RefreshState.BONUS_PENDING
-        
-        # Check price change window
-        if self._is_price_change_window(datetime.now(timezone.utc)):
-            return RefreshState.PRICE_WINDOW
         
         # Check transfer deadline (30+ minutes after deadline only)
         # Strategy: Wait 30 minutes after deadline to avoid API lockup, then check
@@ -1008,8 +1011,8 @@ class RefreshOrchestrator:
                 logger.info("Gameweek data_checked true, refreshing all managers for ranks", extra={
                     "gameweek": self.current_gameweek
                 })
-                self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
                 await self._refresh_manager_points(force_all_managers=True)
+                self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
                 return
             await self._check_fpl_rank_change_and_refresh(force_all_managers=True)
         except Exception as e:
@@ -1195,6 +1198,11 @@ class RefreshOrchestrator:
                 today = now_utc.date()
                 if self._post_price_window_refresh_done_date is None or self._post_price_window_refresh_done_date != today:
                     logger.info("Post–price window cooldown: refreshing all managers for team value", extra={"date": str(today)})
+                    try:
+                        self.db_client.clear_price_change_predictions()
+                        logger.info("Cleared price_change_predictions after price window close", extra={"date": str(today)})
+                    except Exception as e:
+                        logger.warning("Clear price_change_predictions failed", extra={"error": str(e)}, exc_info=True)
                     try:
                         await self._refresh_manager_points(force_all_managers=True)
                         self._post_price_window_refresh_done_date = today
@@ -1519,6 +1527,9 @@ class RefreshOrchestrator:
                     await asyncio.sleep(60)
                 elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     await asyncio.sleep(self.config.fast_loop_interval_live)
+                elif self.current_state == RefreshState.PRICE_WINDOW:
+                    # Poll every 30s during price window so we capture actual changes reliably
+                    await asyncio.sleep(self.config.prices_refresh_interval_window)
                 else:
                     # Idle: use short interval when within kickoff window or past kickoff (likely live, DB may be stale)
                     if self._is_in_kickoff_window() or self._is_likely_live_window():
@@ -1593,12 +1604,50 @@ class RefreshOrchestrator:
                 logger.error("Slow loop error", extra={"error": str(e)}, exc_info=True)
                 await asyncio.sleep(60)
     
+    async def _run_predictions_loop(self):
+        """Run LiveFPL scraper every 30 minutes so predictions update without a separate cron."""
+        backend_dir = Path(__file__).resolve().parent.parent
+        script = backend_dir / "scripts" / "refresh_livefpl_predictions.py"
+        interval = 1800  # 30 minutes
+        # First run after 60s so we don't block startup; then every 30 min
+        await asyncio.sleep(60)
+        while self.running:
+            try:
+                if script.exists():
+                    proc = await asyncio.create_subprocess_exec(
+                        "python3",
+                        str(script),
+                        cwd=str(backend_dir),
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE,
+                    )
+                    stdout, stderr = await proc.communicate()
+                    if proc.returncode != 0:
+                        logger.warning(
+                            "LiveFPL predictions scrape failed",
+                            extra={"returncode": proc.returncode, "stderr": (stderr or b"").decode()[:500]},
+                        )
+                    else:
+                        logger.debug("LiveFPL predictions scrape completed")
+                else:
+                    logger.warning("LiveFPL predictions script not found", extra={"path": str(script)})
+                await asyncio.sleep(interval)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.warning("Predictions loop error", extra={"error": str(e)}, exc_info=True)
+                await asyncio.sleep(interval)
+
     async def run(self):
-        """Run fast and slow loops in parallel."""
-        logger.info("Refresh loops started (fast + slow)")
+        """Run fast, slow, and predictions loops in parallel."""
+        logger.info("Refresh loops started (fast + slow + predictions)")
         self.running = True
         try:
-            await asyncio.gather(self._run_fast_loop(), self._run_slow_loop())
+            await asyncio.gather(
+                self._run_fast_loop(),
+                self._run_slow_loop(),
+                self._run_predictions_loop(),
+            )
         except asyncio.CancelledError:
             logger.info("Refresh loops cancelled")
         finally:

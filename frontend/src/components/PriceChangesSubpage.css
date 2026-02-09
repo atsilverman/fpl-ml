@@ -7,6 +7,38 @@
   color: var(--text-primary);
 }
 
+/* Two separate bento cards on Research page */
+.price-changes-bentos {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.price-changes-bento-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.price-changes-bento-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.price-changes-bento-label-row .bento-card-label {
+  margin: 0;
+}
+
+.price-changes-bento-error .price-changes-error {
+  padding: 12px 0;
+}
+
 .price-changes-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -19,16 +51,17 @@
 .price-changes-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 12px 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 
+/* Sections when embedded in a single card (e.g. showCard=true) */
 .price-changes-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .price-changes-section:not(:first-child) {
@@ -43,18 +76,11 @@
   gap: 16px;
 }
 
-.price-changes-bento-day {
-  background: var(--bg-secondary, rgba(0, 0, 0, 0.03));
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 10px 12px;
+/* Day group: date heading + rise/fall columns only (no container box, matches Predictions) */
+.price-changes-day-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-html[data-theme="dark"] .price-changes-bento-day {
-  background: var(--bg-secondary);
 }
 
 .price-changes-day-heading {
@@ -219,23 +245,19 @@ html[data-theme="dark"] .price-changes-bento-day {
   color: var(--accent-red, #ef4444);
 }
 
-/* Match transfers-summary-column-count: pill style for value */
+/* Bento (card) background – not main – so pill contrasts with row and promotes text color */
 .price-changes-column-price {
   flex-shrink: 0;
   font-weight: 600;
   font-size: 12px;
   line-height: 17px;
   color: var(--text-primary);
-  background: var(--transfers-count-bg, var(--bg-secondary));
+  background: var(--bg-card);
   padding: 3px 8px;
   border-radius: 4px;
   min-width: 24px;
   text-align: center;
   margin-left: auto;
-}
-
-html[data-theme="dark"] .price-changes-column-price {
-  background: var(--transfers-count-bg, var(--bg-primary));
 }
 
 .price-changes-loading,

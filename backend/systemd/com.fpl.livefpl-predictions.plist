@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.fpl.livefpl-predictions</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>scripts/refresh_livefpl_predictions.py</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>REPO_ROOT/backend</string>
+  <key>StartInterval</key>
+  <integer>1800</integer>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/tmp/fpl-livefpl-predictions.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/fpl-livefpl-predictions.err.log</string>
+</dict>
+</plist>
