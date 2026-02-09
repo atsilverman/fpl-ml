@@ -730,7 +730,7 @@
     padding-top: 72px;
     padding-left: 8px;
     padding-right: 8px;
-    padding-bottom: 58px;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     scroll-margin-top: 72px;
   }
 
@@ -753,12 +753,6 @@
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
     z-index: 99;
     border-radius: 0;
-    transition: transform 0.25s ease-out;
-  }
-
-  /* Scroll-to-hide: bottom nav only – slides down off screen when scrolling down, slides up when scrolling up; top header stays fixed */
-  .dashboard.mobile-nav-hidden .header-nav.page-selector-bottom {
-    transform: translateY(100%);
   }
 
   .header-nav.page-selector-bottom.tracking-mode-toggle {

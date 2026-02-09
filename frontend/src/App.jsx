@@ -4,7 +4,6 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ConfigurationProvider } from './contexts/ConfigurationContext'
 import { BentoOrderProvider } from './contexts/BentoOrderContext'
 import { ToastProvider } from './contexts/ToastContext'
-import { ScrollSourceProvider } from './contexts/ScrollSourceContext'
 import ScrollToTop from './components/ScrollToTop'
 import Dashboard from './components/Dashboard'
 import HomePage from './components/HomePage'
@@ -23,9 +22,8 @@ function App() {
           <ToastProvider>
             <BentoOrderProvider>
               <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-                <ScrollSourceProvider>
-                  <ScrollToTop />
-                  <Routes>
+                <ScrollToTop />
+                <Routes>
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/welcome" element={<OnboardingPage />} />
                   <Route path="/" element={<Dashboard />}>
@@ -35,8 +33,7 @@ function App() {
                     <Route path="research" element={<ResearchPage />} />
                     <Route path="live" element={<LivePage />} />
                   </Route>
-                  </Routes>
-                </ScrollSourceProvider>
+                </Routes>
               </Router>
             </BentoOrderProvider>
           </ToastProvider>
