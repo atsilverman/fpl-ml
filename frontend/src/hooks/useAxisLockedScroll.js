@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 
 const DEFAULT_THRESHOLD = 5
+const MOBILE_MAX_WIDTH = 768
 
 /**
  * Locks touch scrolling to a single axis (horizontal or vertical) per gesture.
@@ -9,15 +10,30 @@ const DEFAULT_THRESHOLD = 5
  * scrolling on mobile for 2D scroll containers (e.g. tables with overflow: auto).
  *
  * @param {React.RefObject<HTMLElement | null>} ref - Ref to the scrollable element
- * @param {{ threshold?: number, enabled?: boolean }} [options]
+ * @param {{ threshold?: number, enabled?: boolean, mobileOnly?: boolean }} [options]
  * @param {number} [options.threshold] - Pixels of movement before locking axis (default 5)
  * @param {boolean} [options.enabled] - If false, hook does nothing (default true)
+ * @param {boolean} [options.mobileOnly] - If true, only enable when viewport width <= MOBILE_MAX_WIDTH (default false)
  */
 export function useAxisLockedScroll(ref, options = {}) {
-  const { threshold = DEFAULT_THRESHOLD, enabled = true } = options
+  const { threshold = DEFAULT_THRESHOLD, enabled = true, mobileOnly = false } = options
+
+  const [isMobileViewport, setIsMobileViewport] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches
+  )
 
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined' || !('ontouchstart' in window)) return
+    if (!mobileOnly) return
+    const mql = window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`)
+    const onChange = () => setIsMobileViewport(mql.matches)
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [mobileOnly])
+
+  const active = enabled && (!mobileOnly || isMobileViewport)
+
+  useEffect(() => {
+    if (!active || typeof window === 'undefined' || !('ontouchstart' in window)) return
     const el = ref?.current
     if (!el) return
 
@@ -79,5 +95,5 @@ export function useAxisLockedScroll(ref, options = {}) {
       el.removeEventListener('touchend', onTouchEnd)
       el.removeEventListener('touchcancel', onTouchEnd)
     }
-  }, [ref, threshold, enabled])
+  }, [ref, threshold, active])
 }

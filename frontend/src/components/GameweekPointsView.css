@@ -1021,6 +1021,15 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   min-width: 0;
   overflow: auto;
 }
+
+/* Mobile: same axis-locked scroll (horizontal/vertical only, no diagonal) as home bento GW table */
+@media (max-width: 768px) {
+  .manager-detail-modal-chart-wrap .gameweek-points-scrollable {
+    touch-action: pan-x pan-y;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 /* Match home bento table styling (desktop) */
 @media (min-width: 769px) {
   .manager-detail-modal-chart-wrap .gameweek-points-table {

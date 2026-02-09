@@ -36,7 +36,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
   const [sortColumn, setSortColumn] = useState(null)
   const [sortDirection, setSortDirection] = useState('desc')
   const scrollableRef = useRef(null)
-  useAxisLockedScroll(scrollableRef)
+  useAxisLockedScroll(scrollableRef, { mobileOnly: true })
 
   const updatePopupPlacement = () => {
     if (!impactIconRef.current) return
