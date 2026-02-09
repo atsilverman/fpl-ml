@@ -35,6 +35,18 @@
   margin: 0;
 }
 
+.price-changes-source-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.price-changes-source-note {
+  font-size: 11px;
+  color: var(--text-tertiary, rgba(255, 255, 255, 0.45));
+  font-weight: 400;
+}
+
 .price-changes-bento-error .price-changes-error {
   padding: 12px 0;
 }
@@ -84,8 +96,8 @@
 }
 
 .price-changes-day-heading {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 400;
   color: var(--text-secondary);
   margin: 0 0 2px 0;
 }

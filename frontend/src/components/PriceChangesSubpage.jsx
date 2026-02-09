@@ -149,15 +149,18 @@ export default function PriceChangesSubpage({ showCard = true }) {
               <div className="price-changes-bento bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
                 <div className="price-changes-bento-label-row">
                   <h2 id="price-changes-predictions-heading" className="bento-card-label">Predictions</h2>
-                  <a
-                    href="https://t.co/KBHo75dwC5"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="research-page-source"
-                    aria-label="Source: LiveFPL"
-                  >
-                    Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
-                  </a>
+                  <span className="price-changes-source-wrap">
+                    <a
+                      href="https://t.co/KBHo75dwC5"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="research-page-source"
+                      aria-label="Source: LiveFPL"
+                    >
+                      Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
+                    </a>
+                    <span className="price-changes-source-note">· updates every 30 min</span>
+                  </span>
                 </div>
                 {predictionsContent}
               </div>
