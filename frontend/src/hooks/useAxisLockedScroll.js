@@ -65,16 +65,19 @@ export function useAxisLockedScroll(ref, options = {}) {
         }
       }
 
+      /* Only preventDefault when this element actually has scrollable space in the locked direction.
+         Otherwise the touch would be swallowed and the page/body could not scroll (e.g. Mini League
+         table wrapper has overflow-y: visible; standings table is not a vertical scroll container). */
       if (lock === 'h') {
-        e.preventDefault()
         const maxScrollLeft = el.scrollWidth - el.clientWidth
         if (maxScrollLeft > 0) {
+          e.preventDefault()
           el.scrollLeft = Math.max(0, Math.min(maxScrollLeft, el.scrollLeft - dx))
         }
       } else if (lock === 'v') {
-        e.preventDefault()
         const maxScrollTop = el.scrollHeight - el.clientHeight
         if (maxScrollTop > 0) {
+          e.preventDefault()
           el.scrollTop = Math.max(0, Math.min(maxScrollTop, el.scrollTop - dy))
         }
       }

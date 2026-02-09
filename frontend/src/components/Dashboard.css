@@ -1,9 +1,12 @@
+/* Fixed viewport height so only .dashboard-content scrolls; prevents infinite scroll past content */
 .dashboard {
-  min-height: 100vh;
+  height: 100vh;
+  min-height: 0;
+  max-height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  overflow-x: hidden;
+  overflow: hidden;
   width: 100%;
   max-width: 100vw;
   scroll-behavior: smooth;
@@ -484,6 +487,9 @@
 
 .dashboard-content {
   flex: 1;
+  min-height: 0; /* allow flex child to shrink so overflow scroll works */
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 16px;
   /* Space for fixed header (71px) + buffer so content isn't covered */
   padding-top: 88px;
