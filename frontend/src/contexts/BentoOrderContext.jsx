@@ -10,6 +10,7 @@ const DEFAULT_ORDER = [
   'team-value',
   'gw-rank',
   'chips',
+  'price-changes',
   'transfers',
   'settings'
 ]
@@ -37,6 +38,13 @@ export function BentoOrderProvider({ children }) {
             merged = [...merged]
             merged[leagueRankIdx] = 'gw-rank'
             merged[gwRankIdx] = 'league-rank'
+          }
+          // Ensure price-changes appears above transfers
+          const priceChangesIdx = merged.indexOf('price-changes')
+          const transfersIdx = merged.indexOf('transfers')
+          if (priceChangesIdx !== -1 && transfersIdx !== -1 && priceChangesIdx > transfersIdx) {
+            merged = merged.filter((id) => id !== 'price-changes')
+            merged.splice(transfersIdx, 0, 'price-changes')
           }
           return merged
         }

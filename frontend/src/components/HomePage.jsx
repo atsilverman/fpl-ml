@@ -26,6 +26,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
+import PriceChangesBentoHome from './PriceChangesBentoHome'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
@@ -262,6 +263,11 @@ export default function HomePage() {
       size: '1x1'
     },
     {
+      id: 'price-changes',
+      label: 'Price Changes',
+      size: '2x2'
+    },
+    {
       id: 'settings',
       label: 'Settings',
       size: '2x1',
@@ -314,6 +320,11 @@ export default function HomePage() {
     // Captain card 2x3 when expanded
     if (id === 'captain' && isCaptainExpanded) {
       return 'bento-card-chart-large'
+    }
+
+    // Price Changes: always 2x2, no expand
+    if (id === 'price-changes') {
+      return 'bento-card-2x2'
     }
 
     if (card.size === '2x3') return 'bento-card-chart-large'
@@ -416,6 +427,16 @@ export default function HomePage() {
         {visibleCardOrder.map((cardId, index) => {
           const card = cards.find(c => c.id === cardId)
           if (!card) return null
+
+          if (cardId === 'price-changes') {
+            return (
+              <PriceChangesBentoHome
+                key="price-changes"
+                className={getCardClassName(cardId)}
+                style={{ '--animation-delay': `${index * 0.04}s` }}
+              />
+            )
+          }
 
           // Transform overall-rank card when expanded
           const isOverallRankExpanded = cardId === 'overall-rank' && isPerformanceExpanded

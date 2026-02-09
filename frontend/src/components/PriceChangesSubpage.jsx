@@ -54,7 +54,7 @@ function formatCapturedAt(isoString) {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + ' · ' + formatSnapshotDate(isoString.slice(0, 10))
 }
 
-function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) {
+export function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) {
   const renderList = (list) => (
     <>
       {loading ? (

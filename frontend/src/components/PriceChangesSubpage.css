@@ -35,6 +35,93 @@
   margin: 0;
 }
 
+/* Home bento: timestamp upper right, scrollable player list */
+.price-changes-bento-home {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.price-changes-bento-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.price-changes-bento-timestamp {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
+.price-changes-bento-header-right .bento-card-info-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .price-changes-bento-header-right .bento-card-info-icon:hover {
+    opacity: 1;
+    background-color: var(--bg-card);
+    border-color: var(--text-secondary);
+  }
+}
+
+.price-changes-bento-home-info-popup .price-changes-source-note a {
+  color: var(--accent-blue, #3b82f6);
+  text-decoration: underline;
+}
+
+.price-changes-bento-home .price-changes-bento-body {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.price-changes-bento-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.price-changes-bento-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.price-changes-bento-scroll-hint {
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.6));
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.price-changes-bento-scroll-hint svg {
+  flex-shrink: 0;
+}
+
 .price-changes-source-wrap {
   display: inline-flex;
   align-items: center;

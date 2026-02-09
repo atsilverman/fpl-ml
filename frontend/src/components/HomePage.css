@@ -110,6 +110,14 @@
   min-height: var(--bento-unit-height);
 }
 
+/* 2x2 bento (e.g. Price Changes home) */
+.bento-card-2x2 {
+  grid-column: span 2;
+  grid-row: span 2;
+  height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+}
+
 .bento-card-id-transfers.bento-card-large {
   grid-row: span 1;
 }
@@ -328,6 +336,13 @@
 
   .bento-card-id-transfers.bento-card-large {
     grid-row: span 1;
+  }
+
+  .bento-card-2x2 {
+    grid-column: span 2;
+    grid-row: span 2;
+    height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+    min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
   }
 
   .bento-card-chart-large {
