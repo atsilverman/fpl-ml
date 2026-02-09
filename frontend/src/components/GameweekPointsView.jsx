@@ -285,6 +285,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         tabIndex={onRowClick ? 0 : undefined}
         onClick={onRowClick ? handleRowClick : undefined}
         onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(e) } } : undefined}
+        title={onRowClick && player.player_name ? `View details for ${player.player_name}` : undefined}
         className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''} ${onRowClick ? 'gameweek-points-tr-clickable' : ''}`}
       >
         <td className="gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed">

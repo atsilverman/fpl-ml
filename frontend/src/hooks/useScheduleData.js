@@ -266,6 +266,24 @@ export function useScheduleData() {
     }
   }, [fixtures, gameweeks, teams, teamMap])
 
+  const fixturesByGameweek = useMemo(() => {
+    const byGw = {}
+    fixtures.forEach((f) => {
+      const gw = f.gameweek
+      if (!byGw[gw]) byGw[gw] = []
+      byGw[gw].push({
+        home_team_id: f.home_team_id,
+        away_team_id: f.away_team_id,
+        kickoff_time: f.kickoff_time,
+      })
+    })
+    return gameweeks.map((gw) => ({
+      id: gw.id,
+      name: gw.name,
+      fixtures: byGw[gw.id] ?? [],
+    }))
+  }, [fixtures, gameweeks])
+
   const loading = nextGwLoading || gwListLoading || fixturesLoading || teamsLoading
 
   return {
@@ -273,6 +291,7 @@ export function useScheduleData() {
     teams: teams,
     teamMap,
     scheduleMatrix,
+    fixturesByGameweek,
     nextGwId,
     loading,
   }

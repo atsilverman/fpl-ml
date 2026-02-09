@@ -350,13 +350,18 @@ class PlayerDataRefresher:
         return (events, reversals)
 
     def _sync_players_ownership_from_bootstrap(self, bootstrap: Dict, players_map: Dict[int, Dict]) -> None:
-        """Update selected_by_percent (overall ownership) for all players from bootstrap-static."""
+        """Update selected_by_percent (overall ownership) and cost_tenths (current price) for all players from bootstrap-static API data."""
         elements = bootstrap.get("elements", [])
         if not elements:
             return
         now = datetime.now(timezone.utc).isoformat()
         for elem in elements:
             try:
+                now_cost = elem.get("now_cost")
+                try:
+                    cost_tenths = int(now_cost) if now_cost is not None else None
+                except (TypeError, ValueError):
+                    cost_tenths = None
                 player_data = {
                     "fpl_player_id": elem["id"],
                     "first_name": elem.get("first_name", ""),
@@ -367,10 +372,20 @@ class PlayerDataRefresher:
                     "selected_by_percent": _parse_selected_by_percent(elem.get("selected_by_percent")),
                     "updated_at": now,
                 }
+                if cost_tenths is not None:
+                    player_data["cost_tenths"] = cost_tenths
                 self.db_client.upsert_player(player_data)
             except Exception as e:
                 logger.warning("Sync player ownership failed", extra={"player_id": elem.get("id"), "error": str(e)})
         logger.debug("Synced overall ownership for players", extra={"count": len(elements)})
+
+    def sync_players_ownership_from_bootstrap(self, bootstrap: Dict) -> None:
+        """Update selected_by_percent (overall ownership) and cost_tenths (current price) for all players from bootstrap-static. Call on every refresh cycle so player detail modal always has API-backed ownership and price."""
+        elements = bootstrap.get("elements", [])
+        if not elements:
+            return
+        players_map = {e["id"]: e for e in elements if "id" in e}
+        self._sync_players_ownership_from_bootstrap(bootstrap, players_map)
 
     async def refresh_player_gameweek_stats(
         self,

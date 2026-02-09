@@ -51,7 +51,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
       const [playerRes, priceRes, ranksRes, statsRes, historyRes] = await Promise.all([
         supabase
           .from('players')
-          .select('fpl_player_id, web_name, position, team_id, teams(short_name), selected_by_percent')
+          .select('fpl_player_id, web_name, position, team_id, teams(short_name), selected_by_percent, cost_tenths')
           .eq('fpl_player_id', playerId)
           .single(),
         supabase
@@ -170,6 +170,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           web_name: player.web_name,
           position: player.position,
           positionLabel: POSITION_LABELS[player.position] ?? '—',
+          team_id: player.team_id ?? null,
           team_short_name: player.teams?.short_name ?? null,
         },
         currentPrice,

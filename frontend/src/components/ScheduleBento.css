@@ -1,0 +1,190 @@
+/* Schedule bento: horizontal timeline of upcoming matches by gameweek. Matches schedule-based UI (badge, abbr, home icon). */
+
+.schedule-bento {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  height: auto;
+  grid-column: unset;
+  grid-row: unset;
+  opacity: 1;
+  animation: none;
+}
+
+.schedule-bento .schedule-bento-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.schedule-bento-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.schedule-bento-timeline {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  padding-bottom: 6px;
+  min-height: 0;
+}
+
+.schedule-bento-gw-column {
+  flex: 0 0 auto;
+  min-width: 64px;
+  max-width: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.schedule-bento-gw-heading {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.schedule-bento-gw-fixtures {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schedule-bento-fixture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0;
+  white-space: nowrap;
+}
+
+/* Opponent-only pill: square box, bigger badge, abbr + home icon on same row */
+.schedule-bento-opponent-pill {
+  width: 64px;
+  height: 72px;
+  min-width: 64px;
+  min-height: 72px;
+  max-width: 64px;
+  max-height: 72px;
+  padding: 0;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+}
+
+.schedule-bento-side {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.schedule-bento-opponent-pill .schedule-bento-side {
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Abbreviation and home icon on same row */
+.schedule-bento-abbr-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.schedule-bento-side-home .schedule-cell-abbr-display,
+.schedule-bento-side-home .schedule-cell-home {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.schedule-bento-side-away .schedule-cell-abbr-display,
+.schedule-bento-side-away .schedule-cell-away {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: lowercase;
+}
+
+.schedule-bento-opponent-pill .schedule-cell-abbr-display {
+  font-size: 11px;
+}
+
+.schedule-bento-home-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+  color: var(--text-secondary);
+}
+
+.schedule-bento-vs {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: lowercase;
+  opacity: 0.9;
+}
+
+.schedule-bento .schedule-cell-badge-slot {
+  width: 14px;
+  height: 14px;
+}
+
+.schedule-bento .schedule-cell-badge {
+  width: 14px;
+  height: 14px;
+}
+
+.schedule-bento .schedule-cell-badge-placeholder {
+  width: 14px;
+  height: 14px;
+}
+
+/* Badge in opponent pill (slightly smaller than before) */
+.schedule-bento-opponent-pill .schedule-bento-pill-badge-slot {
+  width: 32px;
+  height: 32px;
+}
+
+.schedule-bento-opponent-pill .schedule-bento-pill-badge,
+.schedule-bento-opponent-pill .schedule-bento-pill-badge-placeholder {
+  width: 32px;
+  height: 32px;
+}
+
+.schedule-bento-loading,
+.schedule-bento-empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 12px 0;
+}

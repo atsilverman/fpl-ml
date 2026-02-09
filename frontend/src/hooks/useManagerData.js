@@ -122,7 +122,7 @@ export function useManagerDataForManager(managerId) {
     queryFn: async () => {
       if (!managerId || !gameweek) return null
 
-      const [currRes, prevRes] = await Promise.all([
+      const [currRes, prevRes, managerRes] = await Promise.all([
         supabase
           .from('manager_gameweek_history')
           .select('transfers_made, transfer_cost, active_chip')
@@ -135,11 +135,17 @@ export function useManagerDataForManager(managerId) {
           .eq('manager_id', managerId)
           .eq('gameweek', gameweek - 1)
           .single(),
+        supabase
+          .from('managers')
+          .select('manager_name, manager_team_name')
+          .eq('manager_id', managerId)
+          .single(),
       ])
 
       const history = currRes.data
       const historyError = currRes.error
       const prevHistory = prevRes.data
+      const managerRow = managerRes?.data
 
       if (historyError && historyError.code !== 'PGRST116') throw historyError
 
@@ -156,6 +162,8 @@ export function useManagerDataForManager(managerId) {
         transfersMade: history?.transfers_made ?? 0,
         freeTransfersAvailable,
         activeChip: history?.active_chip != null ? String(history.active_chip).toLowerCase() : null,
+        managerName: managerRow?.manager_name ?? null,
+        managerTeamName: managerRow?.manager_team_name ?? null,
       }
     },
     enabled: !!managerId && !!gameweek,

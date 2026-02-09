@@ -182,7 +182,7 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
               >
                 <div className="gw-legend-popup-title">Price changes</div>
                 <p className="price-changes-source-note" style={{ margin: 0 }}>
-                  This widget shows price change predictions (rise/fall) for <strong>owned players only</strong>. See the{' '}
+                  Showing price change predictions (rise/fall) for <strong>owned players only</strong>. See the{' '}
                   <Link to="/research?view=price-changes" onClick={() => setShowInfoPopup(false)}>
                     Price Changes page
                   </Link>{' '}

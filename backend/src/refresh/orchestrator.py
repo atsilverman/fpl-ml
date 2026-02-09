@@ -1170,7 +1170,9 @@ class RefreshOrchestrator:
                 
                 self.current_state = new_state
 
-            # Keep player_prices populated from bootstrap so UI always has current price (even when price window has not run)
+            # Keep player_prices and players.cost_tenths / selected_by_percent populated from bootstrap so UI always has current price and overall ownership
+            if bootstrap and self.player_refresher:
+                self.player_refresher.sync_players_ownership_from_bootstrap(bootstrap)
             if bootstrap and self.current_gameweek and self.player_refresher:
                 self.player_refresher.sync_player_prices_from_bootstrap(bootstrap, self.current_gameweek)
             

@@ -26,6 +26,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
+import PlayerDetailModal from './PlayerDetailModal'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
@@ -51,6 +52,8 @@ export default function HomePage() {
   const [isLeagueRankExpanded, setIsLeagueRankExpanded] = useState(false)
   const [isCaptainExpanded, setIsCaptainExpanded] = useState(false)
   const [showTop10Lines, setShowTop10Lines] = useState(false)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [selectedPlayerName, setSelectedPlayerName] = useState('')
   
   // Hooks that depend on state
   const { gameweek, fplRanksUpdated, loading: gwLoading } = useGameweekData()
@@ -74,6 +77,8 @@ export default function HomePage() {
   const { transfersOut: leagueTopTransfersOut, transfersIn: leagueTopTransfersIn, loading: leagueTopTransfersLoading } = useLeagueTopTransfers(LEAGUE_ID, gameweek)
   const { leagueChipData, loading: leagueChipsLoading } = useLeagueChipUsage(gameweek)
   const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
+  const leagueManagerCount = leagueStandings?.length ?? 0
+  const leagueManagerIds = useMemo(() => (leagueStandings ?? []).map((s) => s.manager_id), [leagueStandings])
   const { top10History, loading: leagueTop10HistoryLoading } = useLeagueTop10History(gameweek ?? undefined)
   const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
   const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
@@ -611,6 +616,17 @@ export default function HomePage() {
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
               impactByPlayerId={cardId === 'gw-points' ? impactByPlayerId : undefined}
+              onPlayerRowClick={
+                cardId === 'gw-points'
+                  ? (player) => {
+                      const id = player.effective_player_id ?? player.player_id
+                      if (id != null) {
+                        setSelectedPlayerId(Number(id))
+                        setSelectedPlayerName(player.player_name ?? '')
+                      }
+                    }
+                  : undefined
+              }
               leagueStandings={cardId === 'league-rank' ? leagueStandings : undefined}
               leagueStandingsLoading={cardId === 'league-rank' ? leagueStandingsLoading : undefined}
               currentManagerId={cardId === 'overall-rank' || cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
@@ -624,6 +640,19 @@ export default function HomePage() {
           )
         })}
       </div>
+      {selectedPlayerId != null && (
+        <PlayerDetailModal
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          gameweek={gameweek}
+          leagueManagerCount={leagueManagerCount}
+          leagueManagerIds={leagueManagerIds}
+          onClose={() => {
+            setSelectedPlayerId(null)
+            setSelectedPlayerName('')
+          }}
+        />
+      )}
     </div>
   )
 }

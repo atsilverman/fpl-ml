@@ -131,7 +131,8 @@ export default function BentoCard({
   gameweekDebugData = null,
   gameweekDebugLoading = false,
   isUpdatesDebug = false,
-  updateTimestampsData = null
+  updateTimestampsData = null,
+  onPlayerRowClick = null
 }) {
   const isSecondHalf = gameweek != null && gameweek > 19
   const chipColumns = isSecondHalf ? SECOND_HALF_CHIP_COLUMNS : FIRST_HALF_CHIP_COLUMNS
@@ -686,6 +687,7 @@ export default function BentoCard({
             impactByPlayerId={impactByPlayerId ?? {}}
             isLiveUpdating={isLiveUpdating}
             fixtures={gameweekDebugData?.fixtures ?? []}
+            onPlayerRowClick={onPlayerRowClick}
           />
         </div>
       )}
