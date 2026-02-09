@@ -1,8 +1,24 @@
-import { CircleArrowUp, CircleArrowDown } from 'lucide-react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { CircleArrowUp, CircleArrowDown, Info } from 'lucide-react'
 import { usePlayerPriceChangesByDate } from '../hooks/usePlayerPriceChangesByDate'
 import { usePriceChangePredictions } from '../hooks/usePriceChangePredictions'
 import { usePlayerTeamMap } from '../hooks/usePlayerTeamMap'
 import './PriceChangesSubpage.css'
+
+const POPUP_GAP = 6
+const POPUP_PAD = 8
+function getPopupPosition(anchorRect, popupWidth, popupHeight) {
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 0
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 0
+  let left = anchorRect.right - popupWidth
+  let top = anchorRect.bottom + POPUP_GAP
+  if (left < POPUP_PAD) left = POPUP_PAD
+  if (left + popupWidth > vw - POPUP_PAD) left = vw - POPUP_PAD - popupWidth
+  if (top + popupHeight > vh - POPUP_PAD) top = anchorRect.top - POPUP_GAP - popupHeight
+  if (top < POPUP_PAD) top = POPUP_PAD
+  return { top, left }
+}
 
 const CUTOFF_HOUR = 17
 const CUTOFF_MINUTE = 30
@@ -102,6 +118,40 @@ export default function PriceChangesSubpage({ showCard = true }) {
   const { rises: predRises, falls: predFalls, capturedAt, hasLatestRow, loading: predLoading, error: predError } = usePriceChangePredictions()
   const { getTeamForPlayer } = usePlayerTeamMap()
 
+  const [showLivefplInfoPopup, setShowLivefplInfoPopup] = useState(false)
+  const [livefplInfoPopupPosition, setLivefplInfoPopupPosition] = useState(null)
+  const livefplInfoButtonRef = useRef(null)
+  const livefplInfoPopupContentRef = useRef(null)
+
+  useEffect(() => {
+    if (!showLivefplInfoPopup) setLivefplInfoPopupPosition(null)
+  }, [showLivefplInfoPopup])
+
+  useLayoutEffect(() => {
+    if (!showLivefplInfoPopup) return
+    const anchor = livefplInfoButtonRef.current
+    const popup = livefplInfoPopupContentRef.current
+    if (!anchor || !popup) return
+    const anchorRect = anchor.getBoundingClientRect()
+    const w = popup.offsetWidth
+    const h = popup.offsetHeight
+    setLivefplInfoPopupPosition(getPopupPosition(anchorRect, w, h))
+  }, [showLivefplInfoPopup])
+
+  useEffect(() => {
+    if (!showLivefplInfoPopup) return
+    const handleClickOutside = (e) => {
+      if (
+        (livefplInfoButtonRef.current && livefplInfoButtonRef.current.contains(e.target)) ||
+        (livefplInfoPopupContentRef.current && livefplInfoPopupContentRef.current.contains(e.target))
+      )
+        return
+      setShowLivefplInfoPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showLivefplInfoPopup])
+
   const hasPredictions = (predRises?.length ?? 0) > 0 || (predFalls?.length ?? 0) > 0
   const showPredictionsSection = hasLatestRow || hasPredictions
   const error = actualError ?? predError
@@ -176,6 +226,44 @@ export default function PriceChangesSubpage({ showCard = true }) {
                     >
                       Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
                     </a>
+                    <button
+                      ref={livefplInfoButtonRef}
+                      type="button"
+                      className="bento-card-info-icon"
+                      title="How predictions are updated"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowLivefplInfoPopup((v) => !v)
+                      }}
+                      aria-expanded={showLivefplInfoPopup}
+                      aria-haspopup="dialog"
+                    >
+                      <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+                    </button>
+                    {showLivefplInfoPopup &&
+                      createPortal(
+                        <div
+                          ref={livefplInfoPopupContentRef}
+                          className="gw-legend-popup gw-legend-popup-fixed price-changes-source-info-popup"
+                          role="dialog"
+                          aria-label="Predictions source"
+                          style={{
+                            position: 'fixed',
+                            left: livefplInfoPopupPosition?.left ?? 0,
+                            top: livefplInfoPopupPosition?.top ?? 0,
+                            visibility: livefplInfoPopupPosition ? 'visible' : 'hidden',
+                            zIndex: 9999
+                          }}
+                        >
+                          <div className="gw-legend-popup-title">Predictions source</div>
+                          <p className="price-changes-source-note" style={{ margin: 0 }}>
+                            A web crawler fetches the latest price predictions from{' '}
+                            <a href="https://www.livefpl.net/prices" target="_blank" rel="noopener noreferrer">https://www.livefpl.net/prices</a>
+                            {' '}every 30 minutes.
+                          </p>
+                        </div>,
+                        document.body
+                      )}
                   </span>
                 </div>
                 {predictionsContent}

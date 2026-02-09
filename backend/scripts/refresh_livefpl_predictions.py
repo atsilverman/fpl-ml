@@ -52,6 +52,9 @@ def _dedupe_player_name(name: str) -> str:
         return name
     name = name.strip()
     parts = name.split()
+    # "Andrey Santos Andrey S" or "Andrey Santos Andrey" -> full name + truncated repeat; keep first two words
+    if len(parts) >= 3 and parts[0] == parts[2]:
+        return f"{parts[0]} {parts[1]}"
     if len(parts) == 2:
         a, b = parts[0], parts[1]
         if a == b:
@@ -79,13 +82,17 @@ def _extract_players_from_text(text: str) -> list[dict]:
     return out
 
 
-def _extract_players_from_cell(cell) -> list[dict]:
-    """From a BeautifulSoup table cell, extract list of { player_name, team_id, price }."""
+def _extract_players_from_cell(cell, stop_before_text: str | None = None) -> list[dict]:
+    """From a BeautifulSoup table cell, extract list of { player_name, team_id, price }.
+    If stop_before_text is set, only include players that appear before that text in the cell."""
     if not cell:
         return []
+    imgs = list(cell.find_all("img", src=re.compile(r"new_logos2/(\d+)\.png")))
+    if stop_before_text:
+        before_ids = _nodes_before_stop_text(cell, stop_before_text)
+        imgs = [img for img in imgs if id(img) in before_ids]
     out = []
-    # Find all club shirt images (team id in src)
-    for img in cell.find_all("img", src=re.compile(r"new_logos2/(\d+)\.png")):
+    for img in imgs:
         src = img.get("src") or ""
         m = re.search(r"new_logos2/(\d+)\.png", src)
         if not m:
@@ -142,10 +149,33 @@ def _fetch_team_short_names(client: SupabaseClient) -> dict[int, str]:
         return {}
 
 
+# Only these two row labels from the Summary table (exclude "Others who will be close")
+_SUMMARY_ROW_LABELS = ("Already reached target", "Projected to reach target")
+_OTHERS_WHO_WILL_BE_CLOSE = "Others who will be close"
+
+
+def _nodes_before_stop_text(cell, stop_text: str) -> set:
+    """Return set of node ids for descendants of cell that appear before the first occurrence of stop_text (document order)."""
+    from bs4 import NavigableString
+    stop_lower = stop_text.lower().strip()
+    desc = list(cell.descendants)
+    stop_idx = None
+    for i, d in enumerate(desc):
+        raw = str(d) if isinstance(d, NavigableString) else (d.get_text() if hasattr(d, "get_text") else "")
+        text = " ".join((raw or "").split()).lower()
+        if text and stop_lower in text:
+            stop_idx = i
+            break
+    if stop_idx is None:
+        return set(id(x) for x in desc)
+    return set(id(x) for x in desc[:stop_idx])
+
+
 def scrape_livefpl() -> tuple[list[dict], list[dict]]:
     """
-    GET LiveFPL prices page; parse "Already reached target" and "Projected to reach target"
-    rows for rises and falls; merge and dedupe. Returns (rises, falls).
+    GET LiveFPL prices page; parse only the Summary table's "Already reached target"
+    and "Projected to reach target" rows (not "Others who will be close" or the main table).
+    Merge and dedupe. Returns (rises, falls).
     """
     resp = httpx.get(
         LIVEFPL_URL,
@@ -160,17 +190,32 @@ def scrape_livefpl() -> tuple[list[dict], list[dict]]:
     all_rises: list[dict] = []
     all_falls: list[dict] = []
 
-    for td in soup.find_all("td"):
-        label = (td.get_text() or "").strip()
-        if "Already reached target" in label or "Projected to reach target" in label:
-            row = td.find_parent("tr")
-            if row:
-                cells = row.find_all("td")
-                if len(cells) >= 3:
-                    r = _extract_players_from_cell(cells[1])
-                    f = _extract_players_from_cell(cells[2])
-                    all_rises.extend(r)
-                    all_falls.extend(f)
+    # Only consider the Summary table: find the table that has both "Already" and "Projected"
+    # row labels (excludes main player table and ensures we don't include "Others who will be close")
+    for table in soup.find_all("table"):
+        labels_in_table = set()
+        for row in table.find_all("tr"):
+            cells = row.find_all("td")
+            if len(cells) < 3:
+                continue
+            label = (cells[0].get_text() or "").strip()
+            if label in _SUMMARY_ROW_LABELS:
+                labels_in_table.add(label)
+        if not labels_in_table:
+            continue
+        # This table is the Summary table; parse only the two allowed rows
+        for row in table.find_all("tr"):
+            cells = row.find_all("td")
+            if len(cells) < 3:
+                continue
+            label = (cells[0].get_text() or "").strip()
+            if label not in _SUMMARY_ROW_LABELS:
+                continue
+            r = _extract_players_from_cell(cells[1], stop_before_text=_OTHERS_WHO_WILL_BE_CLOSE)
+            f = _extract_players_from_cell(cells[2], stop_before_text=_OTHERS_WHO_WILL_BE_CLOSE)
+            all_rises.extend(r)
+            all_falls.extend(f)
+        break
 
     if all_rises or all_falls:
         return _merge_dedupe(all_rises), _merge_dedupe(all_falls)

@@ -4,11 +4,14 @@ import { supabase } from '../lib/supabase'
 // Poll for latest predictions (updated every 30 min by backend scraper)
 const POLL_MS = Number(import.meta.env.VITE_PRICE_CHANGES_POLL_MS) || 60_000
 
-/** Collapse duplicate or "FullName ShortName" into a single display name. */
+/** Collapse duplicate or "FullName ShortName" / "Andrey Santos Andrey S" into a single display name. */
 function dedupePlayerName(name) {
   if (!name || typeof name !== 'string') return name ?? 'Unknown'
   const trimmed = name.trim()
   const parts = trimmed.split(/\s+/)
+  if (parts.length >= 3 && parts[0] === parts[2]) {
+    return `${parts[0]} ${parts[1]}`
+  }
   if (parts.length === 2) {
     const [a, b] = parts
     if (a === b) return a
