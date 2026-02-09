@@ -81,14 +81,18 @@ export default function ScheduleBento({ teamId }) {
         <div className="schedule-bento-timeline">
           {gameweeks.map((gw) => {
             const opponents = getOpponents(teamId, gw.id) ?? []
-            if (opponents.length === 0) return null
+            const isBlank = opponents.length === 0
             return (
               <div key={gw.id} className="schedule-bento-gw-column">
                 <div className="schedule-bento-gw-heading">GW{gw.id}</div>
                 <div className="schedule-bento-gw-fixtures">
-                  {opponents.map((opp, idx) => (
-                    <OpponentPill key={`${opp.team_id}-${idx}`} opponent={opp} />
-                  ))}
+                  {isBlank ? (
+                    <span className="schedule-bento-blank" aria-label="Blank gameweek">—</span>
+                  ) : (
+                    opponents.map((opp, idx) => (
+                      <OpponentPill key={`${opp.team_id}-${idx}`} opponent={opp} />
+                    ))
+                  )}
                 </div>
               </div>
             )

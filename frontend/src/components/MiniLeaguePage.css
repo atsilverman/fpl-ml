@@ -572,6 +572,62 @@
   transition: opacity 0.2s ease;
 }
 
+/* Mobile: freeze toolbar + transfers; table body scrolls so users can swipe in the table area */
+@media (max-width: 768px) {
+  .mini-league-page {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 130px);
+    min-height: 0;
+    overflow: hidden;
+    padding-top: 16px;
+  }
+
+  .mini-league-page .league-standings-bento.league-standings-page {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mini-league-page .league-standings-toolbar {
+    flex-shrink: 0;
+  }
+
+  .mini-league-page .league-page-transfers-summary {
+    flex-shrink: 0;
+  }
+
+  .mini-league-page .league-standings-bento-table-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    /* Sticky thead sticks inside this scroll container so header stays visible while rows scroll */
+  }
+
+  /* Transfers view: same freeze — toolbar + League Transfers card fixed, transfers table header sticky, rows scroll */
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table-wrap {
+    min-height: 0;
+    overflow: visible;
+    /* overflow-x: hidden on the wrap breaks position:sticky on thead; use visible so thead sticks to wrapper */
+  }
+
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-secondary);
+    box-shadow: 0 1px 0 var(--border-color);
+  }
+
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead th {
+    background: var(--bg-secondary);
+  }
+}
+
 .league-standings-page .league-standings-bento-table-wrapper--dimmed {
   opacity: 0.65;
 }
