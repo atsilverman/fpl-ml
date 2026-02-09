@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { CircleCheck, CircleArrowRight } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import './ConfigurationModal.css'
 
@@ -52,8 +53,8 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
       
       return (managerDetails || []).map(manager => ({
         manager_id: manager.manager_id,
-        manager_name: manager.manager_name || null,
-        manager_team_name: manager.manager_team_name || null
+        manager_name: (manager.manager_name != null && manager.manager_name !== '') ? String(manager.manager_name).trim() || null : null,
+        manager_team_name: (manager.manager_team_name != null && manager.manager_team_name !== '') ? String(manager.manager_team_name).trim() || null : null
       }))
     },
     enabled: isOpen && step === 2 && !!selectedLeague,
@@ -128,11 +129,8 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
                     >
                       <div className="modal-option-content">
                         <span className="modal-option-name">{league.league_name || `League ${league.league_id}`}</span>
-                        {league.league_name && league.league_name !== `League ${league.league_id}` && (
-                          <span className="modal-option-id">ID: {league.league_id}</span>
-                        )}
                       </div>
-                      <span className="modal-option-arrow">→</span>
+                      <CircleArrowRight className="modal-option-arrow" size={18} strokeWidth={2} aria-hidden />
                     </button>
                   ))}
                 </div>
@@ -170,7 +168,7 @@ export default function ConfigurationModal({ isOpen, onClose, onSave, currentCon
                         )}
                       </div>
                       {selectedManagerId === manager.manager_id && (
-                        <span className="modal-option-check">✓</span>
+                        <CircleCheck className="modal-option-check" size={18} strokeWidth={2.5} aria-hidden />
                       )}
                     </button>
                   ))}

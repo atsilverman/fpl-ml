@@ -83,12 +83,13 @@
 
 .league-page-transfers-summary .transfers-summary-card--collapsed {
   height: auto;
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  justify-content: center;
 }
 
 .league-page-transfers-summary .transfers-summary-card--expanded {
-  height: 180px;
+  min-height: 180px;
 }
 
 /* Clickable header row (same pattern as Top Performers) */
@@ -103,6 +104,12 @@
   margin: -2px 0;
   border-radius: 4px;
   transition: background 0.15s ease;
+}
+
+.league-page-transfers-summary .transfers-summary-card--collapsed .league-page-transfers-summary-header {
+  min-height: 28px;
+  padding: 0;
+  margin: 0;
 }
 
 .league-page-transfers-summary-header:focus-visible {
@@ -160,7 +167,7 @@
   }
 }
 
-/* Wrapper for scrollable content + scroll hint (chevron when content overflows) */
+/* Wrapper for scrollable content + scroll hint (chevron when content overflows). Slide down/up with transition. */
 .league-page-transfers-summary-content-wrap {
   position: relative;
   flex: 1 1 0;
@@ -168,6 +175,14 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.5s ease-out, opacity 0.4s ease-out;
+}
+.league-page-transfers-summary-content-wrap--open {
+  max-height: 220px;
+  opacity: 1;
+  transition: max-height 0.5s ease-in, opacity 0.35s ease-in;
 }
 
 .league-page-transfers-summary .transfers-summary-content {
@@ -572,49 +587,29 @@
   transition: opacity 0.2s ease;
 }
 
-/* Mobile: freeze toolbar + transfers; table body scrolls so users can swipe in the table area */
+/* Mobile: full-height content, page scrolls so nav bar slide animation works with window scroll */
 @media (max-width: 768px) {
   .mini-league-page {
-    display: flex;
-    flex-direction: column;
-    max-height: calc(100vh - 130px);
-    min-height: 0;
-    overflow: hidden;
     padding-top: 16px;
+    padding-bottom: 24px;
   }
 
-  .mini-league-page .league-standings-bento.league-standings-page {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .mini-league-page .league-standings-toolbar {
-    flex-shrink: 0;
-  }
-
-  .mini-league-page .league-page-transfers-summary {
-    flex-shrink: 0;
+  .mini-league-page .league-standings-transfers-spacer {
+    display: none;
   }
 
   .mini-league-page .league-standings-bento-table-wrapper {
-    flex: 1;
-    min-height: 0;
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
-    /* Sticky thead sticks inside this scroll container so header stays visible while rows scroll */
   }
 
-  /* Transfers view: same freeze — toolbar + League Transfers card fixed, transfers table header sticky, rows scroll */
+  /* Sticky thead sticks to viewport when page scrolls */
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table-wrap {
-    min-height: 0;
     overflow: visible;
-    /* overflow-x: hidden on the wrap breaks position:sticky on thead; use visible so thead sticks to wrapper */
   }
 
+  .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead,
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead {
     position: sticky;
     top: 0;
@@ -623,6 +618,7 @@
     box-shadow: 0 1px 0 var(--border-color);
   }
 
+  .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead th,
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead th {
     background: var(--bg-secondary);
   }
@@ -751,6 +747,15 @@
 .league-transfers-table .league-transfers-row--single-or-none .league-transfers-cell-rank,
 .league-transfers-table .league-transfers-row--single-or-none .league-transfers-cell-manager {
   vertical-align: middle;
+}
+
+/* Visually demote rows for managers who made no transfers (still visible, muted) */
+.league-transfers-table .league-transfers-row--no-transfers td {
+  opacity: 0.55;
+  color: var(--text-secondary);
+}
+.league-transfers-table .league-transfers-row--no-transfers.league-standings-bento-row-you td {
+  opacity: 0.75;
 }
 
 .league-transfers-table .league-transfers-row.league-standings-bento-row-you td {

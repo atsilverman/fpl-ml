@@ -7,6 +7,7 @@ import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useAuth } from '../contexts/AuthContext'
+import { useScrollSourceState } from '../contexts/ScrollSourceContext'
 import { supabase } from '../lib/supabase'
 import './Dashboard.css'
 
@@ -78,6 +79,61 @@ export default function Dashboard() {
   const [showH2H, setShowH2H] = useState(false)
   const [debugModalOpen, setDebugModalOpen] = useState(false)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
+  const [mobileNavVisible, setMobileNavVisible] = useState(true)
+  const lastScrollY = useRef(0)
+  const ticking = useRef(false)
+  const scrollSource = useScrollSourceState()
+
+  useEffect(() => {
+    const mobile = window.matchMedia('(max-width: 768px)')
+    if (!mobile.matches) return
+
+    const target = scrollSource || (typeof window !== 'undefined' ? window : null)
+    if (!target) return
+
+    const getScrollY = scrollSource ? () => scrollSource.scrollTop : () => window.scrollY
+
+    const updateNavVisibility = () => {
+      const y = getScrollY()
+      const delta = y - lastScrollY.current
+      if (y <= 12) {
+        setMobileNavVisible(true)
+      } else if (delta > 4) {
+        setMobileNavVisible(false)
+      } else if (delta < -4) {
+        setMobileNavVisible(true)
+      }
+      lastScrollY.current = y
+      ticking.current = false
+    }
+
+    const onScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true
+        requestAnimationFrame(updateNavVisibility)
+      }
+    }
+
+    if (scrollSource) {
+      scrollSource.addEventListener('scroll', onScroll, { passive: true })
+      lastScrollY.current = scrollSource.scrollTop
+    } else {
+      window.addEventListener('scroll', onScroll, { passive: true })
+      lastScrollY.current = window.scrollY
+    }
+    const onResize = () => {
+      if (window.innerWidth > 768) setMobileNavVisible(true)
+    }
+    window.addEventListener('resize', onResize)
+    return () => {
+      if (scrollSource) {
+        scrollSource.removeEventListener('scroll', onScroll)
+      } else {
+        window.removeEventListener('scroll', onScroll)
+      }
+      window.removeEventListener('resize', onResize)
+    }
+  }, [scrollSource])
 
   useEffect(() => {
     // Wait for auth to resolve before redirecting (prevents flash of login screen when already signed in)
@@ -160,7 +216,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
+    <div className={`dashboard${!mobileNavVisible ? ' mobile-nav-hidden' : ''}`}>
       <header className="dashboard-header">
         <div className="header-content">
           <div className="header-title-section">

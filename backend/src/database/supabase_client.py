@@ -326,6 +326,15 @@ class SupabaseClient:
         ).execute()
         return result.data
 
+    def get_manager(self, manager_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Get a manager by ID (manager_name, manager_team_name for preserving backfilled data).
+        """
+        result = self.client.table("managers").select(
+            "manager_id, manager_name, manager_team_name"
+        ).eq("manager_id", manager_id).maybe_single().execute()
+        return result.data
+
     def upsert_manager(self, manager_data: Dict[str, Any]):
         """
         Upsert a manager.

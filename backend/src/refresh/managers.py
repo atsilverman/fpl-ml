@@ -213,7 +213,7 @@ class ManagerDataRefresher:
             
             picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
             
-            # Upsert manager if needed (team/squad name for display, manager_name for legacy/fallback)
+            # Upsert manager: manager_team_name = entry/squad name, manager_name = person name (preserve backfilled)
             entry_data = await self.fpl_client.get_entry(manager_id)
             team_name = (
                 entry_data.get("name")
@@ -221,9 +221,20 @@ class ManagerDataRefresher:
                 or (entry_data.get("player_first_name", "") + " " + entry_data.get("player_last_name", "")).strip()
                 or f"Manager {manager_id}"
             )
+            person_name = (
+                (entry_data.get("player_first_name") or "").strip() + " " + (entry_data.get("player_last_name") or "").strip()
+            ).strip() or None
+            existing = self.db_client.get_manager(manager_id)
+            # Use person name from API when present; otherwise keep existing manager_name (backfilled) so we don't overwrite with team_name
+            if person_name:
+                manager_name = person_name
+            elif existing and (existing.get("manager_name") or "").strip():
+                manager_name = (existing.get("manager_name") or "").strip()
+            else:
+                manager_name = team_name
             manager_data = {
                 "manager_id": manager_id,
-                "manager_name": team_name,
+                "manager_name": manager_name,
                 "manager_team_name": team_name,
                 "favourite_team_id": entry_data.get("favourite_team"),
                 "joined_time": entry_data.get("joined_time"),

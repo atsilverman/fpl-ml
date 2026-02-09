@@ -444,6 +444,8 @@ export default function MiniLeaguePage() {
             <ArrowLeftRight size={11} strokeWidth={1.5} aria-hidden />
           </button>
         </div>
+        <div className="league-standings-bento-body">
+        {showTransfersView && <div className="league-standings-transfers-spacer" aria-hidden="true" />}
         {showTransfersView && (() => {
           const outList = leagueTopTransfersOut || []
           const inList = leagueTopTransfersIn || []
@@ -477,9 +479,11 @@ export default function MiniLeaguePage() {
                     )}
                   </span>
                 </div>
-                {transfersSummaryExpanded && (
-                  <div className="league-page-transfers-summary-content-wrap">
-                    <div className="transfers-summary-content">
+                <div
+                  className={`league-page-transfers-summary-content-wrap ${transfersSummaryExpanded ? 'league-page-transfers-summary-content-wrap--open' : ''}`}
+                  aria-hidden={!transfersSummaryExpanded}
+                >
+                  <div className="transfers-summary-content">
                       {chipLabel && (
                         <div className="transfers-summary-header-row">
                           <span
@@ -544,14 +548,13 @@ export default function MiniLeaguePage() {
                           )}
                         </div>
                       </div>
-                    </div>
                     {!leagueTopTransfersLoading && (outList.length + inList.length) > 8 && (
                       <div className="league-page-transfers-summary-scroll-hint" aria-hidden title="Scroll to view all">
                         <ChevronDown size={14} strokeWidth={2} />
                       </div>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
           )
@@ -765,10 +768,11 @@ export default function MiniLeaguePage() {
                     const transferViewChipLabel = transferViewChip ? (CHIP_LABELS[transferViewChip] ?? transferViewChip) : null
                     const transferViewChipColor = transferViewChip ? (CHIP_COLORS[transferViewChip] ?? 'var(--text-secondary)') : null
                     const hasSingleOrNoTransfers = transfers.length <= 1
+                    const hasNoTransfers = transfers.length === 0
                     return (
                       <tr
                         key={s.manager_id}
-                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''}`}
+                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''}`}
                         onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -852,6 +856,7 @@ export default function MiniLeaguePage() {
             </table>
           </div>
           )}
+        </div>
         </div>
       </div>
 

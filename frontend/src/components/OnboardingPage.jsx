@@ -47,13 +47,14 @@ export default function OnboardingPage() {
       const managerIds = leagueManagers.map((m) => m.manager_id)
       const { data: managerDetails, error: managerError } = await supabase
         .from('managers')
-        .select('manager_id, manager_name')
+        .select('manager_id, manager_name, manager_team_name')
         .in('manager_id', managerIds)
         .order('manager_id', { ascending: true })
       if (managerError) throw managerError
       return (managerDetails || []).map((m) => ({
         manager_id: m.manager_id,
-        manager_name: m.manager_name || `Manager ${m.manager_id}`,
+        manager_name: m.manager_name || null,
+        manager_team_name: m.manager_team_name || null,
       }))
     },
     enabled: !!selectedLeague,
@@ -181,9 +182,14 @@ export default function OnboardingPage() {
                       className={`onboarding-option ${selectedManagerId === manager.manager_id ? 'selected' : ''}`}
                       onClick={() => handleManagerSelect(manager.manager_id)}
                     >
-                      <span className="onboarding-option-name">
-                        {manager.manager_name || `Manager ${manager.manager_id}`}
-                      </span>
+                      <div className="onboarding-option-content">
+                        <span className="onboarding-option-name">
+                          {manager.manager_team_name || manager.manager_name || `Manager ${manager.manager_id}`}
+                        </span>
+                        {manager.manager_team_name && manager.manager_name && manager.manager_name !== manager.manager_team_name && (
+                          <span className="onboarding-option-subtitle">{manager.manager_name}</span>
+                        )}
+                      </div>
                       {selectedManagerId === manager.manager_id && (
                         <span className="onboarding-option-check">✓</span>
                       )}
