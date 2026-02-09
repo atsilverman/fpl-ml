@@ -1281,7 +1281,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px 8px;
+  padding: 14px 16px 16px;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
@@ -1289,55 +1289,57 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   min-width: 0;
 }
 .manager-detail-modal-title {
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
   letter-spacing: 0.2px;
 }
 .manager-detail-modal-subtitle {
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 400;
   color: var(--text-secondary);
-  margin: 2px 0 0;
+  margin: 4px 0 0;
   line-height: 1.2;
 }
 .manager-detail-modal-header-actions {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
 }
 .manager-detail-modal-legend-icon {
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
 }
 .manager-detail-modal-legend-icon .bento-card-expand-icon-svg {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
 }
 .manager-detail-modal-legend-popup {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 .manager-detail-modal-close {
   background: none;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 4px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: color 0.2s, background 0.2s;
 }
 .manager-detail-modal-close svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 @media (hover: hover) {
   .manager-detail-modal-close:hover {
@@ -1496,7 +1498,9 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   background: transparent;
 }
 
-/* Legend: "Name" (green) = Owned by you */
-.gw-legend-popup-text--name-green {
+/* Legend: "Name" (green) = Owned by you – match table player name size/weight */
+.manager-detail-modal-legend-popup .gw-legend-popup-text--name-green {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--accent-green, #10b981);
 }

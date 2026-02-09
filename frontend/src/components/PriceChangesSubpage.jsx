@@ -159,7 +159,6 @@ export default function PriceChangesSubpage({ showCard = true }) {
                     >
                       Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
                     </a>
-                    <span className="price-changes-source-note">· updates every 30 min</span>
                   </span>
                 </div>
                 {predictionsContent}

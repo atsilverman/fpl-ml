@@ -884,7 +884,7 @@ export default function MiniLeaguePage() {
                   aria-expanded={showManagerDetailLegend}
                   aria-haspopup="dialog"
                 >
-                  <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} />
+                  <Info className="bento-card-expand-icon-svg" size={12} strokeWidth={1.5} />
                 </div>
                 {showManagerDetailLegend && (
                   <div className="gw-legend-popup manager-detail-modal-legend-popup" role="dialog" aria-label="GW points legend">
