@@ -445,6 +445,21 @@
   pointer-events: none;
 }
 
+/* Research dropdown: Planner coming soon (icon + spacing + greyed) */
+.nav-item-gameweek-option.nav-item-gameweek-option--coming-soon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+.nav-item-gameweek-option.nav-item-gameweek-option--coming-soon.nav-item-gameweek-option--disabled {
+  opacity: 0.65;
+}
+.nav-item-gameweek-option--coming-soon .nav-item-gameweek-option-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
 .account-button {
   padding: 8px;
   border: 1px solid var(--border-color);
@@ -784,10 +799,12 @@
     font-size: 11px;
   }
 
-  /* Dropdown panel above nav on mobile */
+  /* Dropdown panel above nav on mobile – offset left so it doesn’t go off right edge */
   .nav-item-gameweek-panel {
     top: auto;
     bottom: 100%;
+    left: 50%;
+    transform: translateX(calc(-50% - 20px));
     margin-top: 0;
     margin-bottom: 8px;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15);

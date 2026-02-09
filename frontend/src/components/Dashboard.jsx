@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, TableProperties, FlaskConical } from 'lucide-react'
+import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -20,6 +20,7 @@ const GAMEWEEK_VIEWS = [
 const RESEARCH_VIEWS = [
   { id: 'price-changes', label: 'Price Changes', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
+  { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
 ]
 
 /* Soccer ball icon (no Lucide equivalent); matches lucide size/stroke usage */
@@ -314,13 +315,18 @@ export default function Dashboard() {
                           type="button"
                           role="option"
                           aria-selected={currentPage.id === 'research' && researchView === view.id}
-                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                          aria-label={view.comingSoon ? `${view.label} (coming soon)` : view.label}
+                          title={view.comingSoon ? 'Coming soon' : undefined}
+                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''} ${view.comingSoon ? 'nav-item-gameweek-option--coming-soon' : ''}`}
                           onClick={() => {
                             if (isDisabled) return
                             setResearchView(view.id)
                           }}
                           disabled={isDisabled}
                         >
+                          {view.comingSoon && (
+                            <Construction size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
+                          )}
                           {view.label}
                         </button>
                       )

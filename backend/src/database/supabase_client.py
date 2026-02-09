@@ -461,6 +461,14 @@ class SupabaseClient:
         ).execute()
         
         return result.data
+
+    def update_player_cost_tenths(self, fpl_player_id: int, cost_tenths: int) -> None:
+        """
+        Update a player's cost_tenths (current price fallback on players table).
+        """
+        self.client.table("players").update({"cost_tenths": cost_tenths}).eq(
+            "fpl_player_id", fpl_player_id
+        ).execute()
     
     def clear_price_change_predictions(self) -> None:
         """

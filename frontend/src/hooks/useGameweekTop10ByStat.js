@@ -4,10 +4,77 @@ import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 
 /**
+ * Aggregate per-fixture rows into one row per player (sum stats across DGW fixtures).
+ * So "top 10" is by player gameweek totals, not by single-fixture rows.
+ */
+function aggregateByPlayer(rows) {
+  if (!rows || rows.length === 0) return []
+  const byPlayer = new Map()
+  for (const row of rows) {
+    const id = row.player_id
+    if (id == null) continue
+    const key = Number(id)
+    const existing = byPlayer.get(key)
+    if (!existing) {
+      const totalPoints = Number(row.total_points) || 0
+      const bonusStatus = row.bonus_status ?? 'provisional'
+      const officialBonus = Number(row.bonus) ?? 0
+      const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+      const provisionalBonus = Number(row.provisional_bonus) || 0
+      const effective_total_points = isBonusConfirmed ? totalPoints : totalPoints + provisionalBonus
+      byPlayer.set(key, {
+        player_id: id,
+        total_points: totalPoints,
+        bonus: officialBonus,
+        provisional_bonus: provisionalBonus,
+        effective_total_points,
+        goals_scored: Number(row.goals_scored) || 0,
+        assists: Number(row.assists) || 0,
+        clean_sheets: Number(row.clean_sheets) || 0,
+        saves: Number(row.saves) || 0,
+        bps: Number(row.bps) || 0,
+        defensive_contribution: Number(row.defensive_contribution) || 0,
+        yellow_cards: Number(row.yellow_cards) || 0,
+        red_cards: Number(row.red_cards) || 0,
+        expected_goals: Number(row.expected_goals) || 0,
+        expected_assists: Number(row.expected_assists) || 0,
+        expected_goal_involvements: Number(row.expected_goal_involvements) || 0,
+        expected_goals_conceded: Number(row.expected_goals_conceded) || 0
+      })
+    } else {
+      const totalPoints = Number(row.total_points) || 0
+      const bonusStatus = row.bonus_status ?? 'provisional'
+      const officialBonus = Number(row.bonus) ?? 0
+      const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+      const provisionalBonus = Number(row.provisional_bonus) || 0
+      const rowEffective = isBonusConfirmed ? totalPoints : totalPoints + provisionalBonus
+      existing.total_points += totalPoints
+      existing.bonus += officialBonus
+      existing.provisional_bonus += provisionalBonus
+      existing.effective_total_points += rowEffective
+      existing.goals_scored += Number(row.goals_scored) || 0
+      existing.assists += Number(row.assists) || 0
+      existing.clean_sheets += Number(row.clean_sheets) || 0
+      existing.saves += Number(row.saves) || 0
+      existing.bps += Number(row.bps) || 0
+      existing.defensive_contribution += Number(row.defensive_contribution) || 0
+      existing.yellow_cards += Number(row.yellow_cards) || 0
+      existing.red_cards += Number(row.red_cards) || 0
+      existing.expected_goals += Number(row.expected_goals) || 0
+      existing.expected_assists += Number(row.expected_assists) || 0
+      existing.expected_goal_involvements += Number(row.expected_goal_involvements) || 0
+      existing.expected_goals_conceded += Number(row.expected_goals_conceded) || 0
+    }
+  }
+  return Array.from(byPlayer.values())
+}
+
+/**
  * For each stat column, returns the set of player_id that are in the top 10 for that stat in the gameweek.
  * Used so the green "top 10" badge is only shown when the player is actually top 10 for that specific column.
  * For pts we use effective_total_points when present (total_points + provisional_bonus when bonus not confirmed)
  * so the badge matches the displayed points during live/provisional scoring.
+ * Expects one row per player (e.g. from aggregateByPlayer).
  */
 function computeTop10ByStat(rows) {
   const out = {
@@ -95,19 +162,9 @@ export function useGameweekTop10ByStat() {
         return computeTop10ByStat([])
       }
 
-      const rows = (data || []).map((row) => {
-        const totalPoints = Number(row.total_points) || 0
-        const bonusStatus = row.bonus_status ?? 'provisional'
-        const officialBonus = Number(row.bonus) ?? 0
-        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
-        const provisionalBonus = Number(row.provisional_bonus) || 0
-        const effective_total_points = isBonusConfirmed
-          ? totalPoints
-          : totalPoints + provisionalBonus
-        return { ...row, effective_total_points }
-      })
-
-      return computeTop10ByStat(rows)
+      // Aggregate by player so DGW players are ranked by gameweek totals, not per-fixture rows
+      const aggregated = aggregateByPlayer(data || [])
+      return computeTop10ByStat(aggregated)
     },
     enabled: !!gameweek && !gwLoading,
     staleTime: isLive ? 25 * 1000 : 60 * 1000,

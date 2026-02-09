@@ -1504,3 +1504,167 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   font-weight: 600;
   color: var(--accent-green, #10b981);
 }
+
+/* Player detail modal (same layout as manager modal, stacked above when open) */
+.player-detail-modal-overlay {
+  z-index: 1001;
+}
+.player-detail-modal-content {
+  max-width: min(90vw, 480px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.player-detail-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.player-detail-modal-badge {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.player-detail-modal-header .manager-detail-modal-subtitle {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Player detail bentos: match manager-detail-transfers-bento (same modal context) */
+.player-detail-details-bento,
+.player-detail-chart-bento {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* Match other bentos: no grid placement when inside modal */
+  height: auto;
+  grid-column: unset;
+  grid-row: unset;
+  opacity: 1;
+  animation: none;
+}
+.player-detail-details-bento .bento-card-label,
+.player-detail-chart-bento .bento-card-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.player-detail-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+.player-detail-detail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.player-detail-detail-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.player-detail-detail-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Chart bento header: label left, eye (stat filter) button right */
+.player-detail-chart-bento-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  position: relative;
+}
+.player-detail-chart-bento-label {
+  margin-bottom: 0;
+}
+.player-detail-chart-bento-label .bento-card-label-suffix {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.65;
+  text-transform: none;
+  letter-spacing: 0.3px;
+  margin-left: 6px;
+  color: var(--text-secondary);
+}
+.player-detail-chart-bento-actions {
+  position: relative;
+  flex-shrink: 0;
+}
+.player-detail-chart-stat-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+@media (hover: hover) {
+  .player-detail-chart-stat-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+}
+.player-detail-stat-popup {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 180px;
+}
+.player-detail-stat-popup-row {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .player-detail-stat-popup-row:hover {
+    background: var(--bg-secondary);
+  }
+}
+.player-detail-stat-popup-row--active .gw-legend-popup-text {
+  font-weight: 700;
+  color: var(--accent-blue);
+}
+
+/* Chart bento: height fits chart + gameweek filter (All / Last 6 / Last 12) */
+.player-detail-chart-wrap {
+  width: 100%;
+  height: 262px;
+  min-height: 262px;
+  max-height: 262px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}

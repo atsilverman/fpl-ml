@@ -5,6 +5,7 @@ import { useLeagueActiveChips } from '../hooks/useLeagueActiveChips'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { useLeaguePlayerOwnershipMultiple } from '../hooks/useLeaguePlayerOwnership'
+import { usePlayerDetail } from '../hooks/usePlayerDetail'
 import { useCurrentGameweekPlayers, useCurrentGameweekPlayersForManager } from '../hooks/useCurrentGameweekPlayers'
 import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { usePlayerImpactForManager } from '../hooks/usePlayerImpact'
@@ -14,8 +15,9 @@ import { useManagerData, useManagerDataForManager } from '../hooks/useManagerDat
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal, Eye } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
+import PlayerGameweekPointsChart from './PlayerGameweekPointsChart'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
@@ -83,7 +85,8 @@ export default function MiniLeaguePage() {
   const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedSearchQuery)
   const [selectedPlayers, setSelectedPlayers] = useState([])
   const selectedPlayerIds = useMemo(() => selectedPlayers.map((p) => p.fpl_player_id), [selectedPlayers])
-  const { managerIdsOwningAny, loading: ownershipLoading } = useLeaguePlayerOwnershipMultiple(selectedPlayerIds, gameweek)
+  const leagueManagerIds = useMemo(() => (standings ?? []).map((s) => s.manager_id), [standings])
+  const { managerIdsOwningAny, loading: ownershipLoading } = useLeaguePlayerOwnershipMultiple(selectedPlayerIds, gameweek, leagueManagerIds)
 
   const [sort, setSort] = useState(DEFAULT_SORT)
   const [searchQuery, setSearchQuery] = useState('')
@@ -92,6 +95,11 @@ export default function MiniLeaguePage() {
   const [selectedManagerDisplayName, setSelectedManagerDisplayName] = useState('')
   const [selectedManagerName, setSelectedManagerName] = useState('')
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [showPlayerStatPopup, setShowPlayerStatPopup] = useState(false)
+  const [selectedPlayerStat, setSelectedPlayerStat] = useState('points')
+  const playerStatPopupRef = useRef(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const [showTransfersView, setShowTransfersView] = useState(false)
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
@@ -122,6 +130,18 @@ export default function MiniLeaguePage() {
   const { transfers: selectedManagerTransfers, loading: selectedManagerTransfersLoading } = useTransferImpactsForManager(selectedManagerId, gameweek)
   const { managerData: configuredManagerData } = useManagerData()
   const { transfersOut: leagueTopTransfersOut, transfersIn: leagueTopTransfersIn, loading: leagueTopTransfersLoading } = useLeagueTopTransfers(LEAGUE_ID, gameweek)
+  const leagueManagerCount = standings?.length ?? 0
+  const {
+    player: playerDetailPlayer,
+    currentPrice,
+    seasonPoints,
+    overallRank,
+    positionRank,
+    gameweekPoints = [],
+    leagueOwnershipPct,
+    overallOwnershipPct,
+    loading: playerDetailLoading,
+  } = usePlayerDetail(selectedPlayerId, gameweek, leagueManagerCount, leagueManagerIds)
 
   // GW points for configured manager: same source as home bento (live sum from players when available, else history)
   const currentManagerGwPoints = useMemo(() => {
@@ -198,10 +218,54 @@ export default function MiniLeaguePage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showManagerDetailLegend])
 
-  const handleManagerRowClick = useCallback((managerId, teamName, managerName) => {
+  useEffect(() => {
+    if (!showPlayerStatPopup) return
+    const handleClickOutside = (e) => {
+      if (playerStatPopupRef.current && !playerStatPopupRef.current.contains(e.target)) {
+        setShowPlayerStatPopup(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showPlayerStatPopup])
+
+  const ALL_PLAYER_STAT_OPTIONS = [
+    { key: 'points', label: 'Points' },
+    { key: 'goals', label: 'Goals' },
+    { key: 'assists', label: 'Assists' },
+    { key: 'goal_involvements', label: 'Goal involvements' },
+    { key: 'clean_sheets', label: 'Clean sheets' },
+    { key: 'saves', label: 'Saves' },
+    { key: 'bps', label: 'BPS' },
+    { key: 'bonus', label: 'Bonus' },
+    { key: 'defensive_contribution', label: 'Defensive contribution' },
+    { key: 'yellow_cards', label: 'Yellow cards' },
+    { key: 'red_cards', label: 'Red cards' },
+    { key: 'expected_goals', label: 'xG' },
+    { key: 'expected_assists', label: 'xA' },
+    { key: 'expected_goal_involvements', label: 'xGI' },
+    { key: 'expected_goals_conceded', label: 'xGC' },
+  ]
+
+  const playerStatOptions = useMemo(() => {
+    const position = playerDetailPlayer?.position
+    return ALL_PLAYER_STAT_OPTIONS.filter((opt) => {
+      if (opt.key === 'saves' && position != null && position !== 1) return false
+      if (opt.key === 'clean_sheets' && position === 4) return false
+      return true
+    })
+  }, [playerDetailPlayer?.position])
+
+  useEffect(() => {
+    if (!playerStatOptions.some((o) => o.key === selectedPlayerStat) && playerStatOptions.length > 0) {
+      setSelectedPlayerStat(playerStatOptions[0].key)
+    }
+  }, [playerStatOptions, selectedPlayerStat])
+
+  const handleManagerRowClick = useCallback((managerId, teamNameForTitle, managerNameForSubtitle) => {
     setSelectedManagerId(managerId)
-    setSelectedManagerDisplayName(teamName || `Manager ${managerId}`)
-    setSelectedManagerName(managerName || '')
+    setSelectedManagerDisplayName(teamNameForTitle || `Manager ${managerId}`)
+    setSelectedManagerName(managerNameForSubtitle || '')
   }, [])
 
   const handleSort = useCallback((column) => {
@@ -261,7 +325,6 @@ export default function MiniLeaguePage() {
     return [...rows].sort(cmp)
   }, [standings, liveStatusByManager, sort.column, sort.dir, currentManagerId, currentManagerTotalPointsDisplay, currentManagerGwPointsDisplay])
 
-  const leagueManagerIds = useMemo(() => sortedRows.map((r) => r.manager_id), [sortedRows])
   const { transfersByManager, loading: leagueTransfersLoading } = useLeagueTransferImpacts(leagueManagerIds, gameweek)
 
   const displayRows = sortedRows
@@ -871,9 +934,9 @@ export default function MiniLeaguePage() {
                 <h2 id="manager-detail-modal-title" className="manager-detail-modal-title">
                   {selectedManagerDisplayName}
                 </h2>
-                {selectedManagerName && (
+                {selectedManagerName ? (
                   <p className="manager-detail-modal-subtitle">{selectedManagerName}</p>
-                )}
+                ) : null}
               </div>
               <div className="manager-detail-modal-header-actions" ref={managerDetailLegendRef}>
                 <div
@@ -966,6 +1029,13 @@ export default function MiniLeaguePage() {
                   impactByPlayerId={selectedManagerImpact ?? {}}
                   isLiveUpdating={isSelectedManagerLiveUpdating}
                   ownedByYouPlayerIds={ownedByYouPlayerIds}
+                  onPlayerRowClick={(player) => {
+                    const id = player.effective_player_id ?? player.player_id
+                    if (id != null) {
+                      setSelectedPlayerId(Number(id))
+                      setSelectedPlayerName(player.player_name ?? '')
+                    }
+                  }}
                 />
               </div>
               <div className="manager-detail-transfers-section">
@@ -1026,6 +1096,154 @@ export default function MiniLeaguePage() {
                       ) : null}
                     </>
                   )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedPlayerId != null && (
+        <div
+          className="manager-detail-modal-overlay player-detail-modal-overlay"
+          onClick={() => {
+            setSelectedPlayerId(null)
+            setSelectedPlayerName('')
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="player-detail-modal-title"
+        >
+          <div
+            className="manager-detail-modal-content player-detail-modal-content"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="manager-detail-modal-header">
+              <div className="manager-detail-modal-header-title-wrap">
+                <h2 id="player-detail-modal-title" className="manager-detail-modal-title">
+                  {selectedPlayerName || 'Player'}
+                </h2>
+                {playerDetailPlayer && (
+                  <p className="manager-detail-modal-subtitle">
+                    {playerDetailPlayer.team_short_name && (
+                      <img
+                        src={`/badges/${playerDetailPlayer.team_short_name}.svg`}
+                        alt=""
+                        className="player-detail-modal-badge"
+                        onError={(e) => { e.target.style.display = 'none' }}
+                      />
+                    )}
+                    {playerDetailPlayer.positionLabel}
+                    {playerDetailPlayer.team_short_name ? ` · ${playerDetailPlayer.team_short_name}` : ''}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="manager-detail-modal-close"
+                onClick={() => {
+                  setSelectedPlayerId(null)
+                  setSelectedPlayerName('')
+                }}
+                aria-label="Close"
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="manager-detail-modal-body player-detail-modal-body">
+              <div className="player-detail-details-bento bento-card bento-card-animate">
+                <span className="bento-card-label">Player details</span>
+                {playerDetailLoading ? (
+                  <div className="bento-card-value loading">...</div>
+                ) : (
+                  <div className="player-detail-details-grid">
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Current price</span>
+                      <span className="player-detail-detail-value">
+                        {currentPrice != null ? `£${currentPrice.toFixed(1)}` : '—'}
+                      </span>
+                    </div>
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Position rank (points)</span>
+                      <span className="player-detail-detail-value">{positionRank != null ? positionRank : '—'}</span>
+                    </div>
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Overall rank (points)</span>
+                      <span className="player-detail-detail-value">{overallRank != null ? overallRank : '—'}</span>
+                    </div>
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Total Points</span>
+                      <span className="player-detail-detail-value">{seasonPoints ?? '—'}</span>
+                    </div>
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Ownership (League)</span>
+                      <span className="player-detail-detail-value">
+                        {leagueOwnershipPct != null ? `${leagueOwnershipPct}%` : '—'}
+                      </span>
+                    </div>
+                    <div className="player-detail-detail-row">
+                      <span className="player-detail-detail-label">Ownership (Overall)</span>
+                      <span className="player-detail-detail-value">
+                        {overallOwnershipPct != null ? `${overallOwnershipPct}%` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="player-detail-chart-bento bento-card bento-card-animate">
+                <div className="player-detail-chart-bento-header" ref={playerStatPopupRef}>
+                  <span className="bento-card-label player-detail-chart-bento-label">
+                    Stats by gameweek
+                    <span className="bento-card-label-suffix">
+                      | {playerStatOptions.find((o) => o.key === selectedPlayerStat)?.label ?? 'Points'}
+                    </span>
+                  </span>
+                  <div className="player-detail-chart-bento-actions">
+                    <button
+                      type="button"
+                      className="player-detail-chart-stat-btn"
+                      onClick={() => setShowPlayerStatPopup((v) => !v)}
+                      aria-label="Choose stat to display"
+                      aria-expanded={showPlayerStatPopup}
+                      aria-haspopup="dialog"
+                      title="Show stat"
+                    >
+                      <Eye size={14} strokeWidth={2} aria-hidden />
+                    </button>
+                    {showPlayerStatPopup && (
+                      <div className="player-detail-stat-popup gw-legend-popup" role="dialog" aria-label="Chart stat filter">
+                        <div className="gw-legend-popup-title">Show stat</div>
+                        {playerStatOptions.map(({ key, label }) => (
+                          <div
+                            key={key}
+                            className={`gw-legend-popup-row player-detail-stat-popup-row ${selectedPlayerStat === key ? 'player-detail-stat-popup-row--active' : ''}`}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              setSelectedPlayerStat(key)
+                              setShowPlayerStatPopup(false)
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                setSelectedPlayerStat(key)
+                                setShowPlayerStatPopup(false)
+                              }
+                            }}
+                          >
+                            <span className="gw-legend-popup-text">{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="player-detail-chart-wrap">
+                  <PlayerGameweekPointsChart
+                    data={gameweekPoints}
+                    loading={playerDetailLoading}
+                    statKey={selectedPlayerStat}
+                  />
                 </div>
               </div>
             </div>

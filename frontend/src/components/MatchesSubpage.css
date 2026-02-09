@@ -939,9 +939,9 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 /* Zero values: subtle so non-zero numbers stand out (matchup card + schedule popup + expanded GW bento) */
 .matchup-detail-cell-muted {
-  color: var(--text-tertiary, color-mix(in srgb, var(--text-secondary) 55%, var(--bg-primary)));
+  color: var(--text-tertiary, color-mix(in srgb, var(--text-secondary) 40%, var(--bg-primary)));
   font-weight: 500;
-  opacity: 0.65;
+  opacity: 0.5;
 }
 
 /* Did not play badge (matches GW points view) */

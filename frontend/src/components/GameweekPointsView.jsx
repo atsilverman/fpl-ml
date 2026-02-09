@@ -14,7 +14,7 @@ const POPUP_PADDING = 12
 const POPUP_MAX_WIDTH = 320
 const POPUP_MIN_WIDTH = 260
 
-export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [] }) {
+export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null }) {
   const { fixtures: debugFixtures = [] } = useGameweekDebugData()
   const fixtures = (fixturesProp != null && fixturesProp.length > 0) ? fixturesProp : debugFixtures
   // Support lookup by number or string (Supabase/API can return either) so we always resolve fixture and use fixture table state
@@ -177,7 +177,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   const IMPACT_BAR_MAX = 100
 
-  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp }) => {
+  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick }) => {
     const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
     const captainLabel = !isDgwSecondRow && player.is_captain
       ? (player.multiplier === 3 ? 'TC' : 'C')
@@ -273,9 +273,19 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       )
     }
 
+    const handleRowClick = (e) => {
+      if (onRowClick && typeof onRowClick === 'function') {
+        onRowClick(player)
+      }
+    }
+
     return (
       <tr
-        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''}`}
+        role={onRowClick ? 'button' : undefined}
+        tabIndex={onRowClick ? 0 : undefined}
+        onClick={onRowClick ? handleRowClick : undefined}
+        onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(e) } } : undefined}
+        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''} ${onRowClick ? 'gameweek-points-tr-clickable' : ''}`}
       >
         <td className="gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed">
           <div className="gameweek-points-player-info-cell">
@@ -548,6 +558,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
                     player={player}
                     isFirstBenchRow={index === firstBenchRowIndex}
+                    onRowClick={onPlayerRowClick}
                   />
                 ))
               })()}

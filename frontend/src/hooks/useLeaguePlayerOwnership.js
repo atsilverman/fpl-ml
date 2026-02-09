@@ -16,6 +16,7 @@ export function useLeaguePlayerOwnership(playerId, gameweek) {
         .select('manager_id')
         .eq('player_id', playerId)
         .eq('gameweek', gameweek)
+        .lte('position', 11)
 
       if (err) throw err
 
@@ -32,21 +33,28 @@ export function useLeaguePlayerOwnership(playerId, gameweek) {
 /**
  * Returns manager_ids that own at least one of the given players in the given gameweek.
  * Used to filter league standings when multiple players are selected.
+ * leagueManagerIds: when provided, only counts managers in this list (current league).
  */
-export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek) {
+export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek, leagueManagerIds = null) {
   const ids = Array.isArray(playerIds) ? playerIds.filter((id) => id != null) : []
-  const enabled = ids.length > 0 && !!gameweek
+  const leagueIds = Array.isArray(leagueManagerIds) ? leagueManagerIds : []
+  const enabled = ids.length > 0 && !!gameweek && (leagueManagerIds == null || leagueIds.length > 0)
 
   const { data: managerIds = [], isLoading, error } = useQuery({
-    queryKey: ['league-player-ownership-multiple', ids.slice().sort((a, b) => a - b), gameweek],
+    queryKey: ['league-player-ownership-multiple', ids.slice().sort((a, b) => a - b), gameweek, leagueIds.length ? leagueIds.slice().sort((a, b) => Number(a) - Number(b)) : null],
     queryFn: async () => {
       if (!enabled) return []
 
-      const { data, error: err } = await supabase
+      let query = supabase
         .from('manager_picks')
         .select('manager_id')
         .in('player_id', ids)
         .eq('gameweek', gameweek)
+        .lte('position', 11)
+      if (leagueIds.length > 0) {
+        query = query.in('manager_id', leagueIds)
+      }
+      const { data, error: err } = await query
 
       if (err) throw err
 

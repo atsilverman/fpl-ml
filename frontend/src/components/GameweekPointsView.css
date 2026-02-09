@@ -322,6 +322,15 @@
   border-top: 4px solid var(--border-color);
 }
 
+.gameweek-points-tr-clickable {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .gameweek-points-tr-clickable:hover .gameweek-points-td {
+    background: var(--bg-secondary);
+  }
+}
+
 /* DGW: second fixture row (same player, second opponent) */
 .gameweek-points-tr-dgw-second .gameweek-points-td-player {
   padding-left: 28px;
@@ -474,7 +483,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   width: 64px;
   min-width: 64px;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
@@ -483,6 +492,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   align-items: center;
   justify-content: center;
   gap: 4px;
+  font-size: 10px;
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
@@ -565,7 +575,8 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 /* Muted value only – do not change cell background */
 .gameweek-points-cell-muted,
 .gameweek-points-td.gameweek-points-cell-muted {
-  color: color-mix(in srgb, var(--text-secondary) 24%, var(--bg-primary));
+  color: color-mix(in srgb, var(--text-secondary) 12%, var(--bg-primary));
+  opacity: 0.82;
 }
 
 /* Provisional bonus / live scoring */
@@ -609,7 +620,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-td-pts {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1166,7 +1177,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
   .manager-detail-modal-chart-wrap .gameweek-points-th-pts,
   .manager-detail-modal-chart-wrap .gameweek-points-td-pts {
-    font-weight: 700;
+    font-weight: 600;
   }
   .manager-detail-modal-chart-wrap .gameweek-points-th-impact {
     min-width: 56px;
@@ -1201,7 +1212,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   }
   .manager-detail-modal-chart-wrap .gameweek-points-td {
     padding: 7px 6px;
-    font-size: 11px;
+    font-size: 10px;
   }
   .manager-detail-modal-chart-wrap .gameweek-points-player-info-cell {
     padding-left: 4px;

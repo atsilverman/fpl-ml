@@ -1476,7 +1476,8 @@ html[data-theme="dark"] .transfers-summary-column-count {
 
 /* Muted 0 values (same subtle look as gameweek points table) */
 .league-standings-bento-table td.league-standings-bento-cell-muted {
-  color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+  color: color-mix(in srgb, var(--text-secondary) 22%, var(--bg-primary));
+  opacity: 0.82;
 }
 
 /* Captain bento: collapsed 1x1 */

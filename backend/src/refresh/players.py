@@ -15,6 +15,19 @@ from fpl_api.client import FPLAPIClient
 logger = logging.getLogger(__name__)
 
 
+def _parse_selected_by_percent(value: Any) -> Optional[float]:
+    """Parse FPL selected_by_percent (string e.g. '34.7') to float, or None if missing/invalid."""
+    if value is None:
+        return None
+    try:
+        s = str(value).strip()
+        if not s:
+            return None
+        return float(s)
+    except (TypeError, ValueError):
+        return None
+
+
 class PlayerDataRefresher:
     """Handles player data refresh operations."""
     
@@ -336,6 +349,29 @@ class PlayerDataRefresher:
 
         return (events, reversals)
 
+    def _sync_players_ownership_from_bootstrap(self, bootstrap: Dict, players_map: Dict[int, Dict]) -> None:
+        """Update selected_by_percent (overall ownership) for all players from bootstrap-static."""
+        elements = bootstrap.get("elements", [])
+        if not elements:
+            return
+        now = datetime.now(timezone.utc).isoformat()
+        for elem in elements:
+            try:
+                player_data = {
+                    "fpl_player_id": elem["id"],
+                    "first_name": elem.get("first_name", ""),
+                    "second_name": elem.get("second_name", ""),
+                    "web_name": elem.get("web_name", ""),
+                    "team_id": elem.get("team", 0),
+                    "position": elem.get("element_type", 0),
+                    "selected_by_percent": _parse_selected_by_percent(elem.get("selected_by_percent")),
+                    "updated_at": now,
+                }
+                self.db_client.upsert_player(player_data)
+            except Exception as e:
+                logger.warning("Sync player ownership failed", extra={"player_id": elem.get("id"), "error": str(e)})
+        logger.debug("Synced overall ownership for players", extra={"count": len(elements)})
+
     async def refresh_player_gameweek_stats(
         self,
         gameweek: int,
@@ -389,7 +425,8 @@ class PlayerDataRefresher:
         
         # Ensure all active players exist in players table (avoids FK violation for new FPL players e.g. mid-season signings).
         if not live_only:
-            # Full refresh: upsert every active player from bootstrap.
+            # Full refresh: sync overall ownership for all players from bootstrap, then upsert active players.
+            self._sync_players_ownership_from_bootstrap(bootstrap, players_map)
             for player_id in active_player_ids:
                 elem = players_map.get(player_id)
                 if elem:
@@ -400,6 +437,7 @@ class PlayerDataRefresher:
                         "web_name": elem.get("web_name", ""),
                         "team_id": elem.get("team", 0),
                         "position": elem.get("element_type", 0),
+                        "selected_by_percent": _parse_selected_by_percent(elem.get("selected_by_percent")),
                         "updated_at": datetime.now(timezone.utc).isoformat(),
                     }
                     try:
@@ -425,6 +463,7 @@ class PlayerDataRefresher:
                             "web_name": elem.get("web_name", ""),
                             "team_id": elem.get("team", 0),
                             "position": elem.get("element_type", 0),
+                            "selected_by_percent": _parse_selected_by_percent(elem.get("selected_by_percent")),
                             "updated_at": datetime.now(timezone.utc).isoformat(),
                         }
                         try:
@@ -904,6 +943,7 @@ class PlayerDataRefresher:
                     price_data["prior_price_tenths"] = last_price
 
                 self.db_client.upsert_player_price(price_data)
+                self.db_client.update_player_cost_tenths(player_id, current_price)
 
                 if last_price is not None and current_price != last_price:
                     price_changes.append({
@@ -954,6 +994,7 @@ class PlayerDataRefresher:
                     "recorded_date": today_iso,
                 }
                 self.db_client.upsert_player_price(price_data)
+                self.db_client.update_player_cost_tenths(player_id, current_price)
             logger.debug(
                 "Player prices synced from bootstrap",
                 extra={"gameweek": gameweek, "count": len(elements)},

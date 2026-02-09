@@ -1169,6 +1169,10 @@ class RefreshOrchestrator:
                     self.previous_gameweek_state = None
                 
                 self.current_state = new_state
+
+            # Keep player_prices populated from bootstrap so UI always has current price (even when price window has not run)
+            if bootstrap and self.current_gameweek and self.player_refresher:
+                self.player_refresher.sync_player_prices_from_bootstrap(bootstrap, self.current_gameweek)
             
             # Phase 2: Refresh fixtures (state-dependent); reuse for player refresh to avoid duplicate get_fixtures()
             fixtures_by_gameweek = await self._refresh_fixtures()
