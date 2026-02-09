@@ -597,7 +597,9 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false } = {}) {
   const [matchupsAnchor, setMatchupsAnchor] = useState('current')
   const { gameweek: currentGameweekId } = useGameweekData('current')
-  const { gameweek, loading: gwLoading, dataChecked } = useGameweekData(matchupsAnchor)
+  // Bonus view: only current gameweek (no GW/Next toggle). Matches view: current or next.
+  const effectiveAnchor = toggleBonus ? 'current' : matchupsAnchor
+  const { gameweek, loading: gwLoading, dataChecked } = useGameweekData(effectiveAnchor)
   const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
   const { lastH2HPlayerStatsByFixture, loading: lastH2HPlayerStatsLoading } = useLastH2HPlayerStats(gameweek, showH2H && isSecondHalf)
@@ -685,31 +687,33 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   return (
     <div className="matches-subpage">
       <div className="matches-subpage-header" role="group" aria-label="Matchups view">
-        <div className="matches-anchor-toggle" role="group" aria-label="Gameweek">
-          <div
-            className="matches-anchor-slider"
-            style={{ transform: matchupsAnchor === 'next' ? 'translateX(100%)' : 'translateX(0)' }}
-            aria-hidden
-          />
-          <button
-            type="button"
-            className={`matches-anchor-btn ${matchupsAnchor === 'current' ? 'matches-anchor-btn--active' : ''}`}
-            onClick={() => setMatchupsAnchor('current')}
-            aria-pressed={matchupsAnchor === 'current'}
-            aria-label={currentGameweekId != null ? `Gameweek ${currentGameweekId}` : 'Current gameweek'}
-          >
-            {currentGameweekId != null ? `GW${currentGameweekId}` : 'Current'}
-          </button>
-          <button
-            type="button"
-            className={`matches-anchor-btn ${matchupsAnchor === 'next' ? 'matches-anchor-btn--active' : ''}`}
-            onClick={() => setMatchupsAnchor('next')}
-            aria-pressed={matchupsAnchor === 'next'}
-            aria-label="Next gameweek"
-          >
-            Next
-          </button>
-        </div>
+        {!toggleBonus && (
+          <div className="matches-anchor-toggle" role="group" aria-label="Gameweek">
+            <div
+              className="matches-anchor-slider"
+              style={{ transform: matchupsAnchor === 'next' ? 'translateX(100%)' : 'translateX(0)' }}
+              aria-hidden
+            />
+            <button
+              type="button"
+              className={`matches-anchor-btn ${matchupsAnchor === 'current' ? 'matches-anchor-btn--active' : ''}`}
+              onClick={() => setMatchupsAnchor('current')}
+              aria-pressed={matchupsAnchor === 'current'}
+              aria-label={currentGameweekId != null ? `Gameweek ${currentGameweekId}` : 'Current gameweek'}
+            >
+              {currentGameweekId != null ? `GW${currentGameweekId}` : 'Current'}
+            </button>
+            <button
+              type="button"
+              className={`matches-anchor-btn ${matchupsAnchor === 'next' ? 'matches-anchor-btn--active' : ''}`}
+              onClick={() => setMatchupsAnchor('next')}
+              aria-pressed={matchupsAnchor === 'next'}
+              aria-label="Next gameweek"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
       {fixturesLoading ? (
         <div className="matches-subpage-loading">
@@ -717,7 +721,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
         </div>
       ) : !fixtures?.length ? (
         <div className="matches-subpage-empty">
-          {matchupsAnchor === 'current' ? 'No fixtures for current gameweek' : 'No fixtures for next gameweek'}
+          {effectiveAnchor === 'current' ? 'No fixtures for current gameweek' : 'No fixtures for next gameweek'}
         </div>
       ) : (
         <>

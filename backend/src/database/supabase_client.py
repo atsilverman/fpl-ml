@@ -285,7 +285,7 @@ class SupabaseClient:
             return None
         result = self.client.table("player_gameweek_stats").upsert(
             rows,
-            on_conflict="player_id,gameweek"
+            on_conflict="player_id,gameweek,fixture_id"
         ).execute()
         return result.data
     

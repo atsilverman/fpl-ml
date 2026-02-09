@@ -31,8 +31,8 @@ function getOverridesByDimension(overridesMap, dimension) {
   return overridesMap?.overall ?? null
 }
 
-function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension }) {
-  if (!opponent) return <td className="schedule-cell schedule-cell-empty">—</td>
+function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension, compact }) {
+  if (!opponent) return <td className={`schedule-cell schedule-cell-empty${compact ? ' schedule-cell--compact' : ''}`}>—</td>
   const short = opponent.short_name ?? '?'
   const display = opponent.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
   const baseDifficulty = getBaseDifficultyByDimension(opponent, difficultyDimension)
@@ -69,7 +69,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
   return (
     <td
-      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${difficultyClass} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}`}
+      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${difficultyClass} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}`}
       title={opponent.team_name ?? short}
       role={canOpenPopup ? 'button' : undefined}
       tabIndex={canOpenPopup ? 0 : undefined}
@@ -99,7 +99,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 export default function ScheduleSubpage() {
   const { scheduleMatrix, gameweeks, loading, teamMap, nextGwId } = useScheduleData()
   const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
-  const { teamIds, getOpponent } = scheduleMatrix
+  const { teamIds, getOpponents, slotsPerGw } = scheduleMatrix
   const mapForRow = teamMap || {}
   const difficultyOverridesByDimension = useMemo(() => ({
     overall: config?.teamStrengthOverrides ?? null,
@@ -334,11 +334,19 @@ export default function ScheduleSubpage() {
           <thead>
             <tr>
               <th className="schedule-th schedule-th-team">Team</th>
-              {gameweeks.map((gw) => (
-                <th key={gw.id} className="schedule-th schedule-th-gw">
-                  {gw.id}
-                </th>
-              ))}
+              {gameweeks.flatMap((gw) => {
+                const slots = slotsPerGw[gw.id] ?? 1
+                return Array.from({ length: slots }, (_, slotIndex) => (
+                  <th
+                    key={slots > 1 ? `${gw.id}-${slotIndex}` : gw.id}
+                    className={`schedule-th schedule-th-gw${slots > 1 ? ' schedule-th-gw--compact' : ''}`}
+                    scope="col"
+                    title={slots > 1 ? `GW${gw.id} fixture ${slotIndex + 1}` : undefined}
+                  >
+                    {slotIndex === 0 ? gw.id : ''}
+                  </th>
+                ))
+              })}
             </tr>
           </thead>
           <tbody>
@@ -366,22 +374,27 @@ export default function ScheduleSubpage() {
                       <span className="schedule-cell-team-name">{team?.team_name ?? short}</span>
                     </span>
                   </td>
-                  {gameweeks.map((gw) => {
-                    const opponent = getOpponent(teamId, gw.id)
-                    const lastH2H = opponent ? lastH2HMap[pairKey(teamId, opponent.team_id)] ?? null : null
-                    return (
-                      <OpponentCell
-                        key={gw.id}
-                        rowTeamId={teamId}
-                        opponent={opponent}
-                        lastH2H={lastH2H}
-                        showReverseScores={showReverseScores}
-                        onMatchupClick={handleMatchupClick}
-                        difficultyOverridesByDimension={difficultyOverridesByDimension}
-                        useCustomDifficulty={useCustomDifficulty}
-                        difficultyDimension={difficultyDimension}
-                      />
-                    )
+                  {gameweeks.flatMap((gw) => {
+                    const opponents = getOpponents(teamId, gw.id)
+                    const slots = slotsPerGw[gw.id] ?? 1
+                    return Array.from({ length: slots }, (_, slotIndex) => {
+                      const opponent = opponents[slotIndex] ?? null
+                      const lastH2H = opponent ? lastH2HMap[pairKey(teamId, opponent.team_id)] ?? null : null
+                      return (
+                        <OpponentCell
+                          key={slots > 1 ? `${gw.id}-${slotIndex}` : gw.id}
+                          rowTeamId={teamId}
+                          opponent={opponent}
+                          lastH2H={lastH2H}
+                          showReverseScores={showReverseScores}
+                          onMatchupClick={handleMatchupClick}
+                          difficultyOverridesByDimension={difficultyOverridesByDimension}
+                          useCustomDifficulty={useCustomDifficulty}
+                          difficultyDimension={difficultyDimension}
+                          compact={slots > 1}
+                        />
+                      )
+                    })
                   })}
                 </tr>
               )

@@ -178,10 +178,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
   const IMPACT_BAR_MAX = 100
 
   const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp }) => {
-    const captainLabel = player.is_captain
+    const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
+    const captainLabel = !isDgwSecondRow && player.is_captain
       ? (player.multiplier === 3 ? 'TC' : 'C')
       : null
-    const assistantLabel = player.is_vice_captain ? 'A' : null
+    const assistantLabel = !isDgwSecondRow && player.is_vice_captain ? 'A' : null
     /* Divider line: first bench row in display order (parent passes this so it stays correct when sorted) */
     const isFirstBenchRow = isFirstBenchRowProp === true
     const isBench = player.position >= 12
@@ -274,7 +275,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
     return (
       <tr
-        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''}`}
+        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''}`}
       >
         <td className="gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed">
           <div className="gameweek-points-player-info-cell">
@@ -544,7 +545,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 const firstBenchRowIndex = sortedData.findIndex((p) => p.position >= 12)
                 return sortedData.map((player, index) => (
                   <PlayerTableRow
-                    key={player.position}
+                    key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
                     player={player}
                     isFirstBenchRow={index === firstBenchRowIndex}
                   />

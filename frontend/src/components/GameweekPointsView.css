@@ -322,6 +322,15 @@
   border-top: 4px solid var(--border-color);
 }
 
+/* DGW: second fixture row (same player, second opponent) */
+.gameweek-points-tr-dgw-second .gameweek-points-td-player {
+  padding-left: 28px;
+}
+.gameweek-points-tr-dgw-second .gameweek-points-td-pts {
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
+
 /* Autosub row highlighting: subtle red = subbed out, subtle green = subbed in */
 .gameweek-points-tr-autosub-out .gameweek-points-td {
   background: var(--gw-autosub-out-bg);

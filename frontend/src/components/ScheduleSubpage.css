@@ -674,6 +674,12 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   font-size: 10px;
 }
 
+/* DGW split: narrower columns and smaller text */
+.schedule-th-gw--compact {
+  min-width: 40px;
+  font-size: 9px;
+}
+
 .schedule-row {
   background: var(--bg-primary);
 }
@@ -702,6 +708,33 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
 
 .schedule-cell-empty {
   min-height: 40px;
+}
+
+/* DGW split cells: smaller so two fit per gameweek */
+.schedule-cell--compact {
+  min-width: 40px;
+  padding: 2px 4px;
+  font-size: 10px;
+}
+
+.schedule-cell--compact:not(.schedule-cell-team):not(.schedule-cell-empty) {
+  height: 36px;
+  min-height: 36px;
+  padding: 2px 4px;
+}
+
+.schedule-cell--compact .schedule-cell-abbr-display {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.schedule-cell--compact .schedule-cell-home-indicator {
+  width: 8px;
+  height: 8px;
+}
+
+.schedule-cell--compact .schedule-cell-reverse-score {
+  font-size: 8px;
 }
 
 .schedule-table tbody tr:last-child .schedule-cell {
@@ -1051,6 +1084,21 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   .schedule-th-gw,
   .schedule-cell {
     min-width: 48px;
+  }
+
+  .schedule-th-gw--compact,
+  .schedule-cell--compact {
+    min-width: 32px;
+  }
+
+  .schedule-cell--compact:not(.schedule-cell-team):not(.schedule-cell-empty) {
+    height: 32px;
+    min-height: 32px;
+    padding: 2px 3px;
+  }
+
+  .schedule-cell--compact .schedule-cell-abbr-display {
+    font-size: 8px;
   }
 
   .schedule-cell-badge-slot,

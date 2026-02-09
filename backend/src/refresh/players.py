@@ -448,8 +448,9 @@ class PlayerDataRefresher:
             select_fields
         ).eq("gameweek", gameweek).in_("player_id", list(active_player_ids)).execute().data
         
-        existing_stats_by_player = {
-            stat["player_id"]: stat for stat in existing_stats
+        # Key by (player_id, fixture_id) so we support multiple rows per player (DGW)
+        existing_stats_by_player_fixture = {
+            (stat["player_id"], stat.get("fixture_id")): stat for stat in existing_stats
         }
         
         # Use live endpoint data directly if available (optimization)
@@ -463,25 +464,18 @@ class PlayerDataRefresher:
             # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (MP > 45 = second half)
             fixture_players: Dict[int, List[Dict]] = {}
             for player_id in active_player_ids:
-                existing_stat = existing_stats_by_player.get(player_id, {})
-                fixture_id = existing_stat.get("fixture_id")
-                if not fixture_id and fixtures_by_id:
-                    team_id = players_map.get(player_id, {}).get("team", 0)
-                    for f_id, fixture in fixtures_by_id.items():
-                        if fixture.get("team_h") == team_id or fixture.get("team_a") == team_id:
-                            fixture_id = f_id
-                            break
-                if not fixture_id:
+                team_id = players_map.get(player_id, {}).get("team", 0)
+                if not fixtures_by_id:
                     continue
                 live_elem = live_elements.get(player_id)
                 if not live_elem:
                     continue
                 st = live_elem.get("stats", {})
-                bps = st.get("bps", 0)
-                minutes = st.get("minutes", 0)
-                if fixture_id not in fixture_players:
-                    fixture_players[fixture_id] = []
-                fixture_players[fixture_id].append({"id": player_id, "bps": bps, "minutes": minutes})
+                for f_id, fixture in fixtures_by_id.items():
+                    if fixture.get("team_h") == team_id or fixture.get("team_a") == team_id:
+                        if f_id not in fixture_players:
+                            fixture_players[f_id] = []
+                        fixture_players[f_id].append({"id": player_id, "bps": st.get("bps", 0), "minutes": st.get("minutes", 0)})
             fixture_past_threshold = {
                 fid: max((p["minutes"] for p in plist), default=0) > 45
                 for fid, plist in fixture_players.items()
@@ -500,165 +494,151 @@ class PlayerDataRefresher:
                 position = player_info.get("element_type", 0)
                 team_id = player_info.get("team", 0)
                 
-                # Get fixture context from existing stats or fixtures table
-                existing_stat = existing_stats_by_player.get(player_id, {})
-                fixture_id = existing_stat.get("fixture_id")
-                opponent_team_id = existing_stat.get("opponent_team_id")
-                was_home = existing_stat.get("was_home")
-                kickoff_time = existing_stat.get("kickoff_time")
-                
-                # If no existing stat, try to find fixture from fixtures table
-                if not fixture_id and fixtures_by_id:
-                    # Find fixture where this team is playing
+                # Get all fixtures for this team in this gameweek (1 = single GW, 2 = DGW)
+                player_fixtures = []
+                if fixtures_by_id:
                     for f_id, fixture in fixtures_by_id.items():
                         if fixture.get("team_h") == team_id or fixture.get("team_a") == team_id:
-                            fixture_id = f_id
-                            was_home = fixture.get("team_h") == team_id
-                            opponent_team_id = fixture.get("team_a") if was_home else fixture.get("team_h")
-                            kickoff_time = fixture.get("kickoff_time")
-                            break
+                            player_fixtures.append((f_id, fixture))
+                    player_fixtures.sort(key=lambda x: x[1].get("kickoff_time") or "")
                 
-                # Get fixture status
-                match_finished = False
-                match_finished_provisional = False
-                team_h_score = None
-                team_a_score = None
+                if not player_fixtures:
+                    player_fixtures = [(0, {})]
                 
-                if fixture_id and fixture_id in fixtures_by_id:
-                    fixture = fixtures_by_id[fixture_id]
-                    match_finished = fixture.get("finished", False)
-                    match_finished_provisional = fixture.get("finished_provisional", False)
-                    team_h_score = fixture.get("team_h_score")
-                    team_a_score = fixture.get("team_a_score")
-                
-                # Determine bonus status from stats
-                bonus = stats.get("bonus", 0)
-                bonus_status = "confirmed" if bonus > 0 else "provisional"
+                # One row per fixture; first row gets full live stats, rest get 0 (DGW: two opponents, points on first)
+                for idx, (f_id, fixture) in enumerate(player_fixtures):
+                    fixture_id = f_id if f_id else 0
+                    was_home = fixture.get("team_h") == team_id if fixture else False
+                    opponent_team_id = fixture.get("team_a") if was_home else fixture.get("team_h") if fixture else None
+                    kickoff_time = fixture.get("kickoff_time") if fixture else None
+                    
+                    existing_stat = existing_stats_by_player_fixture.get((player_id, fixture_id), {})
+                    if not existing_stat and fixture_id and fixture_id != 0:
+                        existing_stat = existing_stats_by_player_fixture.get((player_id, None), {})
+                    
+                    match_finished = False
+                    match_finished_provisional = False
+                    team_h_score = None
+                    team_a_score = None
+                    if fixture_id and fixture_id in fixtures_by_id:
+                        f = fixtures_by_id[fixture_id]
+                        match_finished = f.get("finished", False)
+                        match_finished_provisional = f.get("finished_provisional", False)
+                        team_h_score = f.get("team_h_score")
+                        team_a_score = f.get("team_a_score")
+                    
+                    bonus = stats.get("bonus", 0)
+                    bonus_status = "confirmed" if bonus > 0 else "provisional"
+                    provisional_bonus_val = 0
+                    if bonus_status == "provisional" and bonus == 0 and fixture_id and fixture_past_threshold.get(fixture_id, False):
+                        all_in_fixture = fixture_players.get(fixture_id, [])
+                        provisional_bonus_val = self._calculate_provisional_bonus(
+                            player_id,
+                            stats.get("bps", 0),
+                            fixture_id,
+                            all_in_fixture,
+                        )
+                    
+                    stats_for_defcon = {
+                        "defensive_contribution": stats.get("defensive_contribution", 0),
+                        "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
+                        "tackles": stats.get("tackles", 0),
+                        "recoveries": stats.get("recoveries", 0)
+                    }
+                    defcon = self._calculate_defcon(stats_for_defcon, position)
+                    
+                    is_first_row = idx == 0
+                    existing_expected_goals = existing_stat.get("expected_goals", 0) if live_only else None
+                    existing_expected_assists = existing_stat.get("expected_assists", 0) if live_only else None
+                    existing_expected_goal_involvements = existing_stat.get("expected_goal_involvements", 0) if live_only else None
+                    existing_expected_goals_conceded = existing_stat.get("expected_goals_conceded", 0) if live_only else None
+                    existing_influence = existing_stat.get("influence", 0) if live_only else None
+                    existing_creativity = existing_stat.get("creativity", 0) if live_only else None
+                    existing_threat = existing_stat.get("threat", 0) if live_only else None
+                    existing_ict_index = existing_stat.get("ict_index", 0) if live_only else None
+                    
+                    def _float_from(v):
+                        if v is None or v == "":
+                            return None
+                        try:
+                            return float(v)
+                        except (TypeError, ValueError):
+                            return None
+                    def _expected_or_existing(key: str, existing: Optional[float]) -> float:
+                        from_live = _float_from(stats.get(key))
+                        if from_live is not None:
+                            return from_live
+                        if live_only and not match_finished and existing is not None:
+                            return float(existing)
+                        return 0.0
+                    
+                    stats_data = {
+                        "player_id": player_id,
+                        "gameweek": gameweek,
+                        "fixture_id": fixture_id,
+                        "team_id": team_id,
+                        "opponent_team_id": opponent_team_id,
+                        "was_home": was_home,
+                        "kickoff_time": kickoff_time,
+                        "minutes": stats.get("minutes", 0) if is_first_row else 0,
+                        "started": (stats.get("minutes", 0) > 0) if is_first_row else False,
+                        "total_points": stats.get("total_points", 0) if is_first_row else 0,
+                        "bonus": bonus if is_first_row else 0,
+                        "provisional_bonus": provisional_bonus_val if is_first_row else 0,
+                        "bps": stats.get("bps", 0) if is_first_row else 0,
+                        "bonus_status": bonus_status,
+                        "goals_scored": stats.get("goals_scored", 0) if is_first_row else 0,
+                        "assists": stats.get("assists", 0) if is_first_row else 0,
+                        "own_goals": stats.get("own_goals", 0) if is_first_row else 0,
+                        "penalties_missed": stats.get("penalties_missed", 0) if is_first_row else 0,
+                        "tackles": stats.get("tackles", 0) if is_first_row else 0,
+                        "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0) if is_first_row else 0,
+                        "recoveries": stats.get("recoveries", 0) if is_first_row else 0,
+                        "defensive_contribution": defcon if is_first_row else 0,
+                        "saves": stats.get("saves", 0) if is_first_row else 0,
+                        "clean_sheets": stats.get("clean_sheets", 0) if is_first_row else 0,
+                        "goals_conceded": stats.get("goals_conceded", 0) if is_first_row else 0,
+                        "penalties_saved": stats.get("penalties_saved", 0) if is_first_row else 0,
+                        "yellow_cards": stats.get("yellow_cards", 0) if is_first_row else 0,
+                        "red_cards": stats.get("red_cards", 0) if is_first_row else 0,
+                        "team_h_score": team_h_score,
+                        "team_a_score": team_a_score,
+                        "match_finished": match_finished,
+                        "match_finished_provisional": match_finished_provisional,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    stats_data["expected_goals"] = _expected_or_existing("expected_goals", existing_expected_goals) if is_first_row else 0.0
+                    stats_data["expected_assists"] = _expected_or_existing("expected_assists", existing_expected_assists) if is_first_row else 0.0
+                    stats_data["expected_goal_involvements"] = _expected_or_existing("expected_goal_involvements", existing_expected_goal_involvements) if is_first_row else 0.0
+                    stats_data["expected_goals_conceded"] = _expected_or_existing("expected_goals_conceded", existing_expected_goals_conceded) if is_first_row else 0.0
+                    stats_data["influence"] = _expected_or_existing("influence", existing_influence) if is_first_row else 0.0
+                    stats_data["creativity"] = _expected_or_existing("creativity", existing_creativity) if is_first_row else 0.0
+                    stats_data["threat"] = _expected_or_existing("threat", existing_threat) if is_first_row else 0.0
+                    stats_data["ict_index"] = _expected_or_existing("ict_index", existing_ict_index) if is_first_row else 0.0
+                    
+                    batch_stats.append(stats_data)
 
-                # Provisional bonus (1-3 from BPS rank) only after second half (MP > 45)
-                provisional_bonus_val = 0
-                if bonus_status == "provisional" and bonus == 0 and fixture_id and fixture_past_threshold.get(fixture_id, False):
-                    all_in_fixture = fixture_players.get(fixture_id, [])
-                    provisional_bonus_val = self._calculate_provisional_bonus(
-                        player_id,
-                        stats.get("bps", 0),
-                        fixture_id,
-                        all_in_fixture,
-                    )
-                
-                # Calculate DEFCON
-                stats_for_defcon = {
-                    "defensive_contribution": stats.get("defensive_contribution", 0),
-                    "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
-                    "tackles": stats.get("tackles", 0),
-                    "recoveries": stats.get("recoveries", 0)
-                }
-                defcon = self._calculate_defcon(stats_for_defcon, position)
-                
-                # Get existing expected/ICT stats if live_only to preserve them
-                existing_stat = existing_stats_by_player.get(player_id, {})
-                existing_expected_goals = existing_stat.get("expected_goals", 0) if live_only else None
-                existing_expected_assists = existing_stat.get("expected_assists", 0) if live_only else None
-                existing_expected_goal_involvements = existing_stat.get("expected_goal_involvements", 0) if live_only else None
-                existing_expected_goals_conceded = existing_stat.get("expected_goals_conceded", 0) if live_only else None
-                existing_influence = existing_stat.get("influence", 0) if live_only else None
-                existing_creativity = existing_stat.get("creativity", 0) if live_only else None
-                existing_threat = existing_stat.get("threat", 0) if live_only else None
-                existing_ict_index = existing_stat.get("ict_index", 0) if live_only else None
-                
-                # Prepare stats data from live endpoint (store total_points as FPL sends; official bonus already in total_points)
-                stats_data = {
-                    "player_id": player_id,
-                    "gameweek": gameweek,
-                    "fixture_id": fixture_id,
-                    "team_id": team_id,
-                    "opponent_team_id": opponent_team_id,
-                    "was_home": was_home,
-                    "kickoff_time": kickoff_time,
-                    "minutes": stats.get("minutes", 0),
-                    "started": stats.get("minutes", 0) > 0,
-                    "total_points": stats.get("total_points", 0),
-                    "bonus": bonus,
-                    "provisional_bonus": provisional_bonus_val,
-                    "bps": stats.get("bps", 0),
-                    "bonus_status": bonus_status,
-                    "goals_scored": stats.get("goals_scored", 0),
-                    "assists": stats.get("assists", 0),
-                    "own_goals": stats.get("own_goals", 0),
-                    "penalties_missed": stats.get("penalties_missed", 0),
-                    "tackles": stats.get("tackles", 0),
-                    "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
-                    "recoveries": stats.get("recoveries", 0),
-                    "defensive_contribution": defcon,
-                    "saves": stats.get("saves", 0),
-                    "clean_sheets": stats.get("clean_sheets", 0),
-                    "goals_conceded": stats.get("goals_conceded", 0),
-                    "penalties_saved": stats.get("penalties_saved", 0),
-                    "yellow_cards": stats.get("yellow_cards", 0),
-                    "red_cards": stats.get("red_cards", 0),
-                    "team_h_score": team_h_score,
-                    "team_a_score": team_a_score,
-                    "match_finished": match_finished,
-                    "match_finished_provisional": match_finished_provisional,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-                
-                # Expected/ICT: use live endpoint values when present (FPL live returns xG/xA for players who played)
-                # During live_only and unfinished match, only preserve existing when live doesn't provide the stat
-                def _float_from(v):
-                    if v is None or v == "":
-                        return None
-                    try:
-                        return float(v)
-                    except (TypeError, ValueError):
-                        return None
-
-                def _expected_or_existing(key: str, existing: Optional[float]) -> float:
-                    from_live = _float_from(stats.get(key))
-                    if from_live is not None:
-                        return from_live
-                    if live_only and not match_finished and existing is not None:
-                        return float(existing)
-                    return 0.0
-
-                stats_data["expected_goals"] = _expected_or_existing("expected_goals", existing_expected_goals)
-                stats_data["expected_assists"] = _expected_or_existing("expected_assists", existing_expected_assists)
-                stats_data["expected_goal_involvements"] = _expected_or_existing("expected_goal_involvements", existing_expected_goal_involvements)
-                stats_data["expected_goals_conceded"] = _expected_or_existing("expected_goals_conceded", existing_expected_goals_conceded)
-                stats_data["influence"] = _expected_or_existing("influence", existing_influence)
-                stats_data["creativity"] = _expected_or_existing("creativity", existing_creativity)
-                stats_data["threat"] = _expected_or_existing("threat", existing_threat)
-                stats_data["ict_index"] = _expected_or_existing("ict_index", existing_ict_index)
-                
-                batch_stats.append(stats_data)
-
-                # Feed events: compare previous vs new; use effective bonus (BPS provisional when live, confirmed when finished)
-                effective_new_bonus = (
-                    bonus
-                    if (match_finished or bonus > 0)
-                    else provisional_bonus_val
-                )
-                effective_old_bonus = (
-                    existing_stat.get("bonus", 0)
-                    if match_finished
-                    else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
-                )
-                existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
-                # So total_points_after in feed reflects effective total (base + provisional when live)
-                base_total = stats.get("total_points", 0)
-                effective_total = base_total + (effective_new_bonus - bonus)
-                stats_for_feed = {**stats, "bonus": effective_new_bonus, "total_points": effective_total}
-                events_for_player, reversals_for_player = self._feed_events_from_deltas(
-                    existing_stat_for_feed,
-                    stats_for_feed,
-                    gameweek,
-                    player_id,
-                    fixture_id,
-                    position,
-                    occurred_at,
-                )
-                feed_events.extend(events_for_player)
-                feed_reversals.extend(reversals_for_player)
+                    if is_first_row:
+                        effective_new_bonus = bonus if (match_finished or bonus > 0) else provisional_bonus_val
+                        effective_old_bonus = (
+                            existing_stat.get("bonus", 0)
+                            if match_finished
+                            else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
+                        existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
+                        base_total = stats.get("total_points", 0)
+                        effective_total = base_total + (effective_new_bonus - bonus)
+                        stats_for_feed = {**stats, "bonus": effective_new_bonus, "total_points": effective_total}
+                        events_for_player, reversals_for_player = self._feed_events_from_deltas(
+                            existing_stat_for_feed,
+                            stats_for_feed,
+                            gameweek,
+                            player_id,
+                            fixture_id,
+                            position,
+                            occurred_at,
+                        )
+                        feed_events.extend(events_for_player)
+                        feed_reversals.extend(reversals_for_player)
             
             if batch_stats:
                 self.db_client.upsert_player_gameweek_stats(batch_stats)
@@ -692,7 +672,7 @@ class PlayerDataRefresher:
             existing_stats_full = self.db_client.client.table("player_gameweek_stats").select(
                 existing_stat_fields
             ).eq("gameweek", gameweek).in_("player_id", list(active_player_ids)).execute().data
-            existing_stats_by_player = {s["player_id"]: s for s in (existing_stats_full or [])}
+            existing_stats_by_player_fixture = {(s["player_id"], s.get("fixture_id")): s for s in (existing_stats_full or [])}
             feed_events: List[Dict[str, Any]] = []
             feed_reversals: List[Dict[str, Any]] = []
             occurred_at = datetime.now(timezone.utc).isoformat()
@@ -721,114 +701,105 @@ class PlayerDataRefresher:
                         })
                         continue
                     
-                    # Find gameweek data in history
+                    # History can have 1 or 2 entries per gameweek (DGW)
                     history = summary.get("history", [])
-                    gw_data = next(
-                        (h for h in history if h.get("round") == gameweek),
-                        None
-                    )
+                    gw_data_list = [h for h in history if h.get("round") == gameweek]
+                    gw_data_list.sort(key=lambda h: h.get("kickoff_time") or "")
                     
-                    if not gw_data:
+                    if not gw_data_list:
                         continue
                     
-                    # Get player info
                     player_info = players_map.get(player_id, {})
                     position = player_info.get("element_type", 0)
                     
-                    # Determine bonus status
-                    bonus = gw_data.get("bonus", 0)
-                    bonus_status = "confirmed" if bonus > 0 else "provisional"
-                    
-                    # Calculate DEFCON
-                    defcon = self._calculate_defcon(gw_data, position)
-                    
-                    # Get fixture status for match_finished flags
-                    fixture_id = gw_data.get("fixture")
-                    match_finished = False
-                    match_finished_provisional = False
-                    
-                    if fixture_id:
-                        fixture = fixtures_by_id.get(fixture_id)
-                        if fixture:
-                            match_finished = fixture.get("finished", False)
-                            match_finished_provisional = fixture.get("finished_provisional", False)
-                    
-                    # Prepare stats data (store total_points as FPL sends; official bonus already in total_points)
-                    stats_data = {
-                        "player_id": player_id,
-                        "gameweek": gameweek,
-                        "fixture_id": fixture_id,
-                        "team_id": player_info.get("team", 0),
-                        "opponent_team_id": gw_data.get("opponent_team"),
-                        "was_home": gw_data.get("was_home"),
-                        "kickoff_time": gw_data.get("kickoff_time"),
-                        "minutes": gw_data.get("minutes", 0),
-                        "started": gw_data.get("minutes", 0) > 0,
-                        "total_points": gw_data.get("total_points", 0),
-                        "bonus": bonus,
-                        "provisional_bonus": 0,
-                        "bps": gw_data.get("bps", 0),
-                        "bonus_status": bonus_status,
-                        "goals_scored": gw_data.get("goals_scored", 0),
-                        "assists": gw_data.get("assists", 0),
-                        "own_goals": gw_data.get("own_goals", 0),
-                        "penalties_missed": gw_data.get("penalties_missed", 0),
-                        "tackles": gw_data.get("tackles", 0),
-                        "clearances_blocks_interceptions": gw_data.get("clearances_blocks_interceptions", 0),
-                        "recoveries": gw_data.get("recoveries", 0),
-                        "defensive_contribution": defcon,
-                        "saves": gw_data.get("saves", 0),
-                        "clean_sheets": gw_data.get("clean_sheets", 0),
-                        "goals_conceded": gw_data.get("goals_conceded", 0),
-                        "penalties_saved": gw_data.get("penalties_saved", 0),
-                        "yellow_cards": gw_data.get("yellow_cards", 0),
-                        "red_cards": gw_data.get("red_cards", 0),
-                        "expected_goals": float(gw_data.get("expected_goals", 0) or 0),
-                        "expected_assists": float(gw_data.get("expected_assists", 0) or 0),
-                        "expected_goal_involvements": float(gw_data.get("expected_goal_involvements", 0) or 0),
-                        "expected_goals_conceded": float(gw_data.get("expected_goals_conceded", 0) or 0),
-                        "influence": float(gw_data.get("influence", 0) or 0),
-                        "creativity": float(gw_data.get("creativity", 0) or 0),
-                        "threat": float(gw_data.get("threat", 0) or 0),
-                        "ict_index": float(gw_data.get("ict_index", 0) or 0),
-                        "team_h_score": gw_data.get("team_h_score"),
-                        "team_a_score": gw_data.get("team_a_score"),
-                        "match_finished": match_finished,
-                        "match_finished_provisional": match_finished_provisional,
-                        "updated_at": datetime.now(timezone.utc).isoformat()
-                    }
-                    
-                    batch_stats.append(stats_data)
-                    
-                    # Feed events: compare existing vs new and emit point-impacting events
-                    existing_stat = existing_stats_by_player.get(player_id, {})
-                    new_stats_for_feed = {
-                        "goals_scored": gw_data.get("goals_scored", 0),
-                        "assists": gw_data.get("assists", 0),
-                        "minutes": gw_data.get("minutes", 0),
-                        "bonus": bonus,
-                        "total_points": gw_data.get("total_points", 0),
-                        "own_goals": gw_data.get("own_goals", 0),
-                        "penalties_missed": gw_data.get("penalties_missed", 0),
-                        "penalties_saved": gw_data.get("penalties_saved", 0),
-                        "yellow_cards": gw_data.get("yellow_cards", 0),
-                        "red_cards": gw_data.get("red_cards", 0),
-                        "defensive_contribution": defcon,
-                        "clean_sheets": gw_data.get("clean_sheets", 0),
-                        "saves": gw_data.get("saves", 0),
-                        "goals_conceded": gw_data.get("goals_conceded", 0),
-                    }
-                    events_for_player, reversals_for_player = self._feed_events_from_deltas(
-                        existing_stat,
-                        new_stats_for_feed,
-                        gameweek,
-                        player_id,
-                        fixture_id,
-                        position,
-                        occurred_at,
-                    )
-                    feed_events.extend(events_for_player)
-                    feed_reversals.extend(reversals_for_player)
+                    for gw_data in gw_data_list:
+                        bonus = gw_data.get("bonus", 0)
+                        bonus_status = "confirmed" if bonus > 0 else "provisional"
+                        defcon = self._calculate_defcon(gw_data, position)
+                        fixture_id = gw_data.get("fixture") or 0
+                        match_finished = False
+                        match_finished_provisional = False
+                        if fixture_id and fixtures_by_id and fixture_id in fixtures_by_id:
+                            fixture = fixtures_by_id.get(fixture_id)
+                            if fixture:
+                                match_finished = fixture.get("finished", False)
+                                match_finished_provisional = fixture.get("finished_provisional", False)
+                        
+                        stats_data = {
+                            "player_id": player_id,
+                            "gameweek": gameweek,
+                            "fixture_id": fixture_id,
+                            "team_id": player_info.get("team", 0),
+                            "opponent_team_id": gw_data.get("opponent_team"),
+                            "was_home": gw_data.get("was_home"),
+                            "kickoff_time": gw_data.get("kickoff_time"),
+                            "minutes": gw_data.get("minutes", 0),
+                            "started": gw_data.get("minutes", 0) > 0,
+                            "total_points": gw_data.get("total_points", 0),
+                            "bonus": bonus,
+                            "provisional_bonus": 0,
+                            "bps": gw_data.get("bps", 0),
+                            "bonus_status": bonus_status,
+                            "goals_scored": gw_data.get("goals_scored", 0),
+                            "assists": gw_data.get("assists", 0),
+                            "own_goals": gw_data.get("own_goals", 0),
+                            "penalties_missed": gw_data.get("penalties_missed", 0),
+                            "tackles": gw_data.get("tackles", 0),
+                            "clearances_blocks_interceptions": gw_data.get("clearances_blocks_interceptions", 0),
+                            "recoveries": gw_data.get("recoveries", 0),
+                            "defensive_contribution": defcon,
+                            "saves": gw_data.get("saves", 0),
+                            "clean_sheets": gw_data.get("clean_sheets", 0),
+                            "goals_conceded": gw_data.get("goals_conceded", 0),
+                            "penalties_saved": gw_data.get("penalties_saved", 0),
+                            "yellow_cards": gw_data.get("yellow_cards", 0),
+                            "red_cards": gw_data.get("red_cards", 0),
+                            "expected_goals": float(gw_data.get("expected_goals", 0) or 0),
+                            "expected_assists": float(gw_data.get("expected_assists", 0) or 0),
+                            "expected_goal_involvements": float(gw_data.get("expected_goal_involvements", 0) or 0),
+                            "expected_goals_conceded": float(gw_data.get("expected_goals_conceded", 0) or 0),
+                            "influence": float(gw_data.get("influence", 0) or 0),
+                            "creativity": float(gw_data.get("creativity", 0) or 0),
+                            "threat": float(gw_data.get("threat", 0) or 0),
+                            "ict_index": float(gw_data.get("ict_index", 0) or 0),
+                            "team_h_score": gw_data.get("team_h_score"),
+                            "team_a_score": gw_data.get("team_a_score"),
+                            "match_finished": match_finished,
+                            "match_finished_provisional": match_finished_provisional,
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        batch_stats.append(stats_data)
+                        
+                        existing_stat = existing_stats_by_player_fixture.get((player_id, fixture_id), {})
+                        if not existing_stat and fixture_id:
+                            existing_stat = existing_stats_by_player_fixture.get((player_id, None), {})
+                        new_stats_for_feed = {
+                            "goals_scored": gw_data.get("goals_scored", 0),
+                            "assists": gw_data.get("assists", 0),
+                            "minutes": gw_data.get("minutes", 0),
+                            "bonus": bonus,
+                            "total_points": gw_data.get("total_points", 0),
+                            "own_goals": gw_data.get("own_goals", 0),
+                            "penalties_missed": gw_data.get("penalties_missed", 0),
+                            "penalties_saved": gw_data.get("penalties_saved", 0),
+                            "yellow_cards": gw_data.get("yellow_cards", 0),
+                            "red_cards": gw_data.get("red_cards", 0),
+                            "defensive_contribution": defcon,
+                            "clean_sheets": gw_data.get("clean_sheets", 0),
+                            "saves": gw_data.get("saves", 0),
+                            "goals_conceded": gw_data.get("goals_conceded", 0),
+                        }
+                        events_for_player, reversals_for_player = self._feed_events_from_deltas(
+                            existing_stat,
+                            new_stats_for_feed,
+                            gameweek,
+                            player_id,
+                            fixture_id,
+                            position,
+                            occurred_at,
+                        )
+                        feed_events.extend(events_for_player)
+                        feed_reversals.extend(reversals_for_player)
                 
                 if batch_stats:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)

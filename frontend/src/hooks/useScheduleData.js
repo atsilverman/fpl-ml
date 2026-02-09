@@ -47,8 +47,9 @@ export function useScheduleData() {
       if (!gwIds.length) return []
       const { data, error } = await supabase
         .from('fixtures')
-        .select('gameweek, home_team_id, away_team_id')
+        .select('gameweek, home_team_id, away_team_id, kickoff_time')
         .in('gameweek', gwIds)
+        .order('kickoff_time', { ascending: true })
       if (error) throw error
       return data ?? []
     },
@@ -207,35 +208,60 @@ export function useScheduleData() {
       const gw = f.gameweek
       const home = f.home_team_id
       const away = f.away_team_id
+      const kickoff = f.kickoff_time ? new Date(f.kickoff_time).getTime() : 0
       if (home && teamMap[away]) {
+        const key = `${home}-${gw}`
+        if (!byTeamGw[key]) byTeamGw[key] = []
         const opp = teamMap[away]
-        byTeamGw[`${home}-${gw}`] = {
+        byTeamGw[key].push({
           team_id: away,
           ...opp,
           isHome: true,
           difficulty: opp.difficultyWhenAway,
           attackDifficulty: opp.attackDifficultyWhenAway,
           defenceDifficulty: opp.defenceDifficultyWhenAway,
-        }
+          kickoff,
+        })
       }
       if (away && teamMap[home]) {
+        const key = `${away}-${gw}`
+        if (!byTeamGw[key]) byTeamGw[key] = []
         const opp = teamMap[home]
-        byTeamGw[`${away}-${gw}`] = {
+        byTeamGw[key].push({
           team_id: home,
           ...opp,
           isHome: false,
           difficulty: opp.difficultyWhenHome,
           attackDifficulty: opp.attackDifficultyWhenHome,
           defenceDifficulty: opp.defenceDifficultyWhenHome,
-        }
+          kickoff,
+        })
       }
     })
+    // Sort each team's opponents by kickoff (fixtures already ordered by API)
+    Object.keys(byTeamGw).forEach((key) => {
+      byTeamGw[key].sort((a, b) => (a.kickoff || 0) - (b.kickoff || 0))
+    })
     const teamIdsSorted = teams.map((t) => t.team_id)
+    const slotsPerGw = {}
+    gameweeks.forEach((gw) => {
+      let maxSlots = 1
+      teamIdsSorted.forEach((teamId) => {
+        const arr = byTeamGw[`${teamId}-${gw.id}`]
+        if (arr?.length) maxSlots = Math.max(maxSlots, arr.length)
+      })
+      slotsPerGw[gw.id] = maxSlots
+    })
     return {
       teamIds: teamIdsSorted,
       gameweeks,
+      slotsPerGw,
+      getOpponents(teamId, gameweekId) {
+        return byTeamGw[`${teamId}-${gameweekId}`] ?? []
+      },
       getOpponent(teamId, gameweekId) {
-        return byTeamGw[`${teamId}-${gameweekId}`] ?? null
+        const arr = byTeamGw[`${teamId}-${gameweekId}`]
+        return arr?.[0] ?? null
       },
     }
   }, [fixtures, gameweeks, teams, teamMap])

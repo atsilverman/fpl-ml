@@ -489,16 +489,20 @@ class RefreshOrchestrator:
             return None
     
     async def _refresh_fixtures(self) -> Optional[Dict[int, Dict[str, Any]]]:
-        """Refresh fixtures table. Returns fixtures for current gameweek keyed by fpl_fixture_id for reuse (e.g. player refresh)."""
+        """Refresh fixtures table for current and next gameweek (so DGW and next-GW matchups are visible).
+        Returns fixtures for current gameweek only keyed by fpl_fixture_id for reuse (e.g. player refresh)."""
         try:
             fixtures = await self.fpl_client.get_fixtures()
-            
-            # Filter to current gameweek
+
+            # Refresh current + next gameweek so Schedule and Matches "Next" show DGW fixtures
+            gw_ids_to_refresh = []
             if self.current_gameweek:
-                fixtures = [
-                    f for f in fixtures
-                    if f.get("event") == self.current_gameweek
-                ]
+                gw_ids_to_refresh.append(self.current_gameweek)
+            next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+            if next_gws and next_gws[0]["id"] not in gw_ids_to_refresh:
+                gw_ids_to_refresh.append(next_gws[0]["id"])
+            if gw_ids_to_refresh:
+                fixtures = [f for f in fixtures if f.get("event") in gw_ids_to_refresh]
             
             # Get gameweeks to map deadline_time (FPL fixtures API doesn't provide deadline_time)
             # deadline_time is a gameweek-level property, not fixture-level
@@ -535,12 +539,17 @@ class RefreshOrchestrator:
                 }
                 
                 self.db_client.upsert_fixture(fixture_data)
-            
+
+            # Return only current gameweek's fixtures for live/player refresh
+            current_fixtures_by_id = {
+                fid: f for fid, f in fixtures_by_id.items()
+                if f.get("event") == self.current_gameweek
+            }
             logger.debug("Refreshed fixtures", extra={
                 "fixtures_count": len(fixtures),
-                "gameweek": self.current_gameweek
+                "gameweeks_refreshed": gw_ids_to_refresh,
             })
-            return fixtures_by_id
+            return current_fixtures_by_id
         except Exception as e:
             logger.error("Fixtures refresh failed", extra={"error": str(e)}, exc_info=True)
             return None

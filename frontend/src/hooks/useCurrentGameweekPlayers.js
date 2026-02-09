@@ -87,10 +87,19 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         throw statsResult.error
       }
 
-      // Create a map for quick lookup: player_id -> stats
-      const statsMap = {}
+      // player_id -> array of stats (1 or 2 for DGW), sorted by kickoff
+      const statsByPlayer = {}
       ;(statsResult.data || []).forEach(stat => {
-        statsMap[stat.player_id] = stat
+        const pid = stat.player_id
+        if (!statsByPlayer[pid]) statsByPlayer[pid] = []
+        statsByPlayer[pid].push(stat)
+      })
+      Object.keys(statsByPlayer).forEach(pid => {
+        statsByPlayer[pid].sort((a, b) => {
+          const tA = a.kickoff_time ? new Date(a.kickoff_time).getTime() : 0
+          const tB = b.kickoff_time ? new Date(b.kickoff_time).getTime() : 0
+          return tA - tB
+        })
       })
 
       // Fetch player info and team info
@@ -118,10 +127,8 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
 
       // Fetch opponent team info
       const opponentTeamIds = new Set()
-      Object.values(statsMap).forEach(stat => {
-        if (stat.opponent_team_id) {
-          opponentTeamIds.add(stat.opponent_team_id)
-        }
+      Object.values(statsByPlayer).flat().forEach(stat => {
+        if (stat.opponent_team_id) opponentTeamIds.add(stat.opponent_team_id)
       })
 
       let opponentTeamsMap = {}
@@ -162,77 +169,140 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         f => f.finished === true || f.finished === 'true'
       )
 
-      // Combine picks with stats and player info
-      const players = picks.map(pick => {
-        // Stats: always show this slot's player's actual match (minutes, opponent, points)
-        // So Palmer's row shows his match (DNP vs CRY, 0); Kroupi Jr's row shows his match (66' vs LIV, 1)
+      // Combine picks with stats: one row per (pick, stats row). DGW = two rows per pick.
+      const rows = []
+      picks.forEach(pick => {
         const statsPlayerId = pick.player_id
         const statsKey = statsPlayerId != null ? Number(statsPlayerId) : statsPlayerId
-        const stats = statsMap[statsKey] ?? statsMap[statsPlayerId] ?? statsMap[String(statsPlayerId)] ?? {}
-        const opponentTeam = stats.opponent_team_id ? opponentTeamsMap[stats.opponent_team_id] : null
-
+        const statsRows = statsByPlayer[statsKey] ?? statsByPlayer[statsPlayerId] ?? statsByPlayer[String(statsPlayerId)] ?? []
         const slotPlayerInfo = playerInfoMap[pick.player_id] || {}
         const slotName = slotPlayerInfo.web_name || 'Unknown'
         const slotTeamShortName = slotPlayerInfo.teams?.short_name || null
+        const multiplier = pick.multiplier || 1
+        const wasAutoSubbedOut = subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId
 
-        const bonusStatus = stats.bonus_status ?? 'provisional'
-        const provisionalBonus = Number(stats.provisional_bonus) || 0
-        const officialBonus = Number(stats.bonus) ?? 0
-        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
-        // Use fixture.finished (same source as debug panel) so B column shows official bonus once game is finished
-        const fid = stats.fixture_id != null ? stats.fixture_id : null
-        const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
-        const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
-        const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
-        // Only add provisional when in provisional period; when official, total_points already includes bonus
-        const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
-        // Once match is finished, always show official bonus for B column (avoid showing BPS-calculated provisional that can be wrong)
-        const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : provisionalBonus
-
-        return {
-          position: pick.position,
-          player_id: pick.player_id,
-          effective_player_id: pick.player_id,
-          player_name: slotName,
-          player_position: slotPlayerInfo.position || 0,
-          player_team_id: slotPlayerInfo.team_id || null,
-          player_team_short_name: slotTeamShortName,
-          is_captain: pick.is_captain,
-          is_vice_captain: pick.is_vice_captain,
-          multiplier: pick.multiplier || 1,
-          was_auto_subbed_in: pick.was_auto_subbed_in,
-          was_auto_subbed_out: subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId,
-          points: effectivePoints,
-          contributedPoints: effectivePoints * (pick.multiplier || 1),
-          minutes: stats.minutes ?? 0,
-          match_started: stats.started ?? false,
-          match_finished: stats.match_finished ?? false,
-          match_finished_provisional: stats.match_finished_provisional ?? false,
-          fixture_id: stats.fixture_id ?? null,
-          kickoff_time: stats.kickoff_time || null,
-          opponent_team_id: stats.opponent_team_id || null,
-          opponent_team_short_name: opponentTeam?.short_name || null,
-          was_home: stats.was_home || false,
-          goals_scored: stats.goals_scored ?? 0,
-          assists: stats.assists ?? 0,
-          clean_sheets: stats.clean_sheets ?? 0,
-          saves: stats.saves ?? 0,
-          bps: stats.bps ?? 0,
-          bonus: effectiveBonus,
-          bonus_status: bonusStatus,
-          defensive_contribution: stats.defensive_contribution ?? 0,
-          yellow_cards: stats.yellow_cards ?? 0,
-          red_cards: stats.red_cards ?? 0,
-          defcon_points_achieved: stats.defcon_points_achieved ?? false,
-          expected_goals: stats.expected_goals ?? 0,
-          expected_assists: stats.expected_assists ?? 0,
-          expected_goal_involvements: stats.expected_goal_involvements ?? 0,
-          expected_goals_conceded: stats.expected_goals_conceded ?? 0
+        if (statsRows.length === 0) {
+          rows.push({
+            position: pick.position,
+            player_id: pick.player_id,
+            effective_player_id: pick.player_id,
+            player_name: slotName,
+            player_position: slotPlayerInfo.position || 0,
+            player_team_id: slotPlayerInfo.team_id || null,
+            player_team_short_name: slotTeamShortName,
+            is_captain: pick.is_captain,
+            is_vice_captain: pick.is_vice_captain,
+            multiplier,
+            was_auto_subbed_in: pick.was_auto_subbed_in,
+            was_auto_subbed_out: wasAutoSubbedOut,
+            points: 0,
+            contributedPoints: 0,
+            minutes: 0,
+            match_started: false,
+            match_finished: false,
+            match_finished_provisional: false,
+            fixture_id: null,
+            kickoff_time: null,
+            opponent_team_id: null,
+            opponent_team_short_name: null,
+            was_home: false,
+            goals_scored: 0,
+            assists: 0,
+            clean_sheets: 0,
+            saves: 0,
+            bps: 0,
+            bonus: 0,
+            bonus_status: 'provisional',
+            defensive_contribution: 0,
+            yellow_cards: 0,
+            red_cards: 0,
+            defcon_points_achieved: false,
+            expected_goals: 0,
+            expected_assists: 0,
+            expected_goal_involvements: 0,
+            expected_goals_conceded: 0,
+            isDgwRow: false,
+            dgwRowIndex: 0
+          })
+          return
         }
+
+        const totalEffectivePoints = statsRows.reduce((sum, stats) => {
+          const bonusStatus = stats.bonus_status ?? 'provisional'
+          const provisionalBonus = Number(stats.provisional_bonus) || 0
+          const officialBonus = Number(stats.bonus) ?? 0
+          const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+          const fid = stats.fixture_id != null ? stats.fixture_id : null
+          const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
+          const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
+          const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
+          return sum + effectivePoints
+        }, 0)
+
+        statsRows.forEach((stats, idx) => {
+          const opponentTeam = stats.opponent_team_id ? opponentTeamsMap[stats.opponent_team_id] : null
+          const bonusStatus = stats.bonus_status ?? 'provisional'
+          const provisionalBonus = Number(stats.provisional_bonus) || 0
+          const officialBonus = Number(stats.bonus) ?? 0
+          const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+          const fid = stats.fixture_id != null ? stats.fixture_id : null
+          const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
+          const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
+          const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
+          const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : provisionalBonus
+          rows.push({
+            position: pick.position,
+            player_id: pick.player_id,
+            effective_player_id: pick.player_id,
+            player_name: slotName,
+            player_position: slotPlayerInfo.position || 0,
+            player_team_id: slotPlayerInfo.team_id || null,
+            player_team_short_name: slotTeamShortName,
+            is_captain: pick.is_captain,
+            is_vice_captain: pick.is_vice_captain,
+            multiplier,
+            was_auto_subbed_in: pick.was_auto_subbed_in,
+            was_auto_subbed_out: wasAutoSubbedOut,
+            points: effectivePoints,
+            contributedPoints: idx === 0 ? totalEffectivePoints * multiplier : 0,
+            minutes: stats.minutes ?? 0,
+            match_started: stats.started ?? false,
+            match_finished: stats.match_finished ?? false,
+            match_finished_provisional: stats.match_finished_provisional ?? false,
+            fixture_id: fid,
+            kickoff_time: stats.kickoff_time || null,
+            opponent_team_id: stats.opponent_team_id || null,
+            opponent_team_short_name: opponentTeam?.short_name || null,
+            was_home: stats.was_home || false,
+            goals_scored: stats.goals_scored ?? 0,
+            assists: stats.assists ?? 0,
+            clean_sheets: stats.clean_sheets ?? 0,
+            saves: stats.saves ?? 0,
+            bps: stats.bps ?? 0,
+            bonus: effectiveBonus,
+            bonus_status: bonusStatus,
+            defensive_contribution: stats.defensive_contribution ?? 0,
+            yellow_cards: stats.yellow_cards ?? 0,
+            red_cards: stats.red_cards ?? 0,
+            defcon_points_achieved: stats.defcon_points_achieved ?? false,
+            expected_goals: stats.expected_goals ?? 0,
+            expected_assists: stats.expected_assists ?? 0,
+            expected_goal_involvements: stats.expected_goal_involvements ?? 0,
+            expected_goals_conceded: stats.expected_goals_conceded ?? 0,
+            isDgwRow: statsRows.length > 1,
+            dgwRowIndex: idx
+          })
+        })
       })
 
-  // Sort by position (1-15)
-  players.sort((a, b) => a.position - b.position)
+      const players = rows
+  // Sort by position then by dgwRowIndex so DGW second row is right under first
+  players.sort((a, b) => {
+    if (a.position !== b.position) return a.position - b.position
+    return a.dgwRowIndex - b.dgwRowIndex
+  })
 
   return players
 }

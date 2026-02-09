@@ -48,8 +48,8 @@ async def refresh_data():
         print("✅ Orchestrator initialized")
         print("🔄 Running refresh cycle...\n")
         
-        # Run a single refresh cycle
-        await orchestrator._refresh_cycle()
+        # Run a single fast cycle (gameweeks, state, fixtures, players when live, etc.)
+        await orchestrator._fast_cycle()
         
         print("\n✅ Refresh cycle completed successfully!")
         print("\n📊 Mini league standings should now be updated.")
