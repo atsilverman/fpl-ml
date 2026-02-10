@@ -4,6 +4,7 @@ import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useUpdateTimestamps } from '../hooks/useUpdateTimestamps'
 import { useRefreshState } from '../hooks/useRefreshState'
 import { useVerifyManagerAttributes } from '../hooks/useVerifyManagerAttributes'
+import { useDeadlineBatchRuns, formatDurationSeconds } from '../hooks/useDeadlineBatchRuns'
 import './ConfigurationModal.css'
 import './BentoCard.css'
 import './DebugModal.css'
@@ -42,6 +43,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const updateTimestampsData = useUpdateTimestamps()
   const { stateLabel } = useRefreshState()
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
+  const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
   const [showStateCriteria, setShowStateCriteria] = useState(false)
   const stateCriteriaRef = useRef(null)
 
@@ -209,6 +211,72 @@ export default function DebugModal({ isOpen, onClose }) {
             )}
             {verifyData && (!verifyData.attributes || verifyData.attributes.length === 0) && !verifyLoading && (
               <div className="gw-debug-empty">No attributes to compare (no current GW or API/DB missing)</div>
+            )}
+          </section>
+
+          <section className="debug-modal-section">
+            <h3 className="debug-modal-section-title">Deadline batch</h3>
+            {deadlineBatchLoading ? (
+              <div className="bento-card-value loading">
+                <div className="skeleton-text" />
+              </div>
+            ) : !deadlineBatchLatest ? (
+              <div className="gw-debug-empty">No deadline batch run yet</div>
+            ) : (
+              <div className="deadline-batch-debug">
+                <div className="deadline-batch-meta">
+                  <div className="deadline-batch-meta-row">
+                    <span className="deadline-batch-label">Started (GW became current)</span>
+                    <span className="gw-debug-table-mono">{formatDeadlineGw(deadlineBatchLatest.started_at)}</span>
+                  </div>
+                  <div className="deadline-batch-meta-row">
+                    <span className="deadline-batch-label">Finished</span>
+                    <span className="gw-debug-table-mono">
+                      {deadlineBatchLatest.finished_at ? formatDeadlineGw(deadlineBatchLatest.finished_at) : 'In progress'}
+                    </span>
+                  </div>
+                  <div className="deadline-batch-meta-row">
+                    <span className="deadline-batch-label">Duration</span>
+                    <span>{deadlineBatchLatest.duration_seconds != null ? formatDurationSeconds(deadlineBatchLatest.duration_seconds) : '—'}</span>
+                  </div>
+                  {deadlineBatchLatest.manager_count != null && (
+                    <div className="deadline-batch-meta-row">
+                      <span className="deadline-batch-label">Managers</span>
+                      <span>{deadlineBatchLatest.manager_count}</span>
+                    </div>
+                  )}
+                  {deadlineBatchLatest.league_count != null && (
+                    <div className="deadline-batch-meta-row">
+                      <span className="deadline-batch-label">Leagues</span>
+                      <span>{deadlineBatchLatest.league_count}</span>
+                    </div>
+                  )}
+                  {deadlineBatchLatest.success != null && (
+                    <div className="deadline-batch-meta-row">
+                      <span className="deadline-batch-label">Success</span>
+                      <span><GwDebugBadge value={deadlineBatchLatest.success} /></span>
+                    </div>
+                  )}
+                </div>
+                {deadlinePhaseRows.length > 0 && (
+                  <table className="gw-debug-table deadline-batch-phases-table">
+                    <thead>
+                      <tr>
+                        <th className="gw-debug-table-label">Phase</th>
+                        <th>Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deadlinePhaseRows.map((row) => (
+                        <tr key={row.label}>
+                          <td className="gw-debug-table-label">{row.label}</td>
+                          <td>{formatDurationSeconds(row.durationSec)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
             )}
           </section>
 

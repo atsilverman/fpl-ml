@@ -173,3 +173,34 @@ html[data-theme="dark"] .debug-modal-verify-button {
   color: var(--text-secondary);
   margin-top: 8px;
 }
+
+/* Deadline batch (debug) */
+.deadline-batch-debug {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.deadline-batch-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.deadline-batch-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.deadline-batch-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.deadline-batch-phases-table {
+  margin-top: 4px;
+  font-size: 12px;
+}

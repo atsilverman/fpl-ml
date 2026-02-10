@@ -199,6 +199,56 @@ class SupabaseClient:
             "occurred_at": datetime.now(timezone.utc).isoformat(),
         }).execute()
 
+    def insert_deadline_batch_start(self, gameweek: int) -> Optional[int]:
+        """
+        Record that the deadline batch started (when is_current changed for this gameweek).
+        Returns the inserted row id for later update_deadline_batch_finish.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = self.client.table("deadline_batch_runs").insert({
+            "gameweek": gameweek,
+            "started_at": now_iso,
+        }).execute()
+        if result.data and len(result.data) > 0:
+            return result.data[0].get("id")
+        return None
+
+    def update_deadline_batch_finish(
+        self,
+        run_id: int,
+        finished_at: str,
+        duration_seconds: float,
+        manager_count: int,
+        league_count: int,
+        success: bool,
+        phase_breakdown: Optional[Dict[str, Any]] = None,
+    ):
+        """Update a deadline batch run with finish time, duration, counts, and phase breakdown."""
+        payload = {
+            "finished_at": finished_at,
+            "duration_seconds": duration_seconds,
+            "manager_count": manager_count,
+            "league_count": league_count,
+            "success": success,
+        }
+        if phase_breakdown is not None:
+            payload["phase_breakdown"] = phase_breakdown
+        self.client.table("deadline_batch_runs").update(payload).eq("id", run_id).execute()
+
+    def get_first_kickoff_for_gameweek(self, gameweek: int) -> Optional[str]:
+        """Earliest kickoff_time for the gameweek (ISO string or None). Used for 'be prepared by' logging."""
+        result = (
+            self.client.table("fixtures")
+            .select("kickoff_time")
+            .eq("gameweek", gameweek)
+            .order("kickoff_time", desc=False)
+            .limit(1)
+            .execute()
+        )
+        if result.data and len(result.data) > 0 and result.data[0].get("kickoff_time"):
+            return result.data[0]["kickoff_time"]
+        return None
+
     def insert_feed_events(self, events: List[Dict[str, Any]]):
         """
         Bulk-insert gameweek feed events (point-impacting timeline events).
@@ -456,6 +506,22 @@ class SupabaseClient:
             .execute()
         )
         return {r["player_id"]: r["price_tenths"] for r in (rows.data or [])}
+
+    def get_today_prior_prices(self, today_iso: str, gameweek: int) -> Dict[int, int]:
+        """
+        Get prior_price_tenths for today's snapshot (so sync can preserve them and not overwrite).
+        Returns dict player_id -> prior_price_tenths for rows that already have prior set.
+        """
+        rows = (
+            self.client.table("player_prices")
+            .select("player_id, prior_price_tenths")
+            .eq("recorded_date", today_iso)
+            .eq("gameweek", gameweek)
+            .not_.is_("prior_price_tenths", "null")
+            .execute()
+        )
+        data = rows.data or []
+        return {r["player_id"]: r["prior_price_tenths"] for r in data if r.get("prior_price_tenths") is not None}
 
     def upsert_player_price(self, price_data: Dict[str, Any]):
         """

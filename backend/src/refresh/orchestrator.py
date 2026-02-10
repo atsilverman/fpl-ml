@@ -49,10 +49,14 @@ class RefreshOrchestrator:
         self.previous_gameweek_state: Optional[Dict[str, Any]] = None
         # Track the gameweek that was is_next before deadline
         self.next_gameweek_id_before_deadline: Optional[int] = None
+        # Target gameweek for deadline batch: the GW we're waiting to become is_current
+        self._deadline_target_gameweek_id: Optional[int] = None
         # Track if we've already refreshed picks/transfers for current deadline window
         self.deadline_refresh_completed: bool = False
         # First run time of deadline batch (for fixed-window retries so transfers endpoint can catch up)
         self._deadline_batch_first_run_time: Optional[datetime] = None
+        # True when we ran the deadline batch this cycle (so Phase 4 skips MVs to avoid double refresh)
+        self._deadline_batch_ran_this_cycle: bool = False
         # Throttle for FPL rank-change check (only run every 5 min when in BONUS_PENDING)
         self._last_rank_check_time: Optional[datetime] = None
         self._last_rank_check_gameweek: Optional[int] = None
@@ -222,20 +226,20 @@ class RefreshOrchestrator:
         ):
             return RefreshState.BONUS_PENDING
         
-        # Check transfer deadline (30+ minutes after deadline only)
-        # Strategy: Wait 30 minutes after deadline to avoid API lockup, then check
-        # once per minute until gameweek status changes indicate API is back
-        # Once refresh is complete, exit this state to allow normal state detection
+        # Check transfer deadline: enter when NEXT gameweek's deadline has passed by 30+ minutes.
+        # We then wait for that next GW to become is_current before running the batch.
         if not self.deadline_refresh_completed:
-            deadline_time = datetime.fromisoformat(current_gw["deadline_time"].replace("Z", "+00:00"))
-            now = datetime.now(timezone.utc)
-            time_to_deadline = (deadline_time - now).total_seconds()
-            
-            # Only enter TRANSFER_DEADLINE state 30+ minutes after deadline
-            # This avoids API errors during the 0-30 minute lockup window
-            # Exit once refresh is completed to allow normal state detection (e.g., LIVE_MATCHES)
-            if time_to_deadline <= -1800:  # 30 minutes (1800 seconds) after deadline
-                return RefreshState.TRANSFER_DEADLINE
+            next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+            if next_gws:
+                next_gw = next_gws[0]
+                next_deadline_raw = next_gw.get("deadline_time")
+                if next_deadline_raw:
+                    next_deadline = datetime.fromisoformat(next_deadline_raw.replace("Z", "+00:00"))
+                    now = datetime.now(timezone.utc)
+                    time_since_deadline = (now - next_deadline).total_seconds()
+                    if time_since_deadline >= 1800:  # 30 minutes after next GW's deadline
+                        self._deadline_target_gameweek_id = next_gw["id"]
+                        return RefreshState.TRANSFER_DEADLINE
         
         return RefreshState.IDLE
     
@@ -427,6 +431,24 @@ class RefreshOrchestrator:
             "New gameweek still not current after polling",
             extra={"next_gameweek": next_gw_id, "max_polls": max_polls},
         )
+
+    async def _short_bootstrap_check(self) -> bool:
+        """
+        Quick check that FPL API is responsive (1–2 attempts, ~30s delay if first fails).
+        Returns True if bootstrap-static succeeds, False otherwise. Used before deadline batch.
+        """
+        try:
+            await self.fpl_client.get_bootstrap_static()
+            return True
+        except Exception as e:
+            logger.info("Bootstrap check failed, retrying once in 30s", extra={"error": str(e)})
+            await asyncio.sleep(30)
+            try:
+                await self.fpl_client.get_bootstrap_static()
+                return True
+            except Exception as e2:
+                logger.warning("Bootstrap check failed again, skipping batch this cycle", extra={"error": str(e2)})
+                return False
 
     async def _refresh_gameweeks(self) -> Optional[Dict[str, Any]]:
         """Refresh gameweeks table. Returns bootstrap for reuse (e.g. player refresh)."""
@@ -1166,6 +1188,7 @@ class RefreshOrchestrator:
                     self.deadline_refresh_completed = False
                     self._deadline_batch_first_run_time = None
                     self.next_gameweek_id_before_deadline = None
+                    self._deadline_target_gameweek_id = None
                     self.previous_gameweek_state = None
                 
                 self.current_state = new_state
@@ -1245,288 +1268,204 @@ class RefreshOrchestrator:
                         logger.warning("Rank monitor check failed", extra={"error": str(e)}, exc_info=True)
             
             if self.current_state == RefreshState.TRANSFER_DEADLINE:
-                # ⚠️ CRITICAL: Post-deadline refresh strategy
-                # Wait 30 minutes after deadline, then run picks+transfers batch. Run for a fixed window
-                # (e.g. 45 min) so transfers endpoint has time to update (FPL can lag vs is_current).
+                # Run batch only when target gameweek is now is_current (trigger on flip).
                 now_utc = datetime.now(timezone.utc)
                 gameweeks = self.db_client.get_gameweeks(is_current=True, limit=1)
-                if gameweeks:
+                if not gameweeks:
+                    logger.warning("No current gameweek for deadline check")
+                else:
                     current_gw = gameweeks[0]
-                    # Ensure we know which GW we're waiting for (we only ever pass is_current to detector)
-                    if self.next_gameweek_id_before_deadline is None:
-                        self.next_gameweek_id_before_deadline = current_gw.get("id")
-                    status_changed = self._detect_gameweek_status_change(current_gw)
-                    # Run batch: on status change, or first time we haven't run yet this deadline, or again within window
-                    should_run_batch = False
-                    is_first_in_window = False
-                    if status_changed and not self.deadline_refresh_completed:
-                        should_run_batch = True
-                        is_first_in_window = True
-                    elif not self.deadline_refresh_completed and self._deadline_batch_first_run_time is None:
-                        # First time in TRANSFER_DEADLINE: run so we capture picks/transfers (don't rely on status_changed which needs prev state)
-                        should_run_batch = True
-                        is_first_in_window = True
-                    elif not self.deadline_refresh_completed and self._deadline_batch_first_run_time is not None:
-                        window_end = self._deadline_batch_first_run_time + timedelta(
-                            minutes=self.config.deadline_refresh_window_minutes
-                        )
-                        if now_utc < window_end:
-                            should_run_batch = True
-                            is_first_in_window = False
-
-                    if should_run_batch:
-                        if is_first_in_window:
-                            settle_sec = self.config.post_deadline_settle_seconds
-                            if settle_sec > 0:
-                                logger.info(
-                                    "GW status changed, waiting for API endpoints to settle",
-                                    extra={"gameweek": self.current_gameweek, "settle_seconds": settle_sec}
-                                )
-                                await asyncio.sleep(settle_sec)
-                        logger.info(
-                            "Refreshing deadline data",
-                            extra={"gameweek": self.current_gameweek, "first_in_window": is_first_in_window}
-                        )
-                        
-                        # Get all tracked managers
+                    target_gw_id = self._deadline_target_gameweek_id
+                    should_run = (
+                        target_gw_id is not None
+                        and current_gw["id"] == target_gw_id
+                        and not self.deadline_refresh_completed
+                    )
+                    if should_run:
+                        self._deadline_batch_ran_this_cycle = False
+                        self.current_gameweek = target_gw_id  # Use new GW for all batch steps
                         manager_ids = self._get_tracked_manager_ids()
-                        
-                        if manager_ids:
-                            # Refresh manager picks and transfers in batches
+                        league_count = 0
+                        leagues_result = type("_Res", (), {"data": []})()  # default empty
+                        try:
+                            leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
+                            league_count = len(leagues_result.data) if leagues_result.data else 0
+                        except Exception:
+                            pass
+                        run_id = self.db_client.insert_deadline_batch_start(target_gw_id)
+                        first_kickoff = self.db_client.get_first_kickoff_for_gameweek(target_gw_id)
+                        if first_kickoff:
+                            try:
+                                kickoff_dt = datetime.fromisoformat(first_kickoff.replace("Z", "+00:00"))
+                                if kickoff_dt.tzinfo is None:
+                                    kickoff_dt = kickoff_dt.replace(tzinfo=timezone.utc)
+                                mins_until = (kickoff_dt - now_utc).total_seconds() / 60
+                                logger.info("Deadline batch: first kickoff", extra={
+                                    "gameweek": target_gw_id,
+                                    "first_kickoff_utc": first_kickoff,
+                                    "minutes_until_first_kickoff": round(mins_until, 1),
+                                })
+                            except (ValueError, TypeError):
+                                pass
+                        phase = {}
+                        t0 = datetime.now(timezone.utc)
+                        bootstrap_ok = await self._short_bootstrap_check()
+                        phase["bootstrap_check_sec"] = round((datetime.now(timezone.utc) - t0).total_seconds(), 1)
+                        if not bootstrap_ok and run_id is not None:
+                            self.db_client.update_deadline_batch_finish(
+                                run_id,
+                                finished_at=datetime.now(timezone.utc).isoformat(),
+                                duration_seconds=(datetime.now(timezone.utc) - t0).total_seconds(),
+                                manager_count=len(manager_ids) if manager_ids else 0,
+                                league_count=league_count,
+                                success=False,
+                                phase_breakdown=phase,
+                            )
+                        elif not bootstrap_ok:
+                            pass  # No run_id, skip
+                        elif manager_ids:
+                            settle_sec = min(self.config.post_deadline_settle_seconds, 180)
+                            if settle_sec > 0:
+                                logger.info("Settling before deadline batch", extra={"settle_seconds": settle_sec})
+                                await asyncio.sleep(settle_sec)
+                            phase["settle_sec"] = settle_sec
+                            t1 = datetime.now(timezone.utc)
                             batch_size = 5
-                            total_batches = (len(manager_ids) + batch_size - 1) // batch_size
-                            
-                            logger.info("Refreshing picks and transfers", extra={
-                                "count": len(manager_ids),
-                                "total_batches": total_batches,
-                                "gameweek": self.current_gameweek
-                            })
-                            
-                            # Get deadline time for API wait logic (first run only)
                             deadline_time = None
                             if current_gw.get("deadline_time"):
                                 deadline_time = datetime.fromisoformat(
                                     current_gw["deadline_time"].replace("Z", "+00:00")
                                 )
-                            if is_first_in_window:
-                                # Pre-flight API check: Wait for API to be ready before first batch refresh
-                                if deadline_time:
-                                    current_time = datetime.now(timezone.utc)
-                                    logger.info("Waiting for API before batch refresh", extra={"gameweek": self.current_gameweek})
-                                    try:
-                                        api_ready = await self.manager_refresher.wait_for_api_after_deadline(
-                                            deadline_time,
-                                            current_time
-                                        )
-                                        if not api_ready:
-                                            logger.warning("API not ready, proceeding anyway", extra={"gameweek": self.current_gameweek})
-                                    except Exception as e:
-                                        logger.warning("API wait failed, proceeding anyway", extra={"gameweek": self.current_gameweek, "error": str(e)})
-                            
-                            # Track errors during batch refresh
                             failed_managers = set()
-                            
                             for batch_num in range(0, len(manager_ids), batch_size):
-                                batch = manager_ids[batch_num:batch_num + batch_size]
-                                batch_index = (batch_num // batch_size) + 1
-                                
-                                logger.debug("Processing manager batch for picks/transfers", extra={
-                                    "batch": batch_index,
-                                    "total_batches": total_batches,
-                                    "batch_size": len(batch)
-                                })
-                                
-                                # Process picks and transfers in parallel
+                                batch = manager_ids[batch_num : batch_num + batch_size]
                                 tasks = []
-                                for manager_id in batch:
+                                for mid in batch:
                                     tasks.append(
                                         self.manager_refresher.refresh_manager_picks(
-                                            manager_id,
-                                            self.current_gameweek,
-                                            deadline_time=deadline_time,
-                                            use_cache=False  # Force refresh from API
+                                            mid, target_gw_id, deadline_time=deadline_time, use_cache=False
                                         )
                                     )
-                                    tasks.append(
-                                        self.manager_refresher.refresh_manager_transfers(
-                                            manager_id,
-                                            self.current_gameweek
-                                        )
-                                    )
-                                
+                                    tasks.append(self.manager_refresher.refresh_manager_transfers(mid, target_gw_id))
                                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                                
-                                # Log any errors and track failures
-                                for i, result in enumerate(results):
-                                    if isinstance(result, Exception):
-                                        manager_index = i // 2  # Each manager has 2 tasks (picks, transfers)
-                                        task_index = i % 2  # 0 = picks, 1 = transfers
-                                        manager_id = batch[manager_index]
-                                        task_type = "picks" if task_index == 0 else "transfers"
-                                        
-                                        # Track failed managers
-                                        failed_managers.add(manager_id)
-                                        
-                                        # Check if it's a retryable error (API lockup, 5xx errors)
-                                        error_str = str(result)
-                                        is_retryable = any(keyword in error_str.lower() for keyword in [
-                                            "500", "502", "503", "504", "timeout", "connection", "maintenance"
-                                        ])
-                                        
-                                        logger.error("Manager %s failed", task_type, extra={
-                                            "manager_id": manager_id,
-                                            "gameweek": self.current_gameweek,
-                                            "task_type": task_type,
-                                            "error": error_str,
-                                            "is_retryable": is_retryable
-                                        }, exc_info=True)
-                                
-                                # Rate limiting: Wait 2 seconds between batches
+                                for i, res in enumerate(results):
+                                    if isinstance(res, Exception):
+                                        failed_managers.add(batch[i // 2])
+                                        logger.error("Manager picks/transfers failed", extra={
+                                            "manager_id": batch[i // 2], "gameweek": target_gw_id, "error": str(res)
+                                        })
                                 if batch_num + batch_size < len(manager_ids):
                                     await asyncio.sleep(2.0)
-                            
-                            # Evaluate refresh success
                             success_count = len(manager_ids) - len(failed_managers)
                             success_rate = (success_count / len(manager_ids)) * 100 if manager_ids else 0
-                            
-                            # Retry failed managers once if we have retryable errors
-                            if failed_managers and success_rate < 90:  # Less than 90% success
-                                logger.warning("Batch had failures, retrying", extra={
-                                    "gameweek": self.current_gameweek,
-                                    "failed": len(failed_managers),
-                                    "success_rate": f"{success_rate:.1f}%",
-                                    "total": len(manager_ids)
-                                })
-                                
-                                # Wait a bit before retry
+                            if failed_managers and success_rate < 90:
                                 await asyncio.sleep(5.0)
-                                
-                                # Retry failed managers
-                                retry_failed = list(failed_managers)
-                                failed_managers.clear()
-                                
-                                for manager_id in retry_failed:
+                                for mid in list(failed_managers):
                                     try:
                                         await self.manager_refresher.refresh_manager_picks(
-                                            manager_id,
-                                            self.current_gameweek,
-                                            deadline_time=deadline_time,
-                                            use_cache=False
+                                            mid, target_gw_id, deadline_time=deadline_time, use_cache=False
                                         )
-                                        await self.manager_refresher.refresh_manager_transfers(
-                                            manager_id,
-                                            self.current_gameweek
-                                        )
-                                        logger.info("Retry succeeded", extra={"manager_id": manager_id, "gameweek": self.current_gameweek})
-                                    except Exception as e:
-                                        failed_managers.add(manager_id)
-                                        logger.error("Retry failed", extra={"manager_id": manager_id, "gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
-                                    
-                                    # Rate limiting between retries
+                                        await self.manager_refresher.refresh_manager_transfers(mid, target_gw_id)
+                                        failed_managers.discard(mid)
+                                    except Exception:
+                                        pass
                                     await asyncio.sleep(2.0)
-                                
-                                # Recalculate success rate after retry
                                 success_count = len(manager_ids) - len(failed_managers)
                                 success_rate = (success_count / len(manager_ids)) * 100 if manager_ids else 0
-                            
-                            # Only mark as completed if we have reasonable success rate
-                            # Allow some failures (e.g., network issues) but not complete failure
-                            if success_rate >= 80:  # At least 80% success
-                                logger.info("Batch refresh done", extra={
-                                    "gameweek": self.current_gameweek,
-                                    "success": success_count,
-                                    "failed": len(failed_managers),
-                                    "success_rate": f"{success_rate:.1f}%",
-                                    "first_in_window": is_first_in_window
-                                })
-                                if is_first_in_window:
-                                    self._deadline_batch_first_run_time = now_utc
-                                    # Capture baselines and whitelist once (first successful run)
-                                    await self._capture_baselines_if_needed()
-                                    leagues_result = self.db_client.client.table("mini_leagues").select(
-                                        "league_id"
-                                    ).execute()
-                                    for league in leagues_result.data:
-                                        try:
-                                            await self.manager_refresher.build_player_whitelist(
-                                                league["league_id"],
-                                                self.current_gameweek
-                                            )
-                                        except Exception as e:
-                                            logger.error("Player whitelist failed", extra={
-                                                "league_id": league["league_id"],
-                                                "gameweek": self.current_gameweek,
-                                                "error": str(e)
-                                            }, exc_info=True)
-                                    # Wait for FPL to release new gameweek so we stop showing last week's data
+                            phase["picks_and_transfers_sec"] = round((datetime.now(timezone.utc) - t1).total_seconds(), 1)
+                            if success_rate >= 80:
+                                t2 = datetime.now(timezone.utc)
+                                for mid in manager_ids:
                                     try:
-                                        await self._wait_for_new_gameweek_release()
+                                        await self.manager_refresher.refresh_manager_gameweek_history(
+                                            mid, target_gw_id
+                                        )
                                     except Exception as e:
-                                        logger.warning("Wait for new gameweek release failed", extra={
-                                            "gameweek": self.current_gameweek,
-                                            "error": str(e)
-                                        }, exc_info=True)
-                                # Refresh ML Top Transfers MV after every batch so UI gets data when transfers endpoint updates
+                                        logger.warning("Manager history refresh failed", extra={"manager_id": mid, "error": str(e)})
+                                phase["history_refresh_sec"] = round((datetime.now(timezone.utc) - t2).total_seconds(), 1)
+                                t3 = datetime.now(timezone.utc)
+                                await self._capture_baselines_if_needed()
+                                phase["baselines_sec"] = round((datetime.now(timezone.utc) - t3).total_seconds(), 1)
+                                t4 = datetime.now(timezone.utc)
+                                for league in (leagues_result.data or []):
+                                    try:
+                                        await self.manager_refresher.build_player_whitelist(
+                                            league["league_id"], target_gw_id
+                                        )
+                                    except Exception as e:
+                                        logger.error("Player whitelist failed", extra={"league_id": league["league_id"], "error": str(e)})
+                                phase["whitelist_sec"] = round((datetime.now(timezone.utc) - t4).total_seconds(), 1)
+                                t5 = datetime.now(timezone.utc)
                                 try:
                                     self.db_client.refresh_league_transfer_aggregation()
                                 except Exception as mv_err:
-                                    logger.warning("League transfer aggregation refresh failed", extra={
-                                        "gameweek": self.current_gameweek,
-                                        "error": str(mv_err)
-                                    })
-                                # Mark completed only after fixed window so we don't cut off before transfers endpoint updates
-                                if is_first_in_window:
-                                    # Will run again next cycle(s) until window elapses
-                                    logger.info("Deadline batch first run done; will re-run until window elapses", extra={
-                                        "gameweek": self.current_gameweek,
-                                        "window_minutes": self.config.deadline_refresh_window_minutes
-                                    })
-                                else:
-                                    window_end = self._deadline_batch_first_run_time + timedelta(
-                                        minutes=self.config.deadline_refresh_window_minutes
+                                    logger.warning("League transfer aggregation failed", extra={"error": str(mv_err)})
+                                phase["transfer_aggregation_sec"] = round((datetime.now(timezone.utc) - t5).total_seconds(), 1)
+                                t6 = datetime.now(timezone.utc)
+                                try:
+                                    self.db_client.refresh_all_materialized_views()
+                                except Exception as e:
+                                    logger.error("Materialized views refresh failed", extra={"error": str(e)})
+                                phase["materialized_views_sec"] = round((datetime.now(timezone.utc) - t6).total_seconds(), 1)
+                                self._deadline_batch_ran_this_cycle = True
+                                self.deadline_refresh_completed = True
+                                finished_at = datetime.now(timezone.utc)
+                                duration_sec = (finished_at - t0).total_seconds()
+                                if run_id is not None:
+                                    self.db_client.update_deadline_batch_finish(
+                                        run_id,
+                                        finished_at=finished_at.isoformat(),
+                                        duration_seconds=round(duration_sec, 1),
+                                        manager_count=len(manager_ids),
+                                        league_count=league_count,
+                                        success=True,
+                                        phase_breakdown=phase,
                                     )
-                                    if now_utc >= window_end:
-                                        self.deadline_refresh_completed = True
-                                        logger.info("Deadline refresh done (window elapsed)", extra={
-                                            "gameweek": self.current_gameweek,
-                                            "success": success_count,
-                                            "failed": len(failed_managers),
-                                            "success_rate": f"{success_rate:.1f}%"
-                                        })
-                            else:
-                                # Too many failures - don't mark as completed, will retry next cycle
-                                logger.error("Batch failed, retrying next cycle", extra={
-                                    "gameweek": self.current_gameweek,
-                                    "success": success_count,
-                                    "failed": len(failed_managers),
-                                    "success_rate": f"{success_rate:.1f}%",
-                                    "threshold": "80%"
+                                logger.info("Deadline batch completed", extra={
+                                    "gameweek": target_gw_id,
+                                    "duration_sec": round(duration_sec, 1),
+                                    "success_count": success_count,
+                                    "phase_breakdown": phase,
                                 })
-                                # Don't mark as completed - will retry on next cycle
-                                return  # Exit early, don't mark as completed
+                            else:
+                                finished_at = datetime.now(timezone.utc)
+                                if run_id is not None:
+                                    self.db_client.update_deadline_batch_finish(
+                                        run_id,
+                                        finished_at=finished_at.isoformat(),
+                                        duration_seconds=(finished_at - t0).total_seconds(),
+                                        manager_count=len(manager_ids),
+                                        league_count=league_count,
+                                        success=False,
+                                        phase_breakdown=phase,
+                                    )
+                                logger.error("Deadline batch failed (success rate < 80%)", extra={
+                                    "gameweek": target_gw_id,
+                                    "success_rate": f"{success_rate:.1f}%",
+                                })
                         else:
-                            logger.warning("No managers for deadline refresh", extra={"gameweek": self.current_gameweek})
+                            logger.warning("No managers for deadline refresh", extra={"gameweek": target_gw_id})
                     elif self.deadline_refresh_completed:
                         logger.debug("Deadline refresh already completed", extra={"gameweek": self.current_gameweek})
-                    elif not status_changed:
-                        logger.debug("Waiting for gameweek status change after deadline", extra={
-                            "gameweek": self.current_gameweek
-                        })
                     else:
-                        logger.debug("Deadline state (window or status)", extra={"gameweek": self.current_gameweek})
-                else:
-                    logger.warning("No current gameweek for deadline check")
+                        logger.debug("Waiting for target GW to become current", extra={
+                            "target_gameweek": target_gw_id,
+                            "current_gameweek": current_gw.get("id"),
+                        })
             
             # Phase 4: Refresh materialized views (non-live states only; live does MVs in Phase 3 when do_full)
+            # Skip if we already ran MVs inside the deadline batch this cycle
             if self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
-                try:
-                    self.db_client.refresh_all_materialized_views()
-                except Exception as e:
-                    logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
+                if not self._deadline_batch_ran_this_cycle:
+                    try:
+                        self.db_client.refresh_all_materialized_views()
+                    except Exception as e:
+                        logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
 
         except Exception as e:
             logger.error("Fast cycle failed", extra={"error": str(e)}, exc_info=True)
         finally:
+            self._deadline_batch_ran_this_cycle = False
             # Always record fast cycle attempt so debug panel shows backend activity even when cycle fails
             try:
                 self.db_client.insert_refresh_event("fast")

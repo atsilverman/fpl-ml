@@ -970,6 +970,18 @@ class PlayerDataRefresher:
 
             if price_changes:
                 logger.info("Price changes", extra={"gameweek": gameweek, "count": len(price_changes)})
+                try:
+                    self.db_client.clear_price_change_predictions()
+                    logger.info(
+                        "Cleared price_change_predictions after detecting actual changes; next LiveFPL run will repopulate",
+                        extra={"gameweek": gameweek},
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Clear price_change_predictions failed",
+                        extra={"gameweek": gameweek, "error": str(e)},
+                        exc_info=True,
+                    )
 
             logger.info(
                 "Player prices done",
@@ -987,32 +999,36 @@ class PlayerDataRefresher:
     def sync_player_prices_from_bootstrap(self, bootstrap: Dict[str, Any], gameweek: int) -> None:
         """
         Upsert current prices for all players from bootstrap so player_prices always has
-        at least one row per player for the current gameweek. Called on every refresh cycle
-        so the UI can show current price even when the price-window refresh has not run.
+        at least one row per player for the current gameweek. Preserves existing
+        prior_price_tenths for today so we never overwrite the price-window snapshot.
         """
         if not gameweek:
             return
         try:
             elements = bootstrap.get("elements", [])
             today_iso = datetime.now(timezone.utc).date().isoformat()
+            existing_priors = self.db_client.get_today_prior_prices(today_iso, gameweek)
             for player in elements:
                 player_id = player.get("id")
                 if player_id is None:
                     continue
                 current_price = player.get("now_cost", 0)
+                prior = existing_priors.get(player_id)
                 price_data = {
                     "player_id": player_id,
                     "gameweek": gameweek,
                     "price_tenths": current_price,
-                    "price_change_tenths": 0,
+                    "price_change_tenths": (current_price - prior) if prior is not None else 0,
                     "recorded_at": datetime.now(timezone.utc).isoformat(),
                     "recorded_date": today_iso,
                 }
+                if prior is not None:
+                    price_data["prior_price_tenths"] = prior
                 self.db_client.upsert_player_price(price_data)
                 self.db_client.update_player_cost_tenths(player_id, current_price)
             logger.debug(
                 "Player prices synced from bootstrap",
-                extra={"gameweek": gameweek, "count": len(elements)},
+                extra={"gameweek": gameweek, "count": len(elements), "preserved_priors": len(existing_priors)},
             )
         except Exception as e:
             logger.warning(

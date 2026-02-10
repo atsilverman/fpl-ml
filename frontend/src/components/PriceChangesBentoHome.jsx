@@ -51,7 +51,9 @@ function formatSnapshotDate(isoDate) {
 function formatCapturedAt(isoString) {
   if (!isoString) return null
   const d = new Date(isoString)
-  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) + ' · ' + formatSnapshotDate(isoString.slice(0, 10))
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s+(AM|PM)$/i, '$1')
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return `Last Update: ${time} dot ${date}`
 }
 
 function normalizeName(name) {
@@ -143,7 +145,7 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
     >
       <div className="price-changes-bento-label-row">
         <h2 id="price-changes-home-heading" className="bento-card-label">
-          Price Changes
+          price predictions (owned)
         </h2>
         <span className="price-changes-bento-header-right">
           {capturedAt && (
