@@ -79,6 +79,41 @@ export default function Dashboard() {
   const [debugModalOpen, setDebugModalOpen] = useState(false)
   const [accountModalOpen, setAccountModalOpen] = useState(false)
 
+  const dashboardRef = useRef(null)
+  const headerRef = useRef(null)
+  const navRef = useRef(null)
+  const contentRef = useRef(null)
+
+  /* Set CSS variables from measured header and bottom nav height for dynamic top/bottom padding */
+  useEffect(() => {
+    const el = dashboardRef.current
+    const header = headerRef.current
+    const nav = navRef.current
+    if (!el || !header) return
+
+    const setVars = () => {
+      el.style.setProperty('--dashboard-header-height', `${header.offsetHeight}px`)
+      if (nav) {
+        el.style.setProperty('--dashboard-nav-height', `${nav.offsetHeight}px`)
+      }
+    }
+
+    setVars()
+    const ro = new ResizeObserver(setVars)
+    ro.observe(header)
+    if (nav) ro.observe(nav)
+    window.addEventListener('resize', setVars)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', setVars)
+    }
+  }, [])
+
+  /* Scroll main content to top when route or subpage (search) changes */
+  useEffect(() => {
+    contentRef.current?.scrollTo(0, 0)
+  }, [location.pathname, location.search])
+
   useEffect(() => {
     // Wait for auth to resolve before redirecting (prevents flash of login screen when already signed in)
     if (authLoading) return
@@ -160,8 +195,8 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
+    <div ref={dashboardRef} className="dashboard">
+      <header ref={headerRef} className="dashboard-header">
         <div className="header-content">
           <div className="header-title-section">
             <Link to="/" className="header-title-link" aria-label="Go to home">
@@ -177,7 +212,7 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          <nav className="header-nav page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
+          <nav ref={navRef} className="header-nav page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
         {pages.map(page => {
           const isDisabled = !['home', 'mini-league', 'gameweek', 'research'].includes(page.id)
           if (page.id === 'gameweek') {
@@ -375,7 +410,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="dashboard-content">
+      <main ref={contentRef} className="dashboard-content">
         <Outlet context={{ toggleBonus, setToggleBonus, showH2H, setShowH2H, setGameweekView, openDebugModal: () => setDebugModalOpen(true) }} />
       </main>
       <DebugModal isOpen={debugModalOpen} onClose={() => setDebugModalOpen(false)} />
