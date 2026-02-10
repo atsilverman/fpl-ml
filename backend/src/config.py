@@ -34,14 +34,16 @@ class Config:
     max_retry_delay: int = int(os.getenv("MAX_RETRY_DELAY", "60"))
     
     # Refresh Intervals (in seconds)
-    gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "45"))
+    gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "15"))
     # Fast loop (gameweeks + fixtures + players); shorter during live so minutes/points stay current
     fast_loop_interval: int = int(os.getenv("FAST_LOOP_INTERVAL", "15"))
     fast_loop_interval_live: int = int(os.getenv("FAST_LOOP_INTERVAL_LIVE", "10"))
+    # Post-deadline: poll gameweeks every N seconds to detect is_next → is_current and API return ASAP
+    fast_loop_interval_deadline: int = int(os.getenv("FAST_LOOP_INTERVAL_DEADLINE", "15"))
     # Kickoff window: use short interval when now is within N minutes of any fixture kickoff (multi-day GW: Sat–Mon)
     kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
-    # Post-deadline: wait N seconds after gameweek status change before batch refresh (lets API endpoints settle)
-    post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "180"))
+    # Post-deadline: wait N seconds before starting batch (lets API endpoints settle); keep short so fast loop isn't blocked long
+    post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "60"))
     # Post-deadline: run picks+transfers batch for this many minutes so transfers endpoint has time to update (FPL can lag vs is_current)
     deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
     # Slow loop (manager points + MVs) during live matches

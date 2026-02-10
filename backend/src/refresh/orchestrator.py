@@ -1332,7 +1332,7 @@ class RefreshOrchestrator:
                         elif not bootstrap_ok:
                             pass  # No run_id, skip
                         elif manager_ids:
-                            settle_sec = min(self.config.post_deadline_settle_seconds, 180)
+                            settle_sec = min(self.config.post_deadline_settle_seconds, 60)
                             if settle_sec > 0:
                                 logger.info("Settling before deadline batch", extra={"settle_seconds": settle_sec})
                                 await asyncio.sleep(settle_sec)
@@ -1486,7 +1486,7 @@ class RefreshOrchestrator:
             try:
                 await self._fast_cycle()
                 if self.current_state == RefreshState.TRANSFER_DEADLINE:
-                    await asyncio.sleep(60)
+                    await asyncio.sleep(self.config.fast_loop_interval_deadline)
                 elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     await asyncio.sleep(self.config.fast_loop_interval_live)
                 elif self.current_state == RefreshState.PRICE_WINDOW:
