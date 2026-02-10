@@ -226,20 +226,28 @@ class RefreshOrchestrator:
         ):
             return RefreshState.BONUS_PENDING
         
-        # Check transfer deadline: enter when NEXT gameweek's deadline has passed by 30+ minutes.
-        # We then wait for that next GW to become is_current before running the batch.
+        # Check transfer deadline: enter when we're 30+ min past the relevant deadline.
+        # (1) Next GW's deadline passed → wait for that GW to become is_current, then run batch.
+        # (2) Current GW's deadline passed → FPL may have already flipped; enter and run batch for current.
         if not self.deadline_refresh_completed:
+            now = datetime.now(timezone.utc)
             next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
             if next_gws:
                 next_gw = next_gws[0]
                 next_deadline_raw = next_gw.get("deadline_time")
                 if next_deadline_raw:
                     next_deadline = datetime.fromisoformat(next_deadline_raw.replace("Z", "+00:00"))
-                    now = datetime.now(timezone.utc)
-                    time_since_deadline = (now - next_deadline).total_seconds()
-                    if time_since_deadline >= 1800:  # 30 minutes after next GW's deadline
+                    time_since = (now - next_deadline).total_seconds()
+                    if time_since >= 1800:  # 30 min after next GW's deadline
                         self._deadline_target_gameweek_id = next_gw["id"]
                         return RefreshState.TRANSFER_DEADLINE
+            # Also enter when current GW's deadline was 30+ min ago (FPL may have already flipped)
+            current_deadline_raw = current_gw.get("deadline_time")
+            if current_deadline_raw:
+                current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
+                if (now - current_deadline).total_seconds() >= 1800:
+                    self._deadline_target_gameweek_id = current_gw["id"]
+                    return RefreshState.TRANSFER_DEADLINE
         
         return RefreshState.IDLE
     
