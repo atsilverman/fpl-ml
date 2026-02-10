@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 
 const DEFAULT_THRESHOLD = 5
 const MOBILE_MAX_WIDTH = 768
+const INERTIA_FRICTION = 0.92
+const INERTIA_MIN_VELOCITY = 0.4
+const VELOCITY_SAMPLES = 4
 
 /**
  * Locks touch scrolling to a single axis (horizontal or vertical) per gesture.
  * On the first significant touchmove, the dominant axis is chosen; subsequent
  * moves in that gesture only scroll along that axis. Prevents diagonal/rubber-band
  * scrolling on mobile for 2D scroll containers (e.g. tables with overflow: auto).
+ * Applies inertia on touch end so scroll continues and eases to a stop.
  *
  * @param {React.RefObject<HTMLElement | null>} ref - Ref to the scrollable element
  * @param {{ threshold?: number, enabled?: boolean, mobileOnly?: boolean }} [options]
@@ -40,16 +44,31 @@ export function useAxisLockedScroll(ref, options = {}) {
     let lock = null // 'h' | 'v' | null
     let lastX = 0
     let lastY = 0
+    const velocitySamples = { h: [], v: [] }
+    let lastTime = 0
+    let inertiaId = null
+
+    const cancelInertia = () => {
+      if (inertiaId != null) {
+        cancelAnimationFrame(inertiaId)
+        inertiaId = null
+      }
+    }
 
     const onTouchStart = (e) => {
       if (e.touches.length !== 1) return
+      cancelInertia()
       lock = null
+      velocitySamples.h.length = 0
+      velocitySamples.v.length = 0
       lastX = e.touches[0].clientX
       lastY = e.touches[0].clientY
+      lastTime = 0
     }
 
     const onTouchMove = (e) => {
       if (e.touches.length !== 1) return
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
       const x = e.touches[0].clientX
       const y = e.touches[0].clientY
       const dx = x - lastX
@@ -64,6 +83,17 @@ export function useAxisLockedScroll(ref, options = {}) {
           lock = absDx > absDy ? 'h' : 'v'
         }
       }
+
+      if (lastTime > 0 && (lock === 'h' || lock === 'v')) {
+        const dt = Math.min(now - lastTime, 50)
+        if (dt > 2) {
+          const arr = lock === 'h' ? velocitySamples.h : velocitySamples.v
+          const v = (lock === 'h' ? -dx : -dy) / dt
+          arr.push(v)
+          if (arr.length > VELOCITY_SAMPLES) arr.shift()
+        }
+      }
+      lastTime = now
 
       /* Only preventDefault when this element actually has scrollable space in the locked direction.
          Otherwise the touch would be swallowed and the page/body could not scroll (e.g. Mini League
@@ -83,7 +113,43 @@ export function useAxisLockedScroll(ref, options = {}) {
       }
     }
 
+    const runInertia = (axis, initialVelocity) => {
+      const maxScroll = axis === 'h' ? el.scrollWidth - el.clientWidth : el.scrollHeight - el.clientHeight
+      if (maxScroll <= 0) return
+      let velocity = initialVelocity
+      const friction = INERTIA_FRICTION
+
+      const tick = () => {
+        if (Math.abs(velocity) < INERTIA_MIN_VELOCITY) return
+        if (axis === 'h') {
+          const next = el.scrollLeft + velocity
+          if (next <= 0 || next >= maxScroll) {
+            velocity = 0
+            return
+          }
+          el.scrollLeft = next
+        } else {
+          const next = el.scrollTop + velocity
+          if (next <= 0 || next >= maxScroll) {
+            velocity = 0
+            return
+          }
+          el.scrollTop = next
+        }
+        velocity *= friction
+        inertiaId = requestAnimationFrame(tick)
+      }
+      inertiaId = requestAnimationFrame(tick)
+    }
+
     const onTouchEnd = () => {
+      if (lock === 'h' && velocitySamples.h.length > 0) {
+        const avg = velocitySamples.h.reduce((a, b) => a + b, 0) / velocitySamples.h.length
+        runInertia('h', avg * 16)
+      } else if (lock === 'v' && velocitySamples.v.length > 0) {
+        const avg = velocitySamples.v.reduce((a, b) => a + b, 0) / velocitySamples.v.length
+        runInertia('v', avg * 16)
+      }
       lock = null
     }
 
@@ -93,6 +159,7 @@ export function useAxisLockedScroll(ref, options = {}) {
     el.addEventListener('touchcancel', onTouchEnd, { passive: true })
 
     return () => {
+      cancelInertia()
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)

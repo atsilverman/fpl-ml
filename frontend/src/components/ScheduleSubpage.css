@@ -1053,21 +1053,29 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   flex-shrink: 0;
 }
 
-/* Opponent difficulty (FPL strength 1–5): green = easier, red = harder; theme-aware */
+/* Opponent difficulty (FPL strength 1–5): green = easier, red = harder; theme-aware. 1 and 5 emphasised. */
 .schedule-cell-difficulty-1 {
-  background: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--bg-primary));
+  background: color-mix(in srgb, var(--accent-green, #10b981) 40%, var(--bg-primary));
+  font-weight: 700;
+}
+.schedule-cell-difficulty-1 .schedule-cell-abbr-display {
+  font-weight: 800;
 }
 .schedule-cell-difficulty-2 {
-  background: color-mix(in srgb, var(--accent-green, #10b981) 7%, var(--bg-primary));
+  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-primary));
 }
 .schedule-cell-difficulty-3 {
-  /* neutral – keep default */
+  background: var(--bg-card);
 }
 .schedule-cell-difficulty-4 {
-  background: color-mix(in srgb, var(--accent-red, #ef4444) 7%, var(--bg-primary));
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-primary));
 }
 .schedule-cell-difficulty-5 {
-  background: color-mix(in srgb, var(--accent-red, #ef4444) 22%, var(--bg-primary));
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 40%, var(--bg-primary));
+  font-weight: 700;
+}
+.schedule-cell-difficulty-5 .schedule-cell-abbr-display {
+  font-weight: 800;
 }
 
 @media (max-width: 768px) {

@@ -31,8 +31,8 @@ function getOverridesByDimension(overridesMap, dimension) {
   return overridesMap?.overall ?? null
 }
 
-function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension, compact }) {
-  if (!opponent) return <td className={`schedule-cell schedule-cell-empty${compact ? ' schedule-cell--compact' : ''}`}>—</td>
+function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension, compact, colSpan }) {
+  if (!opponent) return <td colSpan={colSpan} className={`schedule-cell schedule-cell-empty${compact ? ' schedule-cell--compact' : ''}`}>—</td>
   const short = opponent.short_name ?? '?'
   const display = opponent.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
   const baseDifficulty = getBaseDifficultyByDimension(opponent, difficultyDimension)
@@ -69,6 +69,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
   return (
     <td
+      colSpan={colSpan}
       className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${difficultyClass} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}`}
       title={opponent.team_name ?? short}
       role={canOpenPopup ? 'button' : undefined}
@@ -377,6 +378,26 @@ export default function ScheduleSubpage() {
                   {gameweeks.flatMap((gw) => {
                     const opponents = getOpponents(teamId, gw.id)
                     const slots = slotsPerGw[gw.id] ?? 1
+                    const singleFixtureMerge = slots > 1 && opponents.length <= 1
+                    if (singleFixtureMerge) {
+                      const opponent = opponents[0] ?? null
+                      const lastH2H = opponent ? lastH2HMap[pairKey(teamId, opponent.team_id)] ?? null : null
+                      return (
+                        <OpponentCell
+                          key={gw.id}
+                          rowTeamId={teamId}
+                          opponent={opponent}
+                          lastH2H={lastH2H}
+                          showReverseScores={showReverseScores}
+                          onMatchupClick={handleMatchupClick}
+                          difficultyOverridesByDimension={difficultyOverridesByDimension}
+                          useCustomDifficulty={useCustomDifficulty}
+                          difficultyDimension={difficultyDimension}
+                          compact={false}
+                          colSpan={slots}
+                        />
+                      )
+                    }
                     return Array.from({ length: slots }, (_, slotIndex) => {
                       const opponent = opponents[slotIndex] ?? null
                       const lastH2H = opponent ? lastH2HMap[pairKey(teamId, opponent.team_id)] ?? null : null
