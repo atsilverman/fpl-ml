@@ -225,6 +225,12 @@ export default function DebugModal({ isOpen, onClose }) {
             ) : (
               <div className="deadline-batch-debug">
                 <div className="deadline-batch-meta">
+                  {deadlineBatchLatest.gameweek != null && (
+                    <div className="deadline-batch-meta-row">
+                      <span className="deadline-batch-label">Gameweek</span>
+                      <span>GW {deadlineBatchLatest.gameweek}</span>
+                    </div>
+                  )}
                   <div className="deadline-batch-meta-row">
                     <span className="deadline-batch-label">Started (GW became current)</span>
                     <span className="gw-debug-table-mono">{formatDeadlineGw(deadlineBatchLatest.started_at)}</span>

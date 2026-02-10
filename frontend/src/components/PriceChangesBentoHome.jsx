@@ -53,7 +53,7 @@ function formatCapturedAt(isoString) {
   const d = new Date(isoString)
   const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true }).replace(/\s+(AM|PM)$/i, '$1')
   const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-  return `Last Update: ${time} dot ${date}`
+  return `Last Update: ${date} · ${time}`
 }
 
 function normalizeName(name) {
