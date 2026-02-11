@@ -702,9 +702,14 @@ class RefreshOrchestrator:
         fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]],
     ) -> None:
         """
-        Update fixture home_score, away_score and minutes from event-live (same source as GW points).
-        Keeps matches page in sync with GW points and match clock; event-live minutes are often
-        more current than the /fixtures/ API, so we derive fixture minutes as max player minutes.
+        Update fixture home_score, away_score and minutes from event-live (same source as GW points),
+        but never show a lower value than the /fixtures/ API (hybrid of both sources).
+
+        - Scoreline: Fixtures API can update before event-live (e.g. stoppage-time goals at 45+2).
+          We take max(api score, event-live derived) so the 5th goal appears as soon as either source has it.
+        - Minutes: Fixtures API has the match clock (e.g. 66'); event-live has "minutes played" per
+          player (e.g. 62' for a sub). We take max(api minutes, max player minutes) so we don't show 62' when
+          the live clock is 66'.
         """
         if not bootstrap or not fixtures_by_gameweek or not live_data.get("elements"):
             return
@@ -732,12 +737,19 @@ class RefreshOrchestrator:
                     away_goals += goals
                     if mins > max_minutes:
                         max_minutes = mins
+            # Hybrid: never show less than fixtures API (avoids stale scoreline/goal and low live minute)
+            api_home = fixture.get("team_h_score")
+            api_away = fixture.get("team_a_score")
+            api_minutes = fixture.get("minutes") or 0
+            home_score = max((api_home if api_home is not None else 0), home_goals)
+            away_score = max((api_away if api_away is not None else 0), away_goals)
+            minutes_value = max(api_minutes, max_minutes) if (api_minutes > 0 or max_minutes > 0) else 0
             try:
                 self.db_client.update_fixture_scores(
                     fpl_fixture_id,
-                    home_score=home_goals,
-                    away_score=away_goals,
-                    minutes=max_minutes if max_minutes > 0 else None,
+                    home_score=home_score,
+                    away_score=away_score,
+                    minutes=minutes_value if minutes_value > 0 else None,
                 )
             except Exception as e:
                 logger.warning(
