@@ -331,7 +331,13 @@
   }
 }
 
-/* DGW: second fixture row (same player, second opponent) – no indent, align with others */
+/* DGW: no divider between the two game rows (data columns only); keep divider in player column between different players */
+.gameweek-points-tr-dgw-first .gameweek-points-td:not(.gameweek-points-td-player-fixed) {
+  border-bottom: none;
+}
+.gameweek-points-td-player-dgw-span {
+  vertical-align: middle;
+}
 .gameweek-points-tr-dgw-second .gameweek-points-td-pts {
   font-size: 0.95em;
   color: var(--text-secondary);

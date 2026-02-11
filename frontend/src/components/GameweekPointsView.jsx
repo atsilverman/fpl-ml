@@ -179,6 +179,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
   const IMPACT_BAR_MAX = 100
 
   const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick }) => {
+    const isDgwFirstRow = Boolean(player.isDgwRow && player.dgwRowIndex === 0)
     const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
     const captainLabel = !isDgwSecondRow && player.is_captain
       ? (player.multiplier === 3 ? 'TC' : 'C')
@@ -292,45 +293,50 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         onClick={onRowClick ? handleRowClick : undefined}
         onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(e) } } : undefined}
         title={onRowClick && player.player_name ? `View details for ${player.player_name}` : undefined}
-        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''} ${onRowClick ? 'gameweek-points-tr-clickable' : ''}`}
+        className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwFirstRow ? 'gameweek-points-tr-dgw-first' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''} ${onRowClick ? 'gameweek-points-tr-clickable' : ''}`}
       >
-        <td className="gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed">
-          <div className="gameweek-points-player-info-cell">
-            {player.player_team_short_name && (
-              <img
-                src={`/badges/${player.player_team_short_name}.svg`}
-                alt=""
-                className="gameweek-points-team-badge"
-                onError={(e) => { e.target.style.display = 'none' }}
-              />
-            )}
-            <div className="gameweek-points-name-and-autosub">
-              <span className={`gameweek-points-player-name-text${isOwnedByYou ? ' gameweek-points-player-name-text--owned-by-you' : ''}`} title={player.player_name}>
-                {(() => {
-                  const name = String(player.player_name ?? '')
-                  return name.length > PLAYER_NAME_MAX_LENGTH ? name.slice(0, PLAYER_NAME_MAX_LENGTH) + '..' : name
-                })()}
-                {captainLabel && (
-                  <span className="gameweek-points-captain-badge-inline">{captainLabel}</span>
-                )}
-                {assistantLabel && (
-                  <span className="gameweek-points-assistant-badge-inline">{assistantLabel}</span>
-                )}
-                {isAutosubOut && (
-                  <span className="gameweek-points-autosub-icon gameweek-points-autosub-out-icon" title="Auto-subbed out">
-                    <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
-                  </span>
-                )}
-                {isAutosubIn && (
-                  <span className="gameweek-points-autosub-icon gameweek-points-autosub-in-icon" title="Auto-subbed in">
-                    <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
-                  </span>
-                )}
-              </span>
+        {!isDgwSecondRow && (
+          <td
+            className={`gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed${isDgwFirstRow ? ' gameweek-points-td-player-dgw-span' : ''}`}
+            rowSpan={isDgwFirstRow ? 2 : undefined}
+          >
+            <div className="gameweek-points-player-info-cell">
+              {player.player_team_short_name && (
+                <img
+                  src={`/badges/${player.player_team_short_name}.svg`}
+                  alt=""
+                  className="gameweek-points-team-badge"
+                  onError={(e) => { e.target.style.display = 'none' }}
+                />
+              )}
+              <div className="gameweek-points-name-and-autosub">
+                <span className={`gameweek-points-player-name-text${isOwnedByYou ? ' gameweek-points-player-name-text--owned-by-you' : ''}`} title={player.player_name}>
+                  {(() => {
+                    const name = String(player.player_name ?? '')
+                    return name.length > PLAYER_NAME_MAX_LENGTH ? name.slice(0, PLAYER_NAME_MAX_LENGTH) + '..' : name
+                  })()}
+                  {captainLabel && (
+                    <span className="gameweek-points-captain-badge-inline">{captainLabel}</span>
+                  )}
+                  {assistantLabel && (
+                    <span className="gameweek-points-assistant-badge-inline">{assistantLabel}</span>
+                  )}
+                  {isAutosubOut && (
+                    <span className="gameweek-points-autosub-icon gameweek-points-autosub-out-icon" title="Auto-subbed out">
+                      <ArrowDownRight size={12} strokeWidth={2.5} aria-hidden />
+                    </span>
+                  )}
+                  {isAutosubIn && (
+                    <span className="gameweek-points-autosub-icon gameweek-points-autosub-in-icon" title="Auto-subbed in">
+                      <ArrowUpRight size={12} strokeWidth={2.5} aria-hidden />
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
-          </div>
-          <span className="gameweek-points-col-sep" aria-hidden />
-        </td>
+            <span className="gameweek-points-col-sep" aria-hidden />
+          </td>
+        )}
         <td
             className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
             title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
