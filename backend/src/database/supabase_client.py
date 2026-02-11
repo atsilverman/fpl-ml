@@ -199,6 +199,21 @@ class SupabaseClient:
             "occurred_at": datetime.now(timezone.utc).isoformat(),
         }).execute()
 
+    def has_successful_deadline_batch_for_gameweek(self, gameweek: int) -> bool:
+        """
+        Return True if we already have a successful deadline batch run for this gameweek.
+        Used to avoid re-running the batch after restart or state re-entry.
+        """
+        result = (
+            self.client.table("deadline_batch_runs")
+            .select("id")
+            .eq("gameweek", gameweek)
+            .eq("success", True)
+            .limit(1)
+            .execute()
+        )
+        return bool(result.data and len(result.data) > 0)
+
     def insert_deadline_batch_start(self, gameweek: int) -> Optional[int]:
         """
         Record that the deadline batch started (when is_current changed for this gameweek).

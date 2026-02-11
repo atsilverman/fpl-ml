@@ -44,6 +44,9 @@ class Config:
     kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
     # Post-deadline: wait N seconds before starting batch (lets API endpoints settle); keep short so fast loop isn't blocked long
     post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "60"))
+    # Post-deadline: picks+transfers batch size (managers per batch) and sleep between batches (seconds)
+    deadline_batch_size: int = int(os.getenv("DEADLINE_BATCH_SIZE", "15"))
+    deadline_batch_sleep_seconds: float = float(os.getenv("DEADLINE_BATCH_SLEEP_SECONDS", "1.0"))
     # Post-deadline: run picks+transfers batch for this many minutes so transfers endpoint has time to update (FPL can lag vs is_current)
     deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
     # Slow loop (manager points + MVs) during live matches

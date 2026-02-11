@@ -1284,6 +1284,10 @@ class RefreshOrchestrator:
                 else:
                     current_gw = gameweeks[0]
                     target_gw_id = self._deadline_target_gameweek_id
+                    # Persisted check: skip if we already completed a successful batch for this GW (survives restart)
+                    if target_gw_id is not None and current_gw["id"] == target_gw_id and self.db_client.has_successful_deadline_batch_for_gameweek(target_gw_id):
+                        self.deadline_refresh_completed = True
+                        logger.info("Deadline batch already completed for this gameweek (persisted), skipping", extra={"gameweek": target_gw_id})
                     should_run = (
                         target_gw_id is not None
                         and current_gw["id"] == target_gw_id
@@ -1338,13 +1342,15 @@ class RefreshOrchestrator:
                                 await asyncio.sleep(settle_sec)
                             phase["settle_sec"] = settle_sec
                             t1 = datetime.now(timezone.utc)
-                            batch_size = 5
+                            batch_size = self.config.deadline_batch_size
+                            batch_sleep = self.config.deadline_batch_sleep_seconds
                             deadline_time = None
                             if current_gw.get("deadline_time"):
                                 deadline_time = datetime.fromisoformat(
                                     current_gw["deadline_time"].replace("Z", "+00:00")
                                 )
                             failed_managers = set()
+                            picks_metadata = {}  # manager_id -> {active_chip, gameweek_rank} from picks phase
                             for batch_num in range(0, len(manager_ids), batch_size):
                                 batch = manager_ids[batch_num : batch_num + batch_size]
                                 tasks = []
@@ -1357,39 +1363,33 @@ class RefreshOrchestrator:
                                     tasks.append(self.manager_refresher.refresh_manager_transfers(mid, target_gw_id))
                                 results = await asyncio.gather(*tasks, return_exceptions=True)
                                 for i, res in enumerate(results):
-                                    if isinstance(res, Exception):
-                                        failed_managers.add(batch[i // 2])
-                                        logger.error("Manager picks/transfers failed", extra={
-                                            "manager_id": batch[i // 2], "gameweek": target_gw_id, "error": str(res)
-                                        })
-                                if batch_num + batch_size < len(manager_ids):
-                                    await asyncio.sleep(2.0)
+                                    if i % 2 == 0:
+                                        mid = batch[i // 2]
+                                        if isinstance(res, Exception):
+                                            failed_managers.add(mid)
+                                            logger.error("Manager picks/transfers failed", extra={
+                                                "manager_id": mid, "gameweek": target_gw_id, "error": str(res)
+                                            })
+                                        elif isinstance(res, dict):
+                                            picks_metadata[mid] = {"active_chip": res.get("active_chip"), "gameweek_rank": res.get("gameweek_rank")}
+                                if batch_num + batch_size < len(manager_ids) and batch_sleep > 0:
+                                    await asyncio.sleep(batch_sleep)
                             success_count = len(manager_ids) - len(failed_managers)
                             success_rate = (success_count / len(manager_ids)) * 100 if manager_ids else 0
-                            if failed_managers and success_rate < 90:
-                                await asyncio.sleep(5.0)
-                                for mid in list(failed_managers):
-                                    try:
-                                        await self.manager_refresher.refresh_manager_picks(
-                                            mid, target_gw_id, deadline_time=deadline_time, use_cache=False
-                                        )
-                                        await self.manager_refresher.refresh_manager_transfers(mid, target_gw_id)
-                                        failed_managers.discard(mid)
-                                    except Exception:
-                                        pass
-                                    await asyncio.sleep(2.0)
-                                success_count = len(manager_ids) - len(failed_managers)
-                                success_rate = (success_count / len(manager_ids)) * 100 if manager_ids else 0
                             phase["picks_and_transfers_sec"] = round((datetime.now(timezone.utc) - t1).total_seconds(), 1)
                             if success_rate >= 80:
                                 t2 = datetime.now(timezone.utc)
-                                for mid in manager_ids:
+                                # Fast path: seed history from previous GW (no FPL history/picks API calls)
+                                self.manager_refresher.seed_manager_gameweek_history_from_previous(
+                                    manager_ids, target_gw_id, picks_metadata
+                                )
+                                for league in (leagues_result.data or []):
                                     try:
-                                        await self.manager_refresher.refresh_manager_gameweek_history(
-                                            mid, target_gw_id
+                                        await self.manager_refresher.calculate_mini_league_ranks(
+                                            league["league_id"], target_gw_id
                                         )
                                     except Exception as e:
-                                        logger.warning("Manager history refresh failed", extra={"manager_id": mid, "error": str(e)})
+                                        logger.warning("Mini league ranks failed", extra={"league_id": league["league_id"], "error": str(e)})
                                 phase["history_refresh_sec"] = round((datetime.now(timezone.utc) - t2).total_seconds(), 1)
                                 t3 = datetime.now(timezone.utc)
                                 await self._capture_baselines_if_needed()
@@ -1447,6 +1447,7 @@ class RefreshOrchestrator:
                                         success=False,
                                         phase_breakdown=phase,
                                     )
+                                self.deadline_refresh_completed = True
                                 logger.error("Deadline batch failed (success rate < 80%)", extra={
                                     "gameweek": target_gw_id,
                                     "success_rate": f"{success_rate:.1f}%",

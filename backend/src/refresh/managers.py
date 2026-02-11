@@ -265,6 +265,8 @@ class ManagerDataRefresher:
                         },
                     )
             active_chip = picks_data.get("active_chip")
+            entry_history = picks_data.get("entry_history") or {}
+            gameweek_rank = entry_history.get("rank")
             
             for pick in picks:
                 is_captain = pick.get("is_captain", False)
@@ -303,6 +305,8 @@ class ManagerDataRefresher:
                 "gameweek": gameweek,
                 "picks_count": len(picks)
             })
+            # Return metadata for deadline batch fast path (avoids duplicate picks fetch in history phase)
+            return {"active_chip": active_chip, "gameweek_rank": gameweek_rank}
             
         except Exception as e:
             logger.error("Error refreshing manager picks", extra={
@@ -310,6 +314,7 @@ class ManagerDataRefresher:
                 "gameweek": gameweek,
                 "error": str(e)
             }, exc_info=True)
+            return None
     
     async def refresh_manager_transfers(
         self,
@@ -858,7 +863,75 @@ class ManagerDataRefresher:
                 "gameweek": gameweek,
                 "error": str(e)
             }, exc_info=True)
-    
+
+    def seed_manager_gameweek_history_from_previous(
+        self,
+        manager_ids: List[int],
+        target_gw_id: int,
+        picks_metadata: Dict[int, Dict[str, Any]],
+    ) -> None:
+        """
+        Create manager_gameweek_history rows for the new current GW by copying from previous GW.
+        No FPL API calls - used at deadline batch when GW just became is_current (pre-kickoff).
+        picks_metadata: manager_id -> {"active_chip": ..., "gameweek_rank": ...} from picks phase.
+        """
+        if target_gw_id < 1:
+            return
+        prev_gw = target_gw_id - 1
+        now_iso = datetime.now(timezone.utc).isoformat()
+        for manager_id in manager_ids:
+            try:
+                prev_rows = self.db_client.client.table("manager_gameweek_history").select(
+                    "total_points, team_value_tenths, bank_tenths, overall_rank, mini_league_rank"
+                ).eq("manager_id", manager_id).eq("gameweek", prev_gw).limit(1).execute().data
+                meta = picks_metadata.get(manager_id) or {}
+                active_chip = meta.get("active_chip")
+                gameweek_rank = meta.get("gameweek_rank")
+                if not prev_rows:
+                    # No previous GW (e.g. GW1): create minimal row with zeros
+                    self.db_client.upsert_manager_gameweek_history({
+                        "manager_id": manager_id,
+                        "gameweek": target_gw_id,
+                        "gameweek_points": 0,
+                        "transfer_cost": 0,
+                        "total_points": 0,
+                        "transfers_made": 0,
+                        "active_chip": active_chip,
+                        "gameweek_rank": gameweek_rank,
+                        "updated_at": now_iso,
+                    })
+                    continue
+                prev = prev_rows[0]
+                # Count transfers for this manager+GW (we just wrote them in picks+transfers phase)
+                trans = self.db_client.client.table("manager_transfers").select("id").eq(
+                    "manager_id", manager_id
+                ).eq("gameweek", target_gw_id).execute()
+                transfers_made = len(trans.data or [])
+                history_data = {
+                    "manager_id": manager_id,
+                    "gameweek": target_gw_id,
+                    "gameweek_points": 0,
+                    "transfer_cost": 0,
+                    "total_points": prev["total_points"],
+                    "team_value_tenths": prev.get("team_value_tenths"),
+                    "bank_tenths": prev.get("bank_tenths"),
+                    "previous_overall_rank": prev.get("overall_rank"),
+                    "previous_mini_league_rank": prev.get("mini_league_rank"),
+                    "baseline_total_points": prev["total_points"],
+                    "transfers_made": transfers_made,
+                    "active_chip": active_chip,
+                    "gameweek_rank": gameweek_rank,
+                    "updated_at": now_iso,
+                }
+                self.db_client.upsert_manager_gameweek_history(history_data)
+            except Exception as e:
+                logger.warning("Seed history from previous failed", extra={
+                    "manager_id": manager_id, "gameweek": target_gw_id, "error": str(e)
+                })
+        logger.info("Seeded manager_gameweek_history from previous GW", extra={
+            "gameweek": target_gw_id, "prev_gw": prev_gw, "count": len(manager_ids)
+        })
+
     async def calculate_mini_league_ranks(
         self,
         league_id: int,
