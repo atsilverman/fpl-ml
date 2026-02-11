@@ -53,8 +53,13 @@ class FPLRefreshService:
             
             self.running = True
             
-            # Start refresh loop
-            await self.orchestrator.run()
+            # Start refresh loop (exits when orchestrator.running is set False by signal)
+            try:
+                await self.orchestrator.run()
+            finally:
+                # Close FPL client only after run() has exited so in-flight requests don't see "client has been closed"
+                if self.orchestrator:
+                    await self.orchestrator.shutdown()
             
         except Exception as e:
             logger.error("Fatal error in refresh service", extra={
@@ -64,11 +69,11 @@ class FPLRefreshService:
             raise
     
     def _handle_shutdown(self, signum):
-        """Handle shutdown signals gracefully."""
+        """Handle shutdown signals: stop loops first; client is closed in start() after run() exits."""
         logger.info("Received shutdown signal", extra={"signal": signum})
         self.running = False
         if self.orchestrator:
-            asyncio.create_task(self.orchestrator.shutdown())
+            self.orchestrator.running = False
 
 
 async def main():
