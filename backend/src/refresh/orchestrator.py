@@ -73,6 +73,8 @@ class RefreshOrchestrator:
         # Hourly refresh: refresh all managers' overall_rank and gameweek_rank every 60 minutes
         self._last_hourly_rank_refresh_time: Optional[datetime] = None
         self._hourly_rank_refresh_interval_seconds: int = 3600  # 1 hour
+        # Throttle live standings inside fast cycle so most fast cycles are short (gameweeks + fixtures + players only)
+        self._last_live_standings_in_fast_cycle: Optional[datetime] = None
         
     async def initialize(self):
         """Initialize orchestrator and clients."""
@@ -1179,7 +1181,9 @@ class RefreshOrchestrator:
                     "from": self.current_state.value,
                     "to": new_state.value
                 })
-                
+                # When leaving live, reset standings throttle so next time we enter live we run standings on first cycle
+                if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING) and new_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                    self._last_live_standings_in_fast_cycle = None
                 # If transitioning away from TRANSFER_DEADLINE, reset tracking flags
                 if self.current_state == RefreshState.TRANSFER_DEADLINE:
                     logger.info("Exiting deadline state", extra={
@@ -1241,43 +1245,52 @@ class RefreshOrchestrator:
                     self.db_client.insert_refresh_duration_log("gw_players", "fast", self.current_state.value, duration_ms)
                 except Exception:
                     pass
-                # Live-only manager points + ranks + MV so standings update this cycle (no FPL API)
-                try:
-                    t_live_standings = datetime.now(timezone.utc)
-                    manager_ids = self._get_tracked_manager_ids()
-                    if manager_ids and self.current_gameweek:
-                        await self.manager_refresher.refresh_manager_gameweek_points_live_only(
-                            manager_ids, self.current_gameweek
-                        )
-                        any_fixture_started = False
+                # Live-only manager points + ranks + MV: run at most every live_standings_in_fast_interval_seconds
+                # so most fast cycles stay short and "Since backend" updates every ~10–30s
+                now_utc = datetime.now(timezone.utc)
+                interval_sec = self.config.live_standings_in_fast_interval_seconds
+                should_run_standings = (
+                    self._last_live_standings_in_fast_cycle is None
+                    or (now_utc - self._last_live_standings_in_fast_cycle).total_seconds() >= interval_sec
+                )
+                if should_run_standings:
+                    try:
+                        t_live_standings = datetime.now(timezone.utc)
+                        manager_ids = self._get_tracked_manager_ids()
+                        if manager_ids and self.current_gameweek:
+                            await self.manager_refresher.refresh_manager_gameweek_points_live_only(
+                                manager_ids, self.current_gameweek
+                            )
+                            any_fixture_started = False
+                            try:
+                                fixtures = self.db_client.client.table("fixtures").select("started").eq(
+                                    "gameweek", self.current_gameweek
+                                ).execute().data
+                                any_fixture_started = any(f.get("started", False) for f in (fixtures or []))
+                            except Exception:
+                                pass
+                            if any_fixture_started:
+                                leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
+                                for league in (leagues_result.data or []):
+                                    try:
+                                        await self.manager_refresher.calculate_mini_league_ranks(
+                                            league["league_id"], self.current_gameweek
+                                        )
+                                    except Exception as e:
+                                        logger.error("League ranks failed", extra={
+                                            "league_id": league["league_id"],
+                                            "gameweek": self.current_gameweek,
+                                            "error": str(e),
+                                        }, exc_info=True)
+                            self.db_client.refresh_materialized_views_for_live()
+                        self._last_live_standings_in_fast_cycle = datetime.now(timezone.utc)
+                        duration_ms = int((datetime.now(timezone.utc) - t_live_standings).total_seconds() * 1000)
                         try:
-                            fixtures = self.db_client.client.table("fixtures").select("started").eq(
-                                "gameweek", self.current_gameweek
-                            ).execute().data
-                            any_fixture_started = any(f.get("started", False) for f in (fixtures or []))
+                            self.db_client.insert_refresh_duration_log("live_standings", "fast", self.current_state.value, duration_ms)
                         except Exception:
                             pass
-                        if any_fixture_started:
-                            leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
-                            for league in (leagues_result.data or []):
-                                try:
-                                    await self.manager_refresher.calculate_mini_league_ranks(
-                                        league["league_id"], self.current_gameweek
-                                    )
-                                except Exception as e:
-                                    logger.error("League ranks failed", extra={
-                                        "league_id": league["league_id"],
-                                        "gameweek": self.current_gameweek,
-                                        "error": str(e),
-                                    }, exc_info=True)
-                        self.db_client.refresh_materialized_views_for_live()
-                    duration_ms = int((datetime.now(timezone.utc) - t_live_standings).total_seconds() * 1000)
-                    try:
-                        self.db_client.insert_refresh_duration_log("live_standings", "fast", self.current_state.value, duration_ms)
-                    except Exception:
-                        pass
-                except Exception as e:
-                    logger.warning("Live standings update failed", extra={"error": str(e)}, exc_info=True)
+                    except Exception as e:
+                        logger.warning("Live standings update failed", extra={"error": str(e)}, exc_info=True)
             else:
                 # Non-live: Phase 2 fixtures only, then catch-up if applicable
                 t1 = datetime.now(timezone.utc)

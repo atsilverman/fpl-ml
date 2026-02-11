@@ -52,6 +52,9 @@ class Config:
     deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
     # Slow loop (manager points + MVs) during live matches — 60s for responsive standings
     full_refresh_interval_live: int = int(os.getenv("FULL_REFRESH_INTERVAL_LIVE", "60"))
+    # In fast cycle when live: run live standings (manager points + ranks + MVs) at most every N seconds so most
+    # fast cycles stay short and "Since backend" updates every ~10–30s instead of every 6+ min
+    live_standings_in_fast_interval_seconds: int = int(os.getenv("LIVE_STANDINGS_IN_FAST_INTERVAL", "90"))
     fixtures_refresh_interval_live: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_LIVE", "30"))
     fixtures_refresh_interval_idle: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_IDLE", "600"))
     players_refresh_interval_live: int = int(os.getenv("PLAYERS_REFRESH_INTERVAL_LIVE", "60"))
