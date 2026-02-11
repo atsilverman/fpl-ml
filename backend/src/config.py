@@ -37,6 +37,7 @@ class Config:
     gameweeks_refresh_interval: int = int(os.getenv("GAMEWEEKS_REFRESH_INTERVAL", "15"))
     # Fast loop (gameweeks + fixtures + players); shorter during live so minutes/points stay current
     fast_loop_interval: int = int(os.getenv("FAST_LOOP_INTERVAL", "15"))
+    # Live: default 10s; set FAST_LOOP_INTERVAL_LIVE=8 for faster updates if server/DB can handle it
     fast_loop_interval_live: int = int(os.getenv("FAST_LOOP_INTERVAL_LIVE", "10"))
     # Post-deadline: poll gameweeks every N seconds to detect is_next → is_current and API return ASAP
     fast_loop_interval_deadline: int = int(os.getenv("FAST_LOOP_INTERVAL_DEADLINE", "15"))

@@ -517,69 +517,64 @@ class RefreshOrchestrator:
         except Exception as e:
             logger.error("Gameweeks refresh failed", extra={"error": str(e)}, exc_info=True)
             return None
-    
+
+    def _apply_fixtures_to_db(
+        self, fixtures: List[Dict[str, Any]], gw_ids_to_refresh: List[int]
+    ) -> Dict[int, Dict[str, Any]]:
+        """Apply raw FPL fixture dicts to DB (upsert). Returns current gameweek fixtures keyed by fpl_fixture_id."""
+        if gw_ids_to_refresh:
+            fixtures = [f for f in fixtures if f.get("event") in gw_ids_to_refresh]
+        gameweeks = self.db_client.get_gameweeks()
+        deadline_time_map = {
+            gw["id"]: gw["deadline_time"]
+            for gw in gameweeks
+            if gw.get("deadline_time")
+        }
+        fixtures_by_id: Dict[int, Dict[str, Any]] = {}
+        for fixture in fixtures:
+            gameweek_id = fixture.get("event")
+            fixtures_by_id[fixture["id"]] = fixture
+            started = fixture.get("started")
+            finished = fixture.get("finished")
+            finished_provisional = fixture.get("finished_provisional")
+            fixture_data = {
+                "fpl_fixture_id": fixture["id"],
+                "gameweek": gameweek_id,
+                "home_team_id": fixture["team_h"],
+                "away_team_id": fixture["team_a"],
+                "home_score": fixture.get("team_h_score"),
+                "away_score": fixture.get("team_a_score"),
+                "started": bool(started) if started is not None else False,
+                "finished": bool(finished) if finished is not None else False,
+                "finished_provisional": bool(finished_provisional) if finished_provisional is not None else False,
+                "minutes": fixture.get("minutes", 0) or 0,
+                "kickoff_time": fixture.get("kickoff_time"),
+                "deadline_time": deadline_time_map.get(gameweek_id),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            self.db_client.upsert_fixture(fixture_data)
+        current_fixtures_by_id = {
+            fid: f for fid, f in fixtures_by_id.items()
+            if f.get("event") == self.current_gameweek
+        }
+        logger.debug("Refreshed fixtures", extra={
+            "fixtures_count": len(fixtures),
+            "gameweeks_refreshed": gw_ids_to_refresh,
+        })
+        return current_fixtures_by_id
+
     async def _refresh_fixtures(self) -> Optional[Dict[int, Dict[str, Any]]]:
         """Refresh fixtures table for current and next gameweek (so DGW and next-GW matchups are visible).
         Returns fixtures for current gameweek only keyed by fpl_fixture_id for reuse (e.g. player refresh)."""
         try:
             fixtures = await self.fpl_client.get_fixtures()
-
-            # Refresh current + next gameweek so Schedule and Matches "Next" show DGW fixtures
             gw_ids_to_refresh = []
             if self.current_gameweek:
                 gw_ids_to_refresh.append(self.current_gameweek)
             next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
             if next_gws and next_gws[0]["id"] not in gw_ids_to_refresh:
                 gw_ids_to_refresh.append(next_gws[0]["id"])
-            if gw_ids_to_refresh:
-                fixtures = [f for f in fixtures if f.get("event") in gw_ids_to_refresh]
-            
-            # Get gameweeks to map deadline_time (FPL fixtures API doesn't provide deadline_time)
-            # deadline_time is a gameweek-level property, not fixture-level
-            gameweeks = self.db_client.get_gameweeks()
-            deadline_time_map = {
-                gw["id"]: gw["deadline_time"]
-                for gw in gameweeks
-                if gw.get("deadline_time")
-            }
-            
-            fixtures_by_id: Dict[int, Dict[str, Any]] = {}
-            for fixture in fixtures:
-                gameweek_id = fixture.get("event")
-                fixtures_by_id[fixture["id"]] = fixture
-                # FPL can return null for started/finished before kickoff; normalize so DB and UI stay consistent
-                started = fixture.get("started")
-                finished = fixture.get("finished")
-                finished_provisional = fixture.get("finished_provisional")
-                fixture_data = {
-                    "fpl_fixture_id": fixture["id"],
-                    "gameweek": gameweek_id,
-                    "home_team_id": fixture["team_h"],
-                    "away_team_id": fixture["team_a"],
-                    "home_score": fixture.get("team_h_score"),
-                    "away_score": fixture.get("team_a_score"),
-                    "started": bool(started) if started is not None else False,
-                    "finished": bool(finished) if finished is not None else False,
-                    "finished_provisional": bool(finished_provisional) if finished_provisional is not None else False,
-                    "minutes": fixture.get("minutes", 0) or 0,
-                    "kickoff_time": fixture.get("kickoff_time"),
-                    # deadline_time comes from gameweeks table, not fixtures API
-                    "deadline_time": deadline_time_map.get(gameweek_id),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-                
-                self.db_client.upsert_fixture(fixture_data)
-
-            # Return only current gameweek's fixtures for live/player refresh
-            current_fixtures_by_id = {
-                fid: f for fid, f in fixtures_by_id.items()
-                if f.get("event") == self.current_gameweek
-            }
-            logger.debug("Refreshed fixtures", extra={
-                "fixtures_count": len(fixtures),
-                "gameweeks_refreshed": gw_ids_to_refresh,
-            })
-            return current_fixtures_by_id
+            return self._apply_fixtures_to_db(fixtures, gw_ids_to_refresh)
         except Exception as e:
             logger.error("Fixtures refresh failed", extra={"error": str(e)}, exc_info=True)
             return None
@@ -588,8 +583,10 @@ class RefreshOrchestrator:
         self,
         bootstrap: Optional[Dict[str, Any]] = None,
         fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]] = None,
+        live_data: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
-        """Refresh player gameweek stats for active players. Reuses bootstrap and fixtures when provided to avoid duplicate API calls. Returns live_data when live so caller can sync fixture scores from same source."""
+        """Refresh player gameweek stats for active players. Reuses bootstrap and fixtures when provided to avoid duplicate API calls.
+        When live_data is provided (e.g. from parallel fetch), does not call get_event_live again. Returns live_data when live."""
         if not self.current_gameweek:
             return None
         
@@ -599,8 +596,6 @@ class RefreshOrchestrator:
         ).execute().data
         
         # Refresh when we have in-progress OR provisionally-finished matches (so GW points stay updated until all fixtures are fully finished).
-        # In progress: started and not yet finished_provisional.
-        # Provisionally finished: finished_provisional and not finished (bonus pending); event-live still has minutes/points/provisional bonus.
         has_live_or_provisional = any(
             (f.get("started", False) and not f.get("finished_provisional", False))
             or (f.get("finished_provisional", False) and not f.get("finished", False))
@@ -613,15 +608,16 @@ class RefreshOrchestrator:
             })
             return None
         
-        # Get live event data (single API call). Catch-up refresh (element-summary when fixtures finished) runs in _fast_cycle.
+        # Use provided live_data or fetch (single API call)
         try:
-            live_data = await self.fpl_client.get_event_live(self.current_gameweek)
+            if live_data is None:
+                live_data = await self.fpl_client.get_event_live(self.current_gameweek)
             active_player_ids = {
-                elem["id"] for elem in live_data.get("elements", [])
+                elem["id"] for elem in (live_data or {}).get("elements", [])
                 if elem.get("stats", {}).get("minutes", 0) > 0
             }
             
-            if active_player_ids:
+            if active_player_ids and live_data:
                 await self.player_refresher.refresh_player_gameweek_stats(
                     self.current_gameweek,
                     active_player_ids,
@@ -1193,34 +1189,94 @@ class RefreshOrchestrator:
             if bootstrap and self.current_gameweek and self.player_refresher:
                 self.player_refresher.sync_player_prices_from_bootstrap(bootstrap, self.current_gameweek)
             
-            # Phase 2: Refresh fixtures (state-dependent); reuse for player refresh to avoid duplicate get_fixtures()
-            t1 = datetime.now(timezone.utc)
-            fixtures_by_gameweek = await self._refresh_fixtures()
-            if fixtures_by_gameweek is not None or self.current_gameweek:
+            # Phase 2 and 3: fixtures and players. Live path uses parallel fetch and early fixture score write.
+            fixtures_by_gameweek = None
+            if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING) and self.current_gameweek:
+                # Live path: fetch fixtures and event-live in parallel; write fixture scores immediately; then refresh players with pre-fetched live_data
+                t1 = datetime.now(timezone.utc)
+                fixtures_coro = self.fpl_client.get_fixtures()
+                live_coro = self.fpl_client.get_event_live(self.current_gameweek)
+                results = await asyncio.gather(fixtures_coro, live_coro, return_exceptions=True)
+                fixtures_list = results[0] if not isinstance(results[0], Exception) else []
+                live_data = results[1] if not isinstance(results[1], Exception) else None
+                if isinstance(results[0], Exception):
+                    logger.warning("Parallel fixtures fetch failed", extra={"error": str(results[0])})
+                if isinstance(results[1], Exception):
+                    logger.warning("Parallel event-live fetch failed", extra={"error": str(results[1])})
+                gw_ids_to_refresh = []
+                if self.current_gameweek:
+                    gw_ids_to_refresh.append(self.current_gameweek)
+                next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+                if next_gws and next_gws[0]["id"] not in gw_ids_to_refresh:
+                    gw_ids_to_refresh.append(next_gws[0]["id"])
+                fixtures_by_gameweek = self._apply_fixtures_to_db(fixtures_list or [], gw_ids_to_refresh)
                 duration_ms = int((datetime.now(timezone.utc) - t1).total_seconds() * 1000)
                 try:
                     self.db_client.insert_refresh_duration_log("fixtures", "fast", self.current_state.value, duration_ms)
                 except Exception:
                     pass
-            # Phase 3 (fast only): player data every cycle; manager points + MVs run in slow loop
-            if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                # Write fixture scores from event-live immediately so match page updates before player processing
+                if live_data and bootstrap and fixtures_by_gameweek:
+                    self._update_fixture_scores_from_live(live_data, bootstrap, fixtures_by_gameweek)
                 t2 = datetime.now(timezone.utc)
-                live_data = await self._refresh_players(
-                    bootstrap=bootstrap, fixtures_by_gameweek=fixtures_by_gameweek
+                live_data_out = await self._refresh_players(
+                    bootstrap=bootstrap,
+                    fixtures_by_gameweek=fixtures_by_gameweek,
+                    live_data=live_data,
                 )
                 duration_ms = int((datetime.now(timezone.utc) - t2).total_seconds() * 1000)
                 try:
                     self.db_client.insert_refresh_duration_log("gw_players", "fast", self.current_state.value, duration_ms)
                 except Exception:
                     pass
-                # Sync fixture scores from event-live so matches page stays in sync with GW points
-                if live_data:
-                    self._update_fixture_scores_from_live(
-                        live_data, bootstrap, fixtures_by_gameweek
-                    )
+                # Live-only manager points + ranks + MV so standings update this cycle (no FPL API)
+                try:
+                    t_live_standings = datetime.now(timezone.utc)
+                    manager_ids = self._get_tracked_manager_ids()
+                    if manager_ids and self.current_gameweek:
+                        await self.manager_refresher.refresh_manager_gameweek_points_live_only(
+                            manager_ids, self.current_gameweek
+                        )
+                        any_fixture_started = False
+                        try:
+                            fixtures = self.db_client.client.table("fixtures").select("started").eq(
+                                "gameweek", self.current_gameweek
+                            ).execute().data
+                            any_fixture_started = any(f.get("started", False) for f in (fixtures or []))
+                        except Exception:
+                            pass
+                        if any_fixture_started:
+                            leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
+                            for league in (leagues_result.data or []):
+                                try:
+                                    await self.manager_refresher.calculate_mini_league_ranks(
+                                        league["league_id"], self.current_gameweek
+                                    )
+                                except Exception as e:
+                                    logger.error("League ranks failed", extra={
+                                        "league_id": league["league_id"],
+                                        "gameweek": self.current_gameweek,
+                                        "error": str(e),
+                                    }, exc_info=True)
+                        self.db_client.refresh_materialized_views_for_live()
+                    duration_ms = int((datetime.now(timezone.utc) - t_live_standings).total_seconds() * 1000)
+                    try:
+                        self.db_client.insert_refresh_duration_log("live_standings", "fast", self.current_state.value, duration_ms)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    logger.warning("Live standings update failed", extra={"error": str(e)}, exc_info=True)
             else:
-                # Option B: when fixtures have finished=True but we stopped normal refresh, run catch-up
-                # via element-summary to pull confirmed bonus; stop when no player has provisional status
+                # Non-live: Phase 2 fixtures only, then catch-up if applicable
+                t1 = datetime.now(timezone.utc)
+                fixtures_by_gameweek = await self._refresh_fixtures()
+                if fixtures_by_gameweek is not None or self.current_gameweek:
+                    duration_ms = int((datetime.now(timezone.utc) - t1).total_seconds() * 1000)
+                    try:
+                        self.db_client.insert_refresh_duration_log("fixtures", "fast", self.current_state.value, duration_ms)
+                    except Exception:
+                        pass
+                # Catch-up: when fixtures finished but we stopped normal refresh, pull confirmed bonus via element-summary
                 t2 = datetime.now(timezone.utc)
                 await self._run_catch_up_player_refresh(
                     bootstrap=bootstrap,

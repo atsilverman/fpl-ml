@@ -109,8 +109,8 @@ export function useManagerData() {
       }
     },
     enabled: !!MANAGER_ID && !!gameweek, // Only run if we have manager ID and gameweek
-    staleTime: isLive ? 20_000 : 30_000, // 20s when live so points stay current
-    refetchInterval: isLive ? 25_000 : 30_000, // 25s when live, 30s otherwise
+    staleTime: isLive ? 12_000 : 30_000, // 12s when live so points stay current
+    refetchInterval: isLive ? 15_000 : 30_000, // 15s when live, 30s otherwise
     refetchIntervalInBackground: true,
   })
 

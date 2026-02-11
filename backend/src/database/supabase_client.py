@@ -445,6 +445,21 @@ class SupabaseClient:
         ).execute()
         
         return result.data
+
+    def update_manager_gameweek_history_points(
+        self,
+        manager_id: int,
+        gameweek: int,
+        gameweek_points: int,
+        total_points: int,
+    ):
+        """Update only gameweek_points and total_points for a manager/gameweek (live-only path; preserves other columns)."""
+        result = self.client.table("manager_gameweek_history").update({
+            "gameweek_points": gameweek_points,
+            "total_points": total_points,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }).eq("manager_id", manager_id).eq("gameweek", gameweek).execute()
+        return result.data
     
     def upsert_manager_pick(self, pick_data: Dict[str, Any]):
         """

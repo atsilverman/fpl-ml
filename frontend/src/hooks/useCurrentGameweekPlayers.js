@@ -478,8 +478,8 @@ export function useCurrentGameweekPlayers() {
       return result
     },
     enabled: !!MANAGER_ID && !!gameweek && !gwLoading,
-    staleTime: isLive ? 15 * 1000 : 30 * 1000, // 15s when live so GW points stay current
-    refetchInterval: isLive ? 18 * 1000 : 60 * 1000, // 18s when live, 1 min otherwise
+    staleTime: isLive ? 10 * 1000 : 30 * 1000, // 10s when live so GW points stay current
+    refetchInterval: isLive ? 12 * 1000 : 60 * 1000, // 12s when live, 1 min otherwise
     refetchIntervalInBackground: true,
   })
 

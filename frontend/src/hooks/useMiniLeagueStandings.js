@@ -32,8 +32,8 @@ export function useMiniLeagueStandings(gameweek = null) {
       return data || []
     },
     enabled: !!LEAGUE_ID, // Only run if we have a league ID
-    staleTime: isLive ? 20_000 : 30_000, // 20s when live so standings stay current
-    refetchInterval: isLive ? 25_000 : 30_000, // 25s when live, 30s otherwise
+    staleTime: isLive ? 10_000 : 30_000, // 10s when live so standings stay current
+    refetchInterval: isLive ? 12_000 : 30_000, // 12s when live, 30s otherwise
     refetchIntervalInBackground: true,
   })
 

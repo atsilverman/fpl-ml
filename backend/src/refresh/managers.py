@@ -597,6 +597,40 @@ class ManagerDataRefresher:
                 "error": str(e)
             })
             return False
+
+    async def refresh_manager_gameweek_points_live_only(
+        self, manager_ids: List[int], gameweek: int
+    ) -> None:
+        """
+        Update manager_gameweek_history gameweek_points and total_points from DB-only calculation (no FPL API).
+        Used during live matches so standings update every fast cycle without waiting for slow loop.
+        """
+        if not manager_ids:
+            return
+        batch_size = 8
+        for i in range(0, len(manager_ids), batch_size):
+            batch = manager_ids[i : i + batch_size]
+            # Calculate points for batch in parallel (DB-only: manager_picks + player_gameweek_stats)
+            tasks = [self.calculate_manager_points(mid, gameweek) for mid in batch]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            # Load existing baseline_total_points for this batch
+            existing = self.db_client.client.table("manager_gameweek_history").select(
+                "manager_id, baseline_total_points"
+            ).eq("gameweek", gameweek).in_("manager_id", batch).execute().data or []
+            baseline_by_manager = {r["manager_id"]: r.get("baseline_total_points") for r in existing}
+            for manager_id, points_result in zip(batch, results):
+                if isinstance(points_result, Exception):
+                    logger.warning("Live-only points calc failed", extra={"manager_id": manager_id, "error": str(points_result)})
+                    continue
+                gameweek_points = points_result.get("gameweek_points", 0)
+                baseline = baseline_by_manager.get(manager_id)
+                total_points = (baseline if baseline is not None else 0) + gameweek_points
+                try:
+                    self.db_client.update_manager_gameweek_history_points(
+                        manager_id, gameweek, gameweek_points, total_points
+                    )
+                except Exception as e:
+                    logger.warning("Live-only mgh update failed", extra={"manager_id": manager_id, "error": str(e)})
     
     async def refresh_manager_gameweek_history(
         self,
