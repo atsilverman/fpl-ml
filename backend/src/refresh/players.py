@@ -47,36 +47,54 @@ class PlayerDataRefresher:
         all_players_in_fixture: List[Dict]
     ) -> int:
         """
-        Calculate provisional bonus from BPS ranking.
-        
+        Calculate provisional bonus from BPS ranking with official FPL tie rules.
+
+        Official rules (Premier League):
+        - Tie for first: Players 1 & 2 get 3 each, Player 3 gets 1 (skip 2).
+        - Tie for second: Player 1 gets 3, Players 2 & 3 get 2 each (skip 1).
+        - Tie for third: Player 1 gets 3, Player 2 gets 2, Players 3 & 4 get 1 each.
+
         Args:
             player_id: Player ID
             player_bps: Player's BPS score
             fixture_id: Fixture ID
-            all_players_in_fixture: All players in the fixture with BPS
-            
+            all_players_in_fixture: All players in the fixture with BPS (and optionally id)
+
         Returns:
             Provisional bonus points (0-3)
         """
-        # Sort players by BPS descending
+        if not all_players_in_fixture:
+            return 0
+        # Sort by BPS descending, then by id ascending for deterministic tiebreaker
         sorted_players = sorted(
             all_players_in_fixture,
-            key=lambda p: p.get("bps", 0),
-            reverse=True
+            key=lambda p: (-(p.get("bps") or 0), p.get("id") or 0),
         )
-        
-        # Find player's position
-        for idx, player in enumerate(sorted_players):
-            if player.get("id") == player_id:
-                if idx == 0:
-                    return 3  # Top BPS
-                elif idx == 1:
-                    return 2  # 2nd BPS
-                elif idx == 2:
-                    return 1  # 3rd BPS
+        # Group consecutive players with the same BPS
+        groups: List[List[Dict]] = []
+        for p in sorted_players:
+            bps = p.get("bps") or 0
+            if groups and (groups[-1][0].get("bps") or 0) == bps:
+                groups[-1].append(p)
+            else:
+                groups.append([p])
+        # Assign bonus by group per official FPL tie rules
+        slot = 0  # 0=3pts, 1=2pts, 2=1pt
+        bonus_per_slot = [3, 2, 1]
+        for group in groups:
+            if slot >= len(bonus_per_slot):
                 break
-        
-        return 0  # No bonus
+            points = bonus_per_slot[slot]
+            for p in group:
+                if p.get("id") == player_id:
+                    return points
+            if slot == 0 and len(group) > 1:
+                slot = 2  # Tie for first: skip 2, next group gets 1
+            elif slot == 1 and len(group) > 1:
+                slot = 3  # Tie for second: no 1pt left
+            else:
+                slot += 1
+        return 0
     
     def _calculate_defcon(
         self,
