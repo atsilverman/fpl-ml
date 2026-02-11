@@ -655,8 +655,8 @@ class PlayerDataRefresher:
                         "minutes": stats.get("minutes", 0) if is_first_row else 0,
                         "started": (stats.get("minutes", 0) > 0) if is_first_row else False,
                         "total_points": stats.get("total_points", 0) if is_first_row else 0,
-                        "bonus": bonus if is_first_row else 0,
-                        "provisional_bonus": provisional_bonus_val if is_first_row else 0,
+                        "bonus": bonus if (is_first_row or provisional_bonus_val == bonus) else 0,  # DGW: also on row where he earned it
+                        "provisional_bonus": provisional_bonus_val,  # per-fixture so DGW shows bonus on correct match
                         "bps": stats.get("bps", 0) if is_first_row else 0,
                         "bonus_status": bonus_status,
                         "goals_scored": stats.get("goals_scored", 0) if is_first_row else 0,
