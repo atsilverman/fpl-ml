@@ -21,8 +21,8 @@ export function useFixtures(gameweek) {
       return data || []
     },
     enabled: !!gameweek, // Only run if we have a gameweek
-    staleTime: isLive ? 15000 : 30000, // Shorter when live so minutes/score stay current
-    refetchInterval: isLive ? 15000 : 30000, // Poll every 15s when live, 30s otherwise
+    staleTime: isLive ? 10_000 : 30_000, // 10s when live so minutes/score stay current
+    refetchInterval: isLive ? 12_000 : 30_000, // 12s when live, 30s otherwise
     refetchIntervalInBackground: true,
   })
 

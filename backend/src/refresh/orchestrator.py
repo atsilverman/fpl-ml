@@ -907,35 +907,15 @@ class RefreshOrchestrator:
             return
         
         try:
-            # When ranks finalize we refresh all managers; otherwise optimize during live
-            if force_all_managers:
+            # When ranks finalize we refresh all managers; otherwise use all tracked during live
+            # so league standings GW points stay current (player stats roll up to manager_gameweek_history)
+            if force_all_managers or self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                 manager_ids = self._get_tracked_manager_ids()
-                if manager_ids:
-                    logger.info("Refreshing all manager points (ranks final)", extra={
-                        "count": len(manager_ids),
-                        "gameweek": self.current_gameweek
-                    })
-            elif self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
-                manager_ids = self._get_active_manager_ids()
-                used_fallback = False
-                if not manager_ids:
-                    # Fallback: no "active" managers found (e.g. manager_picks for GW empty
-                    # or no player_gameweek_stats with minutes>0 yet). Refresh all tracked
-                    # managers so points still update and UI is not stuck at 0.
-                    manager_ids = self._get_tracked_manager_ids()
-                    used_fallback = True
-                    logger.warning(
-                        "No active managers, using all tracked",
-                        extra={
-                            "gameweek": self.current_gameweek,
-                            "fallback_count": len(manager_ids)
-                        }
-                    )
                 if manager_ids:
                     logger.info("Refreshing manager points", extra={
                         "count": len(manager_ids),
                         "gameweek": self.current_gameweek,
-                        "optimization": "active_managers_only" if not used_fallback else "all_tracked_fallback"
+                        "reason": "ranks_final" if force_all_managers else "live"
                     })
             else:
                 # Outside live matches, refresh all managers
@@ -1176,8 +1156,14 @@ class RefreshOrchestrator:
             except Exception as ev:
                 logger.debug("Refresh event (start) insert failed", extra={"path": "fast", "error": str(ev)})
             # Phase 1: Always refresh foundational tables first (reuse bootstrap for player refresh)
+            t0 = datetime.now(timezone.utc)
             bootstrap = await self._refresh_gameweeks()
-            
+            if bootstrap is not None:
+                duration_ms = int((datetime.now(timezone.utc) - t0).total_seconds() * 1000)
+                try:
+                    self.db_client.insert_refresh_duration_log("gameweeks", "fast", self.current_state.value, duration_ms)
+                except Exception:
+                    pass
             # Detect current state
             new_state = await self._detect_state()
             if new_state != self.current_state:
@@ -1208,13 +1194,25 @@ class RefreshOrchestrator:
                 self.player_refresher.sync_player_prices_from_bootstrap(bootstrap, self.current_gameweek)
             
             # Phase 2: Refresh fixtures (state-dependent); reuse for player refresh to avoid duplicate get_fixtures()
+            t1 = datetime.now(timezone.utc)
             fixtures_by_gameweek = await self._refresh_fixtures()
-            
+            if fixtures_by_gameweek is not None or self.current_gameweek:
+                duration_ms = int((datetime.now(timezone.utc) - t1).total_seconds() * 1000)
+                try:
+                    self.db_client.insert_refresh_duration_log("fixtures", "fast", self.current_state.value, duration_ms)
+                except Exception:
+                    pass
             # Phase 3 (fast only): player data every cycle; manager points + MVs run in slow loop
             if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                t2 = datetime.now(timezone.utc)
                 live_data = await self._refresh_players(
                     bootstrap=bootstrap, fixtures_by_gameweek=fixtures_by_gameweek
                 )
+                duration_ms = int((datetime.now(timezone.utc) - t2).total_seconds() * 1000)
+                try:
+                    self.db_client.insert_refresh_duration_log("gw_players", "fast", self.current_state.value, duration_ms)
+                except Exception:
+                    pass
                 # Sync fixture scores from event-live so matches page stays in sync with GW points
                 if live_data:
                     self._update_fixture_scores_from_live(
@@ -1223,11 +1221,17 @@ class RefreshOrchestrator:
             else:
                 # Option B: when fixtures have finished=True but we stopped normal refresh, run catch-up
                 # via element-summary to pull confirmed bonus; stop when no player has provisional status
+                t2 = datetime.now(timezone.utc)
                 await self._run_catch_up_player_refresh(
                     bootstrap=bootstrap,
                     fixtures_by_gameweek=fixtures_by_gameweek,
                 )
-            
+                duration_ms = int((datetime.now(timezone.utc) - t2).total_seconds() * 1000)
+                if duration_ms > 0:
+                    try:
+                        self.db_client.insert_refresh_duration_log("gw_players", "fast", self.current_state.value, duration_ms)
+                    except Exception:
+                        pass
             # Record fast refresh after core work (gameweeks, fixtures, players) so debug panel
             # updates even when this cycle is stuck in a long block (e.g. TRANSFER_DEADLINE batch).
             try:
@@ -1509,9 +1513,30 @@ class RefreshOrchestrator:
         """Slow loop: manager points + MVs every full_refresh_interval_live when in live. Runs in parallel with fast loop."""
         while self.running:
             try:
-                # Hourly: refresh all configured managers' overall_rank and gameweek_rank (simple, no rank-change detection)
+                # When live: run manager points + MVs FIRST so standings update every ~2 min.
+                # Hourly/ranks run after to avoid blocking live updates for 20+ min.
+                if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                    t_mp = datetime.now(timezone.utc)
+                    await self._refresh_manager_points()
+                    duration_ms = int((datetime.now(timezone.utc) - t_mp).total_seconds() * 1000)
+                    try:
+                        self.db_client.insert_refresh_duration_log("manager_points", "slow", self.current_state.value, duration_ms)
+                    except Exception:
+                        pass
+                    await self._validate_player_points_integrity()
+                    t_mv = datetime.now(timezone.utc)
+                    try:
+                        self.db_client.refresh_materialized_views_for_live()
+                        duration_ms = int((datetime.now(timezone.utc) - t_mv).total_seconds() * 1000)
+                        try:
+                            self.db_client.insert_refresh_duration_log("mvs", "slow", self.current_state.value, duration_ms)
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
+                # Hourly (IDLE or after live): refresh all managers' overall_rank/gameweek_rank. Skip when live to avoid blocking.
                 now_utc = datetime.now(timezone.utc)
-                if self.current_gameweek:
+                if self.current_gameweek and self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     should_hourly = (
                         self._last_hourly_rank_refresh_time is None
                         or (now_utc - self._last_hourly_rank_refresh_time).total_seconds() >= self._hourly_rank_refresh_interval_seconds
@@ -1523,16 +1548,9 @@ class RefreshOrchestrator:
                             self._last_hourly_rank_refresh_time = now_utc
                         except Exception as e:
                             logger.warning("Hourly rank refresh failed", extra={"gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
-                # End of gameday (fixtures table: all finished_provisional): capture rank update, refresh all managers
-                if self.current_gameweek:
+                # End of gameday (fixtures table: all finished_provisional): capture rank update. Skip when live.
+                if self.current_gameweek and self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     await self._check_ranks_final_and_refresh()
-                if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
-                    await self._refresh_manager_points()
-                    await self._validate_player_points_integrity()
-                    try:
-                        self.db_client.refresh_materialized_views_for_live()
-                    except Exception as e:
-                        logger.error("Materialized views refresh failed", extra={"error": str(e)}, exc_info=True)
                 # IDLE: sync auto-sub flags to manager_picks so UI shows sub indicators
                 # (pegged to player match finished, not gated by live/bonus state)
                 if self.current_state == RefreshState.IDLE and self.current_gameweek:
@@ -1606,6 +1624,115 @@ class RefreshOrchestrator:
             except Exception as e:
                 logger.warning("Predictions loop error", extra={"error": str(e)}, exc_info=True)
                 await asyncio.sleep(interval)
+
+    async def run_deadline_batch_test(self, gameweek: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Force-run the deadline batch for a gameweek (bypasses state and DB skip check).
+        Used for testing optimization timing. Does NOT insert into deadline_batch_runs.
+        Returns phase breakdown dict with timing for each phase.
+        """
+        if not self.db_client or not self.manager_refresher:
+            await self.initialize()
+        target_gw_id = gameweek
+        if target_gw_id is None:
+            gameweeks = self.db_client.get_gameweeks(is_current=True, limit=1)
+            if not gameweeks:
+                return {"error": "No current gameweek in DB"}
+            target_gw_id = gameweeks[0]["id"]
+            current_gw = gameweeks[0]
+        else:
+            gw_rows = self.db_client.get_gameweeks(gameweek_id=target_gw_id, limit=1)
+            current_gw = gw_rows[0] if gw_rows else {}
+        self.current_gameweek = target_gw_id
+        manager_ids = self._get_tracked_manager_ids()
+        leagues_result = type("_Res", (), {"data": []})()
+        try:
+            leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
+            leagues_result = type("_Res", (), {"data": leagues_result.data or []})()
+        except Exception:
+            pass
+        league_count = len(leagues_result.data) if leagues_result.data else 0
+        if not manager_ids:
+            return {"error": "No tracked managers", "phase": {}}
+        phase = {}
+        t0 = datetime.now(timezone.utc)
+        bootstrap_ok = await self._short_bootstrap_check()
+        phase["bootstrap_check_sec"] = round((datetime.now(timezone.utc) - t0).total_seconds(), 1)
+        if not bootstrap_ok:
+            return {"error": "Bootstrap check failed", "phase": phase}
+        settle_sec = min(self.config.post_deadline_settle_seconds, 60)
+        if settle_sec > 0:
+            await asyncio.sleep(settle_sec)
+        phase["settle_sec"] = settle_sec
+        t1 = datetime.now(timezone.utc)
+        batch_size = self.config.deadline_batch_size
+        batch_sleep = self.config.deadline_batch_sleep_seconds
+        deadline_time = None
+        if current_gw.get("deadline_time"):
+            deadline_time = datetime.fromisoformat(current_gw["deadline_time"].replace("Z", "+00:00"))
+        picks_metadata = {}
+        for batch_num in range(0, len(manager_ids), batch_size):
+            batch = manager_ids[batch_num : batch_num + batch_size]
+            tasks = []
+            for mid in batch:
+                tasks.append(self.manager_refresher.refresh_manager_picks(mid, target_gw_id, deadline_time=deadline_time, use_cache=False))
+                tasks.append(self.manager_refresher.refresh_manager_transfers(mid, target_gw_id))
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for i, res in enumerate(results):
+                if i % 2 == 0:
+                    mid = batch[i // 2]
+                    if isinstance(res, dict):
+                        picks_metadata[mid] = {"active_chip": res.get("active_chip"), "gameweek_rank": res.get("gameweek_rank")}
+            if batch_num + batch_size < len(manager_ids) and batch_sleep > 0:
+                await asyncio.sleep(batch_sleep)
+        phase["picks_and_transfers_sec"] = round((datetime.now(timezone.utc) - t1).total_seconds(), 1)
+        # Refuse seed when any fixture has started (would overwrite live points with 0)
+        try:
+            started_fixtures = self.db_client.client.table("fixtures").select(
+                "fpl_fixture_id"
+            ).eq("gameweek", target_gw_id).eq("started", True).limit(1).execute().data
+            if started_fixtures:
+                return {
+                    "error": "Cannot run deadline batch test: fixtures for GW have started. "
+                    "Seed path would overwrite live points. Use backfill instead: "
+                    "python scripts/backfill_manager_history.py --gameweeks <gw> --force",
+                    "phase": phase,
+                    "gameweek": target_gw_id,
+                }
+        except Exception as e:
+            logger.warning("Could not check fixture status", extra={"gameweek": target_gw_id, "error": str(e)})
+        t2 = datetime.now(timezone.utc)
+        self.manager_refresher.seed_manager_gameweek_history_from_previous(manager_ids, target_gw_id, picks_metadata)
+        for league in (leagues_result.data or []):
+            try:
+                await self.manager_refresher.calculate_mini_league_ranks(league["league_id"], target_gw_id)
+            except Exception as e:
+                logger.warning("Mini league ranks failed", extra={"league_id": league["league_id"], "error": str(e)})
+        phase["history_refresh_sec"] = round((datetime.now(timezone.utc) - t2).total_seconds(), 1)
+        t3 = datetime.now(timezone.utc)
+        await self._capture_baselines_if_needed()
+        phase["baselines_sec"] = round((datetime.now(timezone.utc) - t3).total_seconds(), 1)
+        t4 = datetime.now(timezone.utc)
+        for league in (leagues_result.data or []):
+            try:
+                await self.manager_refresher.build_player_whitelist(league["league_id"], target_gw_id)
+            except Exception as e:
+                logger.warning("Player whitelist failed", extra={"league_id": league["league_id"], "error": str(e)})
+        phase["whitelist_sec"] = round((datetime.now(timezone.utc) - t4).total_seconds(), 1)
+        t5 = datetime.now(timezone.utc)
+        try:
+            self.db_client.refresh_league_transfer_aggregation()
+        except Exception as mv_err:
+            logger.warning("League transfer aggregation failed", extra={"error": str(mv_err)})
+        phase["transfer_aggregation_sec"] = round((datetime.now(timezone.utc) - t5).total_seconds(), 1)
+        t6 = datetime.now(timezone.utc)
+        try:
+            self.db_client.refresh_all_materialized_views()
+        except Exception as e:
+            logger.error("Materialized views refresh failed", extra={"error": str(e)})
+        phase["materialized_views_sec"] = round((datetime.now(timezone.utc) - t6).total_seconds(), 1)
+        total_sec = round((datetime.now(timezone.utc) - t0).total_seconds(), 1)
+        return {"gameweek": target_gw_id, "manager_count": len(manager_ids), "league_count": league_count, "total_sec": total_sec, "phase": phase}
 
     async def run(self):
         """Run fast, slow, and predictions loops in parallel."""

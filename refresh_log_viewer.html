@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refresh Log Viewer</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@2.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #0f1419;
+      color: #e6edf3;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .load-area {
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .load-area label {
+      background: #21262d;
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .load-area label:hover { background: #30363d; }
+    .load-area input[type="file"] { display: none; }
+    .status { font-size: 0.875rem; color: #8b949e; }
+    .charts { display: flex; flex-direction: column; gap: 2rem; }
+    .chart-group h2 {
+      font-size: 1.125rem;
+      margin-bottom: 0.5rem;
+      color: #c9d1d9;
+    }
+    .chart-container {
+      position: relative;
+      height: 220px;
+      background: #161b22;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .empty { color: #8b949e; padding: 2rem; text-align: center; }
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 1rem;
+    }
+    .source-card {
+      background: #161b22;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .source-card h3 { font-size: 1rem; margin: 0 0 0.5rem; color: #58a6ff; }
+    .source-card .chart-wrap { height: 180px; position: relative; }
+  </style>
+</head>
+<body>
+  <h1>Refresh Log Viewer</h1>
+  <div class="load-area">
+    <label for="file">Load JSON</label>
+    <input type="file" id="file" accept=".json,application/json">
+    <span class="status" id="status">Export with: python3 backend/scripts/export_refresh_log.py -o refresh_log.json</span>
+  </div>
+  <div id="content" class="charts"></div>
+
+  <script>
+    const fileInput = document.getElementById('file');
+    const statusEl = document.getElementById('status');
+    const contentEl = document.getElementById('content');
+    let charts = [];
+
+    function destroyCharts() {
+      charts.forEach(c => c.destroy());
+      charts = [];
+    }
+
+    function parseSince(str) {
+      if (str == null) return null;
+      const m = /^(\d+)s$/.exec(str);
+      if (m) return parseInt(m[1], 10);
+      const m2 = /^(\d+)m\s*(\d*)s?$/.exec(str);
+      if (m2) return parseInt(m2[1], 10) * 60 + parseInt(m2[2] || '0', 10);
+      const m3 = /^(\d+)m$/.exec(str);
+      if (m3) return parseInt(m3[1], 10) * 60;
+      const m4 = /^(\d+)h/.exec(str);
+      if (m4) return parseInt(m4[1], 10) * 3600;
+      return null;
+    }
+
+    function buildDatasets(snapshot, source, keys) {
+      const points = snapshot.filter(r => r.source === source);
+      if (points.length === 0) return [];
+      const colors = { since_backend_sec: '#58a6ff', since_frontend_sec: '#3fb950' };
+      const labels = { since_backend_sec: 'Since backend', since_frontend_sec: 'Since frontend' };
+      return keys.map((key, i) => ({
+        label: labels[key],
+        data: points.map(p => ({ x: new Date(p.occurred_at), y: parseFloat(p[key]) })),
+        borderColor: colors[key],
+        backgroundColor: colors[key] + '20',
+        fill: false,
+        tension: 0.2,
+      }));
+    }
+
+    const SOURCE_DISPLAY = {
+      gameweeks: 'Gameweeks',
+      fixtures: 'Fixtures',
+      gw_players: 'GW Players',
+      manager_points: 'Manager points',
+      mvs: 'MVs',
+    };
+
+    function render(data) {
+      destroyCharts();
+      const snapshot = data.snapshot || [];
+      const duration = data.duration || [];
+      const frontendDuration = data.frontend_duration || [];
+      const snapshotSources = [...new Set(snapshot.map(r => r.source))].sort();
+      const backendSources = [...new Set(duration.map(r => r.source))].sort();
+      const frontendSources = [...new Set(frontendDuration.map(r => r.source))].sort();
+
+      const hasAny = snapshotSources.length > 0 || backendSources.length > 0 || frontendSources.length > 0;
+      if (!hasAny) {
+        contentEl.innerHTML = '<div class="empty">No log data. Ensure backend is running and frontend has fetched data, then export.</div>';
+        return;
+      }
+
+      contentEl.innerHTML = '';
+
+      if (frontendSources.length > 0) {
+        const fdSection = document.createElement('div');
+        fdSection.className = 'chart-group';
+        fdSection.innerHTML = '<h2>Frontend fetch duration (ms) — every fetch</h2><div class="source-grid" id="fd-charts"></div>';
+        contentEl.appendChild(fdSection);
+        const fdGrid = fdSection.querySelector('#fd-charts');
+
+        frontendSources.forEach(source => {
+          const pts = frontendDuration.filter(r => r.source === source);
+          const card = document.createElement('div');
+          card.className = 'source-card';
+          card.innerHTML = `<h3>${source}</h3><div class="chart-wrap"><canvas></canvas></div>`;
+          fdGrid.appendChild(card);
+
+          const chart = new Chart(card.querySelector('canvas').getContext('2d'), {
+            type: 'line',
+            data: {
+              datasets: [{
+                label: 'Duration (ms)',
+                data: pts.map(p => ({ x: new Date(p.occurred_at), y: p.duration_ms })),
+                borderColor: '#3fb950',
+                backgroundColor: '#3fb95020',
+                fill: false,
+                tension: 0.2,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  type: 'time',
+                  time: { unit: 'minute' },
+                  grid: { color: '#21262d' },
+                  ticks: { color: '#8b949e', maxTicksLimit: 6 },
+                },
+                y: {
+                  title: { display: true, text: 'ms', color: '#8b949e' },
+                  grid: { color: '#21262d' },
+                  ticks: { color: '#8b949e' },
+                  beginAtZero: true,
+                },
+              },
+              plugins: { legend: { labels: { color: '#c9d1d9' } } },
+            },
+          });
+          charts.push(chart);
+        });
+      }
+
+      if (snapshotSources.length > 0) {
+        const snapSection = document.createElement('div');
+        snapSection.className = 'chart-group';
+        snapSection.innerHTML = '<h2>Staleness (since backend / since frontend) — requires Debug modal open</h2><div class="source-grid" id="snap-charts"></div>';
+        contentEl.appendChild(snapSection);
+        const snapGrid = snapSection.querySelector('#snap-charts');
+        snapshotSources.forEach(source => {
+          const card = document.createElement('div');
+          card.className = 'source-card';
+          card.innerHTML = `<h3>${source}</h3><div class="chart-wrap"><canvas></canvas></div>`;
+          snapGrid.appendChild(card);
+
+          const datasets = buildDatasets(snapshot, source, ['since_backend_sec', 'since_frontend_sec']);
+          if (datasets.length === 0) return;
+
+          const chart = new Chart(card.querySelector('canvas').getContext('2d'), {
+          type: 'line',
+          data: { datasets },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                type: 'time',
+                time: { unit: 'minute', displayFormats: { minute: 'HH:mm', hour: 'HH:mm' } },
+                grid: { color: '#21262d' },
+                ticks: { color: '#8b949e', maxTicksLimit: 6 },
+              },
+              y: {
+                title: { display: true, text: 'Seconds', color: '#8b949e' },
+                grid: { color: '#21262d' },
+                ticks: { color: '#8b949e' },
+                beginAtZero: true,
+              },
+            },
+            plugins: {
+              legend: { labels: { color: '#c9d1d9' } },
+            },
+          },
+        });
+        charts.push(chart);
+        });
+      }
+
+      const durSources = [...new Set(duration.map(r => r.source))].sort();
+      if (durSources.length > 0) {
+        const durSection = document.createElement('div');
+        durSection.className = 'chart-group';
+        durSection.innerHTML = '<h2>Backend duration (ms) per phase</h2><div class="source-grid" id="dur-charts"></div>';
+        contentEl.appendChild(durSection);
+        const durGrid = durSection.querySelector('#dur-charts');
+
+        durSources.forEach(source => {
+          const pts = duration.filter(r => r.source === source);
+          const card = document.createElement('div');
+          card.className = 'source-card';
+          card.innerHTML = `<h3>${SOURCE_DISPLAY[source] || source}</h3><div class="chart-wrap"><canvas></canvas></div>`;
+          durGrid.appendChild(card);
+
+          const chart = new Chart(card.querySelector('canvas').getContext('2d'), {
+            type: 'line',
+            data: {
+              datasets: [{
+                label: 'Duration (ms)',
+                data: pts.map(p => ({ x: new Date(p.occurred_at), y: p.duration_ms })),
+                borderColor: '#f0883e',
+                backgroundColor: '#f0883e20',
+                fill: false,
+                tension: 0.2,
+              }],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                x: {
+                  type: 'time',
+                  time: { unit: 'minute' },
+                  grid: { color: '#21262d' },
+                  ticks: { color: '#8b949e', maxTicksLimit: 6 },
+                },
+                y: {
+                  title: { display: true, text: 'ms', color: '#8b949e' },
+                  grid: { color: '#21262d' },
+                  ticks: { color: '#8b949e' },
+                  beginAtZero: true,
+                },
+              },
+              plugins: { legend: { labels: { color: '#c9d1d9' } } },
+            },
+          });
+          charts.push(chart);
+        });
+      }
+    }
+
+    fileInput.addEventListener('change', (e) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const data = JSON.parse(r.result);
+          render(data);
+          statusEl.textContent = `Loaded: ${(data.duration?.length ?? 0)} backend, ${(data.frontend_duration?.length ?? 0)} frontend duration, ${(data.snapshot?.length ?? 0)} snapshot rows`;
+        } catch (err) {
+          statusEl.textContent = 'Error: ' + err.message;
+          contentEl.innerHTML = '<div class="empty">Invalid JSON</div>';
+        }
+      };
+      r.readAsText(f);
+    });
+  </script>
+</body>
+</html>

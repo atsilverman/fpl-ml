@@ -331,10 +331,7 @@
   }
 }
 
-/* DGW: second fixture row (same player, second opponent) */
-.gameweek-points-tr-dgw-second .gameweek-points-td-player {
-  padding-left: 28px;
-}
+/* DGW: second fixture row (same player, second opponent) – no indent, align with others */
 .gameweek-points-tr-dgw-second .gameweek-points-td-pts {
   font-size: 0.95em;
   color: var(--text-secondary);

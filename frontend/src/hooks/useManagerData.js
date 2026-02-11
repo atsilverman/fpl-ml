@@ -2,10 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useGameweekData } from './useGameweekData'
+import { useRefreshState } from './useRefreshState'
+import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 
 export function useManagerData() {
   const { config } = useConfiguration()
   const { gameweek } = useGameweekData()
+  const { state } = useRefreshState()
+  const isLive = state === 'live_matches' || state === 'bonus_pending'
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
 
@@ -14,6 +18,7 @@ export function useManagerData() {
     queryKey: ['manager', MANAGER_ID, gameweek, LEAGUE_ID],
     queryFn: async () => {
       if (!MANAGER_ID || !gameweek) return null
+      const start = performance.now()
 
       // OPTIMIZATION: Run queries in parallel instead of sequentially
       const queries = [
@@ -81,6 +86,7 @@ export function useManagerData() {
       // Rank change: use backend value (rank before GW kickoff − current rank); don't recompute from prev GW row (that can change after deadline)
       const overallRankChange = history?.overall_rank_change ?? 0
 
+      logRefreshFetchDuration('Manager', performance.now() - start, state)
       return {
         overallRank: history?.overall_rank ?? null,
         overallRankChange,
@@ -103,8 +109,9 @@ export function useManagerData() {
       }
     },
     enabled: !!MANAGER_ID && !!gameweek, // Only run if we have manager ID and gameweek
-    staleTime: 30000, // Cache for 30 seconds
-    refetchInterval: 30000, // Poll every 30 seconds (automatic background refetch)
+    staleTime: isLive ? 20_000 : 30_000, // 20s when live so points stay current
+    refetchInterval: isLive ? 25_000 : 30_000, // 25s when live, 30s otherwise
+    refetchIntervalInBackground: true,
   })
 
   return { managerData, loading: isLoading, error }

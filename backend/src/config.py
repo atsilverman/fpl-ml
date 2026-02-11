@@ -49,8 +49,8 @@ class Config:
     deadline_batch_sleep_seconds: float = float(os.getenv("DEADLINE_BATCH_SLEEP_SECONDS", "1.0"))
     # Post-deadline: run picks+transfers batch for this many minutes so transfers endpoint has time to update (FPL can lag vs is_current)
     deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
-    # Slow loop (manager points + MVs) during live matches
-    full_refresh_interval_live: int = int(os.getenv("FULL_REFRESH_INTERVAL_LIVE", "120"))
+    # Slow loop (manager points + MVs) during live matches — 60s for responsive standings
+    full_refresh_interval_live: int = int(os.getenv("FULL_REFRESH_INTERVAL_LIVE", "60"))
     fixtures_refresh_interval_live: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_LIVE", "30"))
     fixtures_refresh_interval_idle: int = int(os.getenv("FIXTURES_REFRESH_INTERVAL_IDLE", "600"))
     players_refresh_interval_live: int = int(os.getenv("PLAYERS_REFRESH_INTERVAL_LIVE", "60"))

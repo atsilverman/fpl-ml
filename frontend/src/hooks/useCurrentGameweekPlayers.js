@@ -3,6 +3,7 @@ import { useGameweekData } from './useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
+import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 
 /**
  * Shared fetcher for current gameweek players for a given manager.
@@ -151,23 +152,39 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
       // Who was auto-subbed out? (the starter whose place was taken by the bench player)
       const subbedOutPlayerId = picks.find(p => p.was_auto_subbed_in)?.auto_sub_replaced_player_id || null
 
-      // Fetch fixtures for this gameweek so we can use fixture.finished (same source as debug panel)
-      // to decide "match finished" and show official bonus in B column instead of stale provisional
+      // Fetch fixtures for this gameweek (finished state, kickoff, teams for schedule-derived OPP/kickoff)
       const fixturesResult = await supabase
         .from('fixtures')
-        .select('fpl_fixture_id, finished')
+        .select('fpl_fixture_id, finished, started, finished_provisional, kickoff_time, home_team_id, away_team_id')
         .eq('gameweek', gameweek)
       const fixturesById = {}
       const fixtureList = fixturesResult.data || []
+      const fixtureTeamIds = new Set()
       fixtureList.forEach(f => {
         const id = f.fpl_fixture_id
         fixturesById[id] = f
         fixturesById[Number(id)] = f
         fixturesById[String(id)] = f
+        if (f.home_team_id) fixtureTeamIds.add(f.home_team_id)
+        if (f.away_team_id) fixtureTeamIds.add(f.away_team_id)
       })
       const allFixturesFinished = fixtureList.length > 0 && fixtureList.every(
         f => f.finished === true || f.finished === 'true'
       )
+
+      // Team short names for schedule-derived opponent (players with no stats yet, or stats missing kickoff/opponent)
+      let allTeamsMap = {}
+      if (fixtureTeamIds.size > 0) {
+        const teamsResult = await supabase
+          .from('teams')
+          .select('team_id, short_name')
+          .in('team_id', Array.from(fixtureTeamIds))
+        if (!teamsResult.error && teamsResult.data?.length) {
+          teamsResult.data.forEach(t => { allTeamsMap[t.team_id] = t })
+        }
+      }
+      // Merge with opponentTeamsMap so we have full coverage
+      Object.assign(allTeamsMap, opponentTeamsMap)
 
       // Combine picks with stats: one row per (pick, stats row). DGW = two rows per pick.
       const rows = []
@@ -182,8 +199,25 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         const wasAutoSubbedOut = subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId
 
         if (statsRows.length === 0) {
-          rows.push({
-            position: pick.position,
+          // No player_gameweek_stats yet (scheduled game before refresh) – derive fixture/kickoff/opponent from schedule
+          const teamId = slotPlayerInfo.team_id ?? null
+          const scheduleFixtures = teamId
+            ? fixtureList.filter(f => f.home_team_id === teamId || f.away_team_id === teamId)
+                .sort((a, b) => {
+                  const tA = a.kickoff_time ? new Date(a.kickoff_time).getTime() : 0
+                  const tB = b.kickoff_time ? new Date(b.kickoff_time).getTime() : 0
+                  return tA - tB
+                })
+            : []
+          const isDgw = scheduleFixtures.length > 1
+
+          scheduleFixtures.forEach((scheduleFixture, idx) => {
+            const derivedWasHome = scheduleFixture.home_team_id === teamId
+            const derivedOpponentId = derivedWasHome ? scheduleFixture.away_team_id : scheduleFixture.home_team_id
+            const derivedOpponentShort = derivedOpponentId ? (allTeamsMap[derivedOpponentId]?.short_name ?? null) : null
+
+            rows.push({
+              position: pick.position,
             player_id: pick.player_id,
             effective_player_id: pick.player_id,
             player_name: slotName,
@@ -198,14 +232,14 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             points: 0,
             contributedPoints: 0,
             minutes: 0,
-            match_started: false,
-            match_finished: false,
-            match_finished_provisional: false,
-            fixture_id: null,
-            kickoff_time: null,
-            opponent_team_id: null,
-            opponent_team_short_name: null,
-            was_home: false,
+            match_started: scheduleFixture.started ?? false,
+            match_finished: scheduleFixture.finished ?? false,
+            match_finished_provisional: scheduleFixture.finished_provisional ?? false,
+            fixture_id: scheduleFixture.fpl_fixture_id ?? null,
+            kickoff_time: scheduleFixture.kickoff_time ?? null,
+            opponent_team_id: derivedOpponentId ?? null,
+            opponent_team_short_name: derivedOpponentShort ?? null,
+            was_home: derivedWasHome ?? false,
             goals_scored: 0,
             assists: 0,
             clean_sheets: 0,
@@ -221,9 +255,55 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             expected_assists: 0,
             expected_goal_involvements: 0,
             expected_goals_conceded: 0,
-            isDgwRow: false,
-            dgwRowIndex: 0
+            isDgwRow: isDgw,
+            dgwRowIndex: idx
+            })
           })
+
+          if (scheduleFixtures.length === 0) {
+            rows.push({
+              position: pick.position,
+              player_id: pick.player_id,
+              effective_player_id: pick.player_id,
+              player_name: slotName,
+              player_position: slotPlayerInfo.position || 0,
+              player_team_id: slotPlayerInfo.team_id ?? null,
+              player_team_short_name: slotTeamShortName,
+              is_captain: pick.is_captain,
+              is_vice_captain: pick.is_vice_captain,
+              multiplier,
+              was_auto_subbed_in: pick.was_auto_subbed_in,
+              was_auto_subbed_out: wasAutoSubbedOut,
+              points: 0,
+              contributedPoints: 0,
+              minutes: 0,
+              match_started: false,
+              match_finished: false,
+              match_finished_provisional: false,
+              fixture_id: null,
+              kickoff_time: null,
+              opponent_team_id: null,
+              opponent_team_short_name: null,
+              was_home: false,
+              goals_scored: 0,
+              assists: 0,
+              clean_sheets: 0,
+              saves: 0,
+              bps: 0,
+              bonus: 0,
+              bonus_status: 'provisional',
+              defensive_contribution: 0,
+              yellow_cards: 0,
+              red_cards: 0,
+              defcon_points_achieved: false,
+              expected_goals: 0,
+              expected_assists: 0,
+              expected_goal_involvements: 0,
+              expected_goals_conceded: 0,
+              isDgwRow: false,
+              dgwRowIndex: 0
+            })
+          }
           return
         }
 
@@ -240,18 +320,89 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           return sum + effectivePoints
         }, 0)
 
-        statsRows.forEach((stats, idx) => {
+        // DGW expansion: if we have 1 stats row but team has 2 fixtures, add a placeholder row for the second fixture
+        const teamIdForDgw = slotPlayerInfo.team_id ?? null
+        const scheduleFixturesForDgw = teamIdForDgw
+          ? fixtureList.filter(f => f.home_team_id === teamIdForDgw || f.away_team_id === teamIdForDgw)
+              .sort((a, b) => {
+                const tA = a.kickoff_time ? new Date(a.kickoff_time).getTime() : 0
+                const tB = b.kickoff_time ? new Date(b.kickoff_time).getTime() : 0
+                return tA - tB
+              })
+          : []
+        const needsDgwExpansion = statsRows.length === 1 && scheduleFixturesForDgw.length > 1
+        const expandedStatsRows = needsDgwExpansion
+          ? [
+              statsRows[0],
+              {
+                ...statsRows[0],
+                fixture_id: scheduleFixturesForDgw[1].fpl_fixture_id,
+                kickoff_time: scheduleFixturesForDgw[1].kickoff_time,
+                opponent_team_id: scheduleFixturesForDgw[1].home_team_id === teamIdForDgw
+                  ? scheduleFixturesForDgw[1].away_team_id
+                  : scheduleFixturesForDgw[1].home_team_id,
+                was_home: scheduleFixturesForDgw[1].home_team_id === teamIdForDgw,
+                total_points: 0,
+                minutes: 0,
+                goals_scored: 0,
+                assists: 0,
+                clean_sheets: 0,
+                saves: 0,
+                bps: 0,
+                bonus: 0,
+                bonus_status: 'provisional',
+                provisional_bonus: 0,
+                defensive_contribution: 0,
+                yellow_cards: 0,
+                red_cards: 0,
+                defcon_points_achieved: false,
+                expected_goals: 0,
+                expected_assists: 0,
+                expected_goal_involvements: 0,
+                expected_goals_conceded: 0,
+                match_finished: false,
+                match_finished_provisional: false,
+                started: false
+              }
+            ]
+          : statsRows
+
+        expandedStatsRows.forEach((stats, idx) => {
+          const fid = stats.fixture_id != null ? stats.fixture_id : null
+          const fixture = fid != null && fid !== 0
+            ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)])
+            : null
+          const teamId = slotPlayerInfo.team_id ?? null
+          // fixture_id 0 = legacy/placeholder; no fixture in fixturesById. Derive from schedule.
+          // DGW: when fixture is null, get the fixture for this stats row index from schedule (by kickoff order)
+          const scheduleFixturesForTeam = (!fixture && teamId)
+            ? fixtureList.filter(f => f.home_team_id === teamId || f.away_team_id === teamId)
+                .sort((a, b) => {
+                  const tA = a.kickoff_time ? new Date(a.kickoff_time).getTime() : 0
+                  const tB = b.kickoff_time ? new Date(b.kickoff_time).getTime() : 0
+                  return tA - tB
+                })
+            : []
+          const scheduleFixture = scheduleFixturesForTeam[idx] ?? scheduleFixturesForTeam[0] ?? null
+          const effectiveFixture = fixture ?? scheduleFixture ?? null
           const opponentTeam = stats.opponent_team_id ? opponentTeamsMap[stats.opponent_team_id] : null
+          const derivedOpponentFromFixture = effectiveFixture && teamId
+            ? (effectiveFixture.home_team_id === teamId ? allTeamsMap[effectiveFixture.away_team_id] : allTeamsMap[effectiveFixture.home_team_id])
+            : null
+          const kickoffTime = stats.kickoff_time || effectiveFixture?.kickoff_time || null
+          const opponentShortName = opponentTeam?.short_name || derivedOpponentFromFixture?.short_name || null
+          const opponentTeamId = stats.opponent_team_id || (effectiveFixture && teamId
+            ? (effectiveFixture.home_team_id === teamId ? effectiveFixture.away_team_id : effectiveFixture.home_team_id)
+            : null)
           const bonusStatus = stats.bonus_status ?? 'provisional'
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
           const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
-          const fid = stats.fixture_id != null ? stats.fixture_id : null
-          const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
-          const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
+          const fixtureFinished = effectiveFixture != null && (effectiveFixture.finished === true || effectiveFixture.finished === 'true')
           const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
           const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
           const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : provisionalBonus
+          const effectiveFid = effectiveFixture?.fpl_fixture_id ?? (fid && fid !== 0 ? fid : null)
           rows.push({
             position: pick.position,
             player_id: pick.player_id,
@@ -268,13 +419,13 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             points: effectivePoints,
             contributedPoints: idx === 0 ? totalEffectivePoints * multiplier : 0,
             minutes: stats.minutes ?? 0,
-            match_started: stats.started ?? false,
+            match_started: effectiveFixture ? (effectiveFixture.started ?? stats.started) : (stats.started ?? false),
             match_finished: stats.match_finished ?? false,
             match_finished_provisional: stats.match_finished_provisional ?? false,
-            fixture_id: fid,
-            kickoff_time: stats.kickoff_time || null,
-            opponent_team_id: stats.opponent_team_id || null,
-            opponent_team_short_name: opponentTeam?.short_name || null,
+            fixture_id: effectiveFid,
+            kickoff_time: kickoffTime,
+            opponent_team_id: opponentTeamId,
+            opponent_team_short_name: opponentShortName,
             was_home: stats.was_home || false,
             goals_scored: stats.goals_scored ?? 0,
             assists: stats.assists ?? 0,
@@ -291,7 +442,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             expected_assists: stats.expected_assists ?? 0,
             expected_goal_involvements: stats.expected_goal_involvements ?? 0,
             expected_goals_conceded: stats.expected_goals_conceded ?? 0,
-            isDgwRow: statsRows.length > 1,
+            isDgwRow: expandedStatsRows.length > 1,
             dgwRowIndex: idx
           })
         })
@@ -320,10 +471,15 @@ export function useCurrentGameweekPlayers() {
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   const { data: playersData, isLoading, error } = useQuery({
     queryKey: ['current-gameweek-players', MANAGER_ID, gameweek],
-    queryFn: () => fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek),
+    queryFn: async () => {
+      const start = performance.now()
+      const result = await fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek)
+      logRefreshFetchDuration('GW Players', performance.now() - start, refreshState)
+      return result
+    },
     enabled: !!MANAGER_ID && !!gameweek && !gwLoading,
-    staleTime: 30 * 1000, // Cache for 30 seconds
-    refetchInterval: isLive ? 25 * 1000 : 60 * 1000, // 25s when live, 1 min otherwise
+    staleTime: isLive ? 15 * 1000 : 30 * 1000, // 15s when live so GW points stay current
+    refetchInterval: isLive ? 18 * 1000 : 60 * 1000, // 18s when live, 1 min otherwise
     refetchIntervalInBackground: true,
   })
 

@@ -907,12 +907,22 @@ class ManagerDataRefresher:
                     "manager_id", manager_id
                 ).eq("gameweek", target_gw_id).execute()
                 transfers_made = len(trans.data or [])
+                # Preserve gameweek_points and total_points if row exists and matches have been played
+                # (live refresh already updated them; don't overwrite with 0 / prev cumulative)
+                existing = self.db_client.client.table("manager_gameweek_history").select(
+                    "gameweek_points, total_points"
+                ).eq("manager_id", manager_id).eq("gameweek", target_gw_id).limit(1).execute().data
+                gameweek_points = 0
+                total_points = prev["total_points"]
+                if existing and (existing[0].get("gameweek_points") or 0) > 0:
+                    gameweek_points = existing[0]["gameweek_points"]
+                    total_points = existing[0].get("total_points") or prev["total_points"]
                 history_data = {
                     "manager_id": manager_id,
                     "gameweek": target_gw_id,
-                    "gameweek_points": 0,
+                    "gameweek_points": gameweek_points,
                     "transfer_cost": 0,
-                    "total_points": prev["total_points"],
+                    "total_points": total_points,
                     "team_value_tenths": prev.get("team_value_tenths"),
                     "bank_tenths": prev.get("bank_tenths"),
                     "previous_overall_rank": prev.get("overall_rank"),

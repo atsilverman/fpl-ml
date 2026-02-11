@@ -49,9 +49,11 @@ supabase/.temp/
 standings_output/
 *.html
 !frontend/index.html
+!refresh_log_viewer.html
 test_*.py
 audit_*.py
 calculate_*.py
 rerun_*.py
 show_*.py
 *_TEST*.py
+refresh_log.json

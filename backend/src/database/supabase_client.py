@@ -199,6 +199,24 @@ class SupabaseClient:
             "occurred_at": datetime.now(timezone.utc).isoformat(),
         }).execute()
 
+    def insert_refresh_duration_log(self, source: str, path: str, state: str, duration_ms: int):
+        """
+        Record duration of a refresh phase for monitoring/plotting.
+        source: gameweeks, fixtures, gw_players, manager_points, mvs
+        path: fast or slow
+        """
+        try:
+            self.client.table("refresh_duration_log").insert({
+                "source": source,
+                "path": path,
+                "state": state,
+                "duration_ms": duration_ms,
+            }).execute()
+        except Exception as e:
+            logger.debug("Refresh duration log insert failed", extra={
+                "source": source, "path": path, "error": str(e)
+            })
+
     def has_successful_deadline_batch_for_gameweek(self, gameweek: int) -> bool:
         """
         Return True if we already have a successful deadline batch run for this gameweek.

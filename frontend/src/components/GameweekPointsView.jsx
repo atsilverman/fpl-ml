@@ -161,12 +161,13 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   const formatMinutes = (minutes) => (minutes != null && minutes > 0 ? `${minutes}'` : 'DNP')
 
-  /** Format kickoff for MP placeholder: { day: 'SAT', time: '15:00' } in device local TZ; null if invalid */
+  /** Format kickoff for MP/OPP placeholder: { day: 'SAT', time: '15:00' } in device local TZ; null if invalid */
   const formatKickoffShort = (isoString) => {
     if (!isoString) return null
     try {
       const d = new Date(isoString)
       if (Number.isNaN(d.getTime())) return null
+      // Use undefined = device locale/timezone for user's local time
       const day = d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase().slice(0, 3)
       const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: false })
       return { day, time }
@@ -195,14 +196,19 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
-    const fid = player.fixture_id != null ? player.fixture_id : null
+    const fid = player.fixture_id != null && player.fixture_id !== 0 ? player.fixture_id : null
     const fixtureForPlayer = fixturesById && fid != null
       ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)])
       : null
+    const scheduleFixtureByTeam = !fixtureForPlayer && player.player_team_id && fixtures?.length
+      ? fixtures.find(f => f.home_team_id === player.player_team_id || f.away_team_id === player.player_team_id)
+      : null
+    const effectiveKickoffTime = player.kickoff_time || fixtureForPlayer?.kickoff_time || scheduleFixtureByTeam?.kickoff_time || null
+    const fixtureForMatchState = fixtureForPlayer ?? scheduleFixtureByTeam
     // Prefer fixture table state (same source as debug panel) so provisional/live/finished matches backend
-    const matchStarted = fixtureForPlayer ? Boolean(fixtureForPlayer.started) : Boolean(player.match_started)
-    const matchFinished = fixtureForPlayer ? Boolean(fixtureForPlayer.finished) : Boolean(player.match_finished)
-    const matchFinishedProvisional = fixtureForPlayer ? Boolean(fixtureForPlayer.finished_provisional) : Boolean(player.match_finished_provisional)
+    const matchStarted = fixtureForMatchState ? Boolean(fixtureForMatchState.started) : Boolean(player.match_started)
+    const matchFinished = fixtureForMatchState ? Boolean(fixtureForMatchState.finished) : Boolean(player.match_finished)
+    const matchFinishedProvisional = fixtureForMatchState ? Boolean(fixtureForMatchState.finished_provisional) : Boolean(player.match_finished_provisional)
     // Match "in the past" for mins column: started or finished (so DNP shows ! not kickoff for 0 mins when match is done)
     const matchStartedOrFinished = matchStarted || matchFinished || matchFinishedProvisional
     const isMatchLive = matchStarted && !matchFinished && !matchFinishedProvisional
@@ -355,7 +361,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
               </>
             ) : !matchStartedOrFinished ? (
               (() => {
-                const kickoff = formatKickoffShort(player.kickoff_time)
+                const kickoff = formatKickoffShort(effectiveKickoffTime)
                 if (kickoff) {
                   return (
                     <span className="gameweek-points-mins-upcoming" title={`Kickoff: ${kickoff.day} ${kickoff.time} (local)`}>

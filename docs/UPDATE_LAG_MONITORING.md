@@ -32,3 +32,19 @@ The **Updates (debug)** bento on the home page shows when data was last updated,
 
 - `useRefreshEvents()` fetches latest `occurred_at` per path from `refresh_events`.
 - `useUpdateTimestamps()` merges backend timestamps with React Query `dataUpdatedAt` per source and passes rows to the Updates (debug) bento.
+
+## Duration and snapshot logging (plotting)
+
+To analyse refresh lag over time:
+
+1. **Backend** logs each phase duration to `refresh_duration_log` (source, path, state, duration_ms).
+2. **Frontend** logs periodic snapshots to `refresh_snapshot_log` when the Debug modal is open (every 15s): per source, `since_backend_sec` and `since_frontend_sec`.
+3. **Export**: `python3 backend/scripts/export_refresh_log.py -o refresh_log.json`
+4. **View**: Open `refresh_log_viewer.html` in a browser, click "Load JSON", select the exported file.
+
+**Logged data:**
+- **Backend duration** (`refresh_duration_log`): How long each phase took (gameweeks, fixtures, gw_players, manager_points, mvs) — every run.
+- **Frontend duration** (`refresh_frontend_duration_log`): How long each Supabase fetch took per source — every successful fetch.
+- **Snapshot** (`refresh_snapshot_log`): Staleness (since backend/frontend) — only when Debug modal is open, every 15s.
+
+Migrations: `052_refresh_duration_log.sql`, `053_refresh_frontend_duration_log.sql`.

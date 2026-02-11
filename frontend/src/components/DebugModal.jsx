@@ -3,6 +3,7 @@ import { Info } from 'lucide-react'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useUpdateTimestamps } from '../hooks/useUpdateTimestamps'
 import { useRefreshState } from '../hooks/useRefreshState'
+import { useRefreshSnapshotLogger } from '../hooks/useRefreshSnapshotLogger'
 import { useVerifyManagerAttributes } from '../hooks/useVerifyManagerAttributes'
 import { useDeadlineBatchRuns, formatDurationSeconds } from '../hooks/useDeadlineBatchRuns'
 import './ConfigurationModal.css'
@@ -42,6 +43,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading } = useGameweekDebugData()
   const updateTimestampsData = useUpdateTimestamps()
   const { stateLabel } = useRefreshState()
+  useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
   const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
   const [showStateCriteria, setShowStateCriteria] = useState(false)
