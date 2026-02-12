@@ -27,6 +27,7 @@ import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerCompareModal from './PlayerCompareModal'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
@@ -54,6 +55,8 @@ export default function HomePage() {
   const [showTop10Lines, setShowTop10Lines] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [compareMode, setCompareMode] = useState(false)
+  const [selectedPlayerForCompare, setSelectedPlayerForCompare] = useState(null)
   
   // Hooks that depend on state
   const { gameweek, fplRanksUpdated, loading: gwLoading } = useGameweekData()
@@ -556,7 +559,7 @@ export default function HomePage() {
               isChart={showChart}
               isChips={card.isChips}
               isSettings={card.isSettings}
-              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && (hasLiveGames || !fplRanksUpdated)}
+              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && hasLiveGames}
               isLiveUpdating={
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
@@ -619,14 +622,21 @@ export default function HomePage() {
               onPlayerRowClick={
                 cardId === 'gw-points'
                   ? (player) => {
-                      const id = player.effective_player_id ?? player.player_id
-                      if (id != null) {
-                        setSelectedPlayerId(Number(id))
-                        setSelectedPlayerName(player.player_name ?? '')
+                      if (compareMode) {
+                        setSelectedPlayerForCompare(player)
+                        setCompareMode(false)
+                      } else {
+                        const id = player.effective_player_id ?? player.player_id
+                        if (id != null) {
+                          setSelectedPlayerId(Number(id))
+                          setSelectedPlayerName(player.player_name ?? '')
+                        }
                       }
                     }
                   : undefined
               }
+              compareMode={cardId === 'gw-points' ? compareMode : false}
+              onCompareClick={cardId === 'gw-points' ? () => setCompareMode((m) => !m) : undefined}
               leagueStandings={cardId === 'league-rank' ? leagueStandings : undefined}
               leagueStandingsLoading={cardId === 'league-rank' ? leagueStandingsLoading : undefined}
               currentManagerId={cardId === 'overall-rank' || cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
@@ -651,6 +661,13 @@ export default function HomePage() {
             setSelectedPlayerId(null)
             setSelectedPlayerName('')
           }}
+        />
+      )}
+      {selectedPlayerForCompare != null && (
+        <PlayerCompareModal
+          player1={selectedPlayerForCompare}
+          gameweek={gameweek}
+          onClose={() => setSelectedPlayerForCompare(null)}
         />
       )}
     </div>

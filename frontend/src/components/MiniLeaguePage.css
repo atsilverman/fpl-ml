@@ -1302,13 +1302,13 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(2px);
   animation: managerDetailModalFadeIn 0.2s ease-out;
 }
 @keyframes managerDetailModalFadeIn {
@@ -1421,6 +1421,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 }
 
 /* Chart area: same height as home GW points bento; internal scroll like bento */
+.manager-detail-compare-hint {
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
 .manager-detail-modal-chart-wrap {
   flex: 0 0 auto;
   width: 100%;

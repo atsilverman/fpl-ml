@@ -14,9 +14,10 @@ import { useManagerData, useManagerDataForManager } from '../hooks/useManagerDat
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Scale, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerCompareModal from './PlayerCompareModal'
 import ScheduleBento from './ScheduleBento'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
@@ -97,6 +98,8 @@ export default function MiniLeaguePage() {
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [compareMode, setCompareMode] = useState(false)
+  const [selectedPlayerForCompare, setSelectedPlayerForCompare] = useState(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const [showTransfersView, setShowTransfersView] = useState(false)
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
@@ -890,6 +893,17 @@ export default function MiniLeaguePage() {
                 })()}
               </div>
               <div className="manager-detail-modal-header-actions" ref={managerDetailLegendRef}>
+                <button
+                  type="button"
+                  className={`bento-card-compare-btn ${compareMode ? 'bento-card-compare-btn--active' : ''}`}
+                  onClick={() => setCompareMode((m) => !m)}
+                  title={compareMode ? 'Cancel compare' : 'Compare players'}
+                  aria-pressed={compareMode}
+                  aria-label={compareMode ? 'Cancel compare' : 'Compare players'}
+                >
+                  <Scale className="bento-card-compare-icon" size={11} strokeWidth={1.5} aria-hidden />
+                  <span className="bento-card-compare-label">Compare</span>
+                </button>
                 <div
                   className="bento-card-info-icon manager-detail-modal-legend-icon"
                   title="Legend"
@@ -972,6 +986,11 @@ export default function MiniLeaguePage() {
               </div>
             </div>
             <div ref={managerDetailModalBodyRef} className="manager-detail-modal-body bento-card-chart">
+              {compareMode && (
+                <div className="bento-card-compare-hint manager-detail-compare-hint" role="status">
+                  <span className="bento-card-compare-hint-text">Select a player from the list to compare</span>
+                </div>
+              )}
               <div className="manager-detail-modal-chart-wrap">
                 <GameweekPointsView
                   data={selectedManagerPlayers || []}
@@ -981,10 +1000,15 @@ export default function MiniLeaguePage() {
                   isLiveUpdating={isSelectedManagerLiveUpdating}
                   ownedByYouPlayerIds={ownedByYouPlayerIds}
                   onPlayerRowClick={(player) => {
-                    const id = player.effective_player_id ?? player.player_id
-                    if (id != null) {
-                      setSelectedPlayerId(Number(id))
-                      setSelectedPlayerName(player.player_name ?? '')
+                    if (compareMode) {
+                      setSelectedPlayerForCompare(player)
+                      setCompareMode(false)
+                    } else {
+                      const id = player.effective_player_id ?? player.player_id
+                      if (id != null) {
+                        setSelectedPlayerId(Number(id))
+                        setSelectedPlayerName(player.player_name ?? '')
+                      }
                     }
                   }}
                 />
@@ -1065,6 +1089,13 @@ export default function MiniLeaguePage() {
             setSelectedPlayerId(null)
             setSelectedPlayerName('')
           }}
+        />
+      )}
+      {selectedPlayerForCompare != null && (
+        <PlayerCompareModal
+          player1={selectedPlayerForCompare}
+          gameweek={gameweek}
+          onClose={() => setSelectedPlayerForCompare(null)}
         />
       )}
     </div>

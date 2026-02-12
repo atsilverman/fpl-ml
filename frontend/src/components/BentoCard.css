@@ -270,6 +270,62 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   color: var(--text-secondary);
 }
 
+.bento-card-compare-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.bento-card-compare-btn .bento-card-compare-icon {
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.bento-card-compare-btn .bento-card-compare-label {
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .bento-card-compare-btn:hover {
+    opacity: 1;
+    background-color: var(--bg-card);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.bento-card-compare-btn--active {
+  opacity: 1;
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.15));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+
+.bento-card-compare-hint {
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+}
+
+.bento-card-compare-hint-text {
+  font-weight: 500;
+}
+
 .bento-card-expand-icon {
   position: absolute;
   top: 12px;

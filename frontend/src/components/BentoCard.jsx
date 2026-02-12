@@ -7,7 +7,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, Scale, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -132,7 +132,9 @@ export default function BentoCard({
   gameweekDebugLoading = false,
   isUpdatesDebug = false,
   updateTimestampsData = null,
-  onPlayerRowClick = null
+  onPlayerRowClick = null,
+  compareMode = false,
+  onCompareClick = null,
 }) {
   const isSecondHalf = gameweek != null && gameweek > 19
   const chipColumns = isSecondHalf ? SECOND_HALF_CHIP_COLUMNS : FIRST_HALF_CHIP_COLUMNS
@@ -343,6 +345,19 @@ export default function BentoCard({
           <div className="bento-card-expand-icons" ref={gwExpandIconsRef}>
             {isGwPointsExpanded && (
               <>
+                {onCompareClick != null && (
+                  <button
+                    type="button"
+                    className={`bento-card-compare-btn ${compareMode ? 'bento-card-compare-btn--active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); onCompareClick() }}
+                    title={compareMode ? 'Cancel compare' : 'Compare players'}
+                    aria-pressed={compareMode}
+                    aria-label={compareMode ? 'Cancel compare' : 'Compare players'}
+                  >
+                    <Scale className="bento-card-compare-icon" size={11} strokeWidth={1.5} aria-hidden />
+                    <span className="bento-card-compare-label">Compare</span>
+                  </button>
+                )}
                 <div
                   className="bento-card-info-icon"
                   title="Legend"
@@ -680,6 +695,11 @@ export default function BentoCard({
       
       {isExpanded && id === 'gw-points' && (
         <div className="bento-card-chart">
+          {compareMode && (
+            <div className="bento-card-compare-hint" role="status">
+              <span className="bento-card-compare-hint-text">Select a player from the list to compare</span>
+            </div>
+          )}
           <GameweekPointsView
             data={currentGameweekPlayersData || []}
             loading={loading}
