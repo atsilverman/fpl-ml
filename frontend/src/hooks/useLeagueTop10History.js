@@ -5,7 +5,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 /**
  * Hook to fetch overall rank history for the top 10 managers in the configured league
  * (by current league rank). Used for comparison lines on the performance chart.
- * Returns array of { managerId, managerName, leagueRank (1=leader), data: [{ gameweek, overallRank }] }.
+ * Returns array of { managerId, managerName, leagueRank (1=leader), data: [{ gameweek, overallRank, chip }] }.
  */
 export function useLeagueTop10History(gameweek = null) {
   const { config } = useConfiguration()
@@ -50,10 +50,10 @@ export function useLeagueTop10History(gameweek = null) {
         ])
       )
 
-      // Fetch overall rank history for those managers
+      // Fetch overall rank history and chip usage for those managers
       const { data: historyData, error: historyError } = await supabase
         .from('manager_gameweek_history')
-        .select('manager_id, gameweek, overall_rank')
+        .select('manager_id, gameweek, overall_rank, active_chip')
         .in('manager_id', managerIds)
         .not('overall_rank', 'is', null)
         .order('gameweek', { ascending: true })
@@ -74,7 +74,8 @@ export function useLeagueTop10History(gameweek = null) {
         if (byManager.has(row.manager_id)) {
           byManager.get(row.manager_id).data.push({
             gameweek: row.gameweek,
-            overallRank: row.overall_rank
+            overallRank: row.overall_rank,
+            chip: row.active_chip || null
           })
         }
       }

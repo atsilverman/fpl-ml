@@ -767,6 +767,19 @@
     gap: 6px;
   }
 
+  /* Standalone (Add to Home Screen): extra bottom padding and taller nav so it isn’t cropped by the home indicator */
+  .dashboard.standalone-mode .header-content .header-nav.page-selector-bottom {
+    min-height: 56px;
+    padding-bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+  .dashboard.standalone-mode .header-nav.page-selector-bottom.tracking-mode-toggle {
+    padding-bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+  }
+  .dashboard.standalone-mode .page-selector-bottom .tracking-mode-button,
+  .dashboard.standalone-mode .page-selector-bottom .nav-item-gameweek-trigger {
+    min-height: 44px;
+  }
+
   /* Equal-width nav items (Home, League, Gameweek, Research) */
   .page-selector-bottom > .tracking-mode-button,
   .page-selector-bottom > .nav-item-gameweek-wrap {

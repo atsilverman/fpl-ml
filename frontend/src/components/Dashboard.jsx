@@ -84,6 +84,15 @@ export default function Dashboard() {
   const navRef = useRef(null)
   const contentRef = useRef(null)
 
+  /* Detect standalone (Add to Home Screen) so we can add extra safe-area padding for the bottom nav */
+  const [isStandalone, setIsStandalone] = useState(false)
+  useEffect(() => {
+    const standalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      !!window.navigator.standalone
+    setIsStandalone(standalone)
+  }, [])
+
   /* Set CSS variables from measured header and bottom nav height for dynamic top/bottom padding */
   useEffect(() => {
     const el = dashboardRef.current
@@ -195,7 +204,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div ref={dashboardRef} className="dashboard">
+    <div ref={dashboardRef} className={`dashboard ${isStandalone ? 'standalone-mode' : ''}`}>
       <header ref={headerRef} className="dashboard-header">
         <div className="header-content">
           <div className="header-title-section">

@@ -7,8 +7,8 @@ import './PerformanceChart.css'
 
 /** Same subtle color for top-10 lines (except league leader) */
 const TOP10_MUTED_COLOR = 'rgba(148, 163, 184, 0.45)' // slate, subtle
-/** League leader line (distinct) */
-const TOP10_LEADER_COLOR = 'rgba(245, 158, 11, 0.7)'  // amber, more visible
+/** League leader line – same visual weight as configured manager, different color */
+const TOP10_LEADER_COLOR = 'rgba(245, 158, 11, 0.9)'  // amber
 
 /**
  * D3.js Performance Chart Component
@@ -374,6 +374,7 @@ export default function PerformanceChart({
       .attr('y2', d => yScale(d))
       .attr('stroke', 'var(--border-color)')
       .attr('stroke-width', 0.5)
+      .attr('stroke-dasharray', '2,4')
       .attr('opacity', 0)
       .lower() // Ensure grid lines are behind other elements
 
@@ -385,7 +386,7 @@ export default function PerformanceChart({
       .ease(d3.easeCubicOut)
       .attr('y1', d => yScale(d))
       .attr('y2', d => yScale(d))
-      .attr('opacity', 0.15)
+      .attr('opacity', 0.28)
 
     gridLines.exit()
       .transition()
@@ -728,18 +729,19 @@ export default function PerformanceChart({
         .remove()
     }
 
-    // Top-10 league member lines (subtle thin lines, no points); same muted color except league leader; config manager drawn last (on top)
+    // League leader line: same styling as configured manager (thick line + points), different color
     if (filteredTop10LinesData.length > 0) {
       const top10Paths = g.selectAll('.top10-line')
         .data(filteredTop10LinesData, (d, i) => d.managerId ?? i)
 
       const strokeColor = (d) => (d.leagueRank === 1 ? TOP10_LEADER_COLOR : TOP10_MUTED_COLOR)
+      const leaderStrokeWidth = isMobile ? 2 : 2.5
 
       top10Paths.enter()
         .append('path')
         .attr('class', 'top10-line')
         .attr('fill', 'none')
-        .attr('stroke-width', 1)
+        .attr('stroke-width', leaderStrokeWidth)
         .attr('stroke-linecap', 'round')
         .attr('stroke-linejoin', 'round')
         .attr('opacity', 0)
@@ -752,14 +754,62 @@ export default function PerformanceChart({
         .attr('d', d => line(d.data))
         .attr('opacity', 1)
         .attr('stroke', strokeColor)
+        .attr('stroke-width', leaderStrokeWidth)
 
       top10Paths.exit()
         .transition()
         .duration(transitionMs(200))
         .attr('opacity', 0)
         .remove()
+
+      // League leader data points (same style as main line: circle with stroke; chips like main)
+      const leaderPointsFlat = filteredTop10LinesData.flatMap(s => s.data.map(d => ({ ...d, _managerId: s.managerId })))
+      const top10Points = g.selectAll('.top10-point')
+        .data(leaderPointsFlat, d => `${d._managerId}-${d.gameweek}`)
+
+      top10Points.enter()
+        .append('circle')
+        .attr('class', d => d.chip ? 'top10-point top10-chip-point' : 'top10-point')
+        .attr('cx', d => xScale(d.gameweek))
+        .attr('cy', d => yScale(d.overallRank))
+        .attr('r', 0)
+        .attr('fill', d => {
+          if (d.chip && chipInfo[d.chip]) return chipInfo[d.chip].color
+          return 'var(--bg-card)'
+        })
+        .attr('stroke', d => {
+          if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
+          return TOP10_LEADER_COLOR
+        })
+        .attr('stroke-width', d => d.chip ? 2 : 1.5)
+        .attr('opacity', 0)
+        .merge(top10Points)
+        .attr('class', d => d.chip ? 'top10-point top10-chip-point' : 'top10-point')
+        .transition()
+        .duration(transitionMs(240))
+        .ease(d3.easeCubicOut)
+        .attr('cx', d => xScale(d.gameweek))
+        .attr('cy', d => yScale(d.overallRank))
+        .attr('r', d => (d.chip ? 5 : 4))
+        .attr('opacity', 1)
+        .attr('fill', d => {
+          if (d.chip && chipInfo[d.chip]) return chipInfo[d.chip].color
+          return 'var(--bg-card)'
+        })
+        .attr('stroke', d => {
+          if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
+          return TOP10_LEADER_COLOR
+        })
+        .attr('stroke-width', d => d.chip ? 2 : 1.5)
+
+      top10Points.exit()
+        .transition()
+        .duration(transitionMs(200))
+        .attr('r', 0)
+        .attr('opacity', 0)
+        .remove()
     } else {
-      g.selectAll('.top10-line')
+      g.selectAll('.top10-line, .top10-point')
         .transition()
         .duration(transitionMs(200))
         .attr('opacity', 0)
@@ -865,6 +915,9 @@ export default function PerformanceChart({
       .attr('opacity', 0)
       .remove()
 
+    // Ensure configured manager (main) line and dots render above league leader
+    g.selectAll('.main-line, .data-point').raise()
+
     // Tooltip (simple hover effect) - create or select existing
     let tooltip = d3.select('.chart-tooltip')
     if (tooltip.empty()) {
@@ -955,8 +1008,11 @@ export default function PerformanceChart({
         tooltip.transition().duration(200).style('opacity', 0)
       })
 
-    // Chip legend inside SVG so dot size matches graph (r=6/7)
-    const legendChips = Object.entries(chipInfo).map(([key, { name, color }]) => ({ key, name, color }))
+    // Chip legend inside SVG so dot size matches graph (r=6/7); add League leader when toggled
+    const legendChips = [
+      ...Object.entries(chipInfo).map(([key, { name, color }]) => ({ key, name, color, isLine: false })),
+      ...(showTop10Lines ? [{ key: 'league-leader', name: 'League leader', color: TOP10_LEADER_COLOR, isLine: true }] : [])
+    ]
     const legendGroupSel = g.selectAll('.chip-legend-group').data([null])
     legendGroupSel.enter()
       .append('g')
@@ -975,13 +1031,27 @@ export default function PerformanceChart({
       .attr('class', 'chip-legend-item')
 
     const legendDotR = isMobile ? 4 : 5
-    legendItemsEnter.append('circle')
-      .attr('r', legendDotR)
-      .attr('fill', d => d.color)
-      .attr('stroke', 'rgba(0,0,0,0.3)')
-      .attr('stroke-width', 1.5)
-      .attr('cx', 0)
-      .attr('cy', 0)
+    // Circle for chips; line segment for "League leader"
+    legendItemsEnter.each(function(d) {
+      const el = d3.select(this)
+      if (d.isLine) {
+        el.append('path')
+          .attr('class', 'chip-legend-line')
+          .attr('d', `M${-legendDotR},0 L${legendDotR},0`)
+          .attr('stroke', d.color)
+          .attr('stroke-width', 2)
+          .attr('stroke-linecap', 'round')
+          .attr('fill', 'none')
+      } else {
+        el.append('circle')
+          .attr('r', legendDotR)
+          .attr('fill', d.color)
+          .attr('stroke', 'rgba(0,0,0,0.3)')
+          .attr('stroke-width', 1.5)
+          .attr('cx', 0)
+          .attr('cy', 0)
+      }
+    })
 
     legendItemsEnter.append('text')
       .attr('class', 'chip-legend-svg-label')
@@ -999,9 +1069,12 @@ export default function PerformanceChart({
         return `translate(${x}, 0)`
       })
 
-    legendItems.select('circle')
+    legendItems.selectAll('circle')
       .attr('r', legendDotR)
       .attr('fill', d => d.color)
+
+    legendItems.selectAll('.chip-legend-line')
+      .attr('stroke', d => d.color)
 
     legendItems.select('text')
       .attr('x', legendDotR + 3)
