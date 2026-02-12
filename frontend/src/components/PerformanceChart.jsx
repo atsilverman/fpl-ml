@@ -269,6 +269,11 @@ export default function PerformanceChart({
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
+    // Shared style for all horizontal lines (x-axis + y grid lines)
+    const horizontalLineStroke = 'rgba(148, 163, 184, 0.28)'
+    const horizontalLineWidth = 0.5
+    const horizontalLineDasharray = '2,4'
+
     // Calculate scales
     const allRanks = [...filteredData.map(d => d.overallRank)]
     if (filteredComparisonData && filteredComparisonData.length > 0) {
@@ -356,43 +361,12 @@ export default function PerformanceChart({
       g = svg.append('g').attr('class', 'chart-group')
     }
 
-    // Grid lines with transition
+    // Y-axis ticks (used by labels and later by grid lines)
     // If yMin is 1, ensure rank 1 is included in ticks
     let yTicks = yScale.ticks(5)
     if (yMin === 1 && !yTicks.includes(1)) {
       yTicks = [1, ...yTicks].sort((a, b) => a - b)
     }
-    const gridLines = g.selectAll('.grid-line')
-      .data(yTicks, d => d) // Key function
-
-    const gridLinesEnter = gridLines.enter()
-      .append('line')
-      .attr('class', 'grid-line')
-      .attr('x1', padding.left)
-      .attr('x2', width - padding.right)
-      .attr('y1', d => yScale(d))
-      .attr('y2', d => yScale(d))
-      .attr('stroke', 'var(--border-color)')
-      .attr('stroke-width', 0.5)
-      .attr('stroke-dasharray', '2,4')
-      .attr('opacity', 0)
-      .lower() // Ensure grid lines are behind other elements
-
-    const mergedGridLines = gridLinesEnter.merge(gridLines)
-    mergedGridLines.lower() // Ensure grid lines are behind other elements (call on selection, not transition)
-    mergedGridLines
-      .transition()
-      .duration(transitionMs(320))
-      .ease(d3.easeCubicOut)
-      .attr('y1', d => yScale(d))
-      .attr('y2', d => yScale(d))
-      .attr('opacity', 0.28)
-
-    gridLines.exit()
-      .transition()
-      .duration(transitionMs(180))
-      .attr('opacity', 0)
-      .remove()
 
     // Y-axis labels with transition
     const yLabels = g.selectAll('.y-label')
@@ -502,14 +476,17 @@ export default function PerformanceChart({
         .attr('y1', height - padding.bottom)
         .attr('x2', width - padding.right)
         .attr('y2', height - padding.bottom)
-        .attr('stroke', 'var(--border-color)')
-        .attr('stroke-width', 1)
-        .attr('opacity', 0.5)
+        .attr('stroke', horizontalLineStroke)
+        .attr('stroke-width', horizontalLineWidth)
+        .attr('stroke-dasharray', horizontalLineDasharray)
     } else {
       g.select('.x-axis')
         .attr('x2', width - padding.right)
         .attr('y1', height - padding.bottom)
         .attr('y2', height - padding.bottom)
+        .attr('stroke', horizontalLineStroke)
+        .attr('stroke-width', horizontalLineWidth)
+        .attr('stroke-dasharray', horizontalLineDasharray)
     }
 
     // Season midpoint vertical line (only show if midpoint is within visible range)
@@ -657,6 +634,42 @@ export default function PerformanceChart({
       })
 
     areaPath.exit()
+      .transition()
+      .duration(transitionMs(180))
+      .attr('opacity', 0)
+      .remove()
+
+    // Horizontal grid lines (drawn after area so they show on top of fill, before data lines)
+    // Same weight, color and style as x-axis (horizontalLineStroke/Width/Dasharray)
+    const gridLines = g.selectAll('.grid-line')
+      .data(yTicks, d => d)
+
+    const gridLinesEnter = gridLines.enter()
+      .append('line')
+      .attr('class', 'grid-line')
+      .attr('x1', padding.left)
+      .attr('x2', width - padding.right)
+      .attr('y1', d => yScale(d))
+      .attr('y2', d => yScale(d))
+      .attr('stroke', horizontalLineStroke)
+      .attr('stroke-width', horizontalLineWidth)
+      .attr('stroke-dasharray', horizontalLineDasharray)
+      .attr('opacity', 0)
+
+    gridLinesEnter.merge(gridLines)
+      .transition()
+      .duration(transitionMs(320))
+      .ease(d3.easeCubicOut)
+      .attr('x1', padding.left)
+      .attr('x2', width - padding.right)
+      .attr('y1', d => yScale(d))
+      .attr('y2', d => yScale(d))
+      .attr('stroke', horizontalLineStroke)
+      .attr('stroke-width', horizontalLineWidth)
+      .attr('stroke-dasharray', horizontalLineDasharray)
+      .attr('opacity', 1)
+
+    gridLines.exit()
       .transition()
       .duration(transitionMs(180))
       .attr('opacity', 0)
