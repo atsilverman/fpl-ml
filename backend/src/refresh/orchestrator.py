@@ -982,6 +982,12 @@ class RefreshOrchestrator:
                 # 10 calls / 0.5 calls/sec = 20 seconds needed, but we batch so wait 2 sec
                 if batch_num + batch_size < len(manager_ids):
                     await asyncio.sleep(2.0)
+                # Heartbeat every 5 batches so "Since backend" doesn't sit at 10+ min during long runs
+                if (batch_index % 5) == 0:
+                    try:
+                        self.db_client.insert_refresh_event("slow")
+                    except Exception:
+                        pass
             
             # Recalculate mini-league ranks only when at least one fixture has started (or GW finished).
             # Before any kickoff, ranks stay at deadline order; recalc would use same totals but can overwrite.
@@ -1156,6 +1162,47 @@ class RefreshOrchestrator:
         except Exception as e:
             logger.debug("Likely live window check failed", extra={"error": str(e)})
             return False
+
+    def _get_idle_sleep_seconds(self) -> int:
+        """
+        When state is IDLE, return sleep seconds so we run at least once before/during the
+        kickoff window. Uses next (future) kickoff to cap sleep and avoid skipping the window.
+        When in gameweek, never exceed max_idle_sleep_seconds so we match API cadence (~1 min).
+        """
+        if self._is_in_kickoff_window() or self._is_likely_live_window():
+            return self.config.fast_loop_interval_live
+        default_sleep = self.config.gameweeks_refresh_interval
+        if not self.current_gameweek or not self.db_client:
+            return default_sleep
+        # When in gameweek, cap so we never sleep > max_idle_sleep (match API update cadence)
+        def cap_for_gameweek(s: int) -> int:
+            if s > self.config.max_idle_sleep_seconds:
+                return self.config.max_idle_sleep_seconds
+            return s
+        try:
+            next_kickoff_raw = self.db_client.get_next_kickoff_for_gameweek(self.current_gameweek)
+            if not next_kickoff_raw:
+                return cap_for_gameweek(default_sleep)
+            kickoff = datetime.fromisoformat(next_kickoff_raw.replace("Z", "+00:00"))
+            if kickoff.tzinfo is None:
+                kickoff = kickoff.replace(tzinfo=timezone.utc)
+            now = datetime.now(timezone.utc)
+            seconds_until = (kickoff - now).total_seconds()
+            if seconds_until <= 0:
+                return self.config.fast_loop_interval_live
+            window_sec = self.config.kickoff_window_minutes * 60
+            if seconds_until <= window_sec:
+                return self.config.fast_loop_interval_live
+            # Cap sleep so we wake before/during the kickoff window
+            sleep_sec = int(seconds_until - window_sec)
+            sleep_sec = max(self.config.fast_loop_interval_live, min(
+                self.config.gameweeks_refresh_interval,
+                sleep_sec,
+            ))
+            return cap_for_gameweek(sleep_sec)
+        except Exception as e:
+            logger.debug("Idle sleep calculation failed", extra={"error": str(e)})
+            return cap_for_gameweek(default_sleep)
 
     async def _fast_cycle(self):
         """Execute fast refresh cycle (gameweeks, state, fixtures, players when live). No manager points or MVs in live - those run in slow loop."""
@@ -1579,11 +1626,9 @@ class RefreshOrchestrator:
                     # Poll every 30s during price window so we capture actual changes reliably
                     await asyncio.sleep(self.config.prices_refresh_interval_window)
                 else:
-                    # Idle: use short interval when within kickoff window or past kickoff (likely live, DB may be stale)
-                    if self._is_in_kickoff_window() or self._is_likely_live_window():
-                        await asyncio.sleep(self.config.fast_loop_interval_live)
-                    else:
-                        await asyncio.sleep(self.config.gameweeks_refresh_interval)
+                    # Idle: cap sleep by next kickoff so we run at least once before/during kickoff window
+                    sleep_sec = self._get_idle_sleep_seconds()
+                    await asyncio.sleep(sleep_sec)
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -1594,6 +1639,11 @@ class RefreshOrchestrator:
         """Slow loop: manager points + MVs every full_refresh_interval_live when in live. Runs in parallel with fast loop."""
         while self.running:
             try:
+                # Heartbeat at start so "Since backend" updates when iteration begins (not only when it finishes)
+                try:
+                    self.db_client.insert_refresh_event("slow")
+                except Exception as e:
+                    logger.debug("Refresh event (slow start) insert failed", extra={"error": str(e)})
                 # When live: run manager points + MVs FIRST so standings update every ~2 min.
                 # Hourly/ranks run after to avoid blocking live updates for 20+ min.
                 if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):

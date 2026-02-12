@@ -43,11 +43,44 @@
   border-radius: 6px;
   padding: 8px 12px;
   cursor: default;
-  min-width: 100px;
+  min-width: 44px;
 }
 
 html[data-theme="dark"] .debug-modal-state-button {
   background: var(--bg-tertiary);
+}
+
+/* State button: colored by refresh state */
+.debug-modal-state-button--live_matches {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.debug-modal-state-button--bonus_pending {
+  border-color: #eab308;
+  background: rgba(234, 179, 8, 0.1);
+}
+
+.debug-modal-state-button--price_window {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.debug-modal-state-button--transfer_deadline {
+  border-color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.debug-modal-state-button--idle,
+.debug-modal-state-button--outside_gameweek {
+  border-color: #64748b;
+  background: rgba(100, 116, 139, 0.12);
+}
+
+html[data-theme="dark"] .debug-modal-state-button--idle,
+html[data-theme="dark"] .debug-modal-state-button--outside_gameweek {
+  border-color: #64748b;
+  background: rgba(100, 116, 139, 0.2);
 }
 
 .debug-modal-state-info {
@@ -70,7 +103,36 @@ html[data-theme="dark"] .debug-modal-state-button {
 }
 
 .debug-modal-state-dl {
-  margin-top: 12px;
+  margin-top: 40px;
+}
+
+.state-debug-dl-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.state-debug-dl-dot--live_matches {
+  background: #22c55e;
+}
+
+.state-debug-dl-dot--bonus_pending {
+  background: #eab308;
+}
+
+.state-debug-dl-dot--price_window {
+  background: #3b82f6;
+}
+
+.state-debug-dl-dot--transfer_deadline {
+  background: #8b5cf6;
+}
+
+.state-debug-dl-dot--idle {
+  background: #64748b;
 }
 
 .debug-modal-state-value {

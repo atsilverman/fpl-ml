@@ -282,6 +282,23 @@ class SupabaseClient:
             return result.data[0]["kickoff_time"]
         return None
 
+    def get_next_kickoff_for_gameweek(self, gameweek: int) -> Optional[str]:
+        """Earliest kickoff_time for the gameweek that is still in the future (ISO string or None).
+        Used to cap idle sleep so we run at least once before/during the kickoff window."""
+        now_iso = datetime.now(timezone.utc).isoformat()
+        result = (
+            self.client.table("fixtures")
+            .select("kickoff_time")
+            .eq("gameweek", gameweek)
+            .gt("kickoff_time", now_iso)
+            .order("kickoff_time", desc=False)
+            .limit(1)
+            .execute()
+        )
+        if result.data and len(result.data) > 0 and result.data[0].get("kickoff_time"):
+            return result.data[0]["kickoff_time"]
+        return None
+
     def insert_feed_events(self, events: List[Dict[str, Any]]):
         """
         Bulk-insert gameweek feed events (point-impacting timeline events).

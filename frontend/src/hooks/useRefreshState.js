@@ -2,33 +2,22 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 
-/** Match backend KICKOFF_WINDOW_MINUTES: treat as live when within ±N min of any kickoff or past earliest kickoff. */
-const KICKOFF_WINDOW_MINUTES = 5
+/** Typical gap from GW deadline to first kickoff; we show "Deadline" only in this window (30 min–90 min after deadline). */
+const DEADLINE_WINDOW_END_MINUTES = 90
 
-/**
- * True when now is within ±N minutes of any fixture kickoff, or past (earliest kickoff - N min).
- * Uses same logic as backend so we catch live state right away from documented kickoff times.
- */
-function inKickoffOrLikelyLiveWindow(fixtures, windowMinutes = KICKOFF_WINDOW_MINUTES) {
-  if (!fixtures?.length) return false
-  const now = Date.now()
-  const deltaMs = windowMinutes * 60 * 1000
-  let earliestKickoff = null
-  for (const f of fixtures) {
-    const k = f.kickoff_time
-    if (!k) continue
-    const kickoff = new Date(k.replace('Z', '+00:00')).getTime()
-    if (Number.isNaN(kickoff)) continue
-    if (earliestKickoff == null || kickoff < earliestKickoff) earliestKickoff = kickoff
-    if (now >= kickoff - deltaMs && now <= kickoff + deltaMs) return true
-  }
-  return earliestKickoff != null && now >= earliestKickoff - deltaMs
+/** 17:30–17:36 PST (matches backend price change window). */
+function isPriceWindow() {
+  const now = new Date()
+  const pstMinutes = ((now.getUTCHours() - 8 + 24) % 24) * 60 + now.getUTCMinutes()
+  const windowStart = 17 * 60 + 30
+  const windowEnd = windowStart + 6
+  return pstMinutes >= windowStart && pstMinutes <= windowEnd
 }
 
 /**
  * Derives the refresh orchestrator state from gameweeks + fixtures (same logic as backend).
- * Uses kickoff times as a strong hook: when we're in the kickoff window or past earliest kickoff,
- * we treat as live_matches so polling and UI catch live state right away.
+ * State is only LIVE_MATCHES when fixtures have started && !finished_provisional (backend does not
+ * use kickoff/likely-live window for state—those affect polling interval only).
  */
 export function useRefreshState() {
   const { data: gwData } = useQuery({
@@ -55,18 +44,19 @@ export function useRefreshState() {
       const start = performance.now()
       const { data, error } = await supabase
         .from('fixtures')
-        .select('started, finished, finished_provisional, kickoff_time')
+        .select('started, finished, finished_provisional')
         .eq('gameweek', currentGameweek)
       if (error) return []
       const f = data ?? []
       let logState = 'idle'
       if (gwData?.is_current) {
-        if (f.some((x) => x.started && !x.finished_provisional)) logState = 'live_matches'
-        else if (inKickoffOrLikelyLiveWindow(f)) logState = 'live_matches'
+        if (isPriceWindow()) logState = 'price_window'
+        else if (f.some((x) => x.started && !x.finished_provisional)) logState = 'live_matches'
         else if (f.length && f.every((x) => x.finished_provisional && !x.finished)) logState = 'bonus_pending'
         else if (deadlineTime) {
           const d = new Date(deadlineTime.replace('Z', '+00:00'))
-          if ((Date.now() - d) / 60000 >= 30) logState = 'transfer_deadline'
+          const mins = (Date.now() - d) / 60000
+          if (mins >= 30 && mins <= DEADLINE_WINDOW_END_MINUTES) logState = 'transfer_deadline'
         }
       } else if (!gwData) logState = 'outside_gameweek'
       logRefreshFetchDuration('Fixtures', performance.now() - start, logState)
@@ -81,26 +71,21 @@ export function useRefreshState() {
     if (!gwData) return 'outside_gameweek'
     if (!gwData.is_current) return 'outside_gameweek'
 
+    // Match backend order: price window first, then live, bonus, deadline, idle
+    if (isPriceWindow()) return 'price_window'
+
     const liveMatches = fixtures.filter((f) => f.started && !f.finished_provisional)
     if (liveMatches.length) return 'live_matches'
 
     const allBonusPending = fixtures.length > 0 && fixtures.every((f) => f.finished_provisional && !f.finished)
     if (allBonusPending) return 'bonus_pending'
 
-    // Kickoff hook: treat as live when within ±5 min of any kickoff or past earliest kickoff (matches backend)
-    if (fixtures.length > 0 && inKickoffOrLikelyLiveWindow(fixtures)) return 'live_matches'
-
-    const now = new Date()
-    const pstHours = (now.getUTCHours() - 8 + 24) % 24
-    const pstMinutes = pstHours * 60 + now.getUTCMinutes()
-    const windowStart = 17 * 60 + 30
-    const windowEnd = windowStart + 6
-    if (pstMinutes >= windowStart && pstMinutes <= windowEnd) return 'price_window'
-
+    // Only show Deadline in the post-deadline batch window: 30 min after deadline until ~1.5 h (typical gap to first kickoff).
     if (deadlineTime) {
+      const now = new Date()
       const deadline = new Date(deadlineTime.replace('Z', '+00:00'))
       const minutesAfterDeadline = (now - deadline) / (60 * 1000)
-      if (minutesAfterDeadline >= 30) return 'transfer_deadline'
+      if (minutesAfterDeadline >= 30 && minutesAfterDeadline <= DEADLINE_WINDOW_END_MINUTES) return 'transfer_deadline'
     }
 
     return 'idle'

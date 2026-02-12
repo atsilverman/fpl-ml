@@ -43,6 +43,8 @@ class Config:
     fast_loop_interval_deadline: int = int(os.getenv("FAST_LOOP_INTERVAL_DEADLINE", "15"))
     # Kickoff window: use short interval when now is within N minutes of any fixture kickoff (multi-day GW: Sat–Mon)
     kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
+    # When in gameweek (IDLE), never sleep longer than this so we detect live/kickoff within ~1 min (match API cadence)
+    max_idle_sleep_seconds: int = int(os.getenv("MAX_IDLE_SLEEP_SECONDS", "60"))
     # Post-deadline: wait N seconds before starting batch (lets API endpoints settle); keep short so fast loop isn't blocked long
     post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "60"))
     # Post-deadline: picks+transfers batch size (managers per batch) and sleep between batches (seconds)

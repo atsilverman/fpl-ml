@@ -13,11 +13,11 @@ import './DebugModal.css'
 const VERIFY_MANAGER_ID = 344182
 
 const STATE_DEBUG_DEFINITIONS = [
-  { term: 'Live', description: 'At least one fixture: started and not finished_provisional.' },
-  { term: 'Bonus Pending', description: 'All fixtures: finished_provisional and not finished.' },
-  { term: 'Price Window', description: 'Time is in 17:30–17:36 PST (configurable).' },
-  { term: 'Deadline', description: 'Current GW exists, ≥30 min after GW deadline (post-deadline refresh window).' },
-  { term: 'Idle', description: 'Current GW with no live/bonus/price/deadline conditions, or no current gameweek in DB (outside GW).' }
+  { term: 'Live', colorKey: 'live_matches', description: 'At least one fixture: started and not finished_provisional.' },
+  { term: 'Bonus Pending', colorKey: 'bonus_pending', description: 'All fixtures: finished_provisional and not finished.' },
+  { term: 'Price Window', colorKey: 'price_window', description: 'Time is in 17:30–17:36 PST (configurable).' },
+  { term: 'Deadline', colorKey: 'transfer_deadline', description: 'Current GW exists, ≥30 min after GW deadline (post-deadline refresh window).' },
+  { term: 'Idle', colorKey: 'idle', description: 'Current GW with no live/bonus/price/deadline conditions, or no current gameweek in DB (outside GW).' }
 ]
 
 function formatDeadlineGw(iso) {
@@ -42,7 +42,7 @@ function GwDebugBadge({ value }) {
 export default function DebugModal({ isOpen, onClose }) {
   const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading } = useGameweekDebugData()
   const updateTimestampsData = useUpdateTimestamps()
-  const { stateLabel } = useRefreshState()
+  const { state, stateLabel } = useRefreshState()
   useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
   const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
@@ -76,10 +76,10 @@ export default function DebugModal({ isOpen, onClose }) {
             <div className="debug-modal-state-row">
               <button
                 type="button"
-                className="debug-modal-state-button"
-                aria-label="Refresh state"
+                className={`debug-modal-state-button debug-modal-state-button--${state ?? 'idle'}`}
+                aria-label={`Refresh state: ${stateLabel ?? '—'}`}
               >
-                STATE {stateLabel ?? '—'}
+                {stateLabel ?? '—'}
               </button>
               <button
                 type="button"
@@ -94,9 +94,12 @@ export default function DebugModal({ isOpen, onClose }) {
             </div>
             {showStateCriteria && (
               <dl className="state-debug-dl debug-modal-state-dl">
-                {STATE_DEBUG_DEFINITIONS.map(({ term, description }) => (
+                {STATE_DEBUG_DEFINITIONS.map(({ term, colorKey, description }) => (
                   <div key={term} className="state-debug-dl-row">
-                    <dt>{term}</dt>
+                    <dt>
+                      <span className={`state-debug-dl-dot state-debug-dl-dot--${colorKey}`} aria-hidden />
+                      {term}
+                    </dt>
                     <dd>{description}</dd>
                   </div>
                 ))}

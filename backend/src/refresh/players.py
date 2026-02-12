@@ -96,6 +96,27 @@ class PlayerDataRefresher:
                 slot += 1
         return 0
     
+    @staticmethod
+    def _defcon_from_api(stats: Dict) -> Optional[int]:
+        """Get DEFCON from API stats; FPL may use defensive_contribution or defensive_contributions."""
+        v = stats.get("defensive_contribution")
+        if v is not None and v != "":
+            try:
+                n = int(v)
+                if n >= 0:
+                    return n
+            except (TypeError, ValueError):
+                pass
+        v = stats.get("defensive_contributions")
+        if v is not None and v != "":
+            try:
+                n = int(v)
+                if n >= 0:
+                    return n
+            except (TypeError, ValueError):
+                pass
+        return None
+
     def _calculate_defcon(
         self,
         stats: Dict,
@@ -111,9 +132,9 @@ class PlayerDataRefresher:
         Returns:
             DEFCON value
         """
-        # Use official value if available and > 0
-        defcon = stats.get("defensive_contribution", 0)
-        if defcon and defcon > 0:
+        # Use official value if available and > 0 (API may use defensive_contribution or defensive_contributions)
+        defcon = self._defcon_from_api(stats)
+        if defcon is not None and defcon > 0:
             return defcon
         
         # Calculate from raw stats
@@ -612,7 +633,8 @@ class PlayerDataRefresher:
                         )
                     
                     stats_for_defcon = {
-                        "defensive_contribution": stats.get("defensive_contribution", 0),
+                        "defensive_contribution": stats.get("defensive_contribution"),
+                        "defensive_contributions": stats.get("defensive_contributions"),
                         "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
                         "tackles": stats.get("tackles", 0),
                         "recoveries": stats.get("recoveries", 0)
