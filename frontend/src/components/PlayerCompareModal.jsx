@@ -1,26 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
-import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
+import { usePlayerGameweekStatsRange } from '../hooks/usePlayerGameweekStats'
+import { getVisibleStats, formatStatValue, getCompareValue, getLeader } from '../utils/compareStats'
 import './MiniLeaguePage.css'
 import './PlayerCompareModal.css'
 
-const COMPARE_STATS = [
-  { key: 'points', label: 'Points', higherBetter: true },
-  { key: 'minutes', label: 'Minutes', higherBetter: true },
-  { key: 'goals_scored', label: 'Goals', higherBetter: true },
-  { key: 'assists', label: 'Assists', higherBetter: true },
-  { key: 'clean_sheets', label: 'Clean sheets', higherBetter: true },
-  { key: 'saves', label: 'Saves', higherBetter: true },
-  { key: 'bps', label: 'BPS', higherBetter: true },
-  { key: 'bonus', label: 'Bonus', higherBetter: true },
-  { key: 'defensive_contribution', label: 'DEF', higherBetter: true },
-  { key: 'yellow_cards', label: 'Yellow cards', higherBetter: false },
-  { key: 'red_cards', label: 'Red cards', higherBetter: false },
-  { key: 'expected_goals', label: 'xG', higherBetter: true },
-  { key: 'expected_assists', label: 'xA', higherBetter: true },
-  { key: 'expected_goal_involvements', label: 'xGI', higherBetter: true },
-  { key: 'expected_goals_conceded', label: 'xGC', higherBetter: false },
+const GW_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'last6', label: 'Last 6' },
+  { key: 'last12', label: 'Last 12' },
 ]
 
 const POSITION_ABBREV = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
@@ -47,24 +36,6 @@ function statsFromRow(player) {
   }
 }
 
-function formatStatValue(key, value) {
-  if (value == null) return '—'
-  if (['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded'].includes(key)) {
-    const n = Number(value)
-    return n === 0 ? '0' : n.toFixed(2)
-  }
-  return String(value)
-}
-
-/** Returns 'p1' | 'p2' | 'tie' for who leads (or tie). */
-function getLeader(key, higherBetter, v1, v2) {
-  const a = Number(v1) ?? 0
-  const b = Number(v2) ?? 0
-  if (a === b) return 'tie'
-  const p1Wins = higherBetter ? a > b : a < b
-  return p1Wins ? 'p1' : 'p2'
-}
-
 export default function PlayerCompareModal({
   player1,
   gameweek,
@@ -73,12 +44,17 @@ export default function PlayerCompareModal({
   const [searchQuery, setSearchQuery] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
+  const [gwFilter, setGwFilter] = useState('last6')
+  const [per90, setPer90] = useState(false)
   const searchContainerRef = useRef(null)
   const debouncedQuery = useDebounce(searchQuery, 200)
+  const player1Id = player1?.player_id ?? player1?.fpl_player_id ?? null
   const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedQuery)
-  const { stats: player2Stats, loading: p2StatsLoading } = usePlayerGameweekStats(
+  const { stats: player1StatsRange, loading: p1RangeLoading } = usePlayerGameweekStatsRange(player1Id, gameweek, gwFilter)
+  const { stats: player2Stats, loading: p2StatsLoading } = usePlayerGameweekStatsRange(
     selectedPlayer2?.fpl_player_id ?? null,
-    gameweek
+    gameweek,
+    gwFilter
   )
 
   useEffect(() => {
@@ -101,10 +77,15 @@ export default function PlayerCompareModal({
 
   if (!player1) return null
 
-  const stats1 = statsFromRow(player1)
+  const stats1 = (p1RangeLoading ? null : player1StatsRange) ?? statsFromRow(player1)
   const stats2 = player2Stats
   const player1Name = player1.player_name ?? 'Player 1'
   const player2Name = selectedPlayer2?.web_name ?? '—'
+  const pos1 = player1.player_position ?? null
+  const pos2 = selectedPlayer2?.position ?? null
+  const visibleStats = getVisibleStats(pos1, pos2)
+  const minutes1 = stats1?.minutes ?? 0
+  const minutes2 = stats2?.minutes ?? 0
 
   return (
     <div
@@ -120,139 +101,171 @@ export default function PlayerCompareModal({
       >
         <div className="manager-detail-modal-header">
           <h2 id="player-compare-modal-title" className="manager-detail-modal-title player-compare-modal-title">
-            Compare players (GW{gameweek ?? '—'})
+            Compare players
           </h2>
           <button type="button" className="manager-detail-modal-close" onClick={onClose} aria-label="Close">
             <X size={20} strokeWidth={2} />
           </button>
         </div>
         <div className="manager-detail-modal-body player-compare-modal-body">
-          <div className="player-compare-players-row">
-            <div className="player-compare-player-head player-compare-player-1">
-              {player1.player_team_short_name && (
-                <img
-                  src={`/badges/${player1.player_team_short_name}.svg`}
-                  alt=""
-                  className="player-compare-badge"
-                  onError={(e) => { e.target.style.display = 'none' }}
-                />
-              )}
-              <span className="player-compare-player-name">{player1Name}</span>
+          <div className="player-compare-controls">
+            <div className="player-compare-gw-filters">
+              {GW_FILTERS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`player-compare-gw-filter-btn ${gwFilter === key ? 'active' : ''}`}
+                  onClick={() => setGwFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <div className="player-compare-vs" aria-hidden>vs</div>
-            <div className="player-compare-player-head player-compare-player-2">
-              {selectedPlayer2 ? (
-                <>
-                  {selectedPlayer2.team_short_name && (
-                    <img
-                      src={`/badges/${selectedPlayer2.team_short_name}.svg`}
-                      alt=""
-                      className="player-compare-badge"
-                      onError={(e) => { e.target.style.display = 'none' }}
-                    />
-                  )}
-                  <span className="player-compare-player-name">{selectedPlayer2.web_name}</span>
-                  <button
-                    type="button"
-                    className="player-compare-clear-p2"
-                    onClick={() => { setSelectedPlayer2(null); setSearchQuery('') }}
-                    aria-label="Clear second player"
-                  >
-                    <X size={14} />
-                  </button>
-                </>
-              ) : (
-                <div className="player-compare-search-wrap" ref={searchContainerRef}>
-                  <input
-                    type="text"
-                    className="player-compare-search-input"
-                    placeholder="Search player…"
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value)
-                      setDropdownOpen(true)
-                    }}
-                    onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
-                    aria-autocomplete="list"
-                    aria-expanded={dropdownOpen}
-                    aria-controls="player-compare-autocomplete"
-                  />
-                  {dropdownOpen && searchQuery.trim().length >= 2 && (
-                    <ul
-                      id="player-compare-autocomplete"
-                      className="player-compare-autocomplete league-ownership-autocomplete"
-                      role="listbox"
-                    >
-                      {searchLoading ? (
-                        <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
-                      ) : searchPlayers.length === 0 ? (
-                        <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
-                      ) : (
-                        searchPlayers.map((p) => (
-                          <li
-                            key={p.fpl_player_id}
-                            role="option"
-                            className="league-ownership-autocomplete-item"
-                            onClick={() => {
-                              setSelectedPlayer2(p)
-                              setSearchQuery('')
-                              setDropdownOpen(false)
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                setSelectedPlayer2(p)
-                                setSearchQuery('')
-                                setDropdownOpen(false)
-                              }
-                            }}
-                          >
-                            {p.team_short_name && (
-                              <img
-                                src={`/badges/${p.team_short_name}.svg`}
-                                alt=""
-                                className="league-ownership-player-badge"
-                                width={16}
-                                height={16}
-                              />
-                            )}
-                            <span className="league-ownership-player-name">{p.web_name}</span>
-                            {p.position != null && POSITION_ABBREV[p.position] && (
-                              <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
-                                {POSITION_ABBREV[p.position]}
-                              </span>
-                            )}
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  )}
-                </div>
-              )}
-            </div>
+            <label className="player-compare-per90-toggle">
+              <input
+                type="checkbox"
+                checked={per90}
+                onChange={(e) => setPer90(e.target.checked)}
+                aria-label="Show stats per 90 minutes"
+              />
+              <span className="player-compare-per90-label">Per 90</span>
+            </label>
           </div>
 
           <div className="player-compare-table-wrap">
             <table className="player-compare-table">
               <thead>
                 <tr>
-                  <th className="player-compare-th player-compare-th-p1">Player 1</th>
+                  <th className="player-compare-th player-compare-th-p1">
+                    <div className="player-compare-th-player">
+                      {player1.player_team_short_name && (
+                        <img
+                          src={`/badges/${player1.player_team_short_name}.svg`}
+                          alt=""
+                          className="player-compare-badge"
+                          onError={(e) => { e.target.style.display = 'none' }}
+                        />
+                      )}
+                      <span className="player-compare-player-name">{player1Name}</span>
+                      <button
+                        type="button"
+                        className="player-compare-th-clear"
+                        onClick={onClose}
+                        aria-label="Close and change player"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </th>
                   <th className="player-compare-th player-compare-th-stat">Stat</th>
-                  <th className="player-compare-th player-compare-th-p2">Player 2</th>
+                  <th className="player-compare-th player-compare-th-p2">
+                    {selectedPlayer2 ? (
+                      <div className="player-compare-th-player">
+                        {selectedPlayer2.team_short_name && (
+                          <img
+                            src={`/badges/${selectedPlayer2.team_short_name}.svg`}
+                            alt=""
+                            className="player-compare-badge"
+                            onError={(e) => { e.target.style.display = 'none' }}
+                          />
+                        )}
+                        <span className="player-compare-player-name">{selectedPlayer2.web_name}</span>
+                        <button
+                          type="button"
+                          className="player-compare-th-clear"
+                          onClick={() => { setSelectedPlayer2(null); setSearchQuery('') }}
+                          aria-label="Clear and select different player"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="player-compare-th-search-wrap" ref={searchContainerRef}>
+                        <input
+                          type="text"
+                          className="player-compare-search-input"
+                          placeholder="Search player…"
+                          value={searchQuery}
+                          onChange={(e) => {
+                            setSearchQuery(e.target.value)
+                            setDropdownOpen(true)
+                          }}
+                          onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
+                          aria-autocomplete="list"
+                          aria-expanded={dropdownOpen}
+                          aria-controls="player-compare-autocomplete"
+                        />
+                        {dropdownOpen && searchQuery.trim().length >= 2 && (
+                          <ul
+                            id="player-compare-autocomplete"
+                            className="player-compare-autocomplete league-ownership-autocomplete"
+                            role="listbox"
+                          >
+                            {searchLoading ? (
+                              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
+                            ) : searchPlayers.length === 0 ? (
+                              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
+                            ) : (
+                              searchPlayers.map((p) => (
+                                <li
+                                  key={p.fpl_player_id}
+                                  role="option"
+                                  className="league-ownership-autocomplete-item"
+                                  onClick={() => {
+                                    setSelectedPlayer2(p)
+                                    setSearchQuery('')
+                                    setDropdownOpen(false)
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault()
+                                      setSelectedPlayer2(p)
+                                      setSearchQuery('')
+                                      setDropdownOpen(false)
+                                    }
+                                  }}
+                                >
+                                  {p.team_short_name && (
+                                    <img
+                                      src={`/badges/${p.team_short_name}.svg`}
+                                      alt=""
+                                      className="league-ownership-player-badge"
+                                      width={16}
+                                      height={16}
+                                    />
+                                  )}
+                                  <span className="league-ownership-player-name">{p.web_name}</span>
+                                  {p.position != null && POSITION_ABBREV[p.position] && (
+                                    <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
+                                      {POSITION_ABBREV[p.position]}
+                                    </span>
+                                  )}
+                                </li>
+                              ))
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {COMPARE_STATS.map(({ key, label, higherBetter }) => {
+                {visibleStats.map(({ key, label, higherBetter }) => {
                   const v1 = stats1[key]
                   const v2 = stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined)
-                  const leader = stats2 != null ? getLeader(key, higherBetter, v1, v2) : null
+                  const compareV1 = getCompareValue(key, v1, minutes1, per90)
+                  const compareV2 = getCompareValue(key, v2, minutes2, per90)
+                  const leader = stats2 != null ? getLeader(key, higherBetter, compareV1, compareV2) : null
+                  const fmtOpts1 = { per90, minutes: minutes1 }
+                  const fmtOpts2 = { per90, minutes: minutes2 }
                   return (
                     <tr key={key} className="player-compare-tr">
                       <td className="player-compare-td player-compare-td-p1">
                         <span
                           className={`player-compare-pill ${leader === 'p1' ? 'player-compare-pill--leader' : ''}`}
                         >
-                          {formatStatValue(key, v1)}
+                          {formatStatValue(key, v1, fmtOpts1)}
                         </span>
                       </td>
                       <td className="player-compare-td player-compare-td-stat">{label}</td>
@@ -261,9 +274,9 @@ export default function PlayerCompareModal({
                           <span className="player-compare-loading">…</span>
                         ) : (
                           <span
-                            className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''} ${leader === 'tie' ? 'player-compare-pill--tie' : ''}`}
+                            className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''}`}
                           >
-                            {stats2 != null ? formatStatValue(key, v2) : '—'}
+                            {stats2 != null ? formatStatValue(key, v2, fmtOpts2) : '—'}
                           </span>
                         )}
                       </td>

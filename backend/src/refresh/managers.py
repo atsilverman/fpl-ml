@@ -600,14 +600,19 @@ class ManagerDataRefresher:
 
     async def refresh_manager_gameweek_points_live_only(
         self, manager_ids: List[int], gameweek: int
-    ) -> None:
+    ) -> bool:
         """
         Update manager_gameweek_history gameweek_points and total_points from DB-only calculation (no FPL API).
         Used during live matches so standings update every fast cycle without waiting for slow loop.
+
+        Returns:
+            True if all managers were updated successfully; False if any calc or DB update failed.
+            Caller should only refresh mv_mini_league_standings when True to avoid showing incomplete standings.
         """
         if not manager_ids:
-            return
+            return True
         batch_size = 8
+        any_failed = False
         for i in range(0, len(manager_ids), batch_size):
             batch = manager_ids[i : i + batch_size]
             # Calculate points for batch in parallel (DB-only: manager_picks + player_gameweek_stats)
@@ -621,6 +626,7 @@ class ManagerDataRefresher:
             for manager_id, points_result in zip(batch, results):
                 if isinstance(points_result, Exception):
                     logger.warning("Live-only points calc failed", extra={"manager_id": manager_id, "error": str(points_result)})
+                    any_failed = True
                     continue
                 gameweek_points = points_result.get("gameweek_points", 0)
                 baseline = baseline_by_manager.get(manager_id)
@@ -631,6 +637,8 @@ class ManagerDataRefresher:
                     )
                 except Exception as e:
                     logger.warning("Live-only mgh update failed", extra={"manager_id": manager_id, "error": str(e)})
+                    any_failed = True
+        return not any_failed
     
     async def refresh_manager_gameweek_history(
         self,

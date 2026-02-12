@@ -448,7 +448,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 /* Final: finished === true (match confirmed by FPL) – reddish/orange */
 .matchup-card.final {
-  border-color: rgba(234, 88, 12, 0.25);
+  border-color: #c2410c;
 }
 
 .matchup-card.final .matchup-card-status {

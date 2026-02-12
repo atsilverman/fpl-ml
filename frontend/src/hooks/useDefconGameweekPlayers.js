@@ -53,14 +53,31 @@ export function useDefconGameweekPlayers() {
         (fixtureRows || []).map((f) => [f.fpl_fixture_id, f])
       )
 
+      // Aggregate per player (DGW = multiple rows per player): sum defcon, merge match status from any row
       const statsByPlayer = {}
       statsRows.forEach(r => {
-        statsByPlayer[r.player_id] = {
-          fixture_id: r.fixture_id ?? null,
-          defcon: r.defensive_contribution ?? 0,
-          started: r.started ?? false,
-          match_finished: r.match_finished ?? false,
-          match_finished_provisional: r.match_finished_provisional ?? false,
+        const pid = r.player_id
+        const existing = statsByPlayer[pid]
+        const defcon = r.defensive_contribution ?? 0
+        const started = r.started ?? false
+        const matchFinished = r.match_finished === true
+        const matchProvisional = r.match_finished_provisional === true
+        const rowIsLive = started && !matchFinished && !matchProvisional
+        if (!existing) {
+          statsByPlayer[pid] = {
+            fixture_id: r.fixture_id ?? null,
+            defcon,
+            started,
+            match_finished: matchFinished,
+            match_finished_provisional: matchProvisional,
+            is_live: rowIsLive,
+          }
+        } else {
+          existing.defcon += defcon
+          existing.started = existing.started || started
+          existing.match_finished = existing.match_finished && matchFinished
+          existing.match_finished_provisional = existing.match_finished_provisional || matchProvisional
+          existing.is_live = existing.is_live || rowIsLive
         }
       })
 
@@ -76,7 +93,7 @@ export function useDefconGameweekPlayers() {
         const position = p.position ?? 1
         const threshold = DEFCON_THRESHOLD_BY_POSITION[position] ?? 999
         const matchComplete = matchFinished || matchFinishedProvisional
-        const isLive = stat.started === true && !matchComplete
+        const isLive = stat.is_live === true || (stat.started === true && !matchComplete)
         // When gameweek is data_checked, treat all finished matches as final (green check, not grey)
         const matchProvisional = gwDataChecked ? false : (matchFinishedProvisional && !matchFinished)
         const matchConfirmed = matchFinished

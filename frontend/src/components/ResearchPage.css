@@ -109,6 +109,37 @@
   min-width: 0;
 }
 
+/* Compare card: same layout pattern as schedule, no fixed height */
+.research-compare-card {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 20px 14px;
+  gap: 6px;
+  min-height: 400px;
+  overflow: visible;
+}
+
+.research-compare-card .research-page-card-header {
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.research-compare-content {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
+}
+
+.compare-subpage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+
 /* Card header: title (bento font) + source link, inside the card */
 .research-page-card-header {
   display: flex;

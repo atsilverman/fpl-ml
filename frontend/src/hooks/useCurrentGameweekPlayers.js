@@ -6,6 +6,74 @@ import { supabase } from '../lib/supabase'
 import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 
 /**
+ * Infer automatic substitutions from picks + stats + player positions.
+ * Same rules as backend: starter 0 mins + match finished/provisional -> first valid bench
+ * (position-compatible, bench match finished, bench minutes > 0).
+ * When a starter has no stats rows, use fixtureList + team to treat as DNP+finished if their team's fixture is finished.
+ * Returns [{ element_out, element_in }].
+ */
+function inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList = []) {
+  const automaticSubs = []
+  const usedBenchPositions = new Set()
+  const benchPlayers = picks.filter((p) => p.position > 11).sort((a, b) => a.position - b.position)
+  const getStats = (playerId) => {
+    const key = playerId != null ? Number(playerId) : playerId
+    return statsByPlayer[key] ?? statsByPlayer[playerId] ?? statsByPlayer[String(playerId)] ?? []
+  }
+  const getInfo = (playerId) =>
+    playerInfoMap[playerId] ?? playerInfoMap[Number(playerId)] ?? playerInfoMap[String(playerId)] ?? {}
+  const getMatchFinishedForStarter = (playerId) => {
+    const statsRows = getStats(playerId)
+    if (statsRows.length > 0) {
+      return statsRows.some((r) => r.match_finished || r.match_finished_provisional)
+    }
+    const info = getInfo(playerId)
+    const teamId = info.team_id ?? null
+    if (!teamId) return false
+    const teamFixtures = fixtureList.filter(
+      (f) => f.home_team_id === teamId || f.away_team_id === teamId
+    )
+    return teamFixtures.some(
+      (f) => f.finished === true || f.finished === 'true' || f.finished_provisional === true || f.finished_provisional === 'true'
+    )
+  }
+  for (const pick of picks) {
+    if (pick.position > 11) continue
+    const playerId = pick.player_id
+    const statsRows = getStats(playerId)
+    const totalMinutes = statsRows.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
+    const matchFinished = getMatchFinishedForStarter(playerId)
+    if (!(matchFinished && totalMinutes === 0)) continue
+    const slotPlayerInfo = getInfo(playerId)
+    const starterPositionType = slotPlayerInfo.position || 0
+    let substituteId = null
+    for (const benchPick of benchPlayers) {
+      if (usedBenchPositions.has(benchPick.position)) continue
+      const benchPlayerId = benchPick.player_id
+      const benchInfo = getInfo(benchPlayerId)
+      const benchPositionType = benchInfo.position || 0
+      if (starterPositionType === 1) {
+        if (benchPositionType !== 1) continue
+      } else {
+        if (benchPositionType === 1) continue
+      }
+      const benchStats = getStats(benchPlayerId)
+      const benchMinutes = benchStats.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
+      const benchMatchFinished = benchStats.some((r) => r.match_finished || r.match_finished_provisional)
+      if (benchMatchFinished && benchMinutes > 0) {
+        substituteId = benchPlayerId
+        usedBenchPositions.add(benchPick.position)
+        break
+      }
+    }
+    if (substituteId != null) {
+      automaticSubs.push({ element_out: playerId, element_in: substituteId })
+    }
+  }
+  return automaticSubs
+}
+
+/**
  * Shared fetcher for current gameweek players for a given manager.
  * Used by useCurrentGameweekPlayers and useCurrentGameweekPlayersForManager.
  */
@@ -120,10 +188,13 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         throw playerInfoResult.error
       }
 
-      // Create a map for quick lookup: player_id -> player info
+      // Create a map for quick lookup: player_id -> player info (support number and string keys)
       const playerInfoMap = {}
       ;(playerInfoResult.data || []).forEach(player => {
-        playerInfoMap[player.fpl_player_id] = player
+        const id = player.fpl_player_id
+        playerInfoMap[id] = player
+        if (typeof id === 'number') playerInfoMap[String(id)] = player
+        else if (typeof id === 'string') playerInfoMap[Number(id)] = player
       })
 
       // Fetch opponent team info
@@ -144,21 +215,39 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           // Don't throw, just continue without opponent badges
         } else {
           ;(opponentTeamsResult.data || []).forEach(team => {
-            opponentTeamsMap[team.team_id] = team
+            const tid = team.team_id
+            opponentTeamsMap[tid] = team
+            if (typeof tid === 'number') opponentTeamsMap[String(tid)] = team
+            else if (typeof tid === 'string') opponentTeamsMap[Number(tid)] = team
           })
         }
       }
 
-      // Who was auto-subbed out? (the starter whose place was taken by the bench player)
-      const subbedOutPlayerId = picks.find(p => p.was_auto_subbed_in)?.auto_sub_replaced_player_id || null
-
-      // Fetch fixtures for this gameweek (finished state, kickoff, teams for schedule-derived OPP/kickoff)
+      // Fetch fixtures for this gameweek (needed for schedule-derived OPP/kickoff and for auto-sub inference)
       const fixturesResult = await supabase
         .from('fixtures')
         .select('fpl_fixture_id, finished, started, finished_provisional, kickoff_time, home_team_id, away_team_id')
         .eq('gameweek', gameweek)
       const fixturesById = {}
       const fixtureList = fixturesResult.data || []
+
+      // Auto-sub state: from DB first, then infer from stats (and fixture when no stats) when DB has no flags
+      const subbedOutSet = new Set()
+      const replacedBySubIn = new Map() // sub_in_player_id -> replaced_player_id (element_out)
+      const norm = (id) => (id != null ? Number(id) : id)
+      picks.forEach((p) => {
+        if (p.was_auto_subbed_in && p.auto_sub_replaced_player_id != null) {
+          subbedOutSet.add(norm(p.auto_sub_replaced_player_id))
+          replacedBySubIn.set(norm(p.player_id), norm(p.auto_sub_replaced_player_id))
+        }
+      })
+      const inferredSubs = inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList)
+      if (subbedOutSet.size === 0 && inferredSubs.length > 0) {
+        inferredSubs.forEach((s) => {
+          subbedOutSet.add(norm(s.element_out))
+          replacedBySubIn.set(norm(s.element_in), norm(s.element_out))
+        })
+      }
       const fixtureTeamIds = new Set()
       fixtureList.forEach(f => {
         const id = f.fpl_fixture_id
@@ -180,7 +269,12 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           .select('team_id, short_name')
           .in('team_id', Array.from(fixtureTeamIds))
         if (!teamsResult.error && teamsResult.data?.length) {
-          teamsResult.data.forEach(t => { allTeamsMap[t.team_id] = t })
+          teamsResult.data.forEach(t => {
+            const tid = t.team_id
+            allTeamsMap[tid] = t
+            if (typeof tid === 'number') allTeamsMap[String(tid)] = t
+            else if (typeof tid === 'string') allTeamsMap[Number(tid)] = t
+          })
         }
       }
       // Merge with opponentTeamsMap so we have full coverage
@@ -192,11 +286,13 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         const statsPlayerId = pick.player_id
         const statsKey = statsPlayerId != null ? Number(statsPlayerId) : statsPlayerId
         const statsRows = statsByPlayer[statsKey] ?? statsByPlayer[statsPlayerId] ?? statsByPlayer[String(statsPlayerId)] ?? []
-        const slotPlayerInfo = playerInfoMap[pick.player_id] || {}
+        const pickId = pick.player_id
+        const slotPlayerInfo = playerInfoMap[pickId] ?? playerInfoMap[Number(pickId)] ?? playerInfoMap[String(pickId)] ?? {}
         const slotName = slotPlayerInfo.web_name || 'Unknown'
         const slotTeamShortName = slotPlayerInfo.teams?.short_name || null
         const multiplier = pick.multiplier || 1
-        const wasAutoSubbedOut = subbedOutPlayerId != null && pick.player_id === subbedOutPlayerId
+        const wasAutoSubbedOut = subbedOutSet.has(norm(pick.player_id))
+        const wasAutoSubbedIn = pick.was_auto_subbed_in || replacedBySubIn.has(norm(pick.player_id))
 
         if (statsRows.length === 0) {
           // No player_gameweek_stats yet (scheduled game before refresh) – derive fixture/kickoff/opponent from schedule
@@ -227,7 +323,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             is_captain: pick.is_captain,
             is_vice_captain: pick.is_vice_captain,
             multiplier,
-            was_auto_subbed_in: pick.was_auto_subbed_in,
+            was_auto_subbed_in: wasAutoSubbedIn,
             was_auto_subbed_out: wasAutoSubbedOut,
             points: 0,
             contributedPoints: 0,
@@ -272,7 +368,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
               is_captain: pick.is_captain,
               is_vice_captain: pick.is_vice_captain,
               multiplier,
-              was_auto_subbed_in: pick.was_auto_subbed_in,
+              was_auto_subbed_in: wasAutoSubbedIn,
               was_auto_subbed_out: wasAutoSubbedOut,
               points: 0,
               contributedPoints: 0,
@@ -414,7 +510,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             is_captain: pick.is_captain,
             is_vice_captain: pick.is_vice_captain,
             multiplier,
-            was_auto_subbed_in: pick.was_auto_subbed_in,
+            was_auto_subbed_in: wasAutoSubbedIn,
             was_auto_subbed_out: wasAutoSubbedOut,
             points: effectivePoints,
             contributedPoints: idx === 0 ? totalEffectivePoints * multiplier : 0,

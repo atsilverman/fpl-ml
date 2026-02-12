@@ -20,6 +20,7 @@ const GAMEWEEK_VIEWS = [
 const RESEARCH_VIEWS = [
   { id: 'price-changes', label: 'Price Changes', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
+  { id: 'compare', label: 'Compare', disabled: false },
   { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
 ]
 

@@ -1,10 +1,11 @@
 import { useSearchParams } from 'react-router-dom'
 import PriceChangesSubpage from './PriceChangesSubpage'
 import ScheduleSubpage from './ScheduleSubpage'
+import CompareSubpage from './CompareSubpage'
 import './HomePage.css'
 import './ResearchPage.css'
 
-const VALID_VIEWS = ['price-changes', 'schedule']
+const VALID_VIEWS = ['price-changes', 'schedule', 'compare']
 
 export default function ResearchPage() {
   const [searchParams] = useSearchParams()
@@ -25,6 +26,17 @@ export default function ResearchPage() {
       {view === 'schedule' && (
         <div className="research-card research-schedule-card bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
           <ScheduleSubpage />
+        </div>
+      )}
+
+      {view === 'compare' && (
+        <div className="research-card research-compare-card bento-card bento-card-animate bento-card-expanded">
+          <header className="research-page-card-header research-compare-header">
+            <span className="research-page-card-title">Compare</span>
+          </header>
+          <div className="research-compare-content">
+            <CompareSubpage />
+          </div>
         </div>
       )}
     </div>

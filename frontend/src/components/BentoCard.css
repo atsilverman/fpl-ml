@@ -312,6 +312,23 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   color: var(--accent-blue, #3b82f6);
 }
 
+@media (max-width: 768px) {
+  .bento-card-compare-btn .bento-card-compare-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .bento-card-compare-btn {
+    padding: 0 6px;
+  }
+}
+
 .bento-card-compare-hint {
   padding: 6px 10px;
   margin-bottom: 6px;

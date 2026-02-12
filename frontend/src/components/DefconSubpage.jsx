@@ -96,14 +96,12 @@ export default function DefconSubpage({ isActive = true }) {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showFilterPopup, setShowFilterPopup] = useState(false)
   const [showInfoPopup, setShowInfoPopup] = useState(false)
-  /** Section 1: ownership — all, owned only, not owned */
+  /** Section 1: ownership — all, owned only, not owned. Default: owned when visiting page. */
   const [scopeFilter, setScopeFilter] = useState('owned')
-  /** Section 2: position — all, DEF (2), MID (3), FWD (4) */
+  /** Section 2: position — all, DEF (2), MID (3), FWD (4). Default: all. */
   const [positionFilter, setPositionFilter] = useState('all')
-  /** Section 3: matchup — all or fixture id */
+  /** Section 3: matchup — 'all' | 'live' | fixture id. Default: all matchups. */
   const [matchupFilter, setMatchupFilter] = useState('all')
-  /** Live only — show only players in live matches (independent of ownership/position/matchup) */
-  const [liveOnly, setLiveOnly] = useState(false)
   const prevActiveRef = useRef(false)
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -154,14 +152,13 @@ export default function DefconSubpage({ isActive = true }) {
   const filterSummaryText = useMemo(() => {
     const scopeLabel = scopeFilter === 'all' ? 'All' : scopeFilter === 'owned' ? 'Owned' : 'Not owned'
     const positionLabel = positionFilter === 'all' ? 'All positions' : (positionFilter === 2 ? 'DEF' : positionFilter === 3 ? 'MID' : 'FWD')
-    let matchupLabel = 'All matchups'
-    if (matchupFilter !== 'all') {
-      const m = matchups.find(mu => mu.fixtureId === matchupFilter)
-      if (m) matchupLabel = `${m.homeShort ?? '?'} v ${m.awayShort ?? '?'}`
-    }
-    const liveLabel = liveOnly ? ' · Live' : ''
-    return `${scopeLabel} · ${positionLabel} · ${matchupLabel}${liveLabel}`
-  }, [scopeFilter, positionFilter, matchupFilter, matchups, liveOnly])
+    const matchupLabel = matchupFilter === 'live'
+      ? 'Live'
+      : matchupFilter !== 'all' && typeof matchupFilter === 'number'
+        ? (() => { const m = matchups.find(mu => mu.fixtureId === matchupFilter); return m ? `${m.homeShort ?? '?'} v ${m.awayShort ?? '?'}` : 'All matchups' })()
+        : 'All matchups'
+    return `${scopeLabel} · ${positionLabel} · ${matchupLabel}`
+  }, [scopeFilter, positionFilter, matchupFilter, matchups])
 
   const suggestions = useMemo(() => {
     if (!players?.length) return []
@@ -189,21 +186,20 @@ export default function DefconSubpage({ isActive = true }) {
     } else if (scopeFilter === 'not-owned') {
       list = list.filter(p => !ownedPlayerIdSet.has(p.player_id))
     }
-    if (liveOnly) {
+    if (matchupFilter === 'live') {
       list = list.filter(p => p.is_live)
-    }
-    if (positionFilter !== 'all') {
-      list = list.filter(p => p.position === positionFilter)
-    }
-    if (matchupFilter !== 'all') {
+    } else if (matchupFilter !== 'all' && typeof matchupFilter === 'number') {
       const fixture = fixtures?.find(f => f.fpl_fixture_id === matchupFilter)
       if (fixture) {
         const teamIds = new Set([fixture.home_team_id, fixture.away_team_id])
         list = list.filter(p => p.team_id != null && teamIds.has(p.team_id))
       }
     }
+    if (positionFilter !== 'all') {
+      list = list.filter(p => p.position === positionFilter)
+    }
     return list
-  }, [players, searchQuery, scopeFilter, positionFilter, matchupFilter, liveOnly, managerId, ownedPlayerIdSet, fixtures])
+  }, [players, searchQuery, scopeFilter, positionFilter, matchupFilter, managerId, ownedPlayerIdSet, fixtures])
 
   useEffect(() => {
     if (isActive && !prevActiveRef.current) {
@@ -214,7 +210,6 @@ export default function DefconSubpage({ isActive = true }) {
       setScopeFilter('owned')
       setPositionFilter('all')
       setMatchupFilter('all')
-      setLiveOnly(false)
     }
     prevActiveRef.current = isActive
   }, [isActive])
@@ -374,6 +369,7 @@ export default function DefconSubpage({ isActive = true }) {
                 type="button"
                 className={`defcon-matchup-btn ${scopeFilter === 'all' ? 'defcon-matchup-btn--active' : ''}`}
                 onClick={() => setScopeFilter('all')}
+                aria-pressed={scopeFilter === 'all'}
               >
                 All
               </button>
@@ -381,6 +377,7 @@ export default function DefconSubpage({ isActive = true }) {
                 type="button"
                 className={`defcon-matchup-btn ${scopeFilter === 'owned' ? 'defcon-matchup-btn--active' : ''}`}
                 onClick={() => setScopeFilter('owned')}
+                aria-pressed={scopeFilter === 'owned'}
               >
                 Owned
               </button>
@@ -388,6 +385,7 @@ export default function DefconSubpage({ isActive = true }) {
                 type="button"
                 className={`defcon-matchup-btn ${scopeFilter === 'not-owned' ? 'defcon-matchup-btn--active' : ''}`}
                 onClick={() => setScopeFilter('not-owned')}
+                aria-pressed={scopeFilter === 'not-owned'}
               >
                 Not owned
               </button>
@@ -400,27 +398,31 @@ export default function DefconSubpage({ isActive = true }) {
                 type="button"
                 className={`defcon-matchup-btn ${positionFilter === 'all' ? 'defcon-matchup-btn--active' : ''}`}
                 onClick={() => setPositionFilter('all')}
+                aria-pressed={positionFilter === 'all'}
               >
                 All
               </button>
               <button
                 type="button"
                 className={`defcon-matchup-btn ${positionFilter === 2 ? 'defcon-matchup-btn--active' : ''}`}
-                onClick={() => setPositionFilter(positionFilter === 2 ? 'all' : 2)}
+                onClick={() => setPositionFilter(2)}
+                aria-pressed={positionFilter === 2}
               >
                 DEF
               </button>
               <button
                 type="button"
                 className={`defcon-matchup-btn ${positionFilter === 3 ? 'defcon-matchup-btn--active' : ''}`}
-                onClick={() => setPositionFilter(positionFilter === 3 ? 'all' : 3)}
+                onClick={() => setPositionFilter(3)}
+                aria-pressed={positionFilter === 3}
               >
                 MID
               </button>
               <button
                 type="button"
                 className={`defcon-matchup-btn ${positionFilter === 4 ? 'defcon-matchup-btn--active' : ''}`}
-                onClick={() => setPositionFilter(positionFilter === 4 ? 'all' : 4)}
+                onClick={() => setPositionFilter(4)}
+                aria-pressed={positionFilter === 4}
               >
                 FWD
               </button>
@@ -433,14 +435,15 @@ export default function DefconSubpage({ isActive = true }) {
                 type="button"
                 className={`defcon-matchup-btn ${matchupFilter === 'all' ? 'defcon-matchup-btn--active' : ''}`}
                 onClick={() => setMatchupFilter('all')}
+                aria-pressed={matchupFilter === 'all'}
               >
                 All
               </button>
               <button
                 type="button"
-                className={`defcon-matchup-btn defcon-matchup-btn--live ${liveOnly ? 'defcon-matchup-btn--active' : ''}`}
-                onClick={() => setLiveOnly(prev => !prev)}
-                aria-pressed={liveOnly}
+                className={`defcon-matchup-btn defcon-matchup-btn--live ${matchupFilter === 'live' ? 'defcon-matchup-btn--active' : ''}`}
+                onClick={() => setMatchupFilter('live')}
+                aria-pressed={matchupFilter === 'live'}
               >
                 Live
               </button>
@@ -449,7 +452,8 @@ export default function DefconSubpage({ isActive = true }) {
                   key={m.fixtureId}
                   type="button"
                   className={`defcon-matchup-btn ${matchupFilter === m.fixtureId ? 'defcon-matchup-btn--active' : ''}`}
-                  onClick={() => setMatchupFilter(matchupFilter === m.fixtureId ? 'all' : m.fixtureId)}
+                  onClick={() => setMatchupFilter(m.fixtureId)}
+                  aria-pressed={matchupFilter === m.fixtureId}
                   title={`${m.homeShort ?? ''} vs ${m.awayShort ?? ''}`}
                 >
                   {m.homeShort && <img src={`/badges/${m.homeShort}.svg`} alt="" className="defcon-matchup-badge" />}

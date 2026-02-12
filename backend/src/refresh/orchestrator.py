@@ -1304,8 +1304,9 @@ class RefreshOrchestrator:
                     try:
                         t_live_standings = datetime.now(timezone.utc)
                         manager_ids = self._get_tracked_manager_ids()
+                        all_managers_updated = True
                         if manager_ids and self.current_gameweek:
-                            await self.manager_refresher.refresh_manager_gameweek_points_live_only(
+                            all_managers_updated = await self.manager_refresher.refresh_manager_gameweek_points_live_only(
                                 manager_ids, self.current_gameweek
                             )
                             any_fixture_started = False
@@ -1329,7 +1330,9 @@ class RefreshOrchestrator:
                                             "gameweek": self.current_gameweek,
                                             "error": str(e),
                                         }, exc_info=True)
-                            self.db_client.refresh_materialized_views_for_live()
+                            # Only refresh standings MV when all managers updated so we don't show incomplete data
+                            if all_managers_updated:
+                                self.db_client.refresh_materialized_views_for_live()
                         self._last_live_standings_in_fast_cycle = datetime.now(timezone.utc)
                         duration_ms = int((datetime.now(timezone.utc) - t_live_standings).total_seconds() * 1000)
                         try:

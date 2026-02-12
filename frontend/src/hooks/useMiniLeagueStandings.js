@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -10,7 +11,7 @@ export function useMiniLeagueStandings(gameweek = null) {
   const isLive = state === 'live_matches' || state === 'bonus_pending'
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
 
-  const { data: standings = [], isLoading, error, dataUpdatedAt } = useQuery({
+  const { data: rawStandings = [], isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['standings', LEAGUE_ID, gameweek],
     queryFn: async () => {
       if (!LEAGUE_ID) return []
@@ -36,6 +37,31 @@ export function useMiniLeagueStandings(gameweek = null) {
     refetchInterval: isLive ? 12_000 : 30_000, // 12s when live, 30s otherwise
     refetchIntervalInBackground: true,
   })
+
+  // When live: only show new standings when rank 1 has been stable for two consecutive fetches,
+  // so we avoid briefly showing wrong order (e.g. wrong leader) during backend recomputation.
+  const [stableStandings, setStableStandings] = useState([])
+  const lastRank1Ref = useRef(null)
+
+  useEffect(() => {
+    lastRank1Ref.current = null
+  }, [LEAGUE_ID, gameweek])
+
+  useEffect(() => {
+    if (!isLive) {
+      setStableStandings(rawStandings)
+      lastRank1Ref.current = rawStandings[0]?.manager_id ?? null
+      return
+    }
+    if (!rawStandings.length) return
+    const rank1 = rawStandings[0].manager_id
+    if (lastRank1Ref.current === null || lastRank1Ref.current === rank1) {
+      setStableStandings(rawStandings)
+    }
+    lastRank1Ref.current = rank1
+  }, [isLive, rawStandings, dataUpdatedAt])
+
+  const standings = isLive ? stableStandings : rawStandings
 
   return { standings, loading: isLoading, error, dataUpdatedAt }
 }
