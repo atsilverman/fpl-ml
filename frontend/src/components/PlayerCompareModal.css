@@ -36,10 +36,20 @@
 
 .player-compare-controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.player-compare-controls .player-compare-gw-filters,
+.player-compare-controls .player-compare-controls-divider,
+.player-compare-controls .player-compare-gw-filter-btn {
   flex-shrink: 0;
 }
 
