@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useLeagueActiveChips } from '../hooks/useLeagueActiveChips'
@@ -15,7 +16,7 @@ import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Scale, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal, TableProperties } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Scale, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, UserRoundSearch, ListOrdered, ArrowRightLeft } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
 import PlayerCompareModal from './PlayerCompareModal'
@@ -23,12 +24,14 @@ import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
 import './GameweekPointsView.css'
+import './MatchesSubpage.css'
 
 const SORT_COLUMNS = ['rank', 'manager', 'total', 'gw', 'left', 'live']
 const DEFAULT_SORT = { column: 'total', dir: 'desc' }
 const MANAGER_TEAM_NAME_MAX_LENGTH = 15
 const MANAGER_TEAM_NAME_MAX_LENGTH_TRANSFERS_VIEW = 20
 const MANAGER_ABBREV_MAX_WIDTH = 400
+const MOBILE_SEARCH_BREAKPOINT = 768
 
 function abbreviateName(name, maxLength = MANAGER_TEAM_NAME_MAX_LENGTH) {
   if (!name || typeof name !== 'string') return name ?? ''
@@ -74,7 +77,31 @@ function getChipDisplayLabel(activeChip, gameweek) {
 
 const POSITION_ABBREV = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
+const LEAGUE_VIEW_ORDER = ['table', 'captain', 'transfers']
+const LEAGUE_VIEW_LABELS = { table: 'Standings', captain: 'Captaincy', transfers: 'Transfers' }
+const LEAGUE_VIEW_ICONS = { table: ListOrdered, captain: null, transfers: ArrowRightLeft }
+
+/** Captain "C" badge matching standings header; uses currentColor to match icon/tab color scheme */
+function CaptainBadgeIcon({ className, size = 12 }) {
+  return (
+    <span
+      className={`captain-badge-icon ${className ?? ''}`.trim()}
+      style={{ '--captain-badge-size': `${size}px` }}
+      aria-hidden
+    >
+      C
+    </span>
+  )
+}
+
 export default function MiniLeaguePage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const leagueViewMode = (() => {
+    const v = searchParams.get('view')
+    return v === 'captain' || v === 'transfers' ? v : 'table'
+  })()
+  const leagueViewIndex = LEAGUE_VIEW_ORDER.indexOf(leagueViewMode) >= 0 ? LEAGUE_VIEW_ORDER.indexOf(leagueViewMode) : 0
+  const setLeagueView = (viewId) => setSearchParams({ view: viewId }, { replace: true })
   const { config } = useConfiguration()
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
   const currentManagerId = config?.managerId ?? null
@@ -102,7 +129,8 @@ export default function MiniLeaguePage() {
   const [compareMode, setCompareMode] = useState(false)
   const [selectedPlayerForCompare, setSelectedPlayerForCompare] = useState(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
-  const [leagueViewMode, setLeagueViewMode] = useState('table') // 'table' | 'captain' | 'transfers'
+  const [isMobileSearch, setIsMobileSearch] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_SEARCH_BREAKPOINT)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const showCView = leagueViewMode === 'captain'
   const showTransfersView = leagueViewMode === 'transfers'
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
@@ -121,6 +149,20 @@ export default function MiniLeaguePage() {
     mql.addEventListener('change', handler)
     return () => mql.removeEventListener('change', handler)
   }, [])
+
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_SEARCH_BREAKPOINT}px)`)
+    const handler = () => setIsMobileSearch(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+
+  useEffect(() => {
+    if (mobileSearchOpen) {
+      const t = setTimeout(() => document.getElementById('league-ownership-search')?.focus(), 0)
+      return () => clearTimeout(t)
+    }
+  }, [mobileSearchOpen])
 
   const { data: selectedManagerPlayers, isLoading: selectedManagerPlayersLoading } = useCurrentGameweekPlayersForManager(selectedManagerId)
   const { data: configuredManagerPlayers } = useCurrentGameweekPlayers()
@@ -352,30 +394,265 @@ export default function MiniLeaguePage() {
     )
   }
 
+  /* Overlay: only search bar + autocomplete (chips/hint show in main view after close) */
+  const leagueOwnershipSearchOverlayContent = (
+      <div className="league-ownership-search-container" ref={searchContainerRef}>
+        <div className="league-ownership-search-bar">
+          <Search className="league-ownership-search-icon" size={16} aria-hidden />
+          <input
+            type="text"
+            className="league-ownership-search-input"
+            placeholder="Search player to view league ownership"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setDropdownOpen(true)
+            }}
+            onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
+            aria-autocomplete="list"
+            aria-expanded={dropdownOpen}
+            aria-controls="league-player-autocomplete"
+            id="league-ownership-search"
+          />
+        </div>
+        {dropdownOpen && searchQuery.trim().length >= 2 && (
+          <ul
+            id="league-player-autocomplete"
+            className="league-ownership-autocomplete"
+            role="listbox"
+          >
+            {searchLoading ? (
+              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
+            ) : searchPlayers.length === 0 ? (
+              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
+            ) : (
+              searchPlayers.map((p) => (
+                <li
+                  key={p.fpl_player_id}
+                  role="option"
+                  className="league-ownership-autocomplete-item"
+                  onClick={() => {
+                    handleSelectPlayer(p)
+                    setMobileSearchOpen(false)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleSelectPlayer(p)
+                      setMobileSearchOpen(false)
+                    }
+                  }}
+                >
+                  {p.team_short_name && (
+                    <img
+                      src={`/badges/${p.team_short_name}.svg`}
+                      alt=""
+                      className="league-ownership-player-badge"
+                      width={16}
+                      height={16}
+                    />
+                  )}
+                  <span className="league-ownership-player-name">{p.web_name}</span>
+                  {p.position != null && POSITION_ABBREV[p.position] && (
+                    <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
+                      {POSITION_ABBREV[p.position]}
+                    </span>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+    )
+
+  const leagueOwnershipSearchContent = (
+      <div className="league-ownership-search-container" ref={searchContainerRef}>
+        <div className="league-ownership-search-bar">
+          <Search className="league-ownership-search-icon" size={16} aria-hidden />
+          <input
+            type="text"
+            className="league-ownership-search-input"
+            placeholder="Search player to view league ownership"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setDropdownOpen(true)
+            }}
+            onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
+            aria-autocomplete="list"
+            aria-expanded={dropdownOpen}
+            aria-controls="league-player-autocomplete"
+            id="league-ownership-search"
+          />
+        </div>
+        {selectedPlayers.length > 0 && (
+          <div className="league-ownership-selected-container">
+            {selectedPlayers.map((p) => (
+              <span key={p.fpl_player_id} className="league-ownership-selected-chip">
+                {p.team_short_name && (
+                  <img
+                    src={`/badges/${p.team_short_name}.svg`}
+                    alt=""
+                    className="league-ownership-player-badge"
+                    width={16}
+                    height={16}
+                  />
+                )}
+                <span className="league-ownership-player-name">{p.web_name}</span>
+                <button
+                  type="button"
+                  className="league-ownership-clear"
+                  onClick={() => handleRemovePlayer(p.fpl_player_id)}
+                  aria-label={`Remove ${p.web_name}`}
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              className="league-ownership-clear-all"
+              onClick={handleClearFilter}
+              aria-label="Clear all players"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+        {dropdownOpen && searchQuery.trim().length >= 2 && (
+          <ul
+            id="league-player-autocomplete"
+            className="league-ownership-autocomplete"
+            role="listbox"
+          >
+            {searchLoading ? (
+              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
+            ) : searchPlayers.length === 0 ? (
+              <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
+            ) : (
+              searchPlayers.map((p) => (
+                <li
+                  key={p.fpl_player_id}
+                  role="option"
+                  className="league-ownership-autocomplete-item"
+                  onClick={() => handleSelectPlayer(p)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleSelectPlayer(p)
+                    }
+                  }}
+                >
+                  {p.team_short_name && (
+                    <img
+                      src={`/badges/${p.team_short_name}.svg`}
+                      alt=""
+                      className="league-ownership-player-badge"
+                      width={16}
+                      height={16}
+                    />
+                  )}
+                  <span className="league-ownership-player-name">{p.web_name}</span>
+                  {p.position != null && POSITION_ABBREV[p.position] && (
+                    <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
+                      {POSITION_ABBREV[p.position]}
+                    </span>
+                  )}
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+        {selectedPlayers.length > 0 && !ownershipLoading && (
+          <p className="league-ownership-filter-hint">
+            <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
+              <strong>{selectedPlayers[0].web_name}</strong>
+            ) : (
+              <>
+                <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
+              </>
+            )}{' '}
+            this gameweek
+          </p>
+        )}
+      </div>
+    )
+
   return (
     <div className="mini-league-page">
+      <div className="subpage-toolbar-wrap">
+        {isMobileSearch && (
+          <>
+            <button
+              type="button"
+              className="league-mobile-search-trigger"
+              onClick={() => setMobileSearchOpen(true)}
+              aria-label="Search player to view league ownership"
+            >
+              <UserRoundSearch size={14} strokeWidth={2} />
+              {selectedPlayers.length > 0 && (
+                <span className="league-mobile-search-badge" aria-hidden>{selectedPlayers.length}</span>
+              )}
+            </button>
+            {mobileSearchOpen && (
+              <div className="league-search-overlay" role="dialog" aria-modal="true" aria-label="Search player to view league ownership">
+                <div className="league-search-overlay-backdrop" onClick={() => setMobileSearchOpen(false)} aria-hidden />
+                <div className="league-search-overlay-panel">
+                  <div className="league-search-overlay-header">
+                    <span className="league-search-overlay-title">Search players</span>
+                    <button type="button" className="league-search-overlay-close" onClick={() => setMobileSearchOpen(false)} aria-label="Close search">
+                      <X size={20} strokeWidth={2} />
+                    </button>
+                  </div>
+                  <div className="league-search-overlay-body">
+                    {leagueOwnershipSearchOverlayContent}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+        <nav
+          className="subpage-view-toggle"
+          role="tablist"
+          aria-label="League view"
+          data-options="3"
+          style={{ '--slider-offset': leagueViewIndex }}
+        >
+          <span className="subpage-view-toggle-slider" aria-hidden />
+          {LEAGUE_VIEW_ORDER.map((viewId) => {
+            const Icon = LEAGUE_VIEW_ICONS[viewId]
+            return (
+              <button
+                key={viewId}
+                type="button"
+                role="tab"
+                aria-selected={leagueViewMode === viewId}
+                className={`subpage-view-toggle-button ${leagueViewMode === viewId ? 'active' : ''}`}
+                onClick={() => setLeagueView(viewId)}
+                aria-label={LEAGUE_VIEW_LABELS[viewId]}
+                title={LEAGUE_VIEW_LABELS[viewId]}
+              >
+                {viewId === 'captain' ? (
+                  <CaptainBadgeIcon className="subpage-view-toggle-icon" size={12} />
+                ) : (
+                  Icon && <Icon size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                )}
+                <span className="subpage-view-toggle-label">{LEAGUE_VIEW_LABELS[viewId]}</span>
+              </button>
+            )
+          })}
+        </nav>
+      </div>
       <div className="league-standings-bento league-standings-page">
-        <div className="league-standings-toolbar">
-          <div className="league-ownership-search-container" ref={searchContainerRef}>
-            <div className="league-ownership-search-bar">
-            <Search className="league-ownership-search-icon" size={16} aria-hidden />
-            <input
-              type="text"
-              className="league-ownership-search-input"
-              placeholder="Search player to view league ownership"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                setDropdownOpen(true)
-              }}
-              onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
-              aria-autocomplete="list"
-              aria-expanded={dropdownOpen}
-              aria-controls="league-player-autocomplete"
-              id="league-ownership-search"
-            />
+        {!isMobileSearch && (
+          <div className="league-standings-toolbar">
+            {leagueOwnershipSearchContent}
           </div>
-          {selectedPlayers.length > 0 && (
+        )}
+        {isMobileSearch && selectedPlayers.length > 0 && (
+          <div className="league-ownership-main-results">
             <div className="league-ownership-selected-container">
               {selectedPlayers.map((p) => (
                 <span key={p.fpl_player_id} className="league-ownership-selected-chip">
@@ -408,104 +685,20 @@ export default function MiniLeaguePage() {
                 Clear all
               </button>
             </div>
-          )}
-          {dropdownOpen && searchQuery.trim().length >= 2 && (
-            <ul
-              id="league-player-autocomplete"
-              className="league-ownership-autocomplete"
-              role="listbox"
-            >
-              {searchLoading ? (
-                <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
-              ) : searchPlayers.length === 0 ? (
-                <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
-              ) : (
-                searchPlayers.map((p) => (
-                  <li
-                    key={p.fpl_player_id}
-                    role="option"
-                    className="league-ownership-autocomplete-item"
-                    onClick={() => handleSelectPlayer(p)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        handleSelectPlayer(p)
-                      }
-                    }}
-                  >
-                    {p.team_short_name && (
-                      <img
-                        src={`/badges/${p.team_short_name}.svg`}
-                        alt=""
-                        className="league-ownership-player-badge"
-                        width={16}
-                        height={16}
-                      />
-                    )}
-                    <span className="league-ownership-player-name">{p.web_name}</span>
-                    {p.position != null && POSITION_ABBREV[p.position] && (
-                      <span className="league-ownership-autocomplete-position" title={`Position: ${POSITION_ABBREV[p.position]}`}>
-                        {POSITION_ABBREV[p.position]}
-                      </span>
-                    )}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-          {selectedPlayers.length > 0 && !ownershipLoading && (
-            <p className="league-ownership-filter-hint">
-              <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
-                <strong>{selectedPlayers[0].web_name}</strong>
-              ) : (
-                <>
-                  <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
-                </>
-              )}{' '}
-              this gameweek
-            </p>
-          )}
+            {!ownershipLoading && (
+              <p className="league-ownership-filter-hint">
+                <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
+                  <strong>{selectedPlayers[0].web_name}</strong>
+                ) : (
+                  <>
+                    <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
+                  </>
+                )}{' '}
+                this gameweek
+              </p>
+            )}
           </div>
-          <nav className="league-view-toggle" role="tablist" aria-label="League view">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={leagueViewMode === 'table'}
-              className={`league-view-toggle-button ${leagueViewMode === 'table' ? 'active' : ''}`}
-              onClick={() => setLeagueViewMode('table')}
-              aria-label="League table"
-              title="League table"
-            >
-              <span className="league-view-toggle-icon" aria-hidden>
-                <TableProperties size={14} strokeWidth={2} />
-              </span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={leagueViewMode === 'captain'}
-              className={`league-view-toggle-button ${leagueViewMode === 'captain' ? 'active' : ''}`}
-              onClick={() => setLeagueViewMode('captain')}
-              aria-label="Captain view"
-              title="Captain view"
-            >
-              <span className="league-view-toggle-icon league-view-toggle-icon-text" aria-hidden>C</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={leagueViewMode === 'transfers'}
-              className={`league-view-toggle-button ${leagueViewMode === 'transfers' ? 'active' : ''}`}
-              onClick={() => setLeagueViewMode('transfers')}
-              aria-label="Transfers view"
-              title="Transfers view"
-            >
-              <span className="league-view-toggle-icon" aria-hidden>
-                <ArrowLeftRight size={14} strokeWidth={2} />
-              </span>
-            </button>
-          </nav>
-        </div>
+        )}
         <div className="league-standings-bento-body">
         {showTransfersView && <div className="league-standings-transfers-spacer" aria-hidden="true" />}
         {showTransfersView && (() => {
@@ -522,32 +715,30 @@ export default function MiniLeaguePage() {
           const chipColor = transfersSummary?.activeChip != null ? (CHIP_COLORS[String(transfersSummary.activeChip).toLowerCase()] ?? 'var(--text-secondary)') : null
           return (
             <div className="league-page-transfers-summary">
-              <div className={`transfers-summary-card ${transfersSummaryExpanded ? 'transfers-summary-card--expanded' : 'transfers-summary-card--collapsed'}`}>
-                <div
-                  className="league-page-transfers-summary-header"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setTransfersSummaryExpanded((v) => !v)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTransfersSummaryExpanded((v) => !v); } }}
-                  aria-expanded={transfersSummaryExpanded}
-                  aria-label={transfersSummaryExpanded ? 'Collapse League Transfers' : 'Expand League Transfers'}
-                >
-                  <span className="league-page-transfers-summary-title">League Transfers</span>
-                  <span className="league-page-transfers-summary-expand-icon" title={transfersSummaryExpanded ? 'Collapse' : 'Expand'} aria-hidden>
-                    {transfersSummaryExpanded ? (
-                      <Minimize2 className="league-page-transfers-summary-expand-icon-svg" size={11} strokeWidth={1.5} />
-                    ) : (
-                      <MoveDiagonal className="league-page-transfers-summary-expand-icon-svg" size={11} strokeWidth={1.5} />
-                    )}
-                  </span>
-                </div>
-                <div
-                  className={`league-page-transfers-summary-content-wrap ${transfersSummaryExpanded ? 'league-page-transfers-summary-content-wrap--open' : ''}`}
-                  aria-hidden={!transfersSummaryExpanded}
-                >
-                  <div className="transfers-summary-content">
+              <div className={`gw-top-points-card ${transfersSummaryExpanded ? 'gw-top-points-card--expanded' : 'gw-top-points-card--collapsed'}`}>
+                <div className="gw-top-points-content">
+                  <div
+                    className="gw-top-points-header"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setTransfersSummaryExpanded((v) => !v)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTransfersSummaryExpanded((v) => !v); } }}
+                    aria-expanded={transfersSummaryExpanded}
+                    aria-label={transfersSummaryExpanded ? 'Collapse League Transfers' : 'Expand League Transfers'}
+                  >
+                    <span className="gw-top-points-title">League Transfers</span>
+                    <span className="gw-top-points-expand-icon" title={transfersSummaryExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                      {transfersSummaryExpanded ? (
+                        <Minimize2 className="gw-top-points-expand-icon-svg" size={11} strokeWidth={1.5} />
+                      ) : (
+                        <MoveDiagonal className="gw-top-points-expand-icon-svg" size={11} strokeWidth={1.5} />
+                      )}
+                    </span>
+                  </div>
+                  {transfersSummaryExpanded && (
+                    <>
                       {chipLabel && (
-                        <div className="transfers-summary-header-row">
+                        <div className="league-transfers-summary-chip-row">
                           <span
                             className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
                             style={{ backgroundColor: chipColor, color: '#fff' }}
@@ -556,16 +747,16 @@ export default function MiniLeaguePage() {
                           </span>
                         </div>
                       )}
-                      <div className="transfers-summary-columns-wrapper">
-                        <div className="transfers-summary-column transfers-summary-column-out">
-                          <div className="transfers-summary-column-header">
-                            <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
-                          </div>
-                          {leagueTopTransfersLoading ? (
-                            <div className="transfers-summary-loading">Loading...</div>
-                          ) : outList.length === 0 ? (
-                            <div className="transfers-summary-empty">No data</div>
-                          ) : (
+                      {leagueTopTransfersLoading ? (
+                        <div className="gw-top-points-loading">Loading...</div>
+                      ) : (outList.length + inList.length) === 0 ? (
+                        <div className="gw-top-points-empty">No data</div>
+                      ) : (
+                        <div className="transfers-summary-columns-wrapper">
+                          <div className="transfers-summary-column transfers-summary-column-out">
+                            <div className="transfers-summary-column-header">
+                              <span className="transfers-summary-column-title transfers-summary-column-title-out">→OUT</span>
+                            </div>
                             <div className="transfers-summary-column-list">
                               {outList.map((row, i) => (
                                 <div key={i} className="transfers-summary-column-item">
@@ -581,17 +772,11 @@ export default function MiniLeaguePage() {
                                 </div>
                               ))}
                             </div>
-                          )}
-                        </div>
-                        <div className="transfers-summary-column transfers-summary-column-in">
-                          <div className="transfers-summary-column-header">
-                            <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
                           </div>
-                          {leagueTopTransfersLoading ? (
-                            <div className="transfers-summary-loading">Loading...</div>
-                          ) : inList.length === 0 ? (
-                            <div className="transfers-summary-empty">No data</div>
-                          ) : (
+                          <div className="transfers-summary-column transfers-summary-column-in">
+                            <div className="transfers-summary-column-header">
+                              <span className="transfers-summary-column-title transfers-summary-column-title-in">←IN</span>
+                            </div>
                             <div className="transfers-summary-column-list">
                               {inList.map((row, i) => (
                                 <div key={i} className="transfers-summary-column-item">
@@ -607,15 +792,11 @@ export default function MiniLeaguePage() {
                                 </div>
                               ))}
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    {!leagueTopTransfersLoading && (outList.length + inList.length) > 8 && (
-                      <div className="league-page-transfers-summary-scroll-hint" aria-hidden title="Scroll to view all">
-                        <ChevronDown size={14} strokeWidth={2} />
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -636,7 +817,7 @@ export default function MiniLeaguePage() {
               ) : (
                 <>
                   <col style={{ width: '14%' }} />
-                  <col style={{ width: '35%' }} />
+                  <col className="league-standings-bento-col-manager" style={{ width: '35%' }} />
                   <col style={{ width: '12%' }} />
                   <col style={{ width: '13%' }} />
                   <col style={{ width: '13%' }} />
@@ -779,15 +960,6 @@ export default function MiniLeaguePage() {
                     {showCView ? (
                       <td className="league-standings-bento-team league-standings-c-view-manager-cell" title={displayName}>
                         <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
-                        {chipLabel && (
-                          <span
-                            className="league-standings-bento-chip-badge"
-                            style={{ backgroundColor: chipColor }}
-                            title={activeChip && gameweek != null ? `${activeChip} (GW ${gameweek})` : activeChip}
-                          >
-                            {chipLabel}
-                          </span>
-                        )}
                       </td>
                     ) : (
                       <td className="league-standings-bento-team" title={displayName}>
@@ -960,7 +1132,7 @@ export default function MiniLeaguePage() {
                               <span className="league-standings-bento-team-name">{abbreviateName(displayName, MANAGER_TEAM_NAME_MAX_LENGTH_TRANSFERS_VIEW)}</span>
                               {isCurrentUser && <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>}
                             </span>
-                            {transferViewChipLabel && (
+                            {transferViewChipLabel && (transferViewChip === 'freehit' || transferViewChip === 'wildcard') && (
                               <span
                                 className="league-standings-bento-chip-badge"
                                 style={{ backgroundColor: transferViewChipColor }}

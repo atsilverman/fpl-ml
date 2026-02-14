@@ -137,3 +137,43 @@ export function usePlayerGameweekStatsRange(playerId, currentGameweek, filter) {
 
   return { stats: data ?? null, loading: isLoading, error }
 }
+
+/**
+ * Fetches stat ranks (1 = best) for one player over a gameweek range.
+ * When rankBy is 'per90', ranks are by per-90 rate (players with 90+ minutes only).
+ * Returns rank and _tie per stat so UI can show "T-2" for ties.
+ * @param {number|null} playerId
+ * @param {number|null} currentGameweek
+ * @param {'all'|'last6'|'last12'} filter
+ * @param {'total'|'per90'} rankBy - rank by totals or per-90 (matches Per 90 toggle when Rank is on)
+ * @returns {{ ranks: Record<string, number|boolean>|null, loading: boolean, error: Error|null }}
+ */
+export function usePlayerCompareStatRanks(playerId, currentGameweek, filter, rankBy = 'total') {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['player-compare-stat-ranks', playerId, currentGameweek, filter, rankBy],
+    queryFn: async () => {
+      if (playerId == null || currentGameweek == null) return null
+      const gw = Number(currentGameweek)
+      let minGw = 1
+      if (filter === 'last6') minGw = Math.max(1, gw - 5)
+      else if (filter === 'last12') minGw = Math.max(1, gw - 11)
+
+      const { data: result, error: err } = await supabase.rpc('get_player_compare_stat_ranks', {
+        p_player_id: playerId,
+        p_gw_min: minGw,
+        p_gw_max: gw,
+        p_rank_by: rankBy === 'per90' ? 'per90' : 'total',
+      })
+
+      if (err) throw err
+      if (result == null) return null
+      if (Array.isArray(result) && result.length === 1) return result[0]
+      if (typeof result === 'object' && !Array.isArray(result)) return result
+      return null
+    },
+    enabled: playerId != null && currentGameweek != null && ['all', 'last6', 'last12'].includes(filter),
+    staleTime: 60000,
+  })
+
+  return { ranks: data ?? null, loading: isLoading, error }
+}

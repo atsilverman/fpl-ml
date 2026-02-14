@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction, Scale, Calendar } from 'lucide-react'
+import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction, Scale, CalendarDays, ListOrdered, ArrowRightLeft, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -18,10 +18,16 @@ const GAMEWEEK_VIEWS = [
 ]
 
 const RESEARCH_VIEWS = [
-  { id: 'price-changes', label: '£ Changes', disabled: false },
+  { id: 'price-changes', label: 'Changes', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
   { id: 'compare', label: 'Compare', disabled: false },
   { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
+]
+
+const LEAGUE_VIEWS = [
+  { id: 'table', label: 'Standings', disabled: false },
+  { id: 'captain', label: 'Captaincy', disabled: false },
+  { id: 'transfers', label: 'Transfers', disabled: false },
 ]
 
 /* Soccer ball icon (no Lucide equivalent); matches lucide size/stroke usage */
@@ -69,12 +75,20 @@ export default function Dashboard() {
   const [researchDropdownOpen, setResearchDropdownOpen] = useState(false)
   const researchDropdownRef = useRef(null)
   const researchCloseTimeoutRef = useRef(null)
+  const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false)
+  const leagueDropdownRef = useRef(null)
+  const leagueCloseTimeoutRef = useRef(null)
 
   const hasHover = () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
   const HOVER_LEAVE_MS = 180
 
-  const gameweekView = searchParams.get('view') || 'defcon'
+  const gameweekView = searchParams.get('view') || 'matches'
   const isOnGameweek = location.pathname === '/gameweek'
+  const leagueView = (() => {
+    const v = searchParams.get('view')
+    return v === 'captain' || v === 'transfers' ? v : 'table'
+  })()
+  const isOnMiniLeague = location.pathname === '/mini-league'
   const [toggleBonus, setToggleBonus] = useState(false)
   const [showH2H, setShowH2H] = useState(false)
   const [debugModalOpen, setDebugModalOpen] = useState(false)
@@ -92,6 +106,16 @@ export default function Dashboard() {
       window.matchMedia('(display-mode: standalone)').matches ||
       !!window.navigator.standalone
     setIsStandalone(standalone)
+  }, [])
+
+  /* Mobile: no subpage dropdown in nav – use in-page toolbar only. Desktop: expanding list (dropdown). */
+  const NAV_MOBILE_BREAKPOINT = 768
+  const [isMobileNav, setIsMobileNav] = useState(() => typeof window !== 'undefined' && window.innerWidth <= NAV_MOBILE_BREAKPOINT)
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${NAV_MOBILE_BREAKPOINT}px)`)
+    const handler = () => setIsMobileNav(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
   }, [])
 
   /* Set CSS variables from measured header and bottom nav height for dynamic top/bottom padding */
@@ -155,6 +179,17 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [researchDropdownOpen])
 
+  useEffect(() => {
+    if (!leagueDropdownOpen) return
+    const handleClickOutside = (e) => {
+      if (leagueDropdownRef.current && !leagueDropdownRef.current.contains(e.target)) {
+        setLeagueDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [leagueDropdownOpen])
+
   const { data: managerRow } = useQuery({
     queryKey: ['manager-name', managerId],
     queryFn: async () => {
@@ -187,6 +222,7 @@ export default function Dashboard() {
   ]
 
   const currentPage = pages.find(p => location.pathname === p.path) || pages[0]
+  const pageSliderOffset = Math.max(0, pages.findIndex(p => p.id === currentPage.id))
 
   const setGameweekView = (view) => {
     setSearchParams({ view }, { replace: true })
@@ -202,6 +238,15 @@ export default function Dashboard() {
       navigate(`/research?view=${view}`)
     }
     setResearchDropdownOpen(false)
+  }
+
+  const setLeagueView = (view) => {
+    if (isOnMiniLeague) {
+      setSearchParams({ view }, { replace: true })
+    } else {
+      navigate(`/mini-league?view=${view}`)
+    }
+    setLeagueDropdownOpen(false)
   }
 
   return (
@@ -222,10 +267,128 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          <nav ref={navRef} className="header-nav page-selector-bottom tracking-mode-toggle" aria-label="Page navigation">
+          <nav
+            ref={navRef}
+            className="header-nav page-selector-bottom tracking-mode-toggle"
+            aria-label="Page navigation"
+            style={{ '--slider-offset': pageSliderOffset }}
+          >
+            <span className="tracking-mode-slider" aria-hidden />
         {pages.map(page => {
           const isDisabled = !['home', 'mini-league', 'gameweek', 'research'].includes(page.id)
+          if (page.id === 'mini-league') {
+            const LeagueNavIcon = NAV_ICONS['mini-league']
+            if (isMobileNav) {
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  className={`tracking-mode-button ${currentPage.id === 'mini-league' ? 'active' : ''}`}
+                  onClick={() => navigate('/mini-league')}
+                  disabled={isDisabled}
+                  aria-label="League"
+                >
+                  <span className="nav-button-icon" aria-hidden>
+                    <LeagueNavIcon size={20} strokeWidth={2} />
+                  </span>
+                  <span className="nav-button-label">League</span>
+                </button>
+              )
+            }
+            return (
+              <div
+                key={page.id}
+                className="nav-item-gameweek-wrap"
+                ref={leagueDropdownRef}
+                onMouseEnter={() => {
+                  if (leagueCloseTimeoutRef.current) {
+                    clearTimeout(leagueCloseTimeoutRef.current)
+                    leagueCloseTimeoutRef.current = null
+                  }
+                  if (hasHover()) setLeagueDropdownOpen(true)
+                }}
+                onMouseLeave={() => {
+                  if (!hasHover()) return
+                  leagueCloseTimeoutRef.current = setTimeout(() => {
+                    setLeagueDropdownOpen(false)
+                    leagueCloseTimeoutRef.current = null
+                  }, HOVER_LEAVE_MS)
+                }}
+              >
+                <button
+                  type="button"
+                  className={`tracking-mode-button nav-item-gameweek-trigger ${currentPage.id === 'mini-league' ? 'active' : ''}`}
+                  onClick={() => setLeagueDropdownOpen((open) => !open)}
+                  disabled={isDisabled}
+                  aria-expanded={leagueDropdownOpen}
+                  aria-haspopup="listbox"
+                  aria-label="League view"
+                >
+                  <span className="nav-button-icon" aria-hidden>
+                    <LeagueNavIcon size={20} strokeWidth={2} />
+                  </span>
+                  <span className="nav-button-label">League</span>
+                  <ChevronDown
+                    size={12}
+                    strokeWidth={2}
+                    className={`nav-item-gameweek-chevron ${leagueDropdownOpen ? 'nav-item-gameweek-chevron--open' : ''}`}
+                    aria-hidden
+                  />
+                </button>
+                {leagueDropdownOpen && (
+                  <div
+                    className="nav-item-gameweek-panel nav-item-gameweek-panel--open"
+                    role="listbox"
+                    aria-label="League view"
+                  >
+                    {LEAGUE_VIEWS.map((view) => {
+                      const LeagueOptionIcon = { table: ListOrdered, captain: null, transfers: ArrowRightLeft }[view.id]
+                      return (
+                        <button
+                          key={view.id}
+                          type="button"
+                          role="option"
+                          aria-selected={currentPage.id === 'mini-league' && leagueView === view.id}
+                          className={`nav-item-gameweek-option nav-item-gameweek-option--with-icon ${currentPage.id === 'mini-league' && leagueView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                          onClick={() => {
+                            if (view.disabled) return
+                            setLeagueView(view.id)
+                          }}
+                          disabled={view.disabled}
+                        >
+                          {view.id === 'captain' ? (
+                            <span className="captain-badge-icon nav-item-gameweek-option-icon" style={{ '--captain-badge-size': '14px' }} aria-hidden>C</span>
+                          ) : (
+                            LeagueOptionIcon && <LeagueOptionIcon size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
+                          )}
+                          {view.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          }
           if (page.id === 'gameweek') {
+            const GameweekNavIcon = NAV_ICONS.gameweek
+            if (isMobileNav) {
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  className={`tracking-mode-button ${currentPage.id === 'gameweek' ? 'active' : ''}`}
+                  onClick={() => navigate('/gameweek')}
+                  disabled={isDisabled}
+                  aria-label="Gameweek"
+                >
+                  <span className="nav-button-icon" aria-hidden>
+                    <GameweekNavIcon size={20} strokeWidth={2} />
+                  </span>
+                  <span className="nav-button-label">Gameweek</span>
+                </button>
+              )
+            }
             return (
               <div
                 key={page.id}
@@ -258,10 +421,7 @@ export default function Dashboard() {
                   aria-label="Gameweek view"
                 >
                   <span className="nav-button-icon" aria-hidden>
-                    {(() => {
-                      const Icon = NAV_ICONS.gameweek
-                      return <Icon size={20} strokeWidth={2} />
-                    })()}
+                    <GameweekNavIcon size={20} strokeWidth={2} />
                   </span>
                   <span className="nav-button-label">Gameweek</span>
                     <ChevronDown
@@ -277,33 +437,55 @@ export default function Dashboard() {
                     role="listbox"
                     aria-label="Gameweek view"
                   >
-                    {GAMEWEEK_VIEWS.map(view => (
-                      <button
-                        key={view.id}
-                        type="button"
-                        role="option"
-                        aria-selected={currentPage.id === 'gameweek' && gameweekView === view.id}
-                        className={`nav-item-gameweek-option ${currentPage.id === 'gameweek' && gameweekView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
-                        onClick={() => {
-                          if (view.disabled) return
-                          if (currentPage.id !== 'gameweek') {
-                            navigate(`/gameweek?view=${view.id}`)
-                          } else {
-                            setGameweekView(view.id)
-                          }
-                          setGameweekDropdownOpen(false)
-                        }}
-                        disabled={view.disabled}
-                      >
-                        {view.label}
-                      </button>
-                    ))}
+                    {GAMEWEEK_VIEWS.map(view => {
+                      const GameweekOptionIcon = { matches: Swords, bonus: UserStar, defcon: ShieldCheck, feed: Radio }[view.id]
+                      return (
+                        <button
+                          key={view.id}
+                          type="button"
+                          role="option"
+                          aria-selected={currentPage.id === 'gameweek' && gameweekView === view.id}
+                          className={`nav-item-gameweek-option nav-item-gameweek-option--with-icon ${currentPage.id === 'gameweek' && gameweekView === view.id ? 'nav-item-gameweek-option--active' : ''} ${view.disabled ? 'nav-item-gameweek-option--disabled' : ''}`}
+                          onClick={() => {
+                            if (view.disabled) return
+                            if (currentPage.id !== 'gameweek') {
+                              navigate(`/gameweek?view=${view.id}`)
+                            } else {
+                              setGameweekView(view.id)
+                            }
+                            setGameweekDropdownOpen(false)
+                          }}
+                          disabled={view.disabled}
+                        >
+                          {GameweekOptionIcon && <GameweekOptionIcon size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />}
+                          {view.label}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
             )
           }
           if (page.id === 'research') {
+            const ResearchNavIcon = NAV_ICONS.research
+            if (isMobileNav) {
+              return (
+                <button
+                  key={page.id}
+                  type="button"
+                  className={`tracking-mode-button ${currentPage.id === 'research' ? 'active' : ''}`}
+                  onClick={() => navigate('/research')}
+                  disabled={isDisabled}
+                  aria-label="Research"
+                >
+                  <span className="nav-button-icon" aria-hidden>
+                    <ResearchNavIcon size={20} strokeWidth={2} />
+                  </span>
+                  <span className="nav-button-label">Research</span>
+                </button>
+              )
+            }
             return (
               <div
                 key={page.id}
@@ -336,7 +518,7 @@ export default function Dashboard() {
                   aria-label="Research"
                 >
                   <span className="nav-button-icon" aria-hidden>
-                    <NAV_ICONS.research size={20} strokeWidth={2} />
+                    <ResearchNavIcon size={20} strokeWidth={2} />
                   </span>
                   <span className="nav-button-label">Research</span>
                   <ChevronDown
@@ -354,7 +536,7 @@ export default function Dashboard() {
                   >
                     {RESEARCH_VIEWS.map((view) => {
                       const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
-                      const hasIcon = view.id === 'schedule' || view.id === 'compare' || view.comingSoon
+                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'compare' ? Scale : view.comingSoon ? Construction : null
                       return (
                         <button
                           key={view.id}
@@ -363,21 +545,15 @@ export default function Dashboard() {
                           aria-selected={currentPage.id === 'research' && researchView === view.id}
                           aria-label={view.comingSoon ? `${view.label} (coming soon)` : view.label}
                           title={view.comingSoon ? 'Coming soon' : undefined}
-                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''} ${view.comingSoon ? 'nav-item-gameweek-option--coming-soon' : ''} ${hasIcon ? 'nav-item-gameweek-option--with-icon' : ''}`}
+                          className={`nav-item-gameweek-option nav-item-gameweek-option--with-icon ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''} ${view.comingSoon ? 'nav-item-gameweek-option--coming-soon' : ''}`}
                           onClick={() => {
                             if (isDisabled) return
                             setResearchView(view.id)
                           }}
                           disabled={isDisabled}
                         >
-                          {view.id === 'schedule' && (
-                            <Calendar size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
-                          )}
-                          {view.id === 'compare' && (
-                            <Scale size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
-                          )}
-                          {view.comingSoon && (
-                            <Construction size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
+                          {ResearchOptionIcon && (
+                            <ResearchOptionIcon size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
                           )}
                           {view.label}
                         </button>

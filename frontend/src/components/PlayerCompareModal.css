@@ -199,6 +199,7 @@
 
 .player-compare-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -265,6 +266,9 @@
 
 .player-compare-th-stat {
   width: 36%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .player-compare-th-p2 {
@@ -290,6 +294,9 @@
 .player-compare-td-stat {
   color: var(--text-secondary);
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .player-compare-pill {

@@ -1,7 +1,8 @@
 .feed-subpage {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   padding: 0 4px;
 }
 
@@ -331,7 +332,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
 .feed-search-wrap {
@@ -339,6 +340,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   flex: 1;
   min-width: 0;
   max-width: 320px;
+  margin-bottom: 0;
 }
 
 @media (max-width: 768px) {
@@ -348,7 +350,6 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 
 .feed-search-row-actions {
-  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -448,6 +449,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 .feed-filter-popup {
   position: absolute;
   top: 40px;
+  left: 0;
   right: 0;
   width: 100%;
   min-width: 0;
@@ -474,11 +476,12 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 
 @media (min-width: 400px) {
   .feed-filter-popup {
-    left: auto;
-    right: 0;
+    left: 50%;
+    right: auto;
     width: auto;
     min-width: 320px;
     max-width: 360px;
+    transform: translateX(-50%);
   }
 }
 

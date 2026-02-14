@@ -4,7 +4,7 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .defcon-search-row {
@@ -13,7 +13,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
 .defcon-search-wrap {
@@ -414,7 +414,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: 100%;
+  width: calc(100% - 10px);
+  max-width: calc(100% - 10px);
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
 }
 
 .defcon-row-card {
@@ -619,7 +623,7 @@ html[data-theme="dark"] .defcon-position-badge {
 /* Desktop: grow spacing and progress bar with screen size */
 @media (min-width: 769px) {
   .defcon-subpage {
-    gap: 16px;
+    gap: 8px;
   }
 
   .defcon-search-row {

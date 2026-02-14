@@ -355,12 +355,12 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 .bento-card-expand-icon {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 28px;
-  min-width: 36px;
-  min-height: 28px;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
   color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
   opacity: 0.6;
   transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1),

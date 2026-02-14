@@ -1,8 +1,23 @@
 .mini-league-page {
   padding: 0;
-  padding-top: 16px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* Tighter gap below toolbar row so table sits closer */
+.mini-league-page .subpage-toolbar-wrap {
+  margin-bottom: 8px;
+}
+
+.mini-league-page .league-standings-bento.league-standings-page {
+  margin-top: 4px;
+}
+
+/* Desktop: hide in-page subpage toolbar; use header dropdown (League → Standings/Captaincy/Transfers) only */
+@media (min-width: 769px) {
+  .mini-league-page .subpage-toolbar-wrap {
+    display: none;
+  }
 }
 
 /* Toolbar: search + transfers view toggle — same row on mobile and desktop */
@@ -14,9 +29,10 @@
   flex-wrap: nowrap;
 }
 
-/* League view toggle: Table / Captain / Transfers — exact 28px height to match search bar */
+/* League view toggle: full width on mobile, capped on desktop */
 .league-view-toggle {
-  flex-shrink: 0;
+  flex: 1 1 0;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -25,15 +41,37 @@
   background: var(--bg-secondary);
   border-radius: 6px;
   box-sizing: border-box;
-  min-width: 160px;
-  justify-content: center;
+  min-width: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
-.league-view-toggle-button {
-  padding: 0 12px;
+@media (min-width: 769px) {
+  .league-view-toggle {
+    max-width: 280px;
+    min-width: 160px;
+  }
+}
+
+/* Sliding pill behind active tab */
+.league-view-toggle-slider {
+  position: absolute;
+  left: 12px;
+  top: 5px;
+  width: calc((100% - 24px - 16px) / 3); /* (nav width - padding - 2*gap) / 3 */
   height: 26px;
-  min-width: 36px;
+  border-radius: 4px;
+  background: var(--accent-blue, #3b82f6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
+  transform: translateX(calc(var(--slider-offset, 0) * (100% + 8px)));
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.league-view-toggle-button {
+  padding: 0 10px;
+  height: 26px;
+  min-width: 40px;
   flex: 1;
   border: none;
   background: transparent;
@@ -44,30 +82,32 @@
   letter-spacing: 0.02em;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   -webkit-tap-highlight-color: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 @media (hover: hover) {
-  .league-view-toggle-button:hover {
+  .league-view-toggle-button:hover:not(.active) {
     color: var(--text-primary);
     background: var(--bg-card);
   }
 }
 
 .league-view-toggle-button.active {
-  background: var(--accent-blue, #3b82f6);
   color: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
+  background: transparent;
 }
 
 @media (hover: hover) {
   .league-view-toggle-button.active:hover {
-    background: var(--accent-blue, #2563eb);
     color: #fff;
+    background: transparent;
   }
 }
 
@@ -75,203 +115,195 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
+.league-view-toggle-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Captain "C": filled rounded square; default = dark fill + white C, active = white fill + dark C */
 .league-view-toggle-icon-text {
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1em;
+  min-height: 1.1em;
+  padding: 0 2px;
+  border-radius: 4px;
+  box-sizing: border-box;
+  background: var(--text-secondary);
+  color: #fff;
 }
 
-/* Transfers summary (0 of X, →OUT / ←IN) when transfer mode is on – below toolbar, above table */
+.league-view-toggle-button.active .league-view-toggle-icon-text {
+  background: #fff;
+  color: var(--accent-blue, #3b82f6);
+}
+
+/* Desktop only: league view as dropdown (like Gameweek / Research nav) */
+.league-view-dropdown-wrap {
+  display: none;
+}
+
+@media (min-width: 769px) {
+  .league-view-dropdown-wrap {
+    display: block;
+    position: relative;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .league-view-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    min-width: 140px;
+    height: 36px;
+    padding: 0 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .league-view-dropdown-trigger:hover {
+    background: var(--bg-card);
+    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+  }
+
+  .league-view-dropdown-label {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .league-view-dropdown-chevron {
+    flex-shrink: 0;
+    opacity: 0.85;
+    transition: transform 0.2s ease;
+    color: inherit;
+  }
+
+  .league-view-dropdown-chevron--open {
+    transform: rotate(180deg);
+  }
+
+  .league-view-dropdown-panel {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    padding: 4px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 50;
+    min-width: 100%;
+  }
+
+  .league-view-dropdown-option {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .league-view-dropdown-option:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+
+  .league-view-dropdown-option--active {
+    color: var(--accent-blue);
+    font-weight: 600;
+  }
+}
+
+/* Hide pill toggle on desktop (we show dropdown instead) */
+@media (min-width: 769px) {
+  .league-view-toggle {
+    display: none;
+  }
+}
+
+/* League Transfers summary – uses gw-top-points-card (MatchesSubpage) format/sizing; OUT/IN columns keep colors */
 .league-page-transfers-summary {
   margin-bottom: 12px;
   width: 100%;
   min-width: 0;
 }
 
-.league-page-transfers-summary .transfers-summary-card {
-  margin-top: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-@media (hover: hover) {
-  .league-page-transfers-summary .transfers-summary-card:hover {
-    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  }
-}
-
-/* Match Top Performers (.gw-top-points-content) collapsed height: 12px top/bottom padding */
-.league-page-transfers-summary .transfers-summary-card--collapsed {
-  height: auto;
-  padding: 12px 14px;
-  justify-content: center;
-}
-
-.league-page-transfers-summary .transfers-summary-card--expanded {
-  min-height: 180px;
-}
-
-/* Match Top Performers (.gw-top-points-header): same height, padding, and tap target */
-.league-page-transfers-summary-header {
+.league-transfers-summary-chip-row {
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  cursor: pointer;
-  min-height: 26px;
-  padding: 2px 0;
-  margin: -2px 0;
-  border-radius: 4px;
-  transition: background 0.15s ease;
+  margin-bottom: 2px;
 }
 
-.league-page-transfers-summary .transfers-summary-card--collapsed .league-page-transfers-summary-header,
-.league-page-transfers-summary .transfers-summary-card--expanded .league-page-transfers-summary-header {
-  min-height: 26px;
-  padding: 2px 0;
-  margin: -2px 0;
-}
-
-.league-page-transfers-summary-header:focus-visible {
-  outline: 2px solid var(--focus-ring, #3b82f6);
-  outline-offset: 2px;
-}
-
-/* Match Top Performers (.gw-top-points-title) label */
-.league-page-transfers-summary-title {
-  font-size: 11px;
-  line-height: 1.2;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-/* Same expand/collapse icon as Top Performers / home bentos */
-.league-page-transfers-summary-expand-icon {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
-  opacity: 0.6;
-  transition: opacity 0.2s ease, background-color 0.2s ease;
-  border-radius: 4px;
-}
-
-@media (hover: hover) {
-  .league-page-transfers-summary-expand-icon:hover {
-    opacity: 1;
-  }
-}
-
-.league-page-transfers-summary-expand-icon-svg {
-  width: 11px;
-  height: 11px;
-}
-
-.league-page-transfers-summary .transfers-summary-card--expanded .league-page-transfers-summary-expand-icon {
-  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
-  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
-  border-radius: 6px;
-  opacity: 0.85;
-}
-
-@media (hover: hover) {
-  .league-page-transfers-summary .transfers-summary-card--expanded .league-page-transfers-summary-expand-icon:hover {
-    border-color: var(--collapse-icon-color, #64748b);
-    opacity: 1;
-  }
-}
-
-/* Wrapper for scrollable content + scroll hint (chevron when content overflows). Slide down/up with transition. */
-.league-page-transfers-summary-content-wrap {
-  position: relative;
-  flex: 1 1 0;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  max-height: 0;
-  opacity: 0;
-  transition: max-height 0.5s ease-out, opacity 0.4s ease-out;
-}
-.league-page-transfers-summary-content-wrap--open {
-  max-height: 220px;
-  opacity: 1;
-  transition: max-height 0.5s ease-in, opacity 0.35s ease-in;
-}
-
-.league-page-transfers-summary .transfers-summary-content {
+/* OUT/IN columns inside expanded card: compact typography, keep left/right colors from BentoCard */
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper {
   max-height: min(40vh, 200px);
   overflow-y: auto;
 }
 
-/* Subtle chevron at bottom when list overflows to indicate scroll for more */
-.league-page-transfers-summary-scroll-hint {
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-tertiary, rgba(128, 128, 128, 0.6));
-  opacity: 0.7;
-  pointer-events: none;
-}
-
-.league-page-transfers-summary-scroll-hint svg {
-  flex-shrink: 0;
-}
-
-/* Match league page typography: 10px, compact rows; slightly more spacing between rows */
-.league-page-transfers-summary .transfers-summary-column-list {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-list {
   gap: 5px;
 }
 
-.league-page-transfers-summary .transfers-summary-column-item {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-item {
   font-size: 10px;
   padding: 3px 6px;
   min-height: 22px;
   gap: 4px;
 }
 
-.league-page-transfers-summary .transfers-summary-column-name {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-name {
   font-size: 10px;
   line-height: 12px;
   min-height: 18px;
 }
 
-.league-page-transfers-summary .transfers-summary-column-count {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-count {
   font-size: 10px;
   line-height: 12px;
 }
 
-.league-page-transfers-summary .transfers-summary-badge-slot,
-.league-page-transfers-summary .transfers-summary-badge {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-badge-slot,
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-badge {
   width: 16px;
   height: 16px;
 }
 
-.league-page-transfers-summary .transfers-summary-badge-placeholder {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-badge-placeholder {
   width: 16px;
   height: 16px;
 }
 
-.league-page-transfers-summary .transfers-summary-column-header {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-header {
   margin-bottom: 4px;
   position: sticky;
   top: 0;
@@ -280,7 +312,7 @@
   padding-bottom: 2px;
 }
 
-.league-page-transfers-summary .transfers-summary-column-title {
+.league-page-transfers-summary .gw-top-points-content .transfers-summary-column-title {
   font-size: 9px;
 }
 
@@ -298,15 +330,21 @@
   max-width: 200px;
 }
 
+@media (min-width: 769px) {
+  .league-ownership-search-container {
+    max-width: 320px;
+  }
+}
+
 .league-ownership-search-bar {
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 8px;
+  padding: 0 10px;
   background: var(--bg-card, #fff);
   border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 5px;
-  min-height: 28px;
+  border-radius: 6px;
+  height: 36px;
   box-sizing: border-box;
 }
 
@@ -501,6 +539,160 @@
   }
 }
 
+/* Mobile-only: search icon trigger (replaces inline bar) */
+.league-mobile-search-trigger {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .league-mobile-search-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: var(--bg-secondary);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .league-mobile-search-trigger:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+  }
+
+  .league-mobile-search-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 14px;
+    text-align: center;
+    background: var(--accent-blue, #3b82f6);
+    color: #fff;
+    border-radius: 7px;
+  }
+}
+
+/* Mobile search overlay (temporary full-screen search) */
+.league-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.league-search-overlay[aria-modal="true"] {
+  pointer-events: auto;
+}
+
+.league-search-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
+.league-search-overlay-panel {
+  position: relative;
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 100%;
+  max-height: 85vh;
+  margin: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.league-search-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.league-search-overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.league-search-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.league-search-overlay-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+}
+
+.league-search-overlay-body {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  overflow: visible;
+}
+
+.league-search-overlay-body .league-ownership-search-container {
+  max-width: none;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+/* In overlay: autocomplete in-flow so panel height resizes with result count; scroll when many */
+.league-search-overlay-body .league-ownership-autocomplete {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  margin-top: 8px;
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile: selected players + hint in main view (below toolbar, above table) */
+.league-ownership-main-results {
+  margin-bottom: 10px;
+  padding: 0 2px 0 0;
+}
+
+.league-ownership-main-results .league-ownership-selected-container {
+  margin-top: 0;
+}
+
 .standings-header {
   display: flex;
   justify-content: space-between;
@@ -619,7 +811,6 @@
 /* Mobile: full-height content, page scrolls so nav bar slide animation works with window scroll */
 @media (max-width: 768px) {
   .mini-league-page {
-    padding-top: 16px;
     padding-bottom: 24px;
   }
 
@@ -1352,10 +1543,13 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile: fit table in viewport (no horizontal scroll); slightly tighter padding */
+/* Mobile: fit table in viewport (no horizontal scroll); narrower manager column, truncate name */
 @media (max-width: 640px) {
   .league-standings-page .league-standings-bento-table {
     min-width: 0;
+  }
+  .league-standings-page .league-standings-bento-table .league-standings-bento-col-manager {
+    width: 26%;
   }
   .league-standings-page .league-standings-bento-table .league-standings-bento-rank,
   .league-standings-page .league-standings-bento-table .league-standings-bento-team,
@@ -1370,6 +1564,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   }
   .league-standings-page .league-standings-bento-table .league-standings-bento-rank {
     padding-left: 6px;
+  }
+  .league-standings-page .league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

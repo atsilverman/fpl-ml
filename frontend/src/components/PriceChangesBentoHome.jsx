@@ -134,6 +134,9 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
   const loading = predLoading
   const hasData = (rises?.length ?? 0) > 0 || (falls?.length ?? 0) > 0
 
+  /* Auto-hide bento when there are no price prediction changes for owned players */
+  if (!loading && !predError && !hasData) return null
+
   const totalItems = (rises?.length ?? 0) + (falls?.length ?? 0)
   const showScrollHint = totalItems > 8
 
@@ -206,9 +209,6 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
               loading={loading}
               getTeamForPlayer={getTeamForPlayer}
             />
-          )}
-          {!loading && !predError && !hasData && currentGameweekPlayers?.length > 0 && (
-            <p className="price-changes-snapshot-date">None of your players are in the current rise/fall predictions.</p>
           )}
         </div>
         {showScrollHint && !predError && hasData && (

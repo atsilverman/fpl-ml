@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
-import { usePlayerGameweekStatsRange } from '../hooks/usePlayerGameweekStats'
+import { usePlayerGameweekStatsRange, usePlayerCompareStatRanks } from '../hooks/usePlayerGameweekStats'
 import { useToast } from '../contexts/ToastContext'
-import { getVisibleStats, formatStatValue, getCompareValue, getLeader } from '../utils/compareStats'
+import { getVisibleStats, formatStatValue, formatRankDisplay, getCompareValue, getLeader } from '../utils/compareStats'
 import './PlayerCompareModal.css'
 import './MiniLeaguePage.css'
 
@@ -132,6 +132,8 @@ export default function CompareSubpage() {
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
   const [gwFilter, setGwFilter] = useState('last6')
   const [per90, setPer90] = useState(false)
+  const [perMillion, setPerMillion] = useState(false)
+  const [showRank, setShowRank] = useState(false)
   const [dropdownOpen1, setDropdownOpen1] = useState(false)
   const [dropdownOpen2, setDropdownOpen2] = useState(false)
   const searchContainerRef1 = useRef(null)
@@ -141,6 +143,9 @@ export default function CompareSubpage() {
   const player2Id = selectedPlayer2?.fpl_player_id ?? null
   const { stats: player1Stats, loading: p1Loading } = usePlayerGameweekStatsRange(player1Id, gameweek, gwFilter)
   const { stats: player2Stats, loading: p2Loading } = usePlayerGameweekStatsRange(player2Id, gameweek, gwFilter)
+  const rankBy = per90 ? 'per90' : 'total'
+  const { ranks: ranks1, loading: ranks1Loading } = usePlayerCompareStatRanks(player1Id, gameweek, gwFilter, rankBy)
+  const { ranks: ranks2, loading: ranks2Loading } = usePlayerCompareStatRanks(player2Id, gameweek, gwFilter, rankBy)
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -160,6 +165,8 @@ export default function CompareSubpage() {
   const visibleStats = getVisibleStats(pos1, pos2)
   const minutes1 = stats1?.minutes ?? 0
   const minutes2 = stats2?.minutes ?? 0
+  const priceTenths1 = selectedPlayer1?.cost_tenths ?? null
+  const priceTenths2 = selectedPlayer2?.cost_tenths ?? null
 
   return (
     <div className="compare-subpage">
@@ -181,14 +188,41 @@ export default function CompareSubpage() {
           type="button"
           className={`player-compare-gw-filter-btn ${per90 ? 'active' : ''}`}
           onClick={() => {
-            const next = !per90
-            setPer90(next)
-            toast(next ? 'Showing per 90 stats' : 'Showing total stats')
+            setPer90((prev) => !prev)
+            setPerMillion(false)
+            toast(!per90 ? 'Showing per 90 stats' : 'Showing total stats')
           }}
           aria-pressed={per90}
           aria-label={per90 ? 'Showing per 90 stats' : 'Show per 90 stats'}
         >
           Per 90
+        </button>
+        <button
+          type="button"
+          className={`player-compare-gw-filter-btn ${perMillion ? 'active' : ''}`}
+          onClick={() => {
+            setPerMillion((prev) => !prev)
+            setPer90(false)
+            toast(!perMillion ? 'Showing per £ stats' : 'Showing total stats')
+          }}
+          aria-pressed={perMillion}
+          aria-label={perMillion ? 'Showing per £ stats' : 'Show per £ stats'}
+        >
+          Per £
+        </button>
+        <div className="player-compare-controls-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className={`player-compare-gw-filter-btn ${showRank ? 'active' : ''}`}
+          onClick={() => {
+            const next = !showRank
+            setShowRank(next)
+            toast(next ? 'Showing ranked stats (1 = best)' : 'Showing raw stats')
+          }}
+          aria-pressed={showRank}
+          aria-label={showRank ? 'Showing ranked stats' : 'Show ranked stats'}
+        >
+          Rank
         </button>
       </div>
 
@@ -209,7 +243,7 @@ export default function CompareSubpage() {
                   setDropdownOpen={setDropdownOpen1}
                 />
               </th>
-              <th className="player-compare-th player-compare-th-stat">Stat</th>
+              <th className="player-compare-th player-compare-th-stat" aria-label="Stat" />
               <th className="player-compare-th player-compare-th-p2">
                 <PlayerSearchSlot
                   selectedPlayer={selectedPlayer2}
@@ -228,22 +262,36 @@ export default function CompareSubpage() {
             {visibleStats.map(({ key, label, higherBetter }) => {
               const v1 = stats1?.[key] ?? (key === 'points' && stats1 ? stats1.points : undefined)
               const v2 = stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined)
-              const compareV1 = getCompareValue(key, v1, minutes1, per90)
-              const compareV2 = getCompareValue(key, v2, minutes2, per90)
-              const rowLeader = leader ? getLeader(key, higherBetter, compareV1, compareV2) : null
-              const fmtOpts1 = { per90, minutes: minutes1 }
-              const fmtOpts2 = { per90, minutes: minutes2 }
+              const r1 = showRank ? ranks1?.[key] : null
+              const r2 = showRank ? ranks2?.[key] : null
+              const compareV1 = showRank ? (r1 != null ? r1 : Infinity) : getCompareValue(key, v1, minutes1, per90, perMillion, priceTenths1)
+              const compareV2 = showRank ? (r2 != null ? r2 : Infinity) : getCompareValue(key, v2, minutes2, per90, perMillion, priceTenths2)
+              const rowLeader = leader
+                ? showRank
+                  ? getLeader(key, false, compareV1, compareV2)
+                  : getLeader(key, higherBetter, compareV1, compareV2)
+                : null
+              const fmtOpts1 = { per90, perMillion, minutes: minutes1, priceTenths: priceTenths1 }
+              const fmtOpts2 = { per90, perMillion, minutes: minutes2, priceTenths: priceTenths2 }
+              const display1 = showRank ? formatRankDisplay(ranks1, key) : formatStatValue(key, v1, fmtOpts1)
+              const display2 = showRank ? formatRankDisplay(ranks2, key) : formatStatValue(key, v2, fmtOpts2)
               return (
                 <tr key={key} className="player-compare-tr">
                   <td className="player-compare-td player-compare-td-p1">
                     {selectedPlayer1 ? (
-                      p1Loading && !stats1 ? (
+                      showRank ? (ranks1Loading || ranks1 == null ? <span className="player-compare-loading">…</span> : (
+                        <span
+                          className={`player-compare-pill ${rowLeader === 'p1' ? 'player-compare-pill--leader' : ''}`}
+                        >
+                          {display1}
+                        </span>
+                      )) : p1Loading && !stats1 ? (
                         <span className="player-compare-loading">…</span>
                       ) : (
                         <span
                           className={`player-compare-pill ${rowLeader === 'p1' ? 'player-compare-pill--leader' : ''}`}
                         >
-                          {formatStatValue(key, v1, fmtOpts1)}
+                          {display1}
                         </span>
                       )
                     ) : (
@@ -253,13 +301,19 @@ export default function CompareSubpage() {
                   <td className="player-compare-td player-compare-td-stat">{label}</td>
                   <td className="player-compare-td player-compare-td-p2">
                     {selectedPlayer2 ? (
-                      p2Loading && !stats2 ? (
+                      showRank ? (ranks2Loading || ranks2 == null ? <span className="player-compare-loading">…</span> : (
+                        <span
+                          className={`player-compare-pill ${rowLeader === 'p2' ? 'player-compare-pill--leader' : ''}`}
+                        >
+                          {display2}
+                        </span>
+                      )) : p2Loading && !stats2 ? (
                         <span className="player-compare-loading">…</span>
                       ) : (
                         <span
                           className={`player-compare-pill ${rowLeader === 'p2' ? 'player-compare-pill--leader' : ''}`}
                         >
-                          {formatStatValue(key, v2, fmtOpts2)}
+                          {display2}
                         </span>
                       )
                     ) : (

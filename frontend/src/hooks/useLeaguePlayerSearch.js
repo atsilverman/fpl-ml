@@ -20,6 +20,7 @@ export function useLeaguePlayerSearch(query) {
           fpl_player_id,
           web_name,
           position,
+          cost_tenths,
           teams(short_name)
         `)
         .ilike('web_name', `%${trimmed}%`)
@@ -32,7 +33,8 @@ export function useLeaguePlayerSearch(query) {
         fpl_player_id: p.fpl_player_id,
         web_name: p.web_name || '—',
         team_short_name: p.teams?.short_name ?? null,
-        position: p.position ?? null
+        position: p.position ?? null,
+        cost_tenths: p.cost_tenths ?? null
       }))
     },
     enabled,

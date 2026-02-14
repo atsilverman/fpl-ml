@@ -1,9 +1,21 @@
 .research-page {
-  padding: 12px;
+  padding: 0 12px 12px 12px;
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+}
+
+/* Tighter space below subpage toolbar so content sits closer (match mini-league / gameweek) */
+.research-page .subpage-toolbar-wrap {
+  margin-bottom: 8px;
+}
+
+/* Desktop: hide in-page subpage toolbar; use header dropdown (Research → Changes/Schedule/Compare) only */
+@media (min-width: 769px) {
+  .research-page .subpage-toolbar-wrap {
+    display: none;
+  }
 }
 
 .research-card {

@@ -2,78 +2,10 @@
 .matches-subpage {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 4px;
+  gap: 8px;
+  padding-top: 0;
   /* Keep first content below fixed header when scrolling */
   scroll-margin-top: 88px;
-}
-
-.matches-subpage-header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.matches-anchor-toggle {
-  position: relative;
-  display: inline-flex;
-  align-items: stretch;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--bg-secondary);
-  min-height: 36px;
-}
-
-/* Sliding pill – 2px inset so it aligns inside the toggle with buttons */
-.matches-anchor-slider {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 2px;
-  width: calc(50% - 2px);
-  border-radius: 6px;
-  background: var(--accent-blue);
-  transition: transform 0.2s ease;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.matches-anchor-btn {
-  position: relative;
-  z-index: 1;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 8px 16px;
-  min-height: 34px;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.35px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-@media (hover: hover) {
-  .matches-anchor-btn:hover {
-    color: var(--text-primary);
-  }
-}
-.matches-anchor-btn--active {
-  color: white;
-}
-@media (hover: hover) {
-  .matches-anchor-btn--active:hover {
-    color: white;
-  }
 }
 
 .matches-subpage-title {
@@ -709,7 +641,8 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
 }
 
-/* Per-team table block */
+/* Per-team table block. No overflow:hidden on wrap so sticky left (player column) works
+   relative to .matchup-detail-table-scroll; clipping is done on the scroll div. */
 .matchup-detail-table-wrap {
   display: flex;
   flex-direction: column;
@@ -717,7 +650,6 @@ html[data-theme="dark"] .gw-top-points-pill {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
-  overflow: hidden;
 }
 
 .matchup-detail-table-wrap--tap-to-close {
@@ -735,6 +667,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding: 10px 12px;
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
+  border-radius: 8px 8px 0 0;
   font-size: 0.8125rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -760,6 +693,10 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-detail-table-scroll {
   overflow: auto;
   max-height: 60vh;
+  border-radius: 0 0 8px 8px;
+  /* Establish containing block so sticky player column works when parent (e.g. gameweek wipe track) has transform */
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
 }
 
 .matchup-detail-table {
@@ -892,7 +829,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-detail-td-player {
   position: sticky;
   left: 0;
-  z-index: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
