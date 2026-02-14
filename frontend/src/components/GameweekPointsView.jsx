@@ -14,9 +14,16 @@ const POPUP_PADDING = 12
 const POPUP_MAX_WIDTH = 320
 const POPUP_MIN_WIDTH = 260
 
+/** Normalize API/DB boolean (Supabase can return "true"/"false" strings; Boolean("false") is true in JS). */
+function fixtureBool(v) {
+  if (v === true || v === 'true') return true
+  if (v === false || v === 'false') return false
+  return false
+}
+
 export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null }) {
   const { fixtures: debugFixtures = [] } = useGameweekDebugData()
-  const fixtures = (fixturesProp != null && fixturesProp.length > 0) ? fixturesProp : debugFixtures
+  const fixtures = (fixturesProp != null && Array.isArray(fixturesProp)) ? fixturesProp : debugFixtures
   // Support lookup by number or string (Supabase/API can return either) so we always resolve fixture and use fixture table state
   const fixturesById = useMemo(() => {
     const map = {}
@@ -206,13 +213,15 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       : null
     const effectiveKickoffTime = player.kickoff_time || fixtureForPlayer?.kickoff_time || scheduleFixtureByTeam?.kickoff_time || null
     const fixtureForMatchState = fixtureForPlayer ?? scheduleFixtureByTeam
-    // Prefer fixture table state (same source as debug panel) so provisional/live/finished matches backend
-    const matchStarted = fixtureForMatchState ? Boolean(fixtureForMatchState.started) : Boolean(player.match_started)
-    const matchFinished = fixtureForMatchState ? Boolean(fixtureForMatchState.finished) : Boolean(player.match_finished)
-    const matchFinishedProvisional = fixtureForMatchState ? Boolean(fixtureForMatchState.finished_provisional) : Boolean(player.match_finished_provisional)
-    // Match "in the past" for mins column: started or finished (so DNP shows ! not kickoff for 0 mins when match is done)
+    // Normalize fixture booleans (API can return "true"/"false" strings)
+    const matchStarted = fixtureForMatchState ? fixtureBool(fixtureForMatchState.started) : Boolean(player.match_started)
+    const matchFinished = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished) : Boolean(player.match_finished)
+    const matchFinishedProvisional = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished_provisional) : Boolean(player.match_finished_provisional)
     const matchStartedOrFinished = matchStarted || matchFinished || matchFinishedProvisional
-    const isMatchLive = matchStarted && !matchFinished && !matchFinishedProvisional
+    // Dot state is 100% fixture-driven (source of truth). No fixture = never show green.
+    const hasFixtureLiveState = Boolean(fixtureForMatchState)
+    const fixtureSaysLive = hasFixtureLiveState && matchStarted && !matchFinished && !matchFinishedProvisional
+    const isMatchLive = hasFixtureLiveState && fixtureSaysLive
     const isMatchProvisional = matchFinishedProvisional && !matchFinished
     const isBonusPending = isMatchProvisional && player.bonus_status === 'provisional'
     // Only show status dot when match is not finished; never show live/provisional dot for finished matches
@@ -359,7 +368,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 {formatMinutes(player.minutes)}
                 {showMinsLiveDot && (
                   <span
-                    className={`live-updating-indicator gameweek-points-mins-live ${minsDotProvisional ? 'gameweek-points-mins-provisional' : ''}`}
+                    className={`live-updating-indicator ${minsDotProvisional ? 'gameweek-points-mins-provisional' : 'gameweek-points-mins-live'}`}
                     title={minsDotProvisional ? 'Match finished (provisional); stats may update' : 'Minutes can change during live games'}
                     aria-hidden
                   />

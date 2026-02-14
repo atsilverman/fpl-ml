@@ -34,43 +34,86 @@
   }
 }
 
-/* Price Changes view: page header + two separate bento cards */
-.research-page-price-changes-header {
-  flex-shrink: 0;
-  margin-bottom: 0;
-}
-
-.price-changes-bentos {
+/* Price Changes: same container structure as Schedule/Compare – header inside card, sub-sections inside content */
+.research-price-changes-card {
   display: flex;
   flex-direction: column;
-  gap: var(--bento-gap, 16px);
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Each Price Changes bento is a full-width card (not in grid); match site bento styling */
-.research-page .price-changes-bento.bento-card {
+  padding: 12px 14px 20px 14px;
+  gap: 6px;
   width: 100%;
   height: auto;
-  min-height: 280px;
+  min-height: 400px;
   max-height: none;
-  grid-column: unset;
-  grid-row: unset;
-  opacity: 1;
-  transform: none;
-  animation: none;
-  contain: none;
-  will-change: unset;
-  padding: 14px 16px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   overflow: visible;
 }
 
-.research-page .price-changes-bento .bento-card-label {
+.research-price-changes-card .research-page-card-header {
   flex-shrink: 0;
+  padding: 0;
+}
+
+.research-price-changes-content {
+  flex: 0 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+}
+
+.research-price-changes-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* Sub-sections as distinct but related containers (Predictions, Actual by day) */
+.research-price-changes-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.research-price-changes-sub-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
   margin: 0;
+  flex-shrink: 0;
+}
+
+.research-price-changes-sub-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.research-price-changes-sub-header .research-price-changes-sub-title {
+  margin: 0;
+}
+
+.research-price-changes-sub-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+
+.research-price-changes-sub-body .price-changes-bento-body {
+  padding: 0;
 }
 
 /* Schedule card: all teams in one container, horizontal scroll for gameweeks only; tighter padding so table is wider */
@@ -109,13 +152,17 @@
   min-width: 0;
 }
 
-/* Compare card: same layout pattern as schedule, no fixed height */
+/* Compare card: same layout pattern as schedule; height grows with content (override bento-card fixed height) */
 .research-compare-card {
+  align-self: flex-start;
   display: flex;
   flex-direction: column;
   padding: 12px 14px 20px 14px;
   gap: 6px;
+  width: 100%;
+  height: auto;
   min-height: 400px;
+  max-height: none;
   overflow: visible;
 }
 
@@ -131,6 +178,7 @@
   overflow: visible;
   width: 100%;
   min-width: 0;
+  min-height: 0;
 }
 
 .compare-subpage {

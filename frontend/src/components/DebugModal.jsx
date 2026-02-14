@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Info } from 'lucide-react'
+import { useGameweekDebugDataFromFPL } from '../hooks/useGameweekDebugDataFromFPL'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useUpdateTimestamps } from '../hooks/useUpdateTimestamps'
 import { useRefreshState } from '../hooks/useRefreshState'
@@ -40,8 +41,13 @@ function GwDebugBadge({ value }) {
 }
 
 export default function DebugModal({ isOpen, onClose }) {
-  const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading } = useGameweekDebugData()
+  const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading, error: fplDebugError } = useGameweekDebugDataFromFPL(isOpen)
+  const { gameweekRow: gameweekFromDb, fixtures: fixturesFromDb, loading: dbLoading } = useGameweekDebugData()
   const updateTimestampsData = useUpdateTimestamps()
+  const useFplFallback = Boolean(fplDebugError && !gameweekDebugRow)
+  const gwRow = gameweekDebugRow ?? gameweekFromDb ?? null
+  const gwFixtures = (gameweekDebugFixtures?.length ? gameweekDebugFixtures : fixturesFromDb) ?? []
+  const gwLoading = gameweekDebugLoading || (useFplFallback && dbLoading)
   const { state, stateLabel } = useRefreshState()
   useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
@@ -73,6 +79,7 @@ export default function DebugModal({ isOpen, onClose }) {
         <div className="modal-body debug-modal-body">
           <section className="debug-modal-section debug-modal-section-state" ref={stateCriteriaRef}>
             <h3 className="debug-modal-section-title">State</h3>
+            <p className="debug-modal-section-source">Source: derived from backend (Supabase <code>fixtures</code> table: started / finished_provisional).</p>
             <div className="debug-modal-state-row">
               <button
                 type="button"
@@ -109,25 +116,33 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">GW Debug</h3>
+            <p className="debug-modal-section-source">
+              {useFplFallback
+                ? 'Source: Supabase (FPL API unavailable — run dev server for proxy or add serverless proxy in prod).'
+                : 'Source: FPL API directly (bootstrap-static → events). fpl_ranks_updated from Supabase.'}
+            </p>
             <div className="gw-debug-bento-content">
-              {gameweekDebugLoading ? (
+              {fplDebugError && useFplFallback && (
+                <div className="debug-modal-verify-error" role="alert">FPL fetch failed: {fplDebugError}. Showing Supabase data.</div>
+              )}
+              {gwLoading ? (
                 <div className="bento-card-value loading">
                   <div className="skeleton-text" />
                 </div>
-              ) : !gameweekDebugRow ? (
+              ) : !gwRow ? (
                 <div className="gw-debug-empty">No current gameweek</div>
               ) : (
                 <table className="gw-debug-table">
                   <tbody>
-                    <tr><td className="gw-debug-table-label">id</td><td>{gameweekDebugRow.id}</td></tr>
-                    <tr><td className="gw-debug-table-label">name</td><td>{gameweekDebugRow.name ?? '—'}</td></tr>
-                    <tr><td className="gw-debug-table-label">deadline</td><td className="gw-debug-table-mono">{formatDeadlineGw(gameweekDebugRow.deadline_time)}</td></tr>
-                    <tr><td className="gw-debug-table-label">is_current</td><td><GwDebugBadge value={gameweekDebugRow.is_current} /></td></tr>
-                    <tr><td className="gw-debug-table-label">is_previous</td><td><GwDebugBadge value={gameweekDebugRow.is_previous} /></td></tr>
-                    <tr><td className="gw-debug-table-label">is_next</td><td><GwDebugBadge value={gameweekDebugRow.is_next} /></td></tr>
-                    <tr><td className="gw-debug-table-label">finished</td><td><GwDebugBadge value={gameweekDebugRow.finished} /></td></tr>
-                    <tr><td className="gw-debug-table-label">data_checked</td><td><GwDebugBadge value={gameweekDebugRow.data_checked} /></td></tr>
-                    <tr><td className="gw-debug-table-label">fpl_ranks_updated</td><td><GwDebugBadge value={gameweekDebugRow.fpl_ranks_updated} /></td></tr>
+                    <tr><td className="gw-debug-table-label">id</td><td>{gwRow.id}</td></tr>
+                    <tr><td className="gw-debug-table-label">name</td><td>{gwRow.name ?? '—'}</td></tr>
+                    <tr><td className="gw-debug-table-label">deadline</td><td className="gw-debug-table-mono">{formatDeadlineGw(gwRow.deadline_time)}</td></tr>
+                    <tr><td className="gw-debug-table-label">is_current</td><td><GwDebugBadge value={gwRow.is_current} /></td></tr>
+                    <tr><td className="gw-debug-table-label">is_previous</td><td><GwDebugBadge value={gwRow.is_previous} /></td></tr>
+                    <tr><td className="gw-debug-table-label">is_next</td><td><GwDebugBadge value={gwRow.is_next} /></td></tr>
+                    <tr><td className="gw-debug-table-label">finished</td><td><GwDebugBadge value={gwRow.finished} /></td></tr>
+                    <tr><td className="gw-debug-table-label">data_checked</td><td><GwDebugBadge value={gwRow.data_checked} /></td></tr>
+                    <tr><td className="gw-debug-table-label">fpl_ranks_updated</td><td>{(gameweekFromDb?.fpl_ranks_updated ?? gwRow?.fpl_ranks_updated) != null ? <GwDebugBadge value={gameweekFromDb?.fpl_ranks_updated ?? gwRow?.fpl_ranks_updated} /> : '—'}</td></tr>
                   </tbody>
                 </table>
               )}
@@ -136,12 +151,17 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Fixtures</h3>
+            <p className="debug-modal-section-source">
+              {useFplFallback
+                ? 'Source: Supabase (FPL API unavailable — run dev server for proxy or add serverless proxy in prod).'
+                : 'Source: FPL API directly (fixtures endpoint; started / finished / finished_provisional).'}
+            </p>
             <div className="gw-debug-fixtures-wrap">
-              {gameweekDebugLoading ? (
+              {gwLoading ? (
                 <div className="bento-card-value loading">
                   <div className="skeleton-text" />
                 </div>
-              ) : !gameweekDebugFixtures?.length ? (
+              ) : !gwFixtures?.length ? (
                 <div className="gw-debug-empty">No fixtures</div>
               ) : (
                 <table className="gw-debug-table gw-debug-fixtures-table">
@@ -155,7 +175,7 @@ export default function DebugModal({ isOpen, onClose }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {gameweekDebugFixtures.map((f) => (
+                    {gwFixtures.map((f) => (
                       <tr key={f.fpl_fixture_id}>
                         <td className="gw-debug-match-cell">{f.home_short} – {f.away_short}</td>
                         <td><GwDebugBadge value={f.started} /></td>
@@ -172,6 +192,7 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Attribute verification (vs FPL API)</h3>
+            <p className="debug-modal-section-source">Source: DB (Supabase) vs FPL API; comparison via Edge Function <code>debug-verify-manager</code>.</p>
             <p className="debug-modal-verify-intro">Manager {VERIFY_MANAGER_ID} (check). Requires Edge Function <code>debug-verify-manager</code> to be deployed.</p>
             <button
               type="button"
@@ -221,6 +242,7 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Deadline batch</h3>
+            <p className="debug-modal-section-source">Source: backend (Supabase <code>refresh_duration_log</code> / deadline batch metadata).</p>
             {deadlineBatchLoading ? (
               <div className="bento-card-value loading">
                 <div className="skeleton-text" />
@@ -293,6 +315,7 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Updates (debug)</h3>
+            <p className="debug-modal-section-source">Source: backend update timestamps + frontend cache (derived from refresh/query state).</p>
             {updateTimestampsData ? (
               <div className="updates-debug-bento-content">
                 <div className="updates-debug-now">Local time: {updateTimestampsData.localTimeNow}</div>

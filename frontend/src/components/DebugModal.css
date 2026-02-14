@@ -20,7 +20,14 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 12px 0;
+  margin: 0 0 4px 0;
+}
+
+.debug-modal-section-source {
+  font-size: 11px;
+  color: var(--text-muted, #64748b);
+  margin: 0 0 10px 0;
+  font-weight: 400;
 }
 
 .debug-modal-section-state .debug-modal-section-title {

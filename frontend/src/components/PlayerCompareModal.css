@@ -49,6 +49,16 @@
   justify-content: center;
 }
 
+.player-compare-controls-divider {
+  width: 1px;
+  min-width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  margin: 0 4px;
+  border-radius: 1px;
+}
+
+/* Legacy: checkbox Per 90 (if used elsewhere) */
 .player-compare-per90-toggle {
   display: inline-flex;
   align-items: center;
@@ -146,6 +156,33 @@
     width: 100cqw;
     min-width: unset;
   }
+}
+
+/* Outer container: background and border wrap the actual stats table (Research compare subpage) */
+.player-stats-wrap {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary, #f9fafb);
+  overflow: hidden;
+}
+
+/* Inner table container: no border/background so the wrap is the single visible box */
+.player-stats-wrap .player-compare-table-wrap {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+/* Table and cells transparent so wrap background shows through all rows */
+.player-stats-wrap .player-compare-table,
+.player-stats-wrap .player-compare-table thead,
+.player-stats-wrap .player-compare-table tbody,
+.player-stats-wrap .player-compare-th,
+.player-stats-wrap .player-compare-td {
+  background: transparent;
 }
 
 .player-compare-table-wrap {

@@ -687,50 +687,51 @@ class ManagerDataRefresher:
             baseline_total = existing.get("baseline_total_points")
             existing_mini_league_rank = existing.get("mini_league_rank")
             
-            # For finished gameweeks: Use FPL API data directly (OPTIMIZATION - no calculation needed!)
-            # For live gameweeks: Calculate points (needed for real-time updates)
+            # Always use our calculated points (includes auto-subs, no double count) so we never overwrite with lower API values.
+            # For finished gameweeks we still fetch ranks from API; points come from our calc.
             if is_finished:
-                # OPTIMIZATION: Use FPL API data directly - no expensive calculation needed
-                # FPL API provides: points, event_transfers_cost, total_points, value, bank, event_transfers
-                gameweek_points = gw_history.get("points", 0)  # Already includes transfer costs
-                transfer_cost = gw_history.get("event_transfers_cost", 0)
-                total_points = gw_history.get("total_points")
-                active_chip = None  # Will get from picks endpoint
-                
-                # Get picks for gameweek_rank and active_chip
+                points_data_finished = await self.calculate_manager_points(manager_id, gameweek)
+                gameweek_points = points_data_finished.get("gameweek_points", 0)
+                transfer_cost = points_data_finished.get("transfer_cost", 0)
+                active_chip = points_data_finished.get("active_chip")
+                if baseline_total is not None:
+                    current_total = baseline_total + gameweek_points
+                else:
+                    previous_gw = gameweek - 1
+                    previous_history = self.db_client.client.table("manager_gameweek_history").select(
+                        "total_points"
+                    ).eq("manager_id", manager_id).eq("gameweek", previous_gw).execute().data
+                    previous_total = previous_history[0]["total_points"] if previous_history else None
+                    current_total = (previous_total + gameweek_points) if previous_total is not None else (gw_history.get("total_points") or gameweek_points)
+                # Ranks from API
+                gameweek_rank = None
+                overall_rank = gw_history.get("overall_rank")
                 try:
                     picks_data = await self.fpl_client.get_entry_picks(manager_id, gameweek)
                     entry_history = picks_data.get("entry_history", {})
                     gameweek_rank = entry_history.get("rank")
-                    active_chip = picks_data.get("active_chip")
-                    overall_rank = gw_history.get("overall_rank")
-                    logger.debug("Using FPL API data directly for finished gameweek", extra={
-                        "manager_id": manager_id,
-                        "gameweek": gameweek,
-                        "gameweek_points": gameweek_points,
-                        "total_points": total_points
-                    })
+                    if overall_rank is None:
+                        overall_rank = gw_history.get("overall_rank")
                 except Exception as e:
                     logger.warning("Failed to fetch picks for finished gameweek", extra={
                         "manager_id": manager_id,
                         "gameweek": gameweek,
                         "error": str(e)
                     })
-                    gameweek_rank = None
-                    overall_rank = gw_history.get("overall_rank")
-                    # Fallback: try to get from existing data
                     existing_ranks = self.db_client.client.table("manager_gameweek_history").select(
                         "gameweek_rank, overall_rank, active_chip"
                     ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
                     if existing_ranks:
-                        existing_rank_data = existing_ranks[0]
-                        gameweek_rank = existing_rank_data.get("gameweek_rank")
-                        overall_rank = existing_rank_data.get("overall_rank") or overall_rank
-                        active_chip = existing_rank_data.get("active_chip")
-                
-                # Use FPL API total_points (authoritative for finished gameweeks)
-                current_total = total_points if total_points is not None else 0
-                
+                        gameweek_rank = existing_ranks[0].get("gameweek_rank")
+                        overall_rank = overall_rank or existing_ranks[0].get("overall_rank")
+                        if active_chip is None:
+                            active_chip = existing_ranks[0].get("active_chip")
+                logger.debug("Using calculated points for finished gameweek (includes auto-subs)", extra={
+                    "manager_id": manager_id,
+                    "gameweek": gameweek,
+                    "gameweek_points": gameweek_points,
+                    "total_points": current_total
+                })
             else:
                 # Live gameweek: Calculate points (needed for real-time updates)
                 points_data = await self.calculate_manager_points(manager_id, gameweek)

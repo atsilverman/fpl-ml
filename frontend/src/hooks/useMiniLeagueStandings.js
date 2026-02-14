@@ -47,6 +47,8 @@ export function useMiniLeagueStandings(gameweek = null) {
     lastRank1Ref.current = null
   }, [LEAGUE_ID, gameweek])
 
+  // Depend only on isLive and dataUpdatedAt so we don't re-run when rawStandings gets a new
+  // reference (avoids "Maximum update depth exceeded" from setState in a loop).
   useEffect(() => {
     if (!isLive) {
       setStableStandings(rawStandings)
@@ -59,7 +61,7 @@ export function useMiniLeagueStandings(gameweek = null) {
       setStableStandings(rawStandings)
     }
     lastRank1Ref.current = rank1
-  }, [isLive, rawStandings, dataUpdatedAt])
+  }, [isLive, dataUpdatedAt])
 
   const standings = isLive ? stableStandings : rawStandings
 

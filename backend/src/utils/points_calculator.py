@@ -374,6 +374,29 @@ class PointsCalculator:
                     if fixture:
                         player_fixtures[player_id] = fixture[0]
         
+        # Fallback for players with no stats row (e.g. DNP): derive fixture from team so auto-sub can apply
+        missing_fixture_ids = [pid for pid in player_ids if pid not in player_fixtures]
+        if missing_fixture_ids:
+            fixtures_result = self.db_client.client.table("fixtures").select(
+                "*"
+            ).eq("gameweek", gameweek).execute()
+            gameweek_fixtures = fixtures_result.data if fixtures_result.data else []
+            if gameweek_fixtures:
+                players_result = self.db_client.client.table("players").select(
+                    "fpl_player_id, team_id"
+                ).in_("fpl_player_id", missing_fixture_ids).execute()
+                players_list = players_result.data if players_result.data else []
+                player_to_team = {p["fpl_player_id"]: p.get("team_id") for p in players_list}
+                for player_id in missing_fixture_ids:
+                    team_id = player_to_team.get(player_id)
+                    if team_id is None:
+                        continue
+                    player_minutes.setdefault(player_id, 0)  # ensure 0 so DNP triggers sub
+                    for f in gameweek_fixtures:
+                        if f.get("home_team_id") == team_id or f.get("away_team_id") == team_id:
+                            player_fixtures[player_id] = f
+                            break
+        
         # Apply automatic substitutions
         adjusted_picks = self.apply_automatic_subs(
             picks,

@@ -204,18 +204,15 @@ export default function PriceChangesSubpage({ showCard = true }) {
 
   if (!showCard) {
     return (
-      <div className="price-changes-bentos">
+      <div className="research-price-changes-inner">
         {error ? (
-          <div className="price-changes-bento bento-card bento-card-animate price-changes-bento-error">
-            <span className="bento-card-label">Price Changes</span>
-            <div className="price-changes-error">Failed to load price changes.</div>
-          </div>
+          <div className="price-changes-error">Failed to load price changes.</div>
         ) : (
           <>
             {showPredictionsSection && (
-              <div className="price-changes-bento bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
-                <div className="price-changes-bento-label-row">
-                  <h2 id="price-changes-predictions-heading" className="bento-card-label">Predictions</h2>
+              <div className="research-price-changes-sub" aria-labelledby="price-changes-predictions-heading">
+                <div className="research-price-changes-sub-header">
+                  <h2 id="price-changes-predictions-heading" className="research-price-changes-sub-title">Predictions</h2>
                   <span className="price-changes-source-wrap">
                     <a
                       href="https://t.co/KBHo75dwC5"
@@ -266,12 +263,12 @@ export default function PriceChangesSubpage({ showCard = true }) {
                       )}
                   </span>
                 </div>
-                {predictionsContent}
+                <div className="research-price-changes-sub-body">{predictionsContent}</div>
               </div>
             )}
-            <div className="price-changes-bento bento-card bento-card-animate bento-card-chart-2x4 bento-card-expanded">
-              <h2 id="price-changes-actual-heading" className="bento-card-label">Actual by day</h2>
-              {actualContent}
+            <div className="research-price-changes-sub" aria-labelledby="price-changes-actual-heading">
+              <h2 id="price-changes-actual-heading" className="research-price-changes-sub-title">Actual by day</h2>
+              <div className="research-price-changes-sub-body">{actualContent}</div>
             </div>
           </>
         )}

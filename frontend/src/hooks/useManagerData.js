@@ -132,7 +132,7 @@ export function useManagerDataForManager(managerId) {
       const [currRes, prevRes, managerRes] = await Promise.all([
         supabase
           .from('manager_gameweek_history')
-          .select('transfers_made, transfer_cost, active_chip')
+          .select('transfers_made, transfer_cost, active_chip, gameweek_points, total_points')
           .eq('manager_id', managerId)
           .eq('gameweek', gameweek)
           .single(),
@@ -171,6 +171,9 @@ export function useManagerDataForManager(managerId) {
         activeChip: history?.active_chip != null ? String(history.active_chip).toLowerCase() : null,
         managerName: managerRow?.manager_name ?? null,
         managerTeamName: managerRow?.manager_team_name ?? null,
+        transferCost: history?.transfer_cost ?? 0,
+        gameweekPoints: history?.gameweek_points ?? null,
+        totalPoints: history?.total_points ?? null,
       }
     },
     enabled: !!managerId && !!gameweek,

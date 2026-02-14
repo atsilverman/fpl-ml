@@ -13,12 +13,12 @@ import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
 import { useManagerData, useManagerDataForManager } from '../hooks/useManagerData'
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
+import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Scale, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Scale, ArrowDownRight, ArrowUpRight, ArrowLeftRight, Minimize2, MoveDiagonal, TableProperties } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
 import PlayerCompareModal from './PlayerCompareModal'
-import ScheduleBento from './ScheduleBento'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
@@ -82,6 +82,7 @@ export default function MiniLeaguePage() {
   const { standings, loading: standingsLoading, error: standingsError } = useMiniLeagueStandings(gameweek)
   const { liveStatusByManager, loading: liveStatusLoading } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const { activeChipByManager, loading: activeChipLoading } = useLeagueActiveChips(gameweek)
+  const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedSearchQuery)
   const [selectedPlayers, setSelectedPlayers] = useState([])
@@ -101,7 +102,9 @@ export default function MiniLeaguePage() {
   const [compareMode, setCompareMode] = useState(false)
   const [selectedPlayerForCompare, setSelectedPlayerForCompare] = useState(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
-  const [showTransfersView, setShowTransfersView] = useState(false)
+  const [leagueViewMode, setLeagueViewMode] = useState('table') // 'table' | 'captain' | 'transfers'
+  const showCView = leagueViewMode === 'captain'
+  const showTransfersView = leagueViewMode === 'transfers'
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
@@ -147,6 +150,25 @@ export default function MiniLeaguePage() {
   }, [configuredManagerPlayers, configuredManagerData?.transferCost])
   const currentManagerGwPointsDisplay = currentManagerGwPoints != null ? currentManagerGwPoints : (configuredManagerData?.gameweekPoints ?? 0)
   const currentManagerTotalPointsDisplay = (configuredManagerData?.previousGameweekTotalPoints ?? 0) + currentManagerGwPointsDisplay
+
+  // When selected manager has auto-subs (indicator shown), use table-derived GW/total so row matches the table.
+  // Subbed-in player stays in bench position (12–15) in the data, so add their points and subtract subbed-out's.
+  const selectedManagerGwFromTable = useMemo(() => {
+    if (!selectedManagerPlayers?.length || selectedManagerSummary?.transferCost == null) return null
+    const starters = selectedManagerPlayers.filter((p) => p.position >= 1 && p.position <= 11)
+    let raw = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
+    const subbedOut = selectedManagerPlayers.find((p) => p.was_auto_subbed_out)
+    const subbedIn = selectedManagerPlayers.find((p) => p.was_auto_subbed_in)
+    if (subbedOut && subbedIn) {
+      raw = raw - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    }
+    return raw - (selectedManagerSummary.transferCost ?? 0)
+  }, [selectedManagerPlayers, selectedManagerSummary?.transferCost])
+  const selectedManagerHasAutoSub = selectedManagerPlayers?.some((p) => p.was_auto_subbed_out || p.was_auto_subbed_in)
+  const selectedManagerGwDisplay = selectedManagerHasAutoSub && selectedManagerGwFromTable != null ? selectedManagerGwFromTable : null
+  const selectedManagerTotalDisplay = selectedManagerGwDisplay != null && selectedManagerSummary?.totalPoints != null && selectedManagerSummary?.gameweekPoints != null
+    ? selectedManagerSummary.totalPoints + (selectedManagerGwDisplay - selectedManagerSummary.gameweekPoints)
+    : null
 
   const isViewingAnotherManager = selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) !== Number(currentManagerId)
   const ownedByYouPlayerIds = isViewingAnotherManager && configuredManagerPlayers?.length
@@ -279,6 +301,14 @@ export default function MiniLeaguePage() {
     [managerIdsOwningAny]
   )
 
+  const captainByManagerId = useMemo(() => {
+    const m = {}
+    ;(leagueCaptainData ?? []).forEach((r) => {
+      m[r.manager_id] = r
+    })
+    return m
+  }, [leagueCaptainData])
+
   const handleSelectPlayer = useCallback((player) => {
     setSelectedPlayers((prev) =>
       prev.some((p) => p.fpl_player_id === player.fpl_player_id) ? prev : [...prev, player]
@@ -332,7 +362,7 @@ export default function MiniLeaguePage() {
             <input
               type="text"
               className="league-ownership-search-input"
-              placeholder="Search player to see league ownership…"
+              placeholder="Search player to view league ownership"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
@@ -436,16 +466,45 @@ export default function MiniLeaguePage() {
             </p>
           )}
           </div>
-          <button
-            type="button"
-            className={`league-transfers-view-toggle ${showTransfersView ? 'active' : ''}`}
-            onClick={() => setShowTransfersView((v) => !v)}
-            aria-pressed={showTransfersView}
-            aria-label={showTransfersView ? 'Show league table' : 'Show league transfers table'}
-            title={showTransfersView ? 'Show league table' : 'Show league transfers'}
-          >
-            <ArrowLeftRight size={11} strokeWidth={1.5} aria-hidden />
-          </button>
+          <nav className="league-view-toggle" role="tablist" aria-label="League view">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={leagueViewMode === 'table'}
+              className={`league-view-toggle-button ${leagueViewMode === 'table' ? 'active' : ''}`}
+              onClick={() => setLeagueViewMode('table')}
+              aria-label="League table"
+              title="League table"
+            >
+              <span className="league-view-toggle-icon" aria-hidden>
+                <TableProperties size={14} strokeWidth={2} />
+              </span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={leagueViewMode === 'captain'}
+              className={`league-view-toggle-button ${leagueViewMode === 'captain' ? 'active' : ''}`}
+              onClick={() => setLeagueViewMode('captain')}
+              aria-label="Captain view"
+              title="Captain view"
+            >
+              <span className="league-view-toggle-icon league-view-toggle-icon-text" aria-hidden>C</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={leagueViewMode === 'transfers'}
+              className={`league-view-toggle-button ${leagueViewMode === 'transfers' ? 'active' : ''}`}
+              onClick={() => setLeagueViewMode('transfers')}
+              aria-label="Transfers view"
+              title="Transfers view"
+            >
+              <span className="league-view-toggle-icon" aria-hidden>
+                <ArrowLeftRight size={14} strokeWidth={2} />
+              </span>
+            </button>
+          </nav>
         </div>
         <div className="league-standings-bento-body">
         {showTransfersView && <div className="league-standings-transfers-spacer" aria-hidden="true" />}
@@ -564,14 +623,26 @@ export default function MiniLeaguePage() {
         })()}
         <div ref={standingsTableScrollRef} className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
           {!showTransfersView ? (
-          <table className="league-standings-bento-table">
+          <div className={showCView ? 'league-standings-c-view-wrap' : undefined}>
+          <table className={`league-standings-bento-table${showCView ? ' league-standings-c-view-table' : ''}`}>
             <colgroup>
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '14%' }} />
-              <col style={{ width: '14%' }} />
+              {showCView ? (
+                <>
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '25.5%' }} />
+                  <col style={{ width: '25.5%' }} />
+                </>
+              ) : (
+                <>
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '12%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '13%' }} />
+                  <col style={{ width: '13%' }} />
+                </>
+              )}
             </colgroup>
             <thead>
               <tr>
@@ -597,50 +668,68 @@ export default function MiniLeaguePage() {
                     <span className="league-standings-sort-triangle-slot">{sort.column === 'manager' ? <SortTriangle direction={sort.dir} /> : null}</span>
                   </button>
                 </th>
-                <th className="league-standings-bento-total">
-                  <button
-                    type="button"
-                    className="league-standings-sort-header"
-                    onClick={() => handleSort('total')}
-                    aria-sort={sort.column === 'total' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-                  >
-                    Total
-                    <span className="league-standings-sort-triangle-slot">{sort.column === 'total' ? <SortTriangle direction={sort.dir} /> : null}</span>
-                  </button>
-                </th>
-                <th className="league-standings-bento-gw">
-                  <button
-                    type="button"
-                    className="league-standings-sort-header"
-                    onClick={() => handleSort('gw')}
-                    aria-sort={sort.column === 'gw' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-                  >
-                    GW
-                    <span className="league-standings-sort-triangle-slot">{sort.column === 'gw' ? <SortTriangle direction={sort.dir} /> : null}</span>
-                  </button>
-                </th>
-                <th className="league-standings-bento-left-to-play">
-                  <button
-                    type="button"
-                    className="league-standings-sort-header"
-                    onClick={() => handleSort('left')}
-                    aria-sort={sort.column === 'left' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-                  >
-                    LEFT
-                    <span className="league-standings-sort-triangle-slot">{sort.column === 'left' ? <SortTriangle direction={sort.dir} /> : null}</span>
-                  </button>
-                </th>
-                <th className="league-standings-bento-in-play">
-                  <button
-                    type="button"
-                    className="league-standings-sort-header"
-                    onClick={() => handleSort('live')}
-                    aria-sort={sort.column === 'live' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
-                  >
-                    LIVE
-                    <span className="league-standings-sort-triangle-slot">{sort.column === 'live' ? <SortTriangle direction={sort.dir} /> : null}</span>
-                  </button>
-                </th>
+                {!showCView && (
+                  <>
+                    <th className="league-standings-bento-total">
+                      <button
+                        type="button"
+                        className="league-standings-sort-header"
+                        onClick={() => handleSort('total')}
+                        aria-sort={sort.column === 'total' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                      >
+                        Total
+                        <span className="league-standings-sort-triangle-slot">{sort.column === 'total' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                      </button>
+                    </th>
+                    <th className="league-standings-bento-gw">
+                      <button
+                        type="button"
+                        className="league-standings-sort-header"
+                        onClick={() => handleSort('gw')}
+                        aria-sort={sort.column === 'gw' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                      >
+                        GW
+                        <span className="league-standings-sort-triangle-slot">{sort.column === 'gw' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                      </button>
+                    </th>
+                    <th className="league-standings-bento-left-to-play">
+                      <button
+                        type="button"
+                        className="league-standings-sort-header"
+                        onClick={() => handleSort('left')}
+                        aria-sort={sort.column === 'left' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                      >
+                        LEFT
+                        <span className="league-standings-sort-triangle-slot">{sort.column === 'left' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                      </button>
+                    </th>
+                    <th className="league-standings-bento-in-play">
+                      <button
+                        type="button"
+                        className="league-standings-sort-header"
+                        onClick={() => handleSort('live')}
+                        aria-sort={sort.column === 'live' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                      >
+                        LIVE
+                        <span className="league-standings-sort-triangle-slot">{sort.column === 'live' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                      </button>
+                    </th>
+                  </>
+                )}
+                {showCView && (
+                  <>
+                    <th className="captain-standings-bento-captain league-standings-c-view-th-captain">
+                      <span className="captain-standings-bento-header-cell">
+                        Captain <span className="captain-standings-bento-badge-c">C</span>
+                      </span>
+                    </th>
+                    <th className="captain-standings-bento-vice league-standings-c-view-th-vice">
+                      <span className="captain-standings-bento-header-cell">
+                        Vice <span className="captain-standings-bento-badge-v">V</span>
+                      </span>
+                    </th>
+                  </>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -687,40 +776,105 @@ export default function MiniLeaguePage() {
                         ) : null}
                       </span>
                     </td>
-                    <td className="league-standings-bento-team" title={displayName}>
-                      <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
-                      {isCurrentUser && isSearchMode && (
-                        <span className="league-standings-bento-you-badge" title="Configured owner (you)">
-                          You
-                        </span>
-                      )}
-                      {chipLabel && (
-                        <span
-                          className="league-standings-bento-chip-badge"
-                          style={{ backgroundColor: chipColor }}
-                          title={activeChip && gameweek != null ? `${activeChip} (GW ${gameweek})` : activeChip}
-                        >
-                          {chipLabel}
-                        </span>
-                      )}
-                    </td>
-                    <td className={`league-standings-bento-total ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerTotalPointsDisplay : s.total_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
-                      {currentManagerId != null && s.manager_id === currentManagerId ? (currentManagerTotalPointsDisplay ?? '—') : (s.total_points ?? '—')}
-                    </td>
-                    <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
-                      {currentManagerId != null && s.manager_id === currentManagerId ? (currentManagerGwPointsDisplay ?? '—') : (s.gameweek_points ?? '—')}
-                    </td>
-                    <td className={`league-standings-bento-left-to-play ${leftToPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
-                      {leftToPlay !== null && leftToPlay !== undefined ? leftToPlay : '—'}
-                    </td>
-                    <td className={`league-standings-bento-in-play ${inPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
-                      {inPlay !== null && inPlay !== undefined ? inPlay : '—'}
-                    </td>
+                    {showCView ? (
+                      <td className="league-standings-bento-team league-standings-c-view-manager-cell" title={displayName}>
+                        <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
+                        {chipLabel && (
+                          <span
+                            className="league-standings-bento-chip-badge"
+                            style={{ backgroundColor: chipColor }}
+                            title={activeChip && gameweek != null ? `${activeChip} (GW ${gameweek})` : activeChip}
+                          >
+                            {chipLabel}
+                          </span>
+                        )}
+                      </td>
+                    ) : (
+                      <td className="league-standings-bento-team" title={displayName}>
+                        <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
+                        {isCurrentUser && isSearchMode && (
+                          <span className="league-standings-bento-you-badge" title="Configured owner (you)">
+                            You
+                          </span>
+                        )}
+                        {chipLabel && (
+                          <span
+                            className="league-standings-bento-chip-badge"
+                            style={{ backgroundColor: chipColor }}
+                            title={activeChip && gameweek != null ? `${activeChip} (GW ${gameweek})` : activeChip}
+                          >
+                            {chipLabel}
+                          </span>
+                        )}
+                      </td>
+                    )}
+                    {!showCView && (
+                      <>
+                        <td className={`league-standings-bento-total ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerTotalPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerTotalDisplay : s.total_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                          {currentManagerId != null && s.manager_id === currentManagerId
+                            ? (currentManagerTotalPointsDisplay ?? '—')
+                            : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null
+                              ? selectedManagerTotalDisplay
+                              : (s.total_points ?? '—')}
+                        </td>
+                        <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                          {currentManagerId != null && s.manager_id === currentManagerId
+                            ? (currentManagerGwPointsDisplay ?? '—')
+                            : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null
+                              ? selectedManagerGwDisplay
+                              : (s.gameweek_points ?? '—')}
+                        </td>
+                        <td className={`league-standings-bento-left-to-play ${leftToPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                          {leftToPlay !== null && leftToPlay !== undefined ? leftToPlay : '—'}
+                        </td>
+                        <td className={`league-standings-bento-in-play ${inPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                          {inPlay !== null && inPlay !== undefined ? inPlay : '—'}
+                        </td>
+                      </>
+                    )}
+                    {showCView && (() => {
+                      const cap = captainByManagerId[s.manager_id]
+                      const captainName = cap?.captain_name ?? '—'
+                      const viceName = cap?.vice_captain_name ?? '—'
+                      const captainTeam = cap?.captain_team_short_name
+                      const viceTeam = cap?.vice_captain_team_short_name
+                      return (
+                        <>
+                          <td className="captain-standings-bento-captain league-standings-c-view-td-captain" title={captainName}>
+                            <span className="captain-standings-bento-player-cell">
+                              {captainTeam && (
+                                <img
+                                  src={`/badges/${captainTeam}.svg`}
+                                  alt=""
+                                  className="captain-standings-bento-player-badge"
+                                  onError={(e) => { e.target.style.display = 'none' }}
+                                />
+                              )}
+                              <span className="captain-standings-bento-player-name">{captainName}</span>
+                            </span>
+                          </td>
+                          <td className="captain-standings-bento-vice league-standings-c-view-td-vice" title={viceName}>
+                            <span className="captain-standings-bento-player-cell">
+                              {viceTeam && (
+                                <img
+                                  src={`/badges/${viceTeam}.svg`}
+                                  alt=""
+                                  className="captain-standings-bento-player-badge"
+                                  onError={(e) => { e.target.style.display = 'none' }}
+                                />
+                              )}
+                              <span className="captain-standings-bento-player-name">{viceName}</span>
+                            </span>
+                          </td>
+                        </>
+                      )
+                    })()}
                   </tr>
                 )
               })}
             </tbody>
           </table>
+          </div>
           ) : (
           <div ref={transfersTableScrollRef} className="league-transfers-table-wrap">
             <table className="league-transfers-table league-transfers-table-cols">
@@ -833,7 +987,7 @@ export default function MiniLeaguePage() {
                                     )}
                                   </div>
                                 ))}
-                                {transfers.length > 1 && (() => {
+                                {transfers.length >= 1 && (() => {
                                   const net = transfers.reduce((sum, t) => sum + (t.pointImpact ?? 0), 0)
                                   const netClass = net > 0 ? 'positive' : net < 0 ? 'negative' : 'neutral'
                                   return (

@@ -156,6 +156,16 @@
   min-height: 48px;
 }
 
+/* Owned by configured manager: thin green border + green bolder player name */
+.feed-event-card.feed-event-card--owned {
+  border: 1px solid var(--accent-green, #10b981);
+}
+
+.feed-event-card--owned .feed-event-card__player-name:not(.feed-event-card__player-name--loading) {
+  color: var(--accent-green, #10b981);
+  font-weight: 700;
+}
+
 /* Stat later ruled out (e.g. goal/assist disallowed): cross out and grey the existing row */
 .feed-event-card--reversed .feed-event-card__player-name,
 .feed-event-card--reversed .feed-event-card__event-label,

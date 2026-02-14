@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { usePlayerGameweekStatsRange } from '../hooks/usePlayerGameweekStats'
+import { useToast } from '../contexts/ToastContext'
 import { getVisibleStats, formatStatValue, getCompareValue, getLeader } from '../utils/compareStats'
 import './PlayerCompareModal.css'
 import './MiniLeaguePage.css'
@@ -126,6 +127,7 @@ function PlayerSearchSlot({ selectedPlayer, onSelect, onClear, placeholder, slot
 
 export default function CompareSubpage() {
   const { gameweek } = useGameweekData()
+  const { toast } = useToast()
   const [selectedPlayer1, setSelectedPlayer1] = useState(null)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
   const [gwFilter, setGwFilter] = useState('last6')
@@ -174,20 +176,26 @@ export default function CompareSubpage() {
             </button>
           ))}
         </div>
-        <label className="player-compare-per90-toggle">
-          <input
-            type="checkbox"
-            checked={per90}
-            onChange={(e) => setPer90(e.target.checked)}
-            aria-label="Show stats per 90 minutes"
-          />
-          <span className="player-compare-per90-label">Per 90</span>
-        </label>
+        <div className="player-compare-controls-divider" aria-hidden="true" />
+        <button
+          type="button"
+          className={`player-compare-gw-filter-btn ${per90 ? 'active' : ''}`}
+          onClick={() => {
+            const next = !per90
+            setPer90(next)
+            toast(next ? 'Showing per 90 stats' : 'Showing total stats')
+          }}
+          aria-pressed={per90}
+          aria-label={per90 ? 'Showing per 90 stats' : 'Show per 90 stats'}
+        >
+          Per 90
+        </button>
       </div>
 
-      <div className="player-compare-table-wrap">
-        <table className="player-compare-table">
-          <thead>
+      <div className="player-stats-wrap">
+        <div className="player-compare-table-wrap">
+          <table className="player-compare-table">
+            <thead>
             <tr>
               <th className="player-compare-th player-compare-th-p1">
                 <PlayerSearchSlot
@@ -215,8 +223,8 @@ export default function CompareSubpage() {
                 />
               </th>
             </tr>
-          </thead>
-          <tbody>
+            </thead>
+            <tbody>
             {visibleStats.map(({ key, label, higherBetter }) => {
               const v1 = stats1?.[key] ?? (key === 'points' && stats1 ? stats1.points : undefined)
               const v2 = stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined)
@@ -261,8 +269,9 @@ export default function CompareSubpage() {
                 </tr>
               )
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

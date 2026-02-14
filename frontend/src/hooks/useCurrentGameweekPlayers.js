@@ -228,6 +228,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         .from('fixtures')
         .select('fpl_fixture_id, finished, started, finished_provisional, kickoff_time, home_team_id, away_team_id')
         .eq('gameweek', gameweek)
+        .order('kickoff_time', { ascending: true })
       const fixturesById = {}
       const fixtureList = fixturesResult.data || []
 
@@ -551,7 +552,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
     return a.dgwRowIndex - b.dgwRowIndex
   })
 
-  return players
+  return { players, fixtures: fixtureList }
 }
 
 /**
@@ -579,8 +580,11 @@ export function useCurrentGameweekPlayers() {
     refetchIntervalInBackground: true,
   })
 
+  const playersList = Array.isArray(playersData) ? playersData : (playersData?.players ?? [])
+  const fixturesList = playersData?.fixtures ?? []
   return {
-    data: playersData || [],
+    data: playersList,
+    fixtures: fixturesList,
     isLoading: isLoading || gwLoading,
     error
   }
@@ -604,8 +608,11 @@ export function useCurrentGameweekPlayersForManager(managerId) {
     refetchIntervalInBackground: true,
   })
 
+  const playersList = Array.isArray(playersData) ? playersData : (playersData?.players ?? [])
+  const fixturesList = playersData?.fixtures ?? []
   return {
-    data: playersData || [],
+    data: playersList,
+    fixtures: fixturesList,
     isLoading: isLoading || gwLoading,
     error
   }

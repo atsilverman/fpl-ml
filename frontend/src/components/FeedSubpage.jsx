@@ -61,7 +61,7 @@ function eventLabel(event) {
   }
 }
 
-function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, position, impact }) {
+function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, position, impact, isOwned }) {
   const { label, delta } = eventLabel(event)
   const isPositive = event.points_delta > 0
   const isNegative = event.points_delta < 0
@@ -75,7 +75,10 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
   const impactIsNegative = impact != null && impact < 0
 
   return (
-    <article className={`feed-event-card${isReversed ? ' feed-event-card--reversed' : ''}`}>
+    <article
+      className={`feed-event-card${isReversed ? ' feed-event-card--reversed' : ''}${isOwned ? ' feed-event-card--owned' : ''}`}
+      title={isOwned ? 'Owned by your squad' : undefined}
+    >
       <div className="feed-event-card__player">
         {teamShortName && (
           <img
@@ -253,10 +256,17 @@ export default function FeedSubpage({ isActive = true }) {
     enabled: managerId != null && managerId !== '' && !!gameweek,
     staleTime: 60 * 1000,
   })
-  const ownedPlayerIdSet = useMemo(
-    () => new Set(managerPicksRaw.map(r => Number(r.player_id)).filter(n => !Number.isNaN(n))),
-    [managerPicksRaw]
-  )
+  const ownedPlayerIdSet = useMemo(() => {
+    const fromDirect = (managerPicksRaw || []).map((r) => Number(r.player_id)).filter((n) => !Number.isNaN(n))
+    if (fromDirect.length > 0) return new Set(fromDirect)
+    const mid = managerId != null ? Number(managerId) : null
+    if (mid == null || Number.isNaN(mid) || !leaguePicks?.length) return new Set()
+    const fromLeague = leaguePicks
+      .filter((p) => Number(p.manager_id) === mid || p.manager_id === managerId)
+      .map((p) => Number(p.player_id))
+      .filter((n) => !Number.isNaN(n))
+    return new Set(fromLeague)
+  }, [managerPicksRaw, leaguePicks, managerId])
   const viewerMultiplierByPlayerId = useMemo(() => {
     const map = {}
     managerPicksRaw.forEach((p) => {
@@ -688,7 +698,11 @@ export default function FeedSubpage({ isActive = true }) {
       {sortedEvents.length === 0 ? (
         <div className="feed-subpage-empty">No events yet. Events appear during live gameweeks.</div>
       ) : sortedFilteredEvents.length === 0 ? (
-        <div className="feed-subpage-empty">No events match the current filters.</div>
+        <div className="feed-subpage-empty">
+          {scopeFilter === 'owned' && ownedPlayerIdSet.size === 0 && (managerId != null && managerId !== '')
+            ? 'No owned events. Configure your league and make sure your squad is saved for this gameweek to see owned players.'
+            : 'No events match the current filters.'}
+        </div>
       ) : (
         <>
           <div className="feed-event-list__header" aria-hidden="true">
@@ -749,6 +763,7 @@ export default function FeedSubpage({ isActive = true }) {
                 teamShortName={teamShortName}
                 position={position}
                 impact={impactByEventId[event.id]}
+                isOwned={ownedPlayerIdSet.has(Number(event.player_id))}
               />
             )
           })}

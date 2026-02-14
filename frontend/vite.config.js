@@ -7,7 +7,15 @@ export default defineConfig({
   server: {
     port: 5173,
     host: 'localhost',
-    open: true
+    open: true,
+    proxy: {
+      // FPL API (CORS blocks direct browser requests); dev only; prod needs serverless proxy
+      '/api/fpl': {
+        target: 'https://fantasy.premierleague.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/fpl/, '/api')
+      }
+    }
   },
   build: {
     outDir: 'dist',

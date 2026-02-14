@@ -1,35 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChartGantt } from 'lucide-react'
 import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
-import { useGameweekData } from '../hooks/useGameweekData'
 import './PlayerPerformanceChart.css'
-
-/** Get ownership streaks [[startGw, endGw], ...] from player (gameweeks_array or ownership_periods). */
-function getOwnershipStreaks(player) {
-  if (player.gameweeks_array && Array.isArray(player.gameweeks_array) && player.gameweeks_array.length > 0) {
-    const sorted = [...player.gameweeks_array].sort((a, b) => a - b)
-    const streaks = []
-    let start = sorted[0]
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i] !== sorted[i - 1] + 1) {
-        streaks.push([start, sorted[i - 1]])
-        start = sorted[i]
-      }
-    }
-    streaks.push([start, sorted[sorted.length - 1]])
-    return streaks
-  }
-  if (player.ownership_periods && typeof player.ownership_periods === 'string') {
-    return player.ownership_periods.split(',').map((s) => {
-      const part = s.trim().split('-').map((n) => parseInt(n.trim(), 10))
-      const a = part[0]
-      const b = part[1] != null ? part[1] : a
-      return [a, b]
-    }).filter(([a, b]) => !Number.isNaN(a) && !Number.isNaN(b))
-  }
-  return []
-}
 
 const MOBILE_BREAKPOINT = 768
 /** Bar width % above which we place the value inside the bar (right-aligned); below this, place after the bar. */
@@ -64,10 +36,8 @@ export default function PlayerPerformanceChart({
   onFilterChange = null,
 }) {
   const [excludeHaaland, setExcludeHaaland] = useState(false)
-  const [showGantt, setShowGantt] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
   const { toast } = useToast()
-  const { gameweek: currentGameweek } = useGameweekData()
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT)
@@ -123,24 +93,6 @@ export default function PlayerPerformanceChart({
       : 'var(--total-points-bar-mid, #3d7aed)'
   }
 
-  /** X-axis gameweek range from current filter (and current gameweek). */
-  const { gwMin, gwMax, gwRange } = useMemo(() => {
-    const gw = currentGameweek ?? 38
-    let min, max
-    if (filter === 'all') {
-      min = 1
-      max = gw
-    } else if (filter === 'last12') {
-      min = Math.max(1, gw - 11)
-      max = gw
-    } else {
-      min = Math.max(1, gw - 5)
-      max = gw
-    }
-    const range = max - min + 1
-    return { gwMin: min, gwMax: max, gwRange: range || 1 }
-  }, [filter, currentGameweek])
-
   if (loading) {
     return (
       <div className="total-points-chart total-points-chart--loading">
@@ -161,105 +113,7 @@ export default function PlayerPerformanceChart({
 
   return (
     <div className="total-points-chart">
-      {showGantt ? (
-        <div className="total-points-chart__gantt">
-          {(() => {
-            const numBetween = gwRange > 15 ? 3 : 2
-            const ganttTicks = [gwMin]
-            for (let i = 1; i <= numBetween; i++) {
-              const gw = Math.round(gwMin + (gwMax - gwMin) * (i / (numBetween + 1)))
-              if (gw > ganttTicks[ganttTicks.length - 1] && gw < gwMax) ganttTicks.push(gw)
-            }
-            if (gwMax !== ganttTicks[ganttTicks.length - 1]) ganttTicks.push(gwMax)
-            return (
-              <>
-                {/* Vertical lines only at x-axis label positions */}
-                <div className="total-points-chart__gantt-grid" aria-hidden>
-                  <div className="total-points-chart__gantt-x-label-spacer" />
-                  <div className="total-points-chart__gantt-grid-track">
-                    {ganttTicks.map((gw) => (
-                      <div
-                        key={gw}
-                        className="total-points-chart__gantt-grid-line"
-                        style={{ left: `${((gw - gwMin) / gwRange) * 100}%` }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="total-points-chart__gantt-x-labels">
-                  <div className="total-points-chart__gantt-x-label-spacer" aria-hidden />
-                  <div className="total-points-chart__gantt-x-label-track">
-                    {ganttTicks.map((gw) => (
-                      <span
-                        key={gw}
-                        className="total-points-chart__gantt-x-label"
-                        style={{
-                          left: `${((gw - gwMin) / gwRange) * 100}%`,
-                          transform: 'translateX(-50%)',
-                        }}
-                      >
-                        GW{gw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )
-          })()}
-          <div className="total-points-chart__gantt-rows" role="list">
-            {sortedData.map((player) => {
-              const streaks = getOwnershipStreaks(player)
-              const clipped = streaks.map(([a, b]) => [
-                Math.max(a, gwMin),
-                Math.min(b, gwMax),
-              ]).filter(([a, b]) => a <= b)
-              return (
-                <div
-                  key={player.player_id}
-                  className="total-points-chart__gantt-row"
-                  role="listitem"
-                >
-                  <div className="total-points-chart__label">
-                    <span className="total-points-chart__name" title={player.player_name}>
-                      {abbreviateName(player.player_name)}
-                    </span>
-                    {player.team_short_name && (
-                      <img
-                        className="total-points-chart__badge"
-                        src={`/badges/${player.team_short_name}.svg`}
-                        alt=""
-                        width={16}
-                        height={16}
-                        onError={(e) => {
-                          e.target.style.display = 'none'
-                        }}
-                      />
-                    )}
-                  </div>
-                  <div className="total-points-chart__gantt-track">
-                    {clipped.map(([startGw, endGw], segIdx) => {
-                      const leftPct = ((startGw - gwMin) / gwRange) * 100
-                      const widthPct = ((endGw - startGw + 1) / gwRange) * 100
-                      return (
-                        <div
-                          key={`${segIdx}-${startGw}-${endGw}`}
-                          className="total-points-chart__gantt-segment"
-                          style={{
-                            left: `${leftPct}%`,
-                            width: `${widthPct}%`,
-                          }}
-                          title={`${player.player_name}: GW ${startGw}–${endGw}`}
-                        />
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      ) : (
-        <div className="total-points-chart__bars" role="list">
+      <div className="total-points-chart__bars" role="list">
           {sortedData.map((player) => {
             const points = player.total_points || 0
             const pct = player.percentage_of_total_points || 0
@@ -313,8 +167,7 @@ export default function PlayerPerformanceChart({
               </div>
             )
           })}
-        </div>
-      )}
+      </div>
 
       <div className="total-points-chart__controls">
         {onFilterChange && (
@@ -352,18 +205,6 @@ export default function PlayerPerformanceChart({
             <span className="total-points-chart__separator" aria-hidden />
           </>
         )}
-        <button
-          type="button"
-          className={`total-points-chart__btn total-points-chart__btn--gantt chart-gantt ${showGantt ? 'active' : ''}`}
-          onClick={() => {
-            setShowGantt((prev) => !prev)
-            toast(showGantt ? 'Showing points per owned player' : 'Showing player ownership by gameweek')
-          }}
-          title={showGantt ? 'Show points bar chart' : 'Show ownership by gameweek (Gantt)'}
-          aria-label={showGantt ? 'Switch to bar chart' : 'Switch to Gantt chart'}
-        >
-          <ChartGantt size={14} aria-hidden />
-        </button>
         <button
           type="button"
           className={`total-points-chart__btn total-points-chart__btn--exclude ${excludeHaaland ? 'active' : ''}`}

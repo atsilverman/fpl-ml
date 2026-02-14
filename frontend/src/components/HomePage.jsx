@@ -12,6 +12,8 @@ import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
 import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
 import { usePlayerOwnedPerformance } from '../hooks/usePlayerOwnedPerformance'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
+import { useFPLFixturesForMatchState } from '../hooks/useFPLFixturesForMatchState'
+import { useFixturesWithTeams } from '../hooks/useFixturesWithTeams'
 import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { usePlayerImpact } from '../hooks/usePlayerImpact'
 import { useTransferImpacts } from '../hooks/useTransferImpacts'
@@ -50,8 +52,6 @@ export default function HomePage() {
   const [isGwPointsExpanded, setIsGwPointsExpanded] = useState(false)
   const [isTransfersExpanded, setIsTransfersExpanded] = useState(false)
   const [isChipsExpanded, setIsChipsExpanded] = useState(false)
-  const [isLeagueRankExpanded, setIsLeagueRankExpanded] = useState(false)
-  const [isCaptainExpanded, setIsCaptainExpanded] = useState(false)
   const [showTop10Lines, setShowTop10Lines] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
@@ -70,7 +70,9 @@ export default function HomePage() {
   const { inPlay: managerInPlay } = useManagerLiveStatus(config?.managerId ?? null, gameweek)
   const hasManagerPlayerInPlay = hasLiveGames && (managerInPlay ?? 0) > 0
   const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter)
-  const { data: currentGameweekPlayers, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
+  const { data: currentGameweekPlayers, fixtures: currentGameweekFixtures, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
+  const { fixtures: fplFixturesForMatchState } = useFPLFixturesForMatchState(gameweek ?? null, isGwPointsExpanded)
+  const { fixtures: fixturesFromMatches } = useFixturesWithTeams(gameweek ?? null)
   const { top10ByStat, isLoading: top10ByStatLoading } = useGameweekTop10ByStat()
   const { impactByPlayerId, loading: impactLoading } = usePlayerImpact()
   const { transfers: transferImpacts, loading: transferImpactsLoading } = useTransferImpacts(gameweek)
@@ -320,16 +322,6 @@ export default function HomePage() {
       return 'bento-card-chart-large'
     }
 
-    // League rank card 2x3 when expanded
-    if (id === 'league-rank' && isLeagueRankExpanded) {
-      return 'bento-card-chart-large'
-    }
-
-    // Captain card 2x3 when expanded
-    if (id === 'captain' && isCaptainExpanded) {
-      return 'bento-card-chart-large'
-    }
-
     // Price Changes: always 2x2, no expand
     if (id === 'price-changes') {
       return 'bento-card-2x2'
@@ -408,22 +400,6 @@ export default function HomePage() {
     setIsChipsExpanded(false)
   }
 
-  const handleLeagueRankExpandClick = () => {
-    setIsLeagueRankExpanded(true)
-  }
-
-  const handleLeagueRankCollapseClick = () => {
-    setIsLeagueRankExpanded(false)
-  }
-
-  const handleCaptainExpandClick = () => {
-    setIsCaptainExpanded(true)
-  }
-
-  const handleCaptainCollapseClick = () => {
-    setIsCaptainExpanded(false)
-  }
-
   return (
     <div className="home-page">
       {nextDeadlineLocal && (
@@ -477,6 +453,9 @@ export default function HomePage() {
           let playerChartFilterToUse = 'all'
           let onPlayerChartFilterChangeToUse = null
           let currentGameweekPlayersDataToUse = null
+          let gameweekFixturesFromPlayersToUse = null
+          let gameweekFixturesFromFPLToUse = null
+          let gameweekFixturesFromMatchesToUse = null
           let showTop10LinesToUse = false
           let top10LinesDataToUse = null
           let onShowTop10ChangeToUse = null
@@ -514,6 +493,9 @@ export default function HomePage() {
             showValue = showValueInGwPoints ? card.value : undefined
             showChange = showValueInGwPoints ? card.change : undefined
             currentGameweekPlayersDataToUse = (currentGameweekPlayers || [])
+            gameweekFixturesFromPlayersToUse = currentGameweekFixtures?.length ? currentGameweekFixtures : null
+            gameweekFixturesFromFPLToUse = fplFixturesForMatchState?.length ? fplFixturesForMatchState : null
+            gameweekFixturesFromMatchesToUse = fixturesFromMatches ?? []
           } else if (cardId === 'transfers' && isTransfersExpanded) {
             showValue = undefined
             showChange = undefined
@@ -565,7 +547,7 @@ export default function HomePage() {
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
-              isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded) || (cardId === 'league-rank' && isLeagueRankExpanded) || (cardId === 'captain' && isCaptainExpanded)}
+              isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
               style={{ '--animation-delay': `${index * 0.04}s` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}
@@ -575,8 +557,6 @@ export default function HomePage() {
                 cardId === 'total-points' ? handlePlayerPerformanceExpand :
                 cardId === 'gw-points' ? handleGwPointsExpandClick :
                 cardId === 'chips' ? handleChipsExpandClick :
-                cardId === 'league-rank' ? handleLeagueRankExpandClick :
-                cardId === 'captain' ? handleCaptainExpandClick :
                 undefined
               }
               onCollapseClick={
@@ -585,8 +565,6 @@ export default function HomePage() {
                 cardId === 'total-points' ? handlePlayerPerformanceCollapse :
                 cardId === 'gw-points' ? handleGwPointsCollapseClick :
                 cardId === 'chips' ? handleChipsCollapseClick :
-                cardId === 'league-rank' ? handleLeagueRankCollapseClick :
-                cardId === 'captain' ? handleCaptainCollapseClick :
                 undefined
               }
               gameweek={cardId === 'chips' || cardId === 'transfers' ? gameweek : undefined}
@@ -617,6 +595,9 @@ export default function HomePage() {
               onPlayerChartFilterChange={onPlayerChartFilterChangeToUse}
               playerPointsByGameweek={cardId === 'total-points' ? playerPointsByGameweek : undefined}
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
+              gameweekFixturesFromPlayers={cardId === 'gw-points' ? gameweekFixturesFromPlayersToUse : undefined}
+              gameweekFixturesFromFPL={cardId === 'gw-points' ? gameweekFixturesFromFPLToUse : undefined}
+              gameweekFixturesFromMatches={cardId === 'gw-points' ? gameweekFixturesFromMatchesToUse : undefined}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
               impactByPlayerId={cardId === 'gw-points' ? impactByPlayerId : undefined}
               onPlayerRowClick={

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { usePlayerGameweekStatsRange } from '../hooks/usePlayerGameweekStats'
+import { useToast } from '../contexts/ToastContext'
 import { getVisibleStats, formatStatValue, getCompareValue, getLeader } from '../utils/compareStats'
 import './MiniLeaguePage.css'
 import './PlayerCompareModal.css'
@@ -41,6 +42,7 @@ export default function PlayerCompareModal({
   gameweek,
   onClose,
 }) {
+  const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
@@ -121,15 +123,20 @@ export default function PlayerCompareModal({
                 </button>
               ))}
             </div>
-            <label className="player-compare-per90-toggle">
-              <input
-                type="checkbox"
-                checked={per90}
-                onChange={(e) => setPer90(e.target.checked)}
-                aria-label="Show stats per 90 minutes"
-              />
-              <span className="player-compare-per90-label">Per 90</span>
-            </label>
+            <div className="player-compare-controls-divider" aria-hidden="true" />
+            <button
+              type="button"
+              className={`player-compare-gw-filter-btn ${per90 ? 'active' : ''}`}
+              onClick={() => {
+                const next = !per90
+                setPer90(next)
+                toast(next ? 'Showing per 90 stats' : 'Showing total stats')
+              }}
+              aria-pressed={per90}
+              aria-label={per90 ? 'Showing per 90 stats' : 'Show per 90 stats'}
+            >
+              Per 90
+            </button>
           </div>
 
           <div className="player-compare-table-wrap">

@@ -23,7 +23,10 @@ export function useLeagueCaptainPicks(gameweek = null) {
         .eq('gameweek', gameweek)
         .order('calculated_rank', { ascending: true })
 
-      if (standingsError) throw standingsError
+      if (standingsError) {
+        console.warn('[useLeagueCaptainPicks] standings error:', standingsError)
+        return []
+      }
       if (!standings?.length) return []
 
       const managerIds = standings.map(s => s.manager_id)
@@ -35,7 +38,23 @@ export function useLeagueCaptainPicks(gameweek = null) {
         .eq('gameweek', gameweek)
         .or('is_captain.eq.true,is_vice_captain.eq.true')
 
-      if (picksError) throw picksError
+      if (picksError) {
+        console.warn('[useLeagueCaptainPicks] picks error:', picksError)
+        return standings.map(s => {
+          const displayName = (s.manager_team_name && s.manager_team_name.trim())
+            ? s.manager_team_name
+            : (s.manager_name || `Manager ${s.manager_id}`)
+          return {
+            manager_id: s.manager_id,
+            rank: s.calculated_rank ?? s.mini_league_rank ?? null,
+            manager_team_name: displayName,
+            captain_name: '—',
+            vice_captain_name: '—',
+            captain_team_short_name: null,
+            vice_captain_team_short_name: null
+          }
+        })
+      }
 
       const byManager = {}
       ;(picks || []).forEach(p => {

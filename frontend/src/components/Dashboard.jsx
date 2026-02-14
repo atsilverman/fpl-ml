@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction } from 'lucide-react'
+import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction, Scale, Calendar } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -18,7 +18,7 @@ const GAMEWEEK_VIEWS = [
 ]
 
 const RESEARCH_VIEWS = [
-  { id: 'price-changes', label: 'Price Changes', disabled: false },
+  { id: 'price-changes', label: '£ Changes', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
   { id: 'compare', label: 'Compare', disabled: false },
   { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
@@ -354,6 +354,7 @@ export default function Dashboard() {
                   >
                     {RESEARCH_VIEWS.map((view) => {
                       const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
+                      const hasIcon = view.id === 'schedule' || view.id === 'compare' || view.comingSoon
                       return (
                         <button
                           key={view.id}
@@ -362,13 +363,19 @@ export default function Dashboard() {
                           aria-selected={currentPage.id === 'research' && researchView === view.id}
                           aria-label={view.comingSoon ? `${view.label} (coming soon)` : view.label}
                           title={view.comingSoon ? 'Coming soon' : undefined}
-                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''} ${view.comingSoon ? 'nav-item-gameweek-option--coming-soon' : ''}`}
+                          className={`nav-item-gameweek-option ${currentPage.id === 'research' && researchView === view.id ? 'nav-item-gameweek-option--active' : ''} ${isDisabled ? 'nav-item-gameweek-option--disabled' : ''} ${view.comingSoon ? 'nav-item-gameweek-option--coming-soon' : ''} ${hasIcon ? 'nav-item-gameweek-option--with-icon' : ''}`}
                           onClick={() => {
                             if (isDisabled) return
                             setResearchView(view.id)
                           }}
                           disabled={isDisabled}
                         >
+                          {view.id === 'schedule' && (
+                            <Calendar size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
+                          )}
+                          {view.id === 'compare' && (
+                            <Scale size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
+                          )}
                           {view.comingSoon && (
                             <Construction size={14} strokeWidth={2} className="nav-item-gameweek-option-icon" aria-hidden />
                           )}

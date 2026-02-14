@@ -446,9 +446,9 @@ html[data-theme="dark"] .gw-top-points-pill {
   50% { opacity: 0.7; transform: scale(1.25); }
 }
 
-/* Final: finished === true (match confirmed by FPL) – reddish/orange */
+/* Final: finished === true (match confirmed by FPL) – no colored border, status badge only */
 .matchup-card.final {
-  border-color: #c2410c;
+  border-color: var(--border-color);
 }
 
 .matchup-card.final .matchup-card-status {

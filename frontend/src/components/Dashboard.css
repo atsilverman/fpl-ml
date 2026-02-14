@@ -265,8 +265,31 @@
   margin-left: 18px;
 }
 
+/* Desktop: 4 equal columns so the selection pill is identical size regardless of which tab is active */
+@media (min-width: 769px) {
+  .page-selector-bottom.tracking-mode-toggle {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .page-selector-bottom.tracking-mode-toggle > .tracking-mode-button,
+  .page-selector-bottom.tracking-mode-toggle > .nav-item-gameweek-wrap {
+    min-width: 0;
+  }
+}
+
+/* Desktop: equal-width nav items (fallback when not in grid) */
+.page-selector-bottom.tracking-mode-toggle > .tracking-mode-button,
+.page-selector-bottom.tracking-mode-toggle > .nav-item-gameweek-wrap {
+  flex: 1 1 0%;
+  min-width: 80px;
+}
+.page-selector-bottom.tracking-mode-toggle > .nav-item-gameweek-wrap {
+  display: flex;
+}
+
 .page-selector-bottom .tracking-mode-button {
-  flex: 0 1 auto;
+  flex: 1 1 0%;
   min-width: 0;
   min-height: 32px;
   padding: 8px 18px;
@@ -437,6 +460,17 @@
     color: var(--text-primary);
     background: var(--bg-secondary);
   }
+}
+
+.nav-item-gameweek-option--with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-item-gameweek-option--with-icon .nav-item-gameweek-option-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .nav-item-gameweek-option--active {

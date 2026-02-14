@@ -15,12 +15,14 @@ export default function ResearchPage() {
   return (
     <div className="research-page">
       {view === 'price-changes' && (
-        <>
-          <header className="research-page-card-header research-page-price-changes-header">
+        <div className="research-card research-price-changes-card bento-card bento-card-animate bento-card-expanded">
+          <header className="research-page-card-header research-price-changes-header">
             <span className="research-page-card-title">Price Changes</span>
           </header>
-          <PriceChangesSubpage showCard={false} />
-        </>
+          <div className="research-price-changes-content">
+            <PriceChangesSubpage showCard={false} />
+          </div>
+        </div>
       )}
 
       {view === 'schedule' && (

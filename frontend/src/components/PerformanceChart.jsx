@@ -26,7 +26,8 @@ export default function PerformanceChart({
   showTop10Lines = false,
   top10LinesData = null,
   onShowTop10Change = null,
-  currentManagerId = null
+  currentManagerId = null,
+  isStale = false
 }) {
   const { toast } = useToast()
   const svgRef = useRef(null)
@@ -931,6 +932,51 @@ export default function PerformanceChart({
     // Ensure configured manager (main) line and dots render above league leader
     g.selectAll('.main-line, .data-point').raise()
 
+    // Stale indicator: small "!" above the current (last) GW dot when data may be out of date during live games
+    const staleIndicatorOffset = 20
+    const staleIndicatorData = isStale && filteredData.length > 0 ? [filteredData[filteredData.length - 1]] : []
+    const staleIndicator = g.selectAll('.stale-indicator-group').data(staleIndicatorData, d => d.gameweek)
+
+    staleIndicator.enter()
+      .append('g')
+      .attr('class', 'stale-indicator-group')
+      .attr('transform', d => `translate(${xScale(d.gameweek)},${yScale(d.overallRank) - staleIndicatorOffset})`)
+      .attr('title', 'Data may be out of date during live games')
+      .each(function() {
+        const g = d3.select(this)
+        g.append('circle')
+          .attr('class', 'stale-indicator-dot')
+          .attr('r', 6)
+          .attr('fill', '#E7AD10')
+          .attr('stroke', 'rgba(0,0,0,0.2)')
+          .attr('stroke-width', 1)
+        g.append('text')
+          .attr('class', 'stale-indicator-text')
+          .attr('text-anchor', 'middle')
+          .attr('dominant-baseline', 'central')
+          .attr('fill', '#fff')
+          .attr('font-size', 9)
+          .attr('font-weight', '700')
+          .text('!')
+      })
+
+    const staleIndicatorGroups = g.selectAll('.stale-indicator-group')
+    staleIndicatorGroups.select('circle')
+      .attr('r', 6)
+      .attr('fill', '#E7AD10')
+
+    staleIndicatorGroups
+      .transition()
+      .duration(transitionMs(220))
+      .ease(d3.easeCubicOut)
+      .attr('transform', d => `translate(${xScale(d.gameweek)},${yScale(d.overallRank) - staleIndicatorOffset})`)
+
+    staleIndicator.exit()
+      .transition()
+      .duration(transitionMs(180))
+      .attr('opacity', 0)
+      .remove()
+
     // Tooltip (simple hover effect) - create or select existing
     let tooltip = d3.select('.chart-tooltip')
     if (tooltip.empty()) {
@@ -1097,7 +1143,7 @@ export default function PerformanceChart({
     legendItems.exit().remove()
 
     // No cleanup needed - tooltip persists across renders
-  }, [filteredData, filteredComparisonData, filteredTop10LinesData, dimensions, isMobile, lineColor, loading, showComparison, showTop10Lines, filter])
+  }, [filteredData, filteredComparisonData, filteredTop10LinesData, dimensions, isMobile, lineColor, loading, showComparison, showTop10Lines, filter, isStale])
 
   if (loading || !data || data.length === 0) {
     return (

@@ -112,6 +112,9 @@ export default function BentoCard({
   onPlayerChartFilterChange = null,
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
+  gameweekFixturesFromPlayers = null,
+  gameweekFixturesFromFPL = null,
+  gameweekFixturesFromMatches = null,
   top10ByStat = null,
   impactByPlayerId = null,
   gameweek = null,
@@ -232,12 +235,15 @@ export default function BentoCard({
           ? 'bento-card-league-rank-border-positive'
           : 'bento-card-league-rank-border-negative'
       : null
+  const gwRankBorderClass =
+    id === 'gw-rank' && isStale ? 'bento-card-rank-border-stale' : null
   const cardClasses = [
     'bento-card',
     'bento-card-animate',
     className,
     overallRankBorderClass,
     leagueRankBorderClass,
+    gwRankBorderClass,
     id === 'transfers' && 'bento-card-id-transfers',
     isExpanded && 'bento-card-expanded',
     isTransfersExpanded && 'bento-card-transfers-compact'
@@ -289,7 +295,7 @@ export default function BentoCard({
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
-  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'chips' || id === 'league-rank' || id === 'captain'
+  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'chips'
   const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
 
   const handleStateDebugClick = (e) => {
@@ -577,8 +583,11 @@ export default function BentoCard({
           <div className="bento-card-transfers-value-wrap">
             <div className={`bento-card-value bento-card-transfers-value${value === '—' ? ' bento-card-transfers-value-muted' : ''}`}>{value}</div>
             {(() => {
-              const chipBadge = getChipBadgeInfo(transfersSummary?.activeChip ?? null, gameweek)
-              return chipBadge ? (
+              const activeChip = transfersSummary?.activeChip ?? null
+              const chipBadge = getChipBadgeInfo(activeChip, gameweek)
+              const chip = typeof activeChip === 'string' ? activeChip.toLowerCase() : null
+              const showChipBadge = chipBadge && (chip === 'wildcard' || chip === 'freehit')
+              return showChipBadge ? (
                 <div
                   className="bento-card-transfers-chip-badge bento-card-transfers-chip-badge--colored"
                   style={{ backgroundColor: chipBadge.color, color: '#fff' }}
@@ -677,6 +686,7 @@ export default function BentoCard({
               top10LinesData={top10LinesData}
               onShowTop10Change={onShowTop10Change}
               currentManagerId={currentManagerId}
+              isStale={isStale}
             />
           )}
         </div>
@@ -706,7 +716,7 @@ export default function BentoCard({
             top10ByStat={top10ByStat}
             impactByPlayerId={impactByPlayerId ?? {}}
             isLiveUpdating={isLiveUpdating}
-            fixtures={gameweekDebugData?.fixtures ?? []}
+            fixtures={gameweekFixturesFromMatches !== undefined ? gameweekFixturesFromMatches : (gameweekFixturesFromFPL?.length ? gameweekFixturesFromFPL : (gameweekFixturesFromPlayers?.length ? gameweekFixturesFromPlayers : (gameweekDebugData?.fixtures ?? [])))}
             onPlayerRowClick={onPlayerRowClick}
           />
         </div>
