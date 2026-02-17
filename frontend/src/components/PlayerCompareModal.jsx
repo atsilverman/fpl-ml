@@ -46,7 +46,7 @@ export default function PlayerCompareModal({
   const [searchQuery, setSearchQuery] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
-  const [gwFilter, setGwFilter] = useState('last6')
+  const [gwFilter, setGwFilter] = useState('all')
   const [per90, setPer90] = useState(false)
   const [perMillion, setPerMillion] = useState(false)
   const [showRank, setShowRank] = useState(false)

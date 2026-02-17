@@ -38,8 +38,8 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 6px;
   flex-shrink: 0;
   max-width: 100%;
   overflow-x: auto;
@@ -55,8 +55,8 @@
 
 .player-compare-gw-filters {
   display: flex;
-  gap: 6px;
-  justify-content: center;
+  gap: 4px;
+  justify-content: flex-start;
 }
 
 .player-compare-controls-divider {
@@ -64,7 +64,7 @@
   min-width: 1px;
   height: 20px;
   background: var(--border-color);
-  margin: 0 4px;
+  margin: 0 2px;
   border-radius: 1px;
 }
 

@@ -18,9 +18,10 @@ const GAMEWEEK_VIEWS = [
 ]
 
 const RESEARCH_VIEWS = [
-  { id: 'price-changes', label: 'Changes', disabled: false },
+  { id: 'stats', label: 'Stats', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
   { id: 'compare', label: 'Compare', disabled: false },
+  { id: 'price-changes', label: 'Changes', disabled: false },
   { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
 ]
 
@@ -536,7 +537,7 @@ export default function Dashboard() {
                   >
                     {RESEARCH_VIEWS.map((view) => {
                       const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
-                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'compare' ? Scale : view.comingSoon ? Construction : null
+                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'compare' ? Scale : view.id === 'stats' ? ListOrdered : view.comingSoon ? Construction : null
                       return (
                         <button
                           key={view.id}

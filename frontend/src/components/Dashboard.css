@@ -1046,6 +1046,13 @@
     flex-shrink: 0;
   }
 
+  /* Prevent SVG baseline alignment so icons are vertically centered in the slider */
+  .page-selector-bottom .tracking-mode-button .nav-button-icon svg,
+  .page-selector-bottom .nav-item-gameweek-trigger .nav-button-icon svg {
+    display: block;
+    vertical-align: middle;
+  }
+
   /* Single visible child (icon only): center it in the slot */
   .page-selector-bottom .tracking-mode-button:not(.nav-item-gameweek-trigger) {
     padding-left: 0;

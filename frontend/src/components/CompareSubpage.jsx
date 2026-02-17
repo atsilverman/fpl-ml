@@ -130,7 +130,7 @@ export default function CompareSubpage() {
   const { toast } = useToast()
   const [selectedPlayer1, setSelectedPlayer1] = useState(null)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
-  const [gwFilter, setGwFilter] = useState('last6')
+  const [gwFilter, setGwFilter] = useState('all')
   const [per90, setPer90] = useState(false)
   const [perMillion, setPerMillion] = useState(false)
   const [showRank, setShowRank] = useState(false)
@@ -138,6 +138,7 @@ export default function CompareSubpage() {
   const [dropdownOpen2, setDropdownOpen2] = useState(false)
   const searchContainerRef1 = useRef(null)
   const searchContainerRef2 = useRef(null)
+  const controlsScrollRef = useRef(null)
 
   const player1Id = selectedPlayer1?.fpl_player_id ?? null
   const player2Id = selectedPlayer2?.fpl_player_id ?? null
@@ -156,6 +157,10 @@ export default function CompareSubpage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    controlsScrollRef.current?.scrollTo?.({ left: 0 })
+  }, [])
+
   const stats1 = player1Stats
   const stats2 = player2Stats
   const hasBoth = selectedPlayer1 && selectedPlayer2
@@ -170,7 +175,7 @@ export default function CompareSubpage() {
 
   return (
     <div className="compare-subpage">
-      <div className="player-compare-controls">
+      <div className="player-compare-controls" ref={controlsScrollRef}>
         <div className="player-compare-gw-filters">
           {GW_FILTERS.map(({ key, label }) => (
             <button
