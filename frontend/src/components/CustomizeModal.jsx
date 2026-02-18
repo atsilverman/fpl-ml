@@ -23,7 +23,7 @@ const BENTO_LABELS = {
 }
 
 export default function CustomizeModal({ isOpen, onClose }) {
-  const { cardOrder, setCardOrder, isCardVisible, setCardVisible } = useBentoOrder()
+  const { cardOrder, setCardOrder, isCardVisible, setCardVisible, statsMinMinutesPercent, setStatsMinMinutesPercent } = useBentoOrder()
   const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
   const { scheduleMatrix, teamMap, loading: scheduleLoading } = useScheduleData()
   const { toast } = useToast()
@@ -31,6 +31,7 @@ export default function CustomizeModal({ isOpen, onClose }) {
   const [dragOverId, setDragOverId] = useState(null)
   const [layoutExpanded, setLayoutExpanded] = useState(false)
   const [difficultyExpanded, setDifficultyExpanded] = useState(false)
+  const [minutesExpanded, setMinutesExpanded] = useState(false)
   const teamIds = scheduleMatrix?.teamIds ?? []
   const mapForRow = teamMap ?? {}
 
@@ -38,6 +39,7 @@ export default function CustomizeModal({ isOpen, onClose }) {
     if (isOpen) {
       setLayoutExpanded(false)
       setDifficultyExpanded(false)
+      setMinutesExpanded(false)
     }
   }, [isOpen])
 
@@ -223,6 +225,52 @@ export default function CustomizeModal({ isOpen, onClose }) {
                   }}
                 />
               )}
+            </div>
+          </section>
+
+          <section className="customize-section customize-section-minutes" aria-labelledby="customize-minutes-heading">
+            <button
+              type="button"
+              className="customize-section-toggle"
+              onClick={() => setMinutesExpanded((e) => !e)}
+              aria-expanded={minutesExpanded}
+              aria-controls="customize-minutes-content"
+              id="customize-minutes-heading"
+            >
+              <span className="customize-section-toggle-label">Player stats</span>
+              {minutesExpanded ? (
+                <ChevronUp size={18} strokeWidth={2} aria-hidden />
+              ) : (
+                <ChevronDown size={18} strokeWidth={2} aria-hidden />
+              )}
+            </button>
+            <div
+              id="customize-minutes-content"
+              className="customize-section-content"
+              hidden={!minutesExpanded}
+            >
+              <p className="customize-section-subtitle">
+                Hide players who played below this share of possible minutes on the Stats subpage.
+              </p>
+              <div className="customize-minutes-slider-wrap">
+                <label htmlFor="customize-minutes-threshold" className="customize-minutes-label">
+                  Min. minutes played: {statsMinMinutesPercent === 0 ? 'Show all' : `${statsMinMinutesPercent}%`}
+                </label>
+                <input
+                  id="customize-minutes-threshold"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={statsMinMinutesPercent}
+                  onChange={(e) => setStatsMinMinutesPercent(Number(e.target.value))}
+                  className="customize-minutes-range"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={statsMinMinutesPercent}
+                  aria-valuetext={statsMinMinutesPercent === 0 ? 'Show all players' : `${statsMinMinutesPercent}% of possible minutes`}
+                />
+              </div>
             </div>
           </section>
         </div>

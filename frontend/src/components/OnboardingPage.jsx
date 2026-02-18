@@ -84,8 +84,22 @@ export default function OnboardingPage() {
     setSelectedManagerId(null)
   }
 
+  const WIZARD_TOTAL_STEPS = 5
+  const DIFFICULTY_WIZARD_STEPS = [
+    { step: 3, stat: 'strength', title: 'Overall' },
+    { step: 4, stat: 'attack', title: 'Attack' },
+    { step: 5, stat: 'defence', title: 'Defence' },
+  ]
+
   const handleBackFromDifficulty = () => {
-    setStep(2)
+    if (step === 3) setStep(2)
+    else if (step === 4) setStep(3)
+    else if (step === 5) setStep(4)
+  }
+
+  const handleNextDifficultyStep = () => {
+    if (step === 3) setStep(4)
+    else if (step === 4) setStep(5)
   }
 
   const handleNextToDifficulty = () => {
@@ -130,41 +144,6 @@ export default function OnboardingPage() {
           </p>
         </header>
 
-        <div className="onboarding-auth">
-          {authLoading ? (
-            <div className="onboarding-auth-loading">Loading…</div>
-          ) : user ? (
-            <div className="onboarding-auth-signed-in">
-              <UserAvatar user={user} className="onboarding-auth-avatar" />
-              <span className="onboarding-auth-name">
-                {user.user_metadata?.full_name || user.email}
-              </span>
-              <button type="button" className="onboarding-auth-signout" onClick={signOut}>
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <div className="onboarding-auth-unsigned">
-              <p className="onboarding-auth-hint">
-                Sign in with Google to save your league and manager across devices
-              </p>
-              <button
-                type="button"
-                className="onboarding-auth-google"
-                onClick={signInWithGoogle}
-              >
-                <svg className="onboarding-auth-google-icon" viewBox="0 0 24 24" width="20" height="20">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-                Sign in with Google
-              </button>
-            </div>
-          )}
-        </div>
-
         <div className="onboarding-steps">
           {step === 1 && (
             <div className="onboarding-step">
@@ -191,6 +170,34 @@ export default function OnboardingPage() {
                   ))}
                 </div>
               )}
+              <div className="onboarding-signin-below">
+                {authLoading ? (
+                  <span className="onboarding-signin-loading">Loading…</span>
+                ) : user ? (
+                  <div className="onboarding-signin-signed-in">
+                    <UserAvatar user={user} className="onboarding-signin-avatar" />
+                    <span className="onboarding-signin-name">{user.user_metadata?.full_name || user.email}</span>
+                    <button type="button" className="onboarding-signin-signout" onClick={signOut}>
+                      Sign out
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="onboarding-signin-google"
+                    onClick={signInWithGoogle}
+                    aria-label="Sign in with Google"
+                    title="Sign in with Google to save across devices"
+                  >
+                    <svg className="onboarding-signin-google-icon" viewBox="0 0 24 24" width="24" height="24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
@@ -241,62 +248,92 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {step === 3 && (
-            <div className="onboarding-step onboarding-step-difficulty">
-              <button type="button" className="onboarding-back" onClick={handleBackFromDifficulty}>
-                ← Back to manager
-              </button>
-              <h2 className="onboarding-step-title">Schedule difficulty (optional)</h2>
-              <p className="onboarding-step-description onboarding-difficulty-message">
-                Customize how difficult each team is for schedule and data tables. These values replace the default FPL rankings so tables use your own team strength (1 = easiest, 5 = hardest). You can change this later in Customize.
-              </p>
-              {scheduleLoading ? (
-                <div className="onboarding-loading">Loading teams…</div>
-              ) : (
-                <>
-                  <div className="onboarding-difficulty-customizer">
-                    <ScheduleDifficultyCustomizer
-                      embedded
-                      teamIds={teamIds}
-                      teamMap={mapForRow}
-                      savedOverridesByStat={{
-                        strength: draftOverrides.strength ?? null,
-                        attack: draftOverrides.attack ?? null,
-                        defence: draftOverrides.defence ?? null,
-                      }}
-                      onSave={({ strength, attack, defence }) => {
-                        setDraftOverrides({
-                          strength: strength ?? null,
-                          attack: attack ?? null,
-                          defence: defence ?? null,
-                        })
-                        toast('Custom difficulty saved')
-                      }}
-                      onResetStat={(statId) => {
-                        setDraftOverrides((prev) => ({ ...prev, [statId]: null }))
-                      }}
-                    />
-                  </div>
-                  <div className="onboarding-step-actions">
-                    <button
-                      type="button"
-                      className="onboarding-cta"
-                      onClick={handleContinueToDashboard}
-                    >
-                      Continue to dashboard
-                    </button>
-                    <button
-                      type="button"
-                      className="onboarding-skip"
-                      onClick={handleSkipDifficulty}
-                    >
-                      Skip
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
+          {(step === 3 || step === 4 || step === 5) && (() => {
+            const wizardStep = DIFFICULTY_WIZARD_STEPS.find((s) => s.step === step)
+            const isLastDifficulty = step === 5
+            return (
+              <div className="onboarding-step onboarding-step-difficulty">
+                <div className="onboarding-wizard-step-indicator">
+                  Step {step} of {WIZARD_TOTAL_STEPS}
+                </div>
+                <button type="button" className="onboarding-back" onClick={handleBackFromDifficulty}>
+                  {step === 3 ? '← Back to manager' : `← Back to ${DIFFICULTY_WIZARD_STEPS.find((s) => s.step === step - 1)?.title ?? 'previous'}`}
+                </button>
+                <h2 className="onboarding-step-title">
+                  {wizardStep?.title} difficulty (optional)
+                </h2>
+                <p className="onboarding-step-description onboarding-difficulty-message">
+                  {step === 3
+                    ? 'Customize how difficult each team is for schedule and data tables. These values replace the default FPL rankings (1 = easiest, 5 = hardest). You can change this later in Customize.'
+                    : `Set ${wizardStep?.title?.toLowerCase()} difficulty per team. 1 = easiest, 5 = hardest.`}
+                </p>
+                {scheduleLoading ? (
+                  <div className="onboarding-loading">Loading teams…</div>
+                ) : (
+                  <>
+                    <div className="onboarding-difficulty-customizer">
+                      <ScheduleDifficultyCustomizer
+                        embedded
+                        onlyStat={wizardStep?.stat}
+                        teamIds={teamIds}
+                        teamMap={mapForRow}
+                        savedOverridesByStat={{
+                          strength: draftOverrides.strength ?? null,
+                          attack: draftOverrides.attack ?? null,
+                          defence: draftOverrides.defence ?? null,
+                        }}
+                        onSave={({ strength, attack, defence }) => {
+                          setDraftOverrides({
+                            strength: strength ?? null,
+                            attack: attack ?? null,
+                            defence: defence ?? null,
+                          })
+                          toast('Custom difficulty saved')
+                        }}
+                        onResetStat={(statId) => {
+                          setDraftOverrides((prev) => ({ ...prev, [statId]: null }))
+                        }}
+                        onDraftChange={(statId, overrides) => {
+                          setDraftOverrides((prev) => ({
+                            ...prev,
+                            [statId]: Object.keys(overrides || {}).length ? overrides : null,
+                          }))
+                        }}
+                      />
+                    </div>
+                    <div className="onboarding-step-actions">
+                      {isLastDifficulty ? (
+                        <>
+                          <button
+                            type="button"
+                            className="onboarding-cta"
+                            onClick={handleContinueToDashboard}
+                          >
+                            Continue to dashboard
+                          </button>
+                          <button
+                            type="button"
+                            className="onboarding-skip"
+                            onClick={handleSkipDifficulty}
+                          >
+                            Skip
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="onboarding-cta"
+                          onClick={handleNextDifficultyStep}
+                        >
+                          Next
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>

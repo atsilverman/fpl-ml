@@ -39,18 +39,18 @@
   font-weight: 600;
 }
 
-/* Top 6/12 pill: value is hero; container is supportive so the number reads first */
+/* Top 6/12 pill: same blue for all ranks 1–6/12, consistent */
 .research-stats-pts-pill {
   position: relative;
   z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  min-width: 40px;
-  min-height: 28px;
-  padding: 6px 5px;
-  border-radius: 6px;
+  width: 34px;
+  min-width: 34px;
+  min-height: 24px;
+  padding: 4px 4px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 16%, var(--bg-secondary));
   border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 42%, var(--border-color));
   box-sizing: border-box;
@@ -58,7 +58,7 @@
 .research-stats-pts-pill .research-stats-cell-main {
   display: inline;
   font-variant-numeric: tabular-nums;
-  font-size: 1.2em;
+  font-size: 1.05em;
   font-weight: 800;
   color: var(--accent-blue, #3b82f6);
   line-height: 1.1;
@@ -338,7 +338,8 @@
 }
 
 .research-stats-compare-table-wrapper {
-  max-width: min(100%, 800px);
+  max-width: 100%;
+  width: 100%;
 }
 
 .research-stats-compare-table .research-stats-compare-row {
@@ -350,18 +351,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  min-width: 40px;
-  min-height: 28px;
-  padding: 6px 5px;
-  border-radius: 6px;
+  width: 34px;
+  min-width: 34px;
+  min-height: 24px;
+  padding: 4px 4px;
+  border-radius: 5px;
   border: 1px solid var(--accent-yellow, #eab308);
   background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-secondary));
   box-sizing: border-box;
 }
 .research-stats-compare-table .research-stats-compare-best-pill .research-stats-cell-main {
   font-variant-numeric: tabular-nums;
-  font-size: 1.2em;
+  font-size: 1.05em;
   font-weight: 800;
   color: var(--accent-yellow, #eab308);
   line-height: 1.1;
@@ -378,11 +379,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  min-width: 40px;
-  min-height: 28px;
-  padding: 6px 5px;
-  border-radius: 6px;
+  width: 34px;
+  min-width: 34px;
+  min-height: 24px;
+  padding: 4px 4px;
+  border-radius: 5px;
   border: 1px solid var(--accent-yellow, #eab308);
   background: transparent;
   box-sizing: border-box;
@@ -399,6 +400,15 @@
   color: var(--text-secondary);
   text-align: center;
   opacity: 0.9;
+}
+
+.research-stats-count-footer {
+  margin: 0;
+  padding: 8px 0 4px;
+  font-size: 11px;
+  color: var(--text-tertiary, var(--text-secondary));
+  text-align: center;
+  opacity: 0.8;
 }
 
 /* Filter overlay popup (same pattern as MiniLeaguePage search overlay) */
@@ -592,10 +602,10 @@
   flex-shrink: 0;
 }
 
-/* Stats table: fixed layout and min-width; text sizing matches league-standings baseline (MiniLeaguePage.css). */
+/* Stats table: auto layout so columns size to content; min-widths prevent collapse. */
 .research-stats-page .research-stats-table.league-standings-bento-table {
-  table-layout: fixed;
-  /* Width set in JS (statsTableWidth) so table equals sum of column widths; keeps player column at 120px across stat category filters. */
+  table-layout: auto;
+  width: auto;
 }
 
 /* When compare table is shown, collapse main table thead so column widths stay consistent (no resize jump) */
@@ -628,6 +638,11 @@
   font-weight: 700 !important;
   line-height: 1.2;
 }
+/* Align Player/Team header with stat column headers (same font-size and style as PTS) */
+.research-stats-page .research-stats-table.league-standings-bento-table thead th.league-standings-bento-team {
+  font-size: 10px !important;
+  padding: 4px 8px;
+}
 .research-stats-page .research-stats-table.league-standings-bento-table td {
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -653,50 +668,26 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky rank + player columns: stay fixed while stat columns scroll underneath (z-level mask) */
-.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-rank,
-.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-rank {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: var(--bg-secondary);
-  box-sizing: border-box;
-}
+/* Sticky player/team column: stays fixed while stat columns scroll */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team,
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
   position: sticky;
-  left: 10px; /* width of rank column */
+  left: 0;
   z-index: 2;
   background: var(--bg-secondary);
   box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
 }
-/* Header row sticks on vertical scroll; rank/team cells need higher z so they stay on top when both sticky */
-.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-rank,
+/* Header row sticks on vertical scroll; team/player column needs higher z when sticky */
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 4;
 }
 
-/* Content-based column widths: narrow rank + stat cols, name gets remainder */
-.research-stats-page .research-stats-table th.league-standings-bento-rank,
-.research-stats-page .research-stats-table td.league-standings-bento-rank {
-  width: 10px;
-  min-width: 10px;
-  box-sizing: border-box;
-  font-size: 8px !important;
-  font-weight: 500 !important;
-  color: var(--text-secondary);
-  opacity: 0.9;
-}
-.research-stats-page .research-stats-table td.league-standings-bento-rank .league-standings-bento-rank-value {
-  color: inherit;
-  font-weight: inherit;
-}
+/* Stat column widths; name column gets fixed width below */
 .research-stats-page .research-stats-table th.league-standings-bento-total,
 .research-stats-page .research-stats-table th.league-standings-bento-gw,
 .research-stats-page .research-stats-table td.league-standings-bento-total,
 .research-stats-page .research-stats-table td.league-standings-bento-gw {
-  width: 28px;
   min-width: 28px;
   padding: 4px 4px;
   box-sizing: border-box;
@@ -708,8 +699,8 @@
   overflow: visible;
 }
 .research-stats-page .league-standings-bento-table-wrapper {
-  width: fit-content;
-  max-width: min(100%, 800px);
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
@@ -724,10 +715,13 @@
   box-sizing: border-box;
 }
 .research-stats-page .research-stats-table th.league-standings-bento-team {
-  padding: 6px 8px;
-  font-size: 11px;
+  padding: 4px 8px;
+  font-size: 10px !important;
   font-weight: 700;
   text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -781,6 +775,16 @@
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+}
+
+/* Team view: single line = badge + full name (no position/price); allow name to wrap so we don't abbreviate */
+.research-stats-table .research-stats-team-cell .league-standings-bento-team-name {
+  white-space: normal;
+  text-overflow: clip;
+  word-break: break-word;
+}
+.research-stats-table .research-stats-team-cell .research-stats-player-cell-lines {
+  justify-content: center;
 }
 
 /* Position badge pills (same colors as gameweek page); below player name */

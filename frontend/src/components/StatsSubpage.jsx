@@ -3,6 +3,7 @@ import { Search, Filter, X, UserRound, UsersRound, Home, PlaneTakeoff, Swords, S
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
+import { useBentoOrder } from '../contexts/BentoOrderContext'
 import './ResearchPage.css'
 import './BentoCard.css'
 import './MiniLeaguePage.css'
@@ -31,12 +32,18 @@ const POSITION_OPTIONS = [
   { key: '2', label: 'DEF' },
   { key: '1', label: 'GK' }
 ]
+const OWNERSHIP_OPTIONS = [
+  { key: 'all', label: 'All' },
+  { key: 'owned', label: 'Owned' },
+  { key: 'unowned', label: 'Unowned' }
+]
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
 /** Stat columns: key, label, field, category (all | attacking | defending | goalie) */
 const STAT_COLUMNS = [
   { key: 'points', label: 'PTS', field: 'points', category: 'all' },
+  { key: 'tsb', label: 'TSB%', field: 'selected_by_percent', category: 'all' },
   { key: 'minutes', label: 'MP', field: 'minutes', category: 'all' },
   { key: 'goals_scored', label: 'G', field: 'goals_scored', category: 'attacking' },
   { key: 'assists', label: 'A', field: 'assists', category: 'attacking' },
@@ -51,6 +58,21 @@ const STAT_COLUMNS = [
   { key: 'yellow_cards', label: 'YC', field: 'yellow_cards', category: 'all' },
   { key: 'red_cards', label: 'RC', field: 'red_cards', category: 'all' }
 ]
+
+/**
+ * Stats that must not be summed for team view (duplication / not meaningful at team level).
+ * - clean_sheets: summing counts player-CS credits (up to 11 per match), not matches with a clean sheet.
+ * - expected_goals_conceded: same chance attributed to multiple defenders; sum overstates team xGC.
+ * - selected_by_percent (TSB%): player-level ownership; not meaningful at team level.
+ * Team aggregation and team visible columns are derived from STAT_COLUMNS excluding these.
+ * Minutes is still aggregated (for Per 90 denominator) but not shown or ranked in team view.
+ */
+const TEAM_AGGREGATION_EXCLUDED = ['clean_sheets', 'expected_goals_conceded', 'selected_by_percent']
+
+/** Fields we aggregate for team rows (STAT_COLUMNS minus TEAM_AGGREGATION_EXCLUDED). Single source of truth. */
+const TEAM_AGGREGATION_FIELDS = STAT_COLUMNS
+  .map((c) => c.field)
+  .filter((f) => !TEAM_AGGREGATION_EXCLUDED.includes(f))
 
 function SortTriangle({ direction }) {
   const isAsc = direction === 'asc'
@@ -68,6 +90,10 @@ function SortTriangle({ direction }) {
 }
 
 function formatStatValue(value, field, displayMode, minutes, costTenths, showPerM) {
+  if (field === 'selected_by_percent') {
+    const v = value != null ? Number(value) : NaN
+    return { main: !Number.isNaN(v) ? v.toFixed(1) : '—', sub: null }
+  }
   const num = Number(value)
   const isDecimal = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded'].includes(field)
   const displayRaw = isDecimal ? (num === 0 ? '0' : num.toFixed(1)) : String(Math.round(num))
@@ -93,6 +119,7 @@ function formatStatValue(value, field, displayMode, minutes, costTenths, showPer
 
 export default function StatsSubpage() {
   const { gameweek } = useGameweekData()
+  const { statsMinMinutesPercent } = useBentoOrder()
   const [gwFilter, setGwFilter] = useState('all')
   const [locationFilter, setLocationFilter] = useState('all')
   const [statCategory, setStatCategory] = useState('all')
@@ -104,10 +131,13 @@ export default function StatsSubpage() {
   /** 'top6' | 'top12' | null - which top-N highlight is on; mutually exclusive */
   const [topHighlightMode, setTopHighlightMode] = useState(null)
   const [positionFilter, setPositionFilter] = useState('all')
+  const [ownershipFilter, setOwnershipFilter] = useState('all')
   const [mainSort, setMainSort] = useState({ column: 'points', dir: 'desc' })
   const [compareSort, setCompareSort] = useState({ column: 'points', dir: 'desc' })
   /** Player IDs selected for compare (order preserved via array) */
   const [compareSelectedIds, setCompareSelectedIds] = useState([])
+  /** Team keys (team_id or team_short_name) selected for compare when in team view */
+  const [compareSelectedTeamKeys, setCompareSelectedTeamKeys] = useState([])
   /** True only after user has pressed Compare button; gates row-tap add-to-compare in main table */
   const [compareModeActive, setCompareModeActive] = useState(false)
   /** When true, show toast "Select more than 1 player to compare" */
@@ -121,27 +151,42 @@ export default function StatsSubpage() {
   }, [currentGameweekPlayers])
 
   const visibleColumns = useMemo(() => {
-    const base = STAT_COLUMNS.filter((c) => c.field !== 'minutes')
+    let base = STAT_COLUMNS.filter((c) => c.field !== 'minutes')
+    if (teamView) {
+      base = base.filter((c) => !TEAM_AGGREGATION_EXCLUDED.includes(c.field))
+    }
     if (statCategory === 'all') return base
     return base.filter((c) => {
       const cat = c.category
       const matches = Array.isArray(cat) ? cat.includes(statCategory) : cat === statCategory
       return matches || cat === 'all'
     })
-  }, [statCategory])
+  }, [statCategory, teamView])
 
-  /** Table width = rank(10) + player(120) + stat cols(28 each). Keeps player column fixed at 120px across stat category filters. */
-  const statsTableWidth = useMemo(
-    () => 10 + 120 + visibleColumns.length * 28,
-    [visibleColumns.length]
-  )
+  /** Max possible minutes in the selected GW range (for minutes % filter). */
+  const maxPossibleMinutes = useMemo(() => {
+    const matches = gwFilter === 'last6' ? 6 : gwFilter === 'last12' ? 12 : (gameweek ? Number(gameweek) : 38)
+    return matches * 90
+  }, [gwFilter, gameweek])
+
+  /** Players that meet the customize modal "min minutes %" threshold; used for both player list and team aggregation. */
+  const playersAboveMinMinutes = useMemo(() => {
+    if (!players?.length) return []
+    if (statsMinMinutesPercent <= 0 || maxPossibleMinutes <= 0) return players
+    const minMinutes = (statsMinMinutesPercent / 100) * maxPossibleMinutes
+    return players.filter((p) => (Number(p.minutes) || 0) >= minMinutes)
+  }, [players, statsMinMinutesPercent, maxPossibleMinutes])
 
   const filteredPlayers = useMemo(() => {
-    if (!players?.length) return []
-    let list = players
+    if (!playersAboveMinMinutes.length) return []
+    let list = playersAboveMinMinutes
     if (positionFilter !== 'all') {
       const pos = Number(positionFilter)
       if (!Number.isNaN(pos)) list = list.filter((p) => p.position != null && p.position === pos)
+    }
+    if (ownershipFilter !== 'all' && ownedPlayerIds != null) {
+      if (ownershipFilter === 'owned') list = list.filter((p) => p.player_id != null && ownedPlayerIds.has(Number(p.player_id)))
+      else if (ownershipFilter === 'unowned') list = list.filter((p) => p.player_id == null || !ownedPlayerIds.has(Number(p.player_id)))
     }
     const q = searchQuery.trim().toLowerCase()
     if (!q) return list
@@ -150,7 +195,80 @@ export default function StatsSubpage() {
         (p.web_name && p.web_name.toLowerCase().includes(q)) ||
         (p.team_short_name && p.team_short_name.toLowerCase().includes(q))
     )
-  }, [players, positionFilter, searchQuery])
+  }, [playersAboveMinMinutes, positionFilter, ownershipFilter, searchQuery, ownedPlayerIds])
+
+  /** Aggregated stats per team (one row per team); used when teamView is true. Only TEAM_AGGREGATION_FIELDS are summed to avoid misleading CS/xGC. Excludes players below min minutes %. */
+  const teamStats = useMemo(() => {
+    if (!playersAboveMinMinutes.length) return []
+    const byTeam = new Map()
+    for (const p of playersAboveMinMinutes) {
+      const tid = p.team_id ?? p.team_short_name
+      if (tid == null) continue
+      const key = typeof tid === 'number' ? tid : String(tid)
+      const existing = byTeam.get(key)
+      if (!existing) {
+        byTeam.set(key, {
+          team_id: p.team_id,
+          team_short_name: p.team_short_name,
+          team_name: p.team_name ?? p.team_short_name ?? 'Unknown',
+          ...Object.fromEntries(TEAM_AGGREGATION_FIELDS.map((f) => [f, Number(p[f]) || 0]))
+        })
+      } else {
+        TEAM_AGGREGATION_FIELDS.forEach((f) => { existing[f] += Number(p[f]) || 0 })
+      }
+    }
+    return Array.from(byTeam.values())
+  }, [playersAboveMinMinutes])
+
+  const filteredTeams = useMemo(() => {
+    if (!teamStats.length) return []
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return teamStats
+    return teamStats.filter(
+      (t) =>
+        (t.team_name && t.team_name.toLowerCase().includes(q)) ||
+        (t.team_short_name && t.team_short_name.toLowerCase().includes(q))
+    )
+  }, [teamStats, searchQuery])
+
+  const sortedTeams = useMemo(() => {
+    const list = [...filteredTeams]
+    const col = mainSort.column
+    const dir = mainSort.dir === 'asc' ? 1 : -1
+    list.sort((a, b) => {
+      let aVal = a[col]
+      let bVal = b[col]
+      if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * dir
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return dir
+      if (bVal == null) return -dir
+      return String(aVal).localeCompare(String(bVal), undefined, { numeric: true }) * dir
+    })
+    return list
+  }, [filteredTeams, mainSort.column, mainSort.dir])
+
+  /** 1-based rank in sorted team list */
+  const sortedRankByTeamId = useMemo(() => {
+    const m = {}
+    const key = (t) => t.team_id ?? t.team_short_name
+    sortedTeams.forEach((t, i) => { m[key(t)] = i + 1 })
+    return m
+  }, [sortedTeams])
+
+  /** Rank per stat field for teams (1-based): field -> team key -> rank. Only TEAM_AGGREGATION_FIELDS. */
+  const rankByFieldTeams = useMemo(() => {
+    const out = {}
+    const key = (t) => t.team_id ?? t.team_short_name
+    TEAM_AGGREGATION_FIELDS.forEach((field) => {
+      const sorted = [...filteredTeams].sort(
+        (a, b) => (Number(b[field]) ?? 0) - (Number(a[field]) ?? 0)
+      )
+      const rankMap = {}
+      sorted.forEach((t, i) => { rankMap[key(t)] = i + 1 })
+      out[field] = rankMap
+    })
+    return out
+  }, [filteredTeams])
 
   const sortedPlayers = useMemo(() => {
     const list = [...filteredPlayers]
@@ -198,17 +316,29 @@ export default function StatsSubpage() {
     }))
   }, [])
 
+  const getTeamKey = useCallback((t) => t.team_id ?? t.team_short_name, [])
   const compareSelectedSet = useMemo(() => new Set(compareSelectedIds), [compareSelectedIds])
+  const compareSelectedTeamKeySet = useMemo(() => new Set(compareSelectedTeamKeys), [compareSelectedTeamKeys])
   const compareSelectedPlayers = useMemo(() => {
     const idToPlayer = new Map((players ?? []).map((p) => [p.player_id, p]))
     return compareSelectedIds.map((id) => idToPlayer.get(id)).filter(Boolean)
   }, [players, compareSelectedIds])
+  const compareSelectedTeams = useMemo(() => {
+    const keyToTeam = new Map(sortedTeams.map((t) => [getTeamKey(t), t]))
+    return compareSelectedTeamKeys.map((key) => keyToTeam.get(key)).filter(Boolean)
+  }, [sortedTeams, compareSelectedTeamKeys, getTeamKey])
 
   /** When compare has selection, main table shows only non-selected players */
   const mainTablePlayers = useMemo(() => {
     if (compareSelectedIds.length === 0) return sortedPlayers
     return sortedPlayers.filter((p) => !compareSelectedSet.has(p.player_id))
   }, [sortedPlayers, compareSelectedIds.length, compareSelectedSet])
+
+  /** When compare has selection in team view, main table shows only non-selected teams */
+  const mainTableTeams = useMemo(() => {
+    if (compareSelectedTeamKeys.length === 0) return sortedTeams
+    return sortedTeams.filter((t) => !compareSelectedTeamKeySet.has(getTeamKey(t)))
+  }, [sortedTeams, compareSelectedTeamKeys.length, compareSelectedTeamKeySet, getTeamKey])
 
   /** 1-based rank in the full sorted list (used for both tables so rank "retains position") */
   const sortedRankByPlayerId = useMemo(() => {
@@ -264,6 +394,52 @@ export default function StatsSubpage() {
     return out
   }, [compareSelectedPlayers, visibleColumns])
 
+  /** In compare table (team view): best team key per stat column. */
+  const compareBestTeamKeyByField = useMemo(() => {
+    if (compareSelectedTeams.length < 2) return {}
+    const lowerIsBetter = new Set(['expected_goals_conceded', 'yellow_cards', 'red_cards'])
+    const out = {}
+    visibleColumns.forEach(({ field }) => {
+      let bestKey = null
+      let bestVal = null
+      compareSelectedTeams.forEach((t) => {
+        const key = getTeamKey(t)
+        const v = t[field] != null ? Number(t[field]) : NaN
+        if (Number.isNaN(v)) return
+        const isBetter =
+          bestVal == null
+            ? true
+            : lowerIsBetter.has(field)
+              ? v < bestVal
+              : v > bestVal
+        if (isBetter) {
+          bestVal = v
+          bestKey = key
+        }
+      })
+      if (bestKey != null) out[field] = bestKey
+    })
+    return out
+  }, [compareSelectedTeams, visibleColumns, getTeamKey])
+
+  /** Compare table rows (teams) sorted by compare sort */
+  const compareTableTeams = useMemo(() => {
+    if (compareSelectedTeams.length === 0) return []
+    const col = compareSort.column
+    const dir = compareSort.dir === 'asc' ? 1 : -1
+    const list = [...compareSelectedTeams]
+    list.sort((a, b) => {
+      let aVal = a[col]
+      let bVal = b[col]
+      if (typeof aVal === 'number' && typeof bVal === 'number') return (aVal - bVal) * dir
+      if (aVal == null && bVal == null) return 0
+      if (aVal == null) return dir
+      if (bVal == null) return -dir
+      return String(aVal).localeCompare(String(bVal), undefined, { numeric: true }) * dir
+    })
+    return list
+  }, [compareSelectedTeams, compareSort.column, compareSort.dir])
+
   const toggleCompareSelection = useCallback((playerId) => {
     setCompareSelectedIds((prev) => {
       const set = new Set(prev)
@@ -275,13 +451,31 @@ export default function StatsSubpage() {
     })
   }, [])
 
+  const toggleCompareSelectionTeam = useCallback((teamKey) => {
+    setCompareSelectedTeamKeys((prev) => {
+      const set = new Set(prev)
+      if (set.has(teamKey)) {
+        set.delete(teamKey)
+        return [...set]
+      }
+      return [...prev, teamKey]
+    })
+  }, [])
+
   const handleCompareClick = useCallback(() => {
     setCompareModeActive(true)
-    if (compareSelectedIds.length < 2) {
-      setShowCompareMessage(true)
-      setTimeout(() => setShowCompareMessage(false), 3000)
+    if (teamView) {
+      if (compareSelectedTeamKeys.length < 2) {
+        setShowCompareMessage(true)
+        setTimeout(() => setShowCompareMessage(false), 3000)
+      }
+    } else {
+      if (compareSelectedIds.length < 2) {
+        setShowCompareMessage(true)
+        setTimeout(() => setShowCompareMessage(false), 3000)
+      }
     }
-  }, [compareSelectedIds.length])
+  }, [teamView, compareSelectedIds.length, compareSelectedTeamKeys.length])
 
   const mainTableWrapperRef = useRef(null)
   const compareTableWrapperRef = useRef(null)
@@ -304,46 +498,61 @@ export default function StatsSubpage() {
     main.scrollLeft = compare.scrollLeft
     requestAnimationFrame(() => { scrollSyncInProgressRef.current = false })
   }, [])
+  /** When switching to team view, if current sort column is excluded (CS/xGC) or minutes, reset to points */
   useEffect(() => {
-    if (compareSelectedPlayers.length === 0) return
+    if (!teamView) return
+    const bad = [...TEAM_AGGREGATION_EXCLUDED, 'minutes']
+    if (bad.includes(mainSort.column)) {
+      setMainSort({ column: 'points', dir: 'desc' })
+    }
+  }, [teamView])
+
+  useEffect(() => {
+    const hasCompare = teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedPlayers.length > 0
+    if (!hasCompare) return
     const main = mainTableWrapperRef.current
     const compare = compareTableWrapperRef.current
     if (!main || !compare) return
     compare.scrollLeft = main.scrollLeft
-  }, [compareSelectedPlayers.length])
+  }, [teamView, compareSelectedPlayers.length, compareSelectedTeamKeys.length])
 
   const isSortableColumn = (field) =>
-    ['points', 'minutes', 'goals_scored', 'assists', 'clean_sheets', 'saves', 'bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded', 'yellow_cards', 'red_cards'].includes(field)
+    ['points', 'selected_by_percent', 'minutes', 'goals_scored', 'assists', 'clean_sheets', 'saves', 'bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded', 'yellow_cards', 'red_cards'].includes(field)
 
   const filterSummaryText = useMemo(() => {
-    const gwLabel = gwFilter === 'all' ? 'All gameweeks' : gwFilter === 'last6' ? 'Last 6' : 'Last 12'
+    const gwLabel = gwFilter === 'all' ? (gameweek != null ? `GW1-${gameweek}` : 'All gameweeks') : gwFilter === 'last6' ? 'Last 6' : 'Last 12'
     const locationLabel = locationFilter === 'all' ? 'All locations' : locationFilter === 'home' ? 'Home' : 'Away'
-    const positionLabel = positionFilter === 'all' ? 'All positions' : (POSITION_LABELS[Number(positionFilter)] ?? 'All positions')
-    const displayLabel = displayMode === 'total' ? 'Total' : 'Per 90'
-    const parts = [gwLabel, locationLabel, positionLabel, displayLabel]
+    const positionLabel = teamView ? null : (positionFilter === 'all' ? 'All positions' : (POSITION_LABELS[Number(positionFilter)] ?? 'All positions'))
+    const ownershipLabel = !teamView && ownershipFilter !== 'all' ? (ownershipFilter === 'owned' ? 'Owned' : 'Unowned') : null
+    const parts = [gwLabel, locationLabel, ...(positionLabel ? [positionLabel] : []), ...(ownershipLabel ? [ownershipLabel] : [])]
+    if (!teamView) {
+      parts.push(displayMode === 'total' ? 'Total' : 'Per 90')
+      if (showPerM) parts.push('Per £M')
+      if (topHighlightMode === 6) parts.push('Top 6')
+      if (topHighlightMode === 12) parts.push('Top 12')
+    }
     if (statCategory !== 'all') parts.push(statCategory === 'attacking' ? 'Attacking' : statCategory === 'goalie' ? 'Goalie' : 'Defending')
-    if (showPerM) parts.push('Per £M')
-    if (topHighlightMode === 6) parts.push('Top 6')
-    if (topHighlightMode === 12) parts.push('Top 12')
     return parts.join(' · ')
-  }, [gwFilter, locationFilter, positionFilter, displayMode, statCategory, showPerM, topHighlightMode])
+  }, [gwFilter, gameweek, locationFilter, positionFilter, ownershipFilter, displayMode, statCategory, showPerM, topHighlightMode, teamView])
 
   const filtersHaveChanged = useMemo(() => {
     return (
       gwFilter !== 'all' ||
       locationFilter !== 'all' ||
       positionFilter !== 'all' ||
+      ownershipFilter !== 'all' ||
       statCategory !== 'all' ||
       displayMode !== 'total' ||
       showPerM ||
       topHighlightMode != null
     )
-  }, [gwFilter, locationFilter, positionFilter, statCategory, displayMode, showPerM, topHighlightMode])
+  }, [gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, displayMode, showPerM, topHighlightMode])
 
   const handleResetFilters = useCallback(() => {
     setGwFilter('all')
     setLocationFilter('all')
     setPositionFilter('all')
+    setOwnershipFilter('all')
     setStatCategory('all')
     setDisplayMode('total')
     setShowPerM(false)
@@ -376,19 +585,21 @@ export default function StatsSubpage() {
             <input
               type="search"
               className="research-stats-search-input"
-              placeholder="Search player or team"
+              placeholder={teamView ? 'Search team' : 'Search player or team'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search players"
+              aria-label={teamView ? 'Search teams' : 'Search players'}
             />
           </div>
           <button
             type="button"
-            className={`stats-filter-btn stats-compare-btn ${compareSelectedIds.length > 0 ? 'stats-compare-btn--active' : ''}`}
+            className={`stats-filter-btn stats-compare-btn ${(teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0) ? 'stats-compare-btn--active' : ''}`}
             onClick={handleCompareClick}
-            aria-label="Compare selected players"
-            aria-pressed={compareSelectedIds.length > 0}
-            title={compareModeActive ? (compareSelectedIds.length > 0 ? 'Compare mode: tap rows to add or remove' : 'Compare mode: tap rows to add players (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add players'}
+            aria-label={teamView ? 'Compare selected teams' : 'Compare selected players'}
+            aria-pressed={teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0}
+            title={teamView
+              ? (compareModeActive ? (compareSelectedTeamKeys.length > 0 ? 'Compare mode: tap rows to add or remove teams' : 'Compare mode: tap rows to add teams (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add teams')
+              : (compareModeActive ? (compareSelectedIds.length > 0 ? 'Compare mode: tap rows to add or remove' : 'Compare mode: tap rows to add players (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add players')}
           >
             <Scale size={14} strokeWidth={2} />
           </button>
@@ -404,7 +615,7 @@ export default function StatsSubpage() {
         </div>
         {showCompareMessage && (
           <p className="research-stats-compare-message" role="alert">
-            Select more than 1 player to compare.
+            {teamView ? 'Select more than 1 team to compare.' : 'Select more than 1 player to compare.'}
           </p>
         )}
         <p className="research-stats-filter-summary" aria-live="polite">
@@ -468,22 +679,44 @@ export default function StatsSubpage() {
                       ))}
                     </div>
                   </div>
-                  <div className="stats-filter-section">
-                    <div className="stats-filter-section-title">Position</div>
-                    <div className="stats-filter-buttons">
-                      {POSITION_OPTIONS.map(({ key, label }) => (
-                        <button
-                          key={key}
-                          type="button"
-                          className={`stats-filter-option-btn ${positionFilter === key ? 'stats-filter-option-btn--active' : ''}`}
-                          onClick={() => setPositionFilter(key)}
-                          aria-pressed={positionFilter === key}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  {!teamView && (
+                    <>
+                      <div className="stats-filter-section">
+                        <div className="stats-filter-section-title">Position</div>
+                        <div className="stats-filter-buttons">
+                          {POSITION_OPTIONS.map(({ key, label }) => (
+                            <button
+                              key={key}
+                              type="button"
+                              className={`stats-filter-option-btn ${positionFilter === key ? 'stats-filter-option-btn--active' : ''}`}
+                              onClick={() => setPositionFilter(key)}
+                              aria-pressed={positionFilter === key}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {ownedPlayerIds != null && (
+                        <div className="stats-filter-section">
+                          <div className="stats-filter-section-title">Ownership</div>
+                          <div className="stats-filter-buttons">
+                            {OWNERSHIP_OPTIONS.map(({ key, label }) => (
+                              <button
+                                key={key}
+                                type="button"
+                                className={`stats-filter-option-btn ${ownershipFilter === key ? 'stats-filter-option-btn--active' : ''}`}
+                                onClick={() => setOwnershipFilter(key)}
+                                aria-pressed={ownershipFilter === key}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="stats-filter-section">
                     <div className="stats-filter-section-title">Stat category</div>
                     <div className="stats-filter-buttons">
@@ -560,29 +793,314 @@ export default function StatsSubpage() {
         )}
 
         {teamView ? (
-          <div className="research-stats-under-construction" role="status" aria-live="polite">
-            <span>Team stats view coming later</span>
+          <>
+            {compareSelectedTeamKeys.length > 0 && (
+              <div className="research-stats-compare-section" role="region" aria-label="Compare selected teams">
+                <div className="research-stats-compare-table-header-wrap">
+                  <span className="research-stats-compare-title">Compare</span>
+                  {compareSelectedTeams.length > 1 && (
+                    <span className="research-stats-compare-legend" aria-hidden>
+                      <span className="research-stats-compare-legend-item">
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
+                      </span>
+                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
+                        <span className="research-stats-compare-legend-item">
+                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
+                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
+                          </span>
+                          <span className="research-stats-compare-legend-text">
+                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    className="research-stats-compare-clear"
+                    onClick={() => {
+                      setCompareSelectedTeamKeys([])
+                      setCompareModeActive(false)
+                    }}
+                    aria-label="Clear compare selection"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div
+                  ref={compareTableWrapperRef}
+                  className="league-standings-bento-table-wrapper research-stats-compare-table-wrapper research-stats-table-wrapper-sync"
+                  onScroll={handleCompareScroll}
+                >
+                  <table
+                    className="research-stats-table league-standings-bento-table research-stats-compare-table"
+                    style={{ width: 'auto', minWidth: 0 }}
+                  >
+                    <thead>
+                      <tr>
+                        <th className="league-standings-bento-team">Team</th>
+                        {visibleColumns.map(({ key, label, field }) => (
+                          <th key={key} className="league-standings-bento-total">
+                            {isSortableColumn(field) ? (
+                              <button
+                                type="button"
+                                className="league-standings-sort-header"
+                                onClick={() => handleCompareSort(field)}
+                                aria-sort={compareSort.column === field ? (compareSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                              >
+                                {label}
+                                <span className="league-standings-sort-triangle-slot">{compareSort.column === field ? <SortTriangle direction={compareSort.dir} /> : null}</span>
+                              </button>
+                            ) : (
+                              label
+                            )}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compareTableTeams.map((t) => {
+                        const teamKey = getTeamKey(t)
+                        return (
+                          <tr
+                            key={teamKey}
+                            className="league-standings-bento-row research-stats-compare-row"
+                            onClick={() => toggleCompareSelectionTeam(teamKey)}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                toggleCompareSelectionTeam(teamKey)
+                              }
+                            }}
+                            aria-label={`${t.team_name || t.team_short_name || 'Team'}, remove from compare`}
+                          >
+                            <td className="league-standings-bento-team">
+                              <div className="research-stats-player-cell research-stats-team-cell">
+                                {t.team_short_name && (
+                                  <img src={`/badges/${t.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                )}
+                                <div className="research-stats-player-cell-lines">
+                                  <span className="league-standings-bento-team-name" title={t.team_name}>
+                                    {t.team_name || t.team_short_name || '—'}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            {visibleColumns.map(({ key, label, field }) => {
+                              const value = t[field] ?? 0
+                              const { main, sub } = formatStatValue(value, field, 'total', t.minutes, null, false)
+                              const isZero = value == null || Number(value) === 0
+                              const fieldRank = rankByFieldTeams[field]?.[teamKey] ?? null
+                              const N = null /* no top styling in team mode */
+                              const showPill = N != null && fieldRank != null && fieldRank <= N
+                              const isDemoted = N != null && fieldRank != null && fieldRank > N
+                              const demotedOpacity = isDemoted ? Math.max(0.35, 0.6 - (fieldRank - N) * 0.02) : null
+                              const isCompareBest = false /* no stat-leader styling in team mode */
+                              const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
+                              const title = isCompareBest ? (showPill ? `Best in ${label} (#${fieldRank})` : `Best in ${label}`) : (showPill ? `#${fieldRank} in ${label}` : undefined)
+                              const topOn = N != null
+                              const showBluePill = topOn && showPill
+                              const showLeaderOutline = topOn && isCompareBest && !showPill
+                              const showLeaderFilled = !topOn && isCompareBest
+                              const showLeaderBorderOnBlue = topOn && showPill && isCompareBest
+                              const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
+                              return (
+                                <td key={key} className="league-standings-bento-total">
+                                  {showBluePill ? (
+                                    <span className={`research-stats-pts-pill${showLeaderBorderOnBlue ? ' research-stats-compare-best-border' : ''}`} data-rank={fieldRank} title={title} style={pillStrength != null ? { '--pill-strength': pillStrength } : undefined}>
+                                      <span className={`research-stats-cell-main${isZero ? ' research-stats-cell-main--zero' : ''}`}>{main}</span>
+                                    </span>
+                                  ) : showLeaderOutline ? (
+                                    <span className="research-stats-compare-best-outline" title={title}>
+                                      <span className={mainCellClass}>{main}</span>
+                                    </span>
+                                  ) : showLeaderFilled ? (
+                                    <span className="research-stats-compare-best-pill" title={title}>
+                                      <span className={`research-stats-cell-main${isZero ? ' research-stats-cell-main--zero' : ''}`}>{main}</span>
+                                    </span>
+                                  ) : (
+                                    <span className={mainCellClass} style={demotedOpacity != null ? { opacity: demotedOpacity } : undefined}>
+                                      {main}
+                                    </span>
+                                  )}
+                                  {sub && (
+                                    <span className={`research-stats-cell-per-m${isDemoted ? ' research-stats-cell-per-m--demoted' : ''}`} style={demotedOpacity != null ? { opacity: Math.max(0.3, demotedOpacity - 0.05) } : undefined}>
+                                      {sub}
+                                    </span>
+                                  )}
+                                </td>
+                              )
+                            })}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <div
+              ref={mainTableWrapperRef}
+              className="league-standings-bento-table-wrapper research-stats-table-wrapper-sync"
+              onScroll={handleMainScroll}
+              aria-busy={loading}
+              aria-live="polite"
+            >
+              <table
+                className="research-stats-table league-standings-bento-table"
+                style={{ width: 'auto', minWidth: 0 }}
+              >
+                <thead>
+                  <tr>
+                    <th className="league-standings-bento-team">Team</th>
+                    {visibleColumns.map(({ key, label, field }) => (
+                      <th key={key} className="league-standings-bento-total">
+                        {isSortableColumn(field) ? (
+                          <button
+                            type="button"
+                            className="league-standings-sort-header"
+                            onClick={() => handleMainSort(field)}
+                            aria-sort={mainSort.column === field ? (mainSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                          >
+                            {label}
+                            <span className="league-standings-sort-triangle-slot">{mainSort.column === field ? <SortTriangle direction={mainSort.dir} /> : null}</span>
+                          </button>
+                        ) : (
+                          label
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 12 }, (_, i) => (
+                      <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
+                        <td className="league-standings-bento-team">
+                          <div className="research-stats-player-cell">
+                            <span className="skeleton-text research-stats-skeleton-badge" />
+                            <div className="research-stats-player-cell-lines">
+                              <span className="skeleton-text research-stats-skeleton-name" />
+                            </div>
+                          </div>
+                        </td>
+                        {visibleColumns.map(({ key }) => (
+                          <td key={key} className="league-standings-bento-total">
+                            <span className="skeleton-text research-stats-skeleton-cell" />
+                          </td>
+                        ))}
+                      </tr>
+                    ))
+                  ) : (
+                    mainTableTeams.map((t) => {
+                      const teamKey = getTeamKey(t)
+                      return (
+                        <tr
+                          key={teamKey}
+                          className="league-standings-bento-row"
+                          onClick={() => compareModeActive && toggleCompareSelectionTeam(teamKey)}
+                          role={compareModeActive ? 'button' : undefined}
+                          tabIndex={compareModeActive ? 0 : undefined}
+                          onKeyDown={compareModeActive ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              toggleCompareSelectionTeam(teamKey)
+                            }
+                          } : undefined}
+                          aria-label={compareModeActive ? `${t.team_name || t.team_short_name || 'Team'}, add to compare` : undefined}
+                        >
+                        <td className="league-standings-bento-team">
+                          <div className="research-stats-player-cell research-stats-team-cell">
+                            {t.team_short_name && (
+                              <img
+                                src={`/badges/${t.team_short_name}.svg`}
+                                alt=""
+                                className="research-stats-badge"
+                              />
+                            )}
+                            <div className="research-stats-player-cell-lines">
+                              <span className="league-standings-bento-team-name" title={t.team_name}>
+                                {t.team_name || t.team_short_name || '—'}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        {visibleColumns.map(({ key, label, field }) => {
+                          const value = t[field] ?? 0
+                              const { main, sub } = formatStatValue(value, field, 'total', t.minutes, null, false)
+                              const isZero = value == null || Number(value) === 0
+                              const fieldRank = rankByFieldTeams[field]?.[teamKey] ?? null
+                              const N = null /* no top styling in team mode */
+                              const showPill = N != null && fieldRank != null && fieldRank <= N
+                              const isDemoted = N != null && fieldRank != null && fieldRank > N
+                              const demotedOpacity = isDemoted
+                            ? Math.max(0.35, 0.6 - (fieldRank - N) * 0.02)
+                            : null
+                          const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
+                          const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
+                          return (
+                            <td key={key} className="league-standings-bento-total">
+                              {showPill ? (
+                                <span className="research-stats-pts-pill" data-rank={fieldRank} title={`#${fieldRank} in ${label}`} style={pillStrength != null ? { '--pill-strength': pillStrength } : undefined}>
+                                  <span className={`research-stats-cell-main${isZero ? ' research-stats-cell-main--zero' : ''}`}>{main}</span>
+                                </span>
+                              ) : (
+                                <span
+                                  className={mainCellClass}
+                                  style={demotedOpacity != null ? { opacity: demotedOpacity } : undefined}
+                                >
+                                  {main}
+                                </span>
+                              )}
+                              {sub && (
+                                <span
+                                  className={`research-stats-cell-per-m${isDemoted ? ' research-stats-cell-per-m--demoted' : ''}`}
+                                  style={demotedOpacity != null ? { opacity: Math.max(0.3, demotedOpacity - 0.05) } : undefined}
+                                >
+                                  {sub}
+                                </span>
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
+            {!loading && mainTableTeams.length === 0 && (
+              <div className="research-stats-empty" role="status">
+                {compareSelectedTeamKeys.length > 0 ? 'All selected teams are in Compare above.' : 'No teams match the current filters.'}
+              </div>
+            )}
+          </>
         ) : (
           <>
             {compareSelectedPlayers.length > 0 && (
               <div className="research-stats-compare-section" role="region" aria-label="Compare selected players">
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
-                  <span className="research-stats-compare-legend" aria-hidden>
-                    <span className="research-stats-compare-legend-item">
-                      <span className="research-stats-compare-legend-swatch" />
-                      <span className="research-stats-compare-legend-text">Stat leader</span>
-                    </span>
-                    <span className="research-stats-compare-legend-item">
-                      <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
-                        <span className="research-stats-compare-legend-x" aria-hidden>×</span>
+                  {compareSelectedPlayers.length > 1 && (
+                    <span className="research-stats-compare-legend" aria-hidden>
+                      <span className="research-stats-compare-legend-item">
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
                       </span>
-                      <span className="research-stats-compare-legend-text">
-                        {topHighlightMode === 6 ? 'Stat leader + Top 6' : topHighlightMode === 12 ? 'Stat leader + Top 12' : 'Stat leader + Top 6/12'}
-                      </span>
+                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
+                        <span className="research-stats-compare-legend-item">
+                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
+                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
+                          </span>
+                          <span className="research-stats-compare-legend-text">
+                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
+                          </span>
+                        </span>
+                      )}
                     </span>
-                  </span>
+                  )}
                   <button
                     type="button"
                     className="research-stats-compare-clear"
@@ -602,11 +1120,10 @@ export default function StatsSubpage() {
                 >
                   <table
                     className="research-stats-table league-standings-bento-table research-stats-compare-table"
-                    style={{ width: statsTableWidth, minWidth: statsTableWidth }}
+                    style={{ width: 'auto', minWidth: 0 }}
                   >
                     <thead>
                       <tr>
-                        <th className="league-standings-bento-rank">#</th>
                         <th className="league-standings-bento-team">Player</th>
                         {visibleColumns.map(({ key, label, field }) => (
                           <th key={key} className="league-standings-bento-total">
@@ -629,7 +1146,6 @@ export default function StatsSubpage() {
                     </thead>
                     <tbody>
                       {compareTablePlayers.map((p) => {
-                        const rank = sortedRankByPlayerId[p.player_id] ?? '—'
                         return (
                           <tr
                             key={p.player_id}
@@ -645,9 +1161,6 @@ export default function StatsSubpage() {
                             }}
                             aria-label={`${p.web_name || 'Player'}, remove from compare`}
                           >
-                            <td className="league-standings-bento-rank league-standings-bento-rank-value">
-                              <span className="league-standings-bento-rank-inner">{rank}</span>
-                            </td>
                             <td className="league-standings-bento-team">
                               <div className="research-stats-player-cell">
                                 {p.team_short_name && (
@@ -697,6 +1210,7 @@ export default function StatsSubpage() {
                               const showLeaderOutline = topOn && isCompareBest && !showPill
                               const showLeaderFilled = !topOn && isCompareBest
                               const showLeaderBorderOnBlue = topOn && showPill && isCompareBest
+                              const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
                               return (
                                 <td key={key} className="league-standings-bento-total">
                                   {showBluePill ? (
@@ -704,6 +1218,7 @@ export default function StatsSubpage() {
                                       className={`research-stats-pts-pill${showLeaderBorderOnBlue ? ' research-stats-compare-best-border' : ''}`}
                                       data-rank={fieldRank}
                                       title={title}
+                                      style={pillStrength != null ? { '--pill-strength': pillStrength } : undefined}
                                     >
                                       <span className={`research-stats-cell-main${isZero ? ' research-stats-cell-main--zero' : ''}`}>{main}</span>
                                     </span>
@@ -757,11 +1272,10 @@ export default function StatsSubpage() {
             >
               <table
                 className="research-stats-table league-standings-bento-table"
-                style={{ width: statsTableWidth, minWidth: statsTableWidth }}
+                style={{ width: 'auto', minWidth: 0 }}
               >
                 <thead>
                   <tr>
-                    <th className="league-standings-bento-rank">#</th>
                     <th className="league-standings-bento-team">Player</th>
                     {visibleColumns.map(({ key, label, field }) => (
                       <th key={key} className="league-standings-bento-total">
@@ -786,9 +1300,6 @@ export default function StatsSubpage() {
                   {loading ? (
                     Array.from({ length: 12 }, (_, i) => (
                       <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
-                        <td className="league-standings-bento-rank league-standings-bento-rank-value">
-                          <span className="skeleton-text research-stats-skeleton-cell" />
-                        </td>
                         <td className="league-standings-bento-team">
                           <div className="research-stats-player-cell">
                             <span className="skeleton-text research-stats-skeleton-badge" />
@@ -821,9 +1332,6 @@ export default function StatsSubpage() {
                         } : undefined}
                         aria-label={compareModeActive ? `${p.web_name || 'Player'}, add to compare` : undefined}
                       >
-                        <td className="league-standings-bento-rank league-standings-bento-rank-value">
-                          <span className="league-standings-bento-rank-inner">{sortedRankByPlayerId[p.player_id] ?? '—'}</span>
-                        </td>
                         <td className="league-standings-bento-team">
                           <div className="research-stats-player-cell">
                             {p.team_short_name && (
@@ -868,10 +1376,11 @@ export default function StatsSubpage() {
                             ? Math.max(0.35, 0.6 - (rank - N) * 0.02)
                             : null
                           const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
+                          const pillStrength = showPill && rank != null && N != null ? Math.max(0.35, 1 - (rank - 1) / N * 0.65) : undefined
                           return (
                             <td key={key} className="league-standings-bento-total">
                               {showPill ? (
-                                <span className="research-stats-pts-pill" data-rank={rank} title={`#${rank} in ${label}`}>
+                                <span className="research-stats-pts-pill" data-rank={rank} title={`#${rank} in ${label}`} style={pillStrength != null ? { '--pill-strength': pillStrength } : undefined}>
                                   <span className={`research-stats-cell-main${isZero ? ' research-stats-cell-main--zero' : ''}`}>{main}</span>
                                 </span>
                               ) : (
@@ -905,6 +1414,11 @@ export default function StatsSubpage() {
               </div>
             )}
           </>
+        )}
+        {!loading && (teamView ? teamStats.length : playersAboveMinMinutes.length) > 0 && (
+          <p className="research-stats-count-footer" role="status" aria-live="polite">
+            Showing {teamView ? filteredTeams.length : filteredPlayers.length} of {teamView ? teamStats.length : playersAboveMinMinutes.length} {teamView ? 'teams' : 'players'}
+          </p>
         )}
       </div>
     </div>

@@ -38,104 +38,87 @@
   margin: 0;
 }
 
-.onboarding-auth {
-  padding: 24px 28px;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.onboarding-auth-loading {
-  font-size: 14px;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.onboarding-auth-unsigned {
+/* Sign in below "Choose your league" – Google logo only, low prominence */
+.onboarding-signin-below {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
 }
 
-.onboarding-auth-hint {
-  font-size: 14px;
+.onboarding-signin-loading {
+  font-size: 13px;
   color: var(--text-secondary);
-  margin: 0;
-  text-align: center;
 }
 
-.onboarding-auth-google {
+.onboarding-signin-google {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 12px 20px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
+  border-radius: 10px;
   background: var(--bg-secondary);
-  color: var(--text-primary);
-  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  width: 100%;
-  max-width: 280px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 @media (hover: hover) {
-  .onboarding-auth-google:hover {
+  .onboarding-signin-google:hover {
     background: var(--bg-card);
     border-color: var(--accent-blue);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 }
 
-.onboarding-auth-google-icon {
-  flex-shrink: 0;
+.onboarding-signin-google-icon {
+  display: block;
 }
 
-.onboarding-auth-signed-in {
+.onboarding-signin-signed-in {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
-.onboarding-auth-avatar {
-  width: 40px;
-  height: 40px;
-  min-width: 0;
+.onboarding-signin-avatar {
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   border-radius: 50%;
   object-fit: cover;
   display: block;
 }
 
-.onboarding-auth-name {
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--text-primary);
-  flex: 1;
-  min-width: 0;
+.onboarding-signin-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.onboarding-auth-signout {
-  padding: 8px 14px;
+.onboarding-signin-signout {
+  padding: 4px 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  background: var(--bg-secondary);
+  background: transparent;
   color: var(--text-secondary);
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 @media (hover: hover) {
-  .onboarding-auth-signout:hover {
-    background: var(--bg-card);
+  .onboarding-signin-signout:hover {
+    background: var(--bg-secondary);
     color: var(--text-primary);
     border-color: var(--accent-blue);
   }
@@ -277,7 +260,14 @@
   }
 }
 
-/* Step 3: Schedule difficulty (optional) */
+/* Wizard: steps 3–5 (Overall, Attack, Defence) */
+.onboarding-wizard-step-indicator {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
 .onboarding-step-difficulty {
   gap: 12px;
 }
@@ -301,6 +291,7 @@
 
 .onboarding-difficulty-customizer .customize-difficulty-toolbar {
   margin-bottom: 12px;
+  justify-content: flex-end;
 }
 
 .onboarding-difficulty-customizer .customize-rows {

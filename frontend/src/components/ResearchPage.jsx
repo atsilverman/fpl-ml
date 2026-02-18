@@ -14,8 +14,8 @@ const VALID_VIEWS = ['stats', 'schedule', 'compare', 'price-changes']
 
 export default function ResearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const rawView = searchParams.get('view') || 'price-changes'
-  const view = VALID_VIEWS.includes(rawView) ? rawView : 'price-changes'
+  const rawView = searchParams.get('view') || 'stats'
+  const view = VALID_VIEWS.includes(rawView) ? rawView : 'stats'
   const viewIndex = RESEARCH_VIEW_ORDER.indexOf(view) >= 0 ? RESEARCH_VIEW_ORDER.indexOf(view) : 0
   const setView = (v) => setSearchParams({ view: v }, { replace: true })
 

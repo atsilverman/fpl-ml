@@ -14,9 +14,11 @@ export default function ScheduleDifficultyCustomizer({
   onSave,
   onCancel,
   onResetStat,
+  onDraftChange, // when set (wizard mode), called with (statId, overrides) when draft for that stat changes so parent can persist
   embedded = false,
+  onlyStat = null, // when set ('strength'|'attack'|'defence'), show single stat only (wizard mode), no tabs, no Save in embedded
 }) {
-  const [selectedStatId, setSelectedStatId] = useState('strength')
+  const [selectedStatId, setSelectedStatId] = useState(onlyStat || 'strength')
   const [baseline, setBaseline] = useState('fpl') // 'fpl' | 'calculated' (for Attack/Defence only)
   const [draftByStat, setDraftByStat] = useState(() => ({
     strength: { ...(savedOverridesByStat?.strength || {}) },
@@ -32,18 +34,23 @@ export default function ScheduleDifficultyCustomizer({
     })
   }, [savedOverridesByStat?.strength, savedOverridesByStat?.attack, savedOverridesByStat?.defence])
 
+  const effectiveStatId = onlyStat || selectedStatId
+  useEffect(() => {
+    if (onlyStat) setSelectedStatId(onlyStat)
+  }, [onlyStat])
+
   const teams = useMemo(
     () => (teamIds || []).map((id) => ({ team_id: id, ...(teamMap || {})[id] })).filter((t) => t.team_id != null),
     [teamIds, teamMap]
   )
 
-  const draft = draftByStat[selectedStatId] || {}
-  const opt = SCHEDULE_STAT_OPTIONS.find((o) => o.id === selectedStatId)
+  const draft = draftByStat[effectiveStatId] || {}
+  const opt = SCHEDULE_STAT_OPTIONS.find((o) => o.id === effectiveStatId)
   const baseKey = opt?.defaultKey ?? 'strength'
   const effectiveDefaultKey =
-    selectedStatId === 'attack' && baseline === 'calculated'
+    effectiveStatId === 'attack' && baseline === 'calculated'
       ? 'calculatedAttackDefault'
-      : selectedStatId === 'defence' && baseline === 'calculated'
+      : effectiveStatId === 'defence' && baseline === 'calculated'
         ? 'calculatedDefenceDefault'
         : baseKey
 
@@ -62,13 +69,22 @@ export default function ScheduleDifficultyCustomizer({
     } else {
       next[teamId] = num
     }
-    setDraftByStat((prev) => ({ ...prev, [selectedStatId]: Object.keys(next).length ? next : {} }))
+    const nextDraft = Object.keys(next).length ? next : {}
+    setDraftByStat((prev) => {
+      const nextState = { ...prev, [effectiveStatId]: nextDraft }
+      onDraftChange?.(effectiveStatId, nextDraft)
+      return nextState
+    })
   }
 
   const baselineLabel = baseline === 'calculated' ? 'Calculated' : 'FPL'
   const handleResetCurrent = () => {
-    onResetStat?.(selectedStatId)
-    setDraftByStat((prev) => ({ ...prev, [selectedStatId]: {} }))
+    onResetStat?.(effectiveStatId)
+    setDraftByStat((prev) => {
+      const nextState = { ...prev, [effectiveStatId]: {} }
+      onDraftChange?.(effectiveStatId, {})
+      return nextState
+    })
   }
 
   const handleSave = () => {
@@ -81,25 +97,27 @@ export default function ScheduleDifficultyCustomizer({
 
   const tabsAndList = (
     <>
-      <div className="schedule-customizer-stat-tabs">
-        {SCHEDULE_STAT_OPTIONS.map((optItem) => (
-          <button
-            key={optItem.id}
-            type="button"
-            className={`schedule-customizer-stat-tab ${selectedStatId === optItem.id ? 'schedule-customizer-stat-tab--active' : ''}`}
-            onClick={() => setSelectedStatId(optItem.id)}
-            aria-pressed={selectedStatId === optItem.id}
-          >
-            {optItem.label}
-          </button>
-        ))}
-      </div>
+      {!onlyStat && (
+        <div className="schedule-customizer-stat-tabs">
+          {SCHEDULE_STAT_OPTIONS.map((optItem) => (
+            <button
+              key={optItem.id}
+              type="button"
+              className={`schedule-customizer-stat-tab ${selectedStatId === optItem.id ? 'schedule-customizer-stat-tab--active' : ''}`}
+              onClick={() => setSelectedStatId(optItem.id)}
+              aria-pressed={selectedStatId === optItem.id}
+            >
+              {optItem.label}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="schedule-customizer-body">
         <div className="schedule-customizer-description-row">
           <p className="schedule-customizer-description">
             1 = easiest, 5 = hardest.
           </p>
-          {(selectedStatId === 'attack' || selectedStatId === 'defence') && (
+          {(effectiveStatId === 'attack' || effectiveStatId === 'defence') && (
             <div className="schedule-customizer-baseline">
               <span className="schedule-customizer-baseline-label">Baseline:</span>
               <button
@@ -124,8 +142,8 @@ export default function ScheduleDifficultyCustomizer({
             type="button"
             className="schedule-customizer-reset"
             onClick={handleResetCurrent}
-            title={`Reset ${selectedStatId === 'strength' ? 'overall' : selectedStatId} to ${baselineLabel} defaults`}
-            aria-label={`Reset ${selectedStatId === 'strength' ? 'overall' : selectedStatId} to ${baselineLabel} defaults`}
+            title={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
+            aria-label={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
           >
             Reset
           </button>
@@ -184,25 +202,27 @@ export default function ScheduleDifficultyCustomizer({
           1 = easiest, 5 = hardest.
         </p>
         <div className="customize-difficulty-toolbar">
-          <div className="schedule-customizer-stat-tabs">
-            {SCHEDULE_STAT_OPTIONS.map((optItem) => (
-              <button
-                key={optItem.id}
-                type="button"
-                className={`schedule-customizer-stat-tab ${selectedStatId === optItem.id ? 'schedule-customizer-stat-tab--active' : ''}`}
-                onClick={() => setSelectedStatId(optItem.id)}
-                aria-pressed={selectedStatId === optItem.id}
-              >
-                {optItem.label}
-              </button>
-            ))}
-          </div>
+          {!onlyStat && (
+            <div className="schedule-customizer-stat-tabs">
+              {SCHEDULE_STAT_OPTIONS.map((optItem) => (
+                <button
+                  key={optItem.id}
+                  type="button"
+                  className={`schedule-customizer-stat-tab ${selectedStatId === optItem.id ? 'schedule-customizer-stat-tab--active' : ''}`}
+                  onClick={() => setSelectedStatId(optItem.id)}
+                  aria-pressed={selectedStatId === optItem.id}
+                >
+                  {optItem.label}
+                </button>
+              ))}
+            </div>
+          )}
           <button
             type="button"
             className="customize-difficulty-reset"
             onClick={handleResetCurrent}
-            title={`Reset ${selectedStatId === 'strength' ? 'overall' : selectedStatId} to ${baselineLabel} defaults`}
-            aria-label={`Reset ${selectedStatId === 'strength' ? 'overall' : selectedStatId} to ${baselineLabel} defaults`}
+            title={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
+            aria-label={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
           >
             Reset
           </button>
@@ -250,13 +270,15 @@ export default function ScheduleDifficultyCustomizer({
             )
           })}
         </div>
-        <button
-          type="button"
-          className="modal-button modal-button-save"
-          onClick={handleSave}
-        >
-          Save
-        </button>
+        {!onlyStat && (
+          <button
+            type="button"
+            className="modal-button modal-button-save"
+            onClick={handleSave}
+          >
+            Save
+          </button>
+        )}
       </>
     )
   }

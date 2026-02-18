@@ -80,13 +80,16 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
 }
 
 function mapRowToPlayer(row, playerMap) {
-  const info = playerMap[row.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, cost_tenths: null }
+  const info = playerMap[row.player_id] || { web_name: 'Unknown', team_id: null, team_short_name: null, team_name: null, position: null, cost_tenths: null, selected_by_percent: null }
   return {
     player_id: row.player_id,
     web_name: info.web_name,
+    team_id: info.team_id,
     team_short_name: info.team_short_name,
+    team_name: info.team_name,
     position: info.position,
     cost_tenths: info.cost_tenths,
+    selected_by_percent: info.selected_by_percent != null ? Number(info.selected_by_percent) : null,
     points: row.effective_total_points ?? 0,
     minutes: row.minutes ?? 0,
     goals_scored: row.goals_scored ?? 0,
@@ -134,7 +137,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
         const { data: players, error: playersError } = await supabase
           .from('players')
-          .select('fpl_player_id, web_name, team_id, position, cost_tenths, teams(short_name)')
+          .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams(short_name, team_name)')
           .in('fpl_player_id', playerIds)
 
         if (playersError) {
@@ -146,9 +149,12 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
         ;(players || []).forEach((p) => {
           playerMap[p.fpl_player_id] = {
             web_name: p.web_name ?? 'Unknown',
+            team_id: p.team_id ?? null,
             team_short_name: p.teams?.short_name ?? null,
+            team_name: p.teams?.team_name ?? null,
             position: p.position != null ? Number(p.position) : null,
-            cost_tenths: p.cost_tenths != null ? Number(p.cost_tenths) : null
+            cost_tenths: p.cost_tenths != null ? Number(p.cost_tenths) : null,
+            selected_by_percent: p.selected_by_percent != null ? Number(p.selected_by_percent) : null
           }
         })
 
@@ -205,7 +211,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('fpl_player_id, web_name, team_id, position, cost_tenths, teams(short_name)')
+        .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams(short_name, team_name)')
         .in('fpl_player_id', playerIds)
 
       if (playersError) {
@@ -217,9 +223,12 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       ;(players || []).forEach((p) => {
         playerMap[p.fpl_player_id] = {
           web_name: p.web_name ?? 'Unknown',
+          team_id: p.team_id ?? null,
           team_short_name: p.teams?.short_name ?? null,
+          team_name: p.teams?.team_name ?? null,
           position: p.position != null ? Number(p.position) : null,
-          cost_tenths: p.cost_tenths != null ? Number(p.cost_tenths) : null
+          cost_tenths: p.cost_tenths != null ? Number(p.cost_tenths) : null,
+          selected_by_percent: p.selected_by_percent != null ? Number(p.selected_by_percent) : null
         }
       })
 
@@ -267,13 +276,16 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       const filtered = cache.rawStats.filter((r) => r.gameweek >= minGw && r.gameweek <= gw)
       const aggregated = aggregateByPlayer(filtered, locationFilter)
       const mapped = aggregated.map((s) => {
-        const info = cache.playerMap[s.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, cost_tenths: null }
+        const info = cache.playerMap[s.player_id] || { web_name: 'Unknown', team_id: null, team_short_name: null, team_name: null, position: null, cost_tenths: null, selected_by_percent: null }
         return {
           player_id: s.player_id,
           web_name: info.web_name,
+          team_id: info.team_id,
           team_short_name: info.team_short_name,
+          team_name: info.team_name,
           position: info.position,
           cost_tenths: info.cost_tenths,
+          selected_by_percent: info.selected_by_percent != null ? Number(info.selected_by_percent) : null,
           points: s.effective_total_points ?? s.total_points ?? 0,
           minutes: s.minutes ?? 0,
           goals_scored: s.goals_scored ?? 0,

@@ -18,6 +18,7 @@ const DEFAULT_ORDER = [
 const BentoOrderContext = createContext()
 
 const VISIBILITY_STORAGE_KEY = 'bento_card_visibility'
+const STATS_MIN_MINUTES_PERCENT_KEY = 'stats_min_minutes_percent'
 
 export function BentoOrderProvider({ children }) {
   const [cardOrder, setCardOrder] = useState(() => {
@@ -63,6 +64,14 @@ export function BentoOrderProvider({ children }) {
     return {}
   })
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false)
+  const [statsMinMinutesPercent, setStatsMinMinutesPercentState] = useState(() => {
+    const saved = localStorage.getItem(STATS_MIN_MINUTES_PERCENT_KEY)
+    if (saved != null) {
+      const n = parseInt(saved, 10)
+      if (!Number.isNaN(n) && n >= 0 && n <= 100) return n
+    }
+    return 20
+  })
 
   useEffect(() => {
     localStorage.setItem('bento_card_order', JSON.stringify(cardOrder))
@@ -72,11 +81,20 @@ export function BentoOrderProvider({ children }) {
     localStorage.setItem(VISIBILITY_STORAGE_KEY, JSON.stringify(cardVisibility))
   }, [cardVisibility])
 
+  useEffect(() => {
+    localStorage.setItem(STATS_MIN_MINUTES_PERCENT_KEY, String(statsMinMinutesPercent))
+  }, [statsMinMinutesPercent])
+
   const setCardVisible = (id, visible) => {
     setCardVisibilityState((prev) => ({ ...prev, [id]: visible }))
   }
 
   const isCardVisible = (id) => id === 'settings' || cardVisibility[id] !== false
+
+  const setStatsMinMinutesPercent = (value) => {
+    const n = Math.min(100, Math.max(0, Number(value)))
+    setStatsMinMinutesPercentState(Number.isNaN(n) ? 0 : n)
+  }
 
   const openCustomizeModal = () => setCustomizeModalOpen(true)
   const closeCustomizeModal = () => setCustomizeModalOpen(false)
@@ -89,6 +107,8 @@ export function BentoOrderProvider({ children }) {
         cardVisibility,
         setCardVisible,
         isCardVisible,
+        statsMinMinutesPercent,
+        setStatsMinMinutesPercent,
         openCustomizeModal,
         closeCustomizeModal,
         customizeModalOpen
