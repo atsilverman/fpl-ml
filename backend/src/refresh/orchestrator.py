@@ -614,10 +614,34 @@ class RefreshOrchestrator:
         try:
             if live_data is None:
                 live_data = await self.fpl_client.get_event_live(self.current_gameweek)
-            active_player_ids = {
+            # Players with minutes in live response (so we have fresh stats to write)
+            live_minutes_player_ids = {
                 elem["id"] for elem in (live_data or {}).get("elements", [])
                 if elem.get("stats", {}).get("minutes", 0) > 0
             }
+            # Also include any player who already has stats for this gameweek so we don't drop DGW rows
+            # (e.g. Arsenal DGW: live might not list them yet or we need to preserve two fixture rows)
+            existing_stats_player_ids = set()
+            # And include all players in tracked managers' picks so DGW players get stats written (two rows per fixture)
+            picked_player_ids = set()
+            if self.db_client and self.current_gameweek:
+                try:
+                    existing = self.db_client.client.table("player_gameweek_stats").select(
+                        "player_id"
+                    ).eq("gameweek", self.current_gameweek).execute().data or []
+                    existing_stats_player_ids = {r["player_id"] for r in existing}
+                except Exception:
+                    pass
+                try:
+                    manager_ids = self._get_tracked_manager_ids()
+                    if manager_ids:
+                        picks_result = self.db_client.client.table("manager_picks").select(
+                            "player_id"
+                        ).eq("gameweek", self.current_gameweek).in_("manager_id", manager_ids).execute()
+                        picked_player_ids = {p["player_id"] for p in (picks_result.data or [])}
+                except Exception:
+                    pass
+            active_player_ids = live_minutes_player_ids | existing_stats_player_ids | picked_player_ids
             
             if active_player_ids and live_data:
                 await self.player_refresher.refresh_player_gameweek_stats(

@@ -547,6 +547,14 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   flex-shrink: 0;
 }
 
+/* Live match in progress – stats not yet populated */
+.gameweek-points-mins-live-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--live-dot, #eab308);
+  letter-spacing: 0.02em;
+}
+
 /* Upcoming match: day + time in local TZ (subtle, not DNP) */
 .gameweek-points-mins-upcoming {
   display: inline-flex;

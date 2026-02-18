@@ -503,6 +503,13 @@
   text-overflow: ellipsis;
 }
 
+.defcon-v-opp {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary, #666);
+  flex-shrink: 0;
+}
+
 /* Same greyish pill as matches page top-points position fallback */
 .defcon-position-badge {
   display: inline-block;

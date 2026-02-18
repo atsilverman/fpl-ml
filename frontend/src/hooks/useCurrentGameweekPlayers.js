@@ -417,7 +417,6 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           return sum + effectivePoints
         }, 0)
 
-        // DGW expansion: if we have 1 stats row but team has 2 fixtures, add a placeholder row for the second fixture
         const teamIdForDgw = slotPlayerInfo.team_id ?? null
         const scheduleFixturesForDgw = teamIdForDgw
           ? fixtureList.filter(f => f.home_team_id === teamIdForDgw || f.away_team_id === teamIdForDgw)
@@ -427,42 +426,64 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
                 return tA - tB
               })
           : []
-        const needsDgwExpansion = statsRows.length === 1 && scheduleFixturesForDgw.length > 1
-        const expandedStatsRows = needsDgwExpansion
-          ? [
-              statsRows[0],
-              {
-                ...statsRows[0],
-                fixture_id: scheduleFixturesForDgw[1].fpl_fixture_id,
-                kickoff_time: scheduleFixturesForDgw[1].kickoff_time,
-                opponent_team_id: scheduleFixturesForDgw[1].home_team_id === teamIdForDgw
-                  ? scheduleFixturesForDgw[1].away_team_id
-                  : scheduleFixturesForDgw[1].home_team_id,
-                was_home: scheduleFixturesForDgw[1].home_team_id === teamIdForDgw,
-                total_points: 0,
-                minutes: 0,
-                goals_scored: 0,
-                assists: 0,
-                clean_sheets: 0,
-                saves: 0,
-                bps: 0,
-                bonus: 0,
-                bonus_status: 'provisional',
-                provisional_bonus: 0,
-                defensive_contribution: 0,
-                yellow_cards: 0,
-                red_cards: 0,
-                defcon_points_achieved: false,
-                expected_goals: 0,
-                expected_assists: 0,
-                expected_goal_involvements: 0,
-                expected_goals_conceded: 0,
-                match_finished: false,
-                match_finished_provisional: false,
-                started: false
+
+        // Build one stats row per schedule fixture, matching by fixture_id so DGW shows per-fixture stats on the correct row
+        const expandedStatsRows = (() => {
+          if (scheduleFixturesForDgw.length <= 1) {
+            return statsRows
+          }
+          const zeroRowForScheduleFixture = (scheduleFixture) => ({
+            fixture_id: scheduleFixture.fpl_fixture_id ?? null,
+            kickoff_time: scheduleFixture.kickoff_time ?? null,
+            opponent_team_id: scheduleFixture.home_team_id === teamIdForDgw
+              ? scheduleFixture.away_team_id
+              : scheduleFixture.home_team_id,
+            was_home: scheduleFixture.home_team_id === teamIdForDgw,
+            total_points: 0,
+            minutes: 0,
+            goals_scored: 0,
+            assists: 0,
+            clean_sheets: 0,
+            saves: 0,
+            bps: 0,
+            bonus: 0,
+            bonus_status: 'provisional',
+            provisional_bonus: 0,
+            defensive_contribution: 0,
+            yellow_cards: 0,
+            red_cards: 0,
+            defcon_points_achieved: false,
+            expected_goals: 0,
+            expected_assists: 0,
+            expected_goal_involvements: 0,
+            expected_goals_conceded: 0,
+            match_finished: false,
+            match_finished_provisional: false,
+            started: false
+          })
+          const usedStatsIndices = new Set()
+          return scheduleFixturesForDgw.map((scheduleFixture, scheduleIdx) => {
+            const matched = statsRows.find((s, i) => {
+              if (usedStatsIndices.has(i)) return false
+              const fid = s.fixture_id != null && s.fixture_id !== 0 ? s.fixture_id : null
+              const schedFid = scheduleFixture.fpl_fixture_id ?? null
+              if (schedFid != null && fid != null) {
+                if (fid === schedFid || Number(fid) === Number(schedFid)) {
+                  usedStatsIndices.add(i)
+                  return true
+                }
+                return false
               }
-            ]
-          : statsRows
+              if ((fid == null || fid === 0) && scheduleIdx === 0) {
+                usedStatsIndices.add(i)
+                return true
+              }
+              return false
+            })
+            if (matched) return matched
+            return zeroRowForScheduleFixture(scheduleFixture)
+          })
+        })()
 
         expandedStatsRows.forEach((stats, idx) => {
           const fid = stats.fixture_id != null ? stats.fixture_id : null

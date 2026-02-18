@@ -10,7 +10,7 @@ import './DefconSubpage.css'
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
-function DefconRow({ player }) {
+function DefconRow({ player, opponentShortName }) {
   const { web_name, team_short_name, defcon, threshold, position, is_live, match_provisional, match_confirmed } = player
   const isGk = threshold >= 999
   const denomDisplay = isGk ? '—' : threshold
@@ -42,6 +42,7 @@ function DefconRow({ player }) {
       <div className="defcon-player-info">
         <div className="defcon-name-row">
           <span className="defcon-name">{web_name}</span>
+          {opponentShortName && <span className="defcon-v-opp"> v {opponentShortName}</span>}
           {statusDot && (
             <span className="defcon-status-dot-wrap" aria-hidden>
               <span
@@ -189,11 +190,7 @@ export default function DefconSubpage({ isActive = true }) {
     if (matchupFilter === 'live') {
       list = list.filter(p => p.is_live)
     } else if (matchupFilter !== 'all' && typeof matchupFilter === 'number') {
-      const fixture = fixtures?.find(f => f.fpl_fixture_id === matchupFilter)
-      if (fixture) {
-        const teamIds = new Set([fixture.home_team_id, fixture.away_team_id])
-        list = list.filter(p => p.team_id != null && teamIds.has(p.team_id))
-      }
+      list = list.filter(p => p.fixture_id === matchupFilter)
     }
     if (positionFilter !== 'all') {
       list = list.filter(p => p.position === positionFilter)
@@ -472,7 +469,11 @@ export default function DefconSubpage({ isActive = true }) {
           <p className="defcon-list-empty">No players fit the current criteria.</p>
         ) : (
           filteredPlayers.map(player => (
-            <DefconRow key={player.player_id} player={player} />
+            <DefconRow
+              key={`${player.player_id}-${player.fixture_id ?? 0}`}
+              player={player}
+              opponentShortName={player.opponent_team_id != null ? (teamsMap[player.opponent_team_id] ?? null) : null}
+            />
           ))
         )}
       </div>

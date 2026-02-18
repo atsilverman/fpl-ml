@@ -896,6 +896,13 @@ html[data-theme="dark"] .gw-top-points-pill {
   line-height: 1;
 }
 
+/* Live match in progress – stats not yet in */
+.matchup-detail-live-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--live-dot, #eab308);
+}
+
 /* Provisional bonus / live scoring: muted so users know it can change */
 .matchup-detail-cell-provisional {
   color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));

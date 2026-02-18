@@ -68,14 +68,15 @@ function formatExpected(v) {
   return n.toFixed(2)
 }
 
-export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, onTableAreaClick }) {
+export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, fixtureStatus, onTableAreaClick }) {
   const [sortKey, setSortKey] = useState('points')
   const [sortDir, setSortDir] = useState('asc')
   const tableScrollRef = useRef(null)
   useAxisLockedScroll(tableScrollRef)
-  /* Always hide 0 minutes / DNP players in matchup card (any state or H2H view) */
+  const isLive = fixtureStatus === 'live'
+  /* When live: show all players (stats may not be in yet). Otherwise hide 0 minutes / DNP. */
   const filteredPlayers = players?.length
-    ? players.filter(p => p.minutes != null && Number(p.minutes) > 0)
+    ? (isLive ? players : players.filter(p => p.minutes != null && Number(p.minutes) > 0))
     : (players ?? [])
   const displayedPlayers = useMemo(() => {
     if (!filteredPlayers.length) return []
@@ -120,7 +121,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
             <span className="matchup-detail-table-title">{teamName || 'Team'}</span>
           </div>
         )}
-        <div className="matchup-detail-table-empty">No player data</div>
+        <div className="matchup-detail-table-empty">{isLive ? 'Live – stats updating' : 'No player data'}</div>
       </div>
     )
   }
@@ -245,15 +246,21 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                     )}
                     <span className={`matchup-detail-player-name${isOwnedByYou ? ' matchup-detail-player-name--owned-by-you' : ''}`} title={p.player_name}>{p.player_name}</span>
                   </td>
-                  <td className={`matchup-detail-td matchup-detail-td-mins ${isDnp ? 'matchup-detail-cell-muted' : ''}`}>
-                    {isDnp ? (
+                  <td className={`matchup-detail-td matchup-detail-td-mins ${(isDnp || (isLive && (p.minutes == null || Number(p.minutes) === 0))) ? 'matchup-detail-cell-muted' : ''}`}>
+                    {(p.minutes != null && Number(p.minutes) > 0) ? (
+                      `${p.minutes}'`
+                    ) : isDnp ? (
                       useDashForDnp ? (
                         '–'
                       ) : (
                         <span className="matchup-detail-dnp-badge" title="Did not play">!</span>
                       )
+                    ) : isLive ? (
+                      <span className="matchup-detail-live-badge" title="Match in progress – stats updating">Live</span>
+                    ) : useDashForDnp ? (
+                      '–'
                     ) : (
-                      `${p.minutes}'`
+                      <span className="matchup-detail-dnp-badge" title="Did not play">!</span>
                     )}
                   </td>
                   <td
@@ -529,6 +536,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     hideHeader
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    fixtureStatus={status}
                     onTableAreaClick={onToggle}
                   />
                 </div>
@@ -541,6 +549,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     ownedPlayerIds={ownedPlayerIds}
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    fixtureStatus={status}
                     onTableAreaClick={onToggle}
                   />
                   <MatchPlayerTable
@@ -550,6 +559,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     top10ByStat={top10ByStat}
                     ownedPlayerIds={ownedPlayerIds}
                     useDashForDnp={useH2HStats || status === 'scheduled'}
+                    fixtureStatus={status}
                     onTableAreaClick={onToggle}
                   />
                 </div>

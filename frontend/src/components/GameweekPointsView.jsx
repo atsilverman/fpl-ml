@@ -218,6 +218,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const matchFinished = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished) : Boolean(player.match_finished)
     const matchFinishedProvisional = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished_provisional) : Boolean(player.match_finished_provisional)
     const matchStartedOrFinished = matchStarted || matchFinished || matchFinishedProvisional
+    const matchFinishedOrProvisional = matchFinished || matchFinishedProvisional
     // Dot state is 100% fixture-driven (source of truth). No fixture = never show green.
     const hasFixtureLiveState = Boolean(fixtureForMatchState)
     const fixtureSaysLive = hasFixtureLiveState && matchStarted && !matchFinished && !matchFinishedProvisional
@@ -361,7 +362,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
               formatNumber(ptsDisplay)
             )}
           </td>
-        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchStartedOrFinished ? 'gameweek-points-cell-muted' : ''}`}>
+        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
               <>
@@ -387,6 +388,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 }
                 return <span className="gameweek-points-mins-upcoming gameweek-points-mins-upcoming-tbd">–</span>
               })()
+            ) : isMatchLive ? (
+              <span className="gameweek-points-mins-live-badge" title="Match in progress – stats updating">Live</span>
             ) : (
               <span className="gameweek-points-mins-dnp-badge" title="Did not play">!</span>
             )}
