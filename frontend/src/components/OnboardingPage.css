@@ -277,6 +277,66 @@
   }
 }
 
+/* Step 3: Schedule difficulty (optional) */
+.onboarding-step-difficulty {
+  gap: 12px;
+}
+
+.onboarding-difficulty-message {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 4px 0;
+}
+
+.onboarding-difficulty-customizer {
+  margin: 8px 0;
+  padding: 16px 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.onboarding-difficulty-customizer .customize-section-subtitle {
+  margin-bottom: 12px;
+}
+
+.onboarding-difficulty-customizer .customize-difficulty-toolbar {
+  margin-bottom: 12px;
+}
+
+.onboarding-difficulty-customizer .customize-rows {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.onboarding-difficulty-customizer .modal-button-save {
+  margin-bottom: 0;
+}
+
+.onboarding-step-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.onboarding-skip {
+  background: transparent;
+  border: none;
+  padding: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .onboarding-skip:hover {
+    color: var(--text-primary);
+  }
+}
+
 @media (max-width: 600px) {
   .onboarding {
     padding: 16px;
@@ -303,5 +363,9 @@
 
   .onboarding-options {
     max-height: 280px;
+  }
+
+  .onboarding-difficulty-customizer .customize-rows {
+    max-height: 240px;
   }
 }

@@ -1,3 +1,132 @@
+/* Under construction / placeholder banner */
+.research-stats-under-construction {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  border-radius: 6px;
+  color: #ca8a04;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.research-stats-under-construction svg {
+  flex-shrink: 0;
+  color: #ca8a04;
+}
+
+.research-stats-under-construction-banner {
+  justify-content: center;
+  padding: 6px 12px;
+  margin-bottom: 8px;
+}
+
+.research-stats-loading,
+.research-stats-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+/* Configured owner: green player name (matches Matches/Feed) */
+.research-stats-player-name--owned {
+  color: var(--accent-green, #10b981);
+  font-weight: 600;
+}
+
+/* Top 6/12 pill: value is hero; container is supportive so the number reads first */
+.research-stats-pts-pill {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  min-height: 28px;
+  padding: 6px 5px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 16%, var(--bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 42%, var(--border-color));
+  box-sizing: border-box;
+}
+.research-stats-pts-pill .research-stats-cell-main {
+  display: inline;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2em;
+  font-weight: 800;
+  color: var(--accent-blue, #3b82f6);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+.research-stats-cell-main {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+/* Demote non–top-12 values when Top 12 highlight is on */
+.research-stats-cell-main--demoted {
+  opacity: 0.45;
+  color: var(--text-secondary);
+}
+/* Strongly demote 0 / 0.0 so meaningful stats stand out */
+.research-stats-cell-main--zero {
+  opacity: 0.35;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.research-stats-pts-pill .research-stats-cell-main--zero {
+  opacity: 0.55;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent-blue, #3b82f6) 55%, var(--text-secondary));
+}
+.research-stats-compare-table .research-stats-compare-best-pill .research-stats-cell-main--zero {
+  opacity: 0.55;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent-yellow, #eab308) 55%, var(--text-secondary));
+}
+.research-stats-cell-per-m {
+  display: block;
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.research-stats-cell-per-m--demoted {
+  opacity: 0.4;
+}
+
+/* Loading skeleton: reuse BentoCard skeleton-text animation with smaller cell sizes */
+.research-stats-table .research-stats-skeleton-cell {
+  display: inline-block;
+  height: 14px;
+  min-width: 20px;
+  width: 100%;
+  max-width: 32px;
+}
+.research-stats-table .research-stats-skeleton-badge {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.research-stats-table .research-stats-skeleton-name {
+  display: block;
+  height: 12px;
+  width: 72px;
+  margin-bottom: 4px;
+}
+.research-stats-table .research-stats-skeleton-meta {
+  display: block;
+  height: 10px;
+  width: 48px;
+}
+
 /* Stats toolbar: search + filter (same pattern as Defcon/Feed) */
 .research-stats-toolbar {
   position: relative;
@@ -92,7 +221,302 @@
   fill: currentColor;
 }
 
-/* Inline filters: full width inside card, below toolbar */
+.stats-compare-btn {
+  /* same as .stats-filter-btn */
+}
+
+.stats-compare-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
+}
+
+.research-stats-compare-message {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 40%, var(--border-color));
+  border-radius: 6px;
+  text-align: center;
+  animation: research-stats-compare-message-in 0.2s ease-out;
+}
+
+@keyframes research-stats-compare-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.research-stats-compare-section {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.research-stats-compare-table-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.research-stats-compare-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.research-stats-compare-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.research-stats-compare-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.research-stats-compare-legend-swatch {
+  width: 14px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-secondary));
+  border: 1px solid var(--accent-yellow, #eab308);
+}
+
+.research-stats-compare-legend-swatch--blue-yellow {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 16%, var(--bg-secondary));
+  border-color: var(--accent-yellow, #eab308);
+}
+
+.research-stats-compare-legend-swatch--blue-yellow .research-stats-compare-legend-x {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent-blue, #3b82f6);
+}
+
+.research-stats-compare-legend-text {
+  white-space: nowrap;
+}
+
+.research-stats-compare-clear {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .research-stats-compare-clear:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+}
+
+.research-stats-compare-table-wrapper {
+  max-width: min(100%, 800px);
+}
+
+.research-stats-compare-table .research-stats-compare-row {
+  cursor: pointer;
+}
+
+/* Compare table: category leader pill – value prominent, yellow border frame */
+.research-stats-compare-table .research-stats-compare-best-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  min-height: 28px;
+  padding: 6px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-yellow, #eab308);
+  background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-secondary));
+  box-sizing: border-box;
+}
+.research-stats-compare-table .research-stats-compare-best-pill .research-stats-cell-main {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2em;
+  font-weight: 800;
+  color: var(--accent-yellow, #eab308);
+  line-height: 1.1;
+  letter-spacing: 0.02em;
+}
+
+/* Top 6/12 on: blue pill + yellow border = stat leader AND top rank */
+.research-stats-compare-table .research-stats-pts-pill.research-stats-compare-best-border {
+  border-color: var(--accent-yellow, #eab308);
+}
+
+/* Top 6/12 on: stat leader but not in top N = yellow border only, no fill */
+.research-stats-compare-table .research-stats-compare-best-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  min-height: 28px;
+  padding: 6px 5px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-yellow, #eab308);
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.research-stats-page .research-stats-table tbody tr[role="button"] {
+  cursor: pointer;
+}
+
+.research-stats-filter-summary {
+  margin: 0;
+  padding: 0 0 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Filter overlay popup (same pattern as MiniLeaguePage search overlay) */
+.stats-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.stats-filter-overlay[aria-modal="true"] {
+  pointer-events: auto;
+}
+
+.stats-filter-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
+.stats-filter-overlay-panel {
+  position: relative;
+  flex: 0 1 auto;
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  margin-left: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-filter-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.stats-filter-overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stats-filter-overlay-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-filter-overlay-reset {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue, #3b82f6);
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .stats-filter-overlay-reset:hover {
+    color: var(--accent-blue, #3b82f6);
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-secondary));
+  }
+}
+
+.stats-filter-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .stats-filter-overlay-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+}
+
+.stats-filter-overlay-body {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Filters content inside overlay */
+.stats-filter-overlay-body .research-stats-filters {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding: 0;
+}
+
+/* Inline filters (when used inside overlay body) */
 .research-stats-filters {
   width: 100%;
   display: flex;
@@ -125,12 +549,21 @@
 .stats-filter-buttons {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
+}
+
+.stats-filter-display-divider {
+  color: var(--text-secondary);
+  padding: 0 2px;
+  font-weight: 400;
+  user-select: none;
 }
 
 .stats-filter-option-btn {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   padding: 6px 10px;
   font-size: 12px;
   font-weight: 500;
@@ -155,11 +588,41 @@
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-secondary));
 }
 
+.stats-filter-option-btn .stats-filter-option-icon {
+  flex-shrink: 0;
+}
+
 /* Stats table: fixed layout and min-width; text sizing matches league-standings baseline (MiniLeaguePage.css). */
 .research-stats-page .research-stats-table.league-standings-bento-table {
   table-layout: fixed;
-  min-width: 800px; /* don't shrink – allow horizontal scroll in wrapper to view all columns (e.g. DEFCON) */
+  /* Width set in JS (statsTableWidth) so table equals sum of column widths; keeps player column at 120px across stat category filters. */
 }
+
+/* When compare table is shown, collapse main table thead so column widths stay consistent (no resize jump) */
+.research-stats-page .research-stats-table.league-standings-bento-table thead.research-stats-thead-collapsed {
+  height: 0;
+  line-height: 0;
+  font-size: 0;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+.research-stats-page .research-stats-table.league-standings-bento-table thead.research-stats-thead-collapsed tr {
+  height: 0;
+  border: none;
+}
+.research-stats-page .research-stats-table.league-standings-bento-table thead.research-stats-thead-collapsed th {
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  line-height: 0;
+  font-size: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
 .research-stats-page .research-stats-table.league-standings-bento-table th {
   font-size: 12px !important;
   font-weight: 700 !important;
@@ -171,11 +634,47 @@
   line-height: 1.2;
 }
 .research-stats-page .research-stats-table tbody tr {
-  min-height: 42px;
+  min-height: 46px;
 }
 .research-stats-page .research-stats-table tbody td {
-  min-height: 42px !important;
-  height: 42px !important;
+  min-height: 46px !important;
+  height: 46px !important;
+}
+
+/* Sticky table header: freeze header row when page scrolls (main table only; same idea as sticky left columns) */
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead tr {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 0 var(--border-color);
+}
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
+  background: var(--bg-secondary);
+}
+
+/* Sticky rank + player columns: stay fixed while stat columns scroll underneath (z-level mask) */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-rank,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-rank {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg-secondary);
+  box-sizing: border-box;
+}
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
+  position: sticky;
+  left: 10px; /* width of rank column */
+  z-index: 2;
+  background: var(--bg-secondary);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+}
+/* Header row sticks on vertical scroll; rank/team cells need higher z so they stay on top when both sticky */
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-rank,
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
+  z-index: 4;
 }
 
 /* Content-based column widths: narrow rank + stat cols, name gets remainder */
@@ -197,8 +696,9 @@
 .research-stats-page .research-stats-table th.league-standings-bento-gw,
 .research-stats-page .research-stats-table td.league-standings-bento-total,
 .research-stats-page .research-stats-table td.league-standings-bento-gw {
-  width: 18px;
-  min-width: 18px;
+  width: 28px;
+  min-width: 28px;
+  padding: 4px 4px;
   box-sizing: border-box;
   font-size: 10px !important;
 }
@@ -208,43 +708,73 @@
   overflow: visible;
 }
 .research-stats-page .league-standings-bento-table-wrapper {
+  width: fit-content;
+  max-width: min(100%, 800px);
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
-.research-stats-table .league-standings-bento-team {
-  max-width: 42px;
-  min-width: calc(var(--stats-player-min-ch, 14) * 1ch);
+/* Player/team column: 120px, single-line layout so names and info fit without extra rows */
+.research-stats-page .research-stats-table th.league-standings-bento-team,
+.research-stats-page .research-stats-table td.league-standings-bento-team {
+  width: 120px;
+  max-width: 120px;
+  min-width: 120px;
+  box-sizing: border-box;
+}
+.research-stats-page .research-stats-table th.league-standings-bento-team {
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
-
+.research-stats-page .research-stats-table td.league-standings-bento-team {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  padding: 6px 8px;
+}
 .research-stats-table .league-standings-bento-team .research-stats-player-cell {
+  flex: 1 1 0%;
   min-width: 0;
   max-width: 100%;
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   gap: 6px;
+  overflow: hidden;
 }
 .research-stats-table .league-standings-bento-team .research-stats-player-cell-lines {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
-  min-width: 0;
-  max-width: 100%;
+  gap: 1px;
+  justify-content: center;
 }
 .research-stats-table .league-standings-bento-team .league-standings-bento-team-name {
-  display: block;
-  max-width: 80px;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
-  font-size: 10px;
+  line-height: 1.2;
+}
+.research-stats-table .league-standings-bento-team .research-stats-meta-line {
+  flex: 0 0 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .research-stats-player-cell .research-stats-badge {
@@ -306,14 +836,15 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile: fixed width and center align for stat columns only (not rank or player); doubled width for readability */
+/* Mobile: narrower stat columns with reduced padding */
 @media (max-width: 640px) {
   .research-stats-page .research-stats-table th.league-standings-bento-total,
   .research-stats-page .research-stats-table th.league-standings-bento-gw,
   .research-stats-page .research-stats-table td.league-standings-bento-total,
   .research-stats-page .research-stats-table td.league-standings-bento-gw {
-    width: 80px;
-    min-width: 80px;
+    width: 48px;
+    min-width: 48px;
+    padding: 4px 4px;
     text-align: center;
   }
   .research-stats-page .research-stats-table th.league-standings-bento-total .league-standings-sort-header,

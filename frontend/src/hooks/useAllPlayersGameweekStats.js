@@ -6,10 +6,17 @@ import { supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 5000
 
+const MV_TABLE_BY_GW = {
+  all: 'mv_research_player_stats_all',
+  last6: 'mv_research_player_stats_last_6',
+  last12: 'mv_research_player_stats_last_12'
+}
+
+const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+
 /**
  * Aggregate per-fixture rows into one row per player (sum stats across DGW fixtures).
- * @param {Array} rows - raw stats rows (must already be filtered by GW range and location if needed)
- * @param {string} locationFilter - 'all' | 'home' | 'away'
+ * Used when MVs are not available (fallback).
  */
 function aggregateByPlayer(rows, locationFilter = 'all') {
   if (!rows || rows.length === 0) return []
@@ -72,9 +79,35 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
   return Array.from(byPlayer.values())
 }
 
+function mapRowToPlayer(row, playerMap) {
+  const info = playerMap[row.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, cost_tenths: null }
+  return {
+    player_id: row.player_id,
+    web_name: info.web_name,
+    team_short_name: info.team_short_name,
+    position: info.position,
+    cost_tenths: info.cost_tenths,
+    points: row.effective_total_points ?? 0,
+    minutes: row.minutes ?? 0,
+    goals_scored: row.goals_scored ?? 0,
+    assists: row.assists ?? 0,
+    clean_sheets: row.clean_sheets ?? 0,
+    saves: row.saves ?? 0,
+    bps: row.bps ?? 0,
+    defensive_contribution: row.defensive_contribution ?? 0,
+    yellow_cards: row.yellow_cards ?? 0,
+    red_cards: row.red_cards ?? 0,
+    expected_goals: Number(row.expected_goals) ?? 0,
+    expected_assists: Number(row.expected_assists) ?? 0,
+    expected_goal_involvements: Number(row.expected_goal_involvements) ?? 0,
+    expected_goals_conceded: Number(row.expected_goals_conceded) ?? 0
+  }
+}
+
 /**
- * Fetches full raw stats (GW 1 to current) and players once per gameweek; derives
- * All / Last 6 / Last 12 and location in memory so filter switches are instant.
+ * Fetches player stats for the Stats subpage. Uses materialized views when available
+ * (one small request per GW range + location) for fast load; falls back to raw
+ * player_gameweek_stats + in-memory aggregation if MVs are not yet deployed.
  * @param {'all'|'last6'|'last12'} gwFilter - GW range
  * @param {'all'|'home'|'away'} locationFilter - filter by was_home
  */
@@ -84,11 +117,66 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
 
   const { data: cache, isLoading } = useQuery({
-    queryKey: ['all-players-gameweek-stats-full', gameweek],
+    queryKey: ['all-players-gameweek-stats', gameweek, gwFilter, locationFilter],
     queryFn: async () => {
       if (!gameweek) return null
       const gw = Number(gameweek)
 
+      const mvTable = MV_TABLE_BY_GW[gwFilter]
+      const { data: mvRows, error: mvError } = await supabase
+        .from(mvTable)
+        .select(MV_SELECT)
+        .eq('location', locationFilter)
+
+      if (!mvError && mvRows != null) {
+        const playerIds = [...new Set((mvRows || []).map((r) => r.player_id).filter(Boolean))]
+        if (playerIds.length === 0) return { source: 'mv', rows: [], playerMap: {} }
+
+        const { data: players, error: playersError } = await supabase
+          .from('players')
+          .select('fpl_player_id, web_name, team_id, position, cost_tenths, teams(short_name)')
+          .in('fpl_player_id', playerIds)
+
+        if (playersError) {
+          console.error('Error fetching players for stats table:', playersError)
+          return { source: 'mv', rows: [], playerMap: {} }
+        }
+
+        const playerMap = {}
+        ;(players || []).forEach((p) => {
+          playerMap[p.fpl_player_id] = {
+            web_name: p.web_name ?? 'Unknown',
+            team_short_name: p.teams?.short_name ?? null,
+            position: p.position != null ? Number(p.position) : null,
+            cost_tenths: p.cost_tenths != null ? Number(p.cost_tenths) : null
+          }
+        })
+
+        const needPrice = playerIds.filter((id) => playerMap[id]?.cost_tenths == null)
+        if (needPrice.length > 0) {
+          const { data: priceRows } = await supabase
+            .from('player_prices')
+            .select('player_id, price_tenths, recorded_at')
+            .eq('gameweek', gw)
+            .in('player_id', needPrice)
+            .order('recorded_at', { ascending: false })
+          if (priceRows?.length) {
+            const byPlayer = new Map()
+            for (const row of priceRows) {
+              if (row.player_id != null && !byPlayer.has(row.player_id) && row.price_tenths != null) {
+                byPlayer.set(row.player_id, Number(row.price_tenths))
+              }
+            }
+            byPlayer.forEach((tenths, id) => {
+              if (playerMap[id]) playerMap[id].cost_tenths = tenths
+            })
+          }
+        }
+
+        return { source: 'mv', rows: mvRows || [], playerMap }
+      }
+
+      // Fallback: raw fetch + aggregate
       const baseQuery = supabase
         .from('player_gameweek_stats')
         .select(
@@ -113,7 +201,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       }
 
       const playerIds = [...new Set(stats.map((r) => r.player_id).filter(Boolean))]
-      if (playerIds.length === 0) return { rawStats: [], playerMap: {} }
+      if (playerIds.length === 0) return { source: 'raw', rawStats: [], playerMap: {} }
 
       const { data: players, error: playersError } = await supabase
         .from('players')
@@ -122,7 +210,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
       if (playersError) {
         console.error('Error fetching players for stats table:', playersError)
-        return { rawStats: stats, playerMap: {} }
+        return { source: 'raw', rawStats: stats, playerMap: {} }
       }
 
       const playerMap = {}
@@ -135,7 +223,6 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
         }
       })
 
-      // Fallback: current price from player_prices for this gameweek (when players.cost_tenths is null)
       const needPrice = playerIds.filter((id) => playerMap[id]?.cost_tenths == null)
       if (needPrice.length > 0) {
         const { data: priceRows } = await supabase
@@ -157,7 +244,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
         }
       }
 
-      return { rawStats: stats, playerMap }
+      return { source: 'raw', rawStats: stats, playerMap }
     },
     enabled: !!gameweek && !gwLoading,
     staleTime: isLive ? 25 * 1000 : 2 * 60 * 1000,
@@ -166,54 +253,47 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   })
 
   const players = useMemo(() => {
-    if (!cache?.rawStats?.length) return []
-    const gw = Number(gameweek)
-    let minGw = 1
-    if (gwFilter === 'last6') minGw = Math.max(1, gw - 5)
-    else if (gwFilter === 'last12') minGw = Math.max(1, gw - 11)
-    const filtered = cache.rawStats.filter(
-      (r) => r.gameweek >= minGw && r.gameweek <= gw
-    )
-    const aggregated = aggregateByPlayer(filtered, locationFilter)
-    const { playerMap } = cache
-    const mapped = aggregated.map((s) => {
-      const info = playerMap[s.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, cost_tenths: null }
-      return {
-        player_id: s.player_id,
-        web_name: info.web_name,
-        team_short_name: info.team_short_name,
-        position: info.position,
-        cost_tenths: info.cost_tenths,
-        points: s.effective_total_points ?? s.total_points ?? 0,
-        minutes: s.minutes ?? 0,
-        goals_scored: s.goals_scored ?? 0,
-        assists: s.assists ?? 0,
-        clean_sheets: s.clean_sheets ?? 0,
-        saves: s.saves ?? 0,
-        bps: s.bps ?? 0,
-        defensive_contribution: s.defensive_contribution ?? 0,
-        yellow_cards: s.yellow_cards ?? 0,
-        red_cards: s.red_cards ?? 0,
-        expected_goals: s.expected_goals ?? 0,
-        expected_assists: s.expected_assists ?? 0,
-        expected_goal_involvements: s.expected_goal_involvements ?? 0,
-        expected_goals_conceded: s.expected_goals_conceded ?? 0
-      }
-    })
-    // Exclude players with all zero stats (did not play in the period)
-    return mapped.filter(
-      (p) =>
-        (p.points ?? 0) !== 0 ||
-        (p.minutes ?? 0) !== 0 ||
-        (p.goals_scored ?? 0) !== 0 ||
-        (p.assists ?? 0) !== 0 ||
-        (p.clean_sheets ?? 0) !== 0 ||
-        (p.saves ?? 0) !== 0 ||
-        (p.bps ?? 0) !== 0 ||
-        (p.defensive_contribution ?? 0) !== 0 ||
-        (p.expected_goals ?? 0) !== 0 ||
-        (p.expected_assists ?? 0) !== 0
-    )
+    if (!cache) return []
+
+    if (cache.source === 'mv' && cache.rows?.length) {
+      return cache.rows.map((row) => mapRowToPlayer(row, cache.playerMap))
+    }
+
+    if (cache.source === 'raw' && cache.rawStats?.length) {
+      const gw = Number(gameweek)
+      let minGw = 1
+      if (gwFilter === 'last6') minGw = Math.max(1, gw - 5)
+      else if (gwFilter === 'last12') minGw = Math.max(1, gw - 11)
+      const filtered = cache.rawStats.filter((r) => r.gameweek >= minGw && r.gameweek <= gw)
+      const aggregated = aggregateByPlayer(filtered, locationFilter)
+      const mapped = aggregated.map((s) => {
+        const info = cache.playerMap[s.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, cost_tenths: null }
+        return {
+          player_id: s.player_id,
+          web_name: info.web_name,
+          team_short_name: info.team_short_name,
+          position: info.position,
+          cost_tenths: info.cost_tenths,
+          points: s.effective_total_points ?? s.total_points ?? 0,
+          minutes: s.minutes ?? 0,
+          goals_scored: s.goals_scored ?? 0,
+          assists: s.assists ?? 0,
+          clean_sheets: s.clean_sheets ?? 0,
+          saves: s.saves ?? 0,
+          bps: s.bps ?? 0,
+          defensive_contribution: s.defensive_contribution ?? 0,
+          yellow_cards: s.yellow_cards ?? 0,
+          red_cards: s.red_cards ?? 0,
+          expected_goals: s.expected_goals ?? 0,
+          expected_assists: s.expected_assists ?? 0,
+          expected_goal_involvements: s.expected_goal_involvements ?? 0,
+          expected_goals_conceded: s.expected_goals_conceded ?? 0
+        }
+      })
+      return mapped.filter((p) => (p.minutes ?? 0) >= 1)
+    }
+
+    return []
   }, [cache, gameweek, gwFilter, locationFilter])
 
   return {

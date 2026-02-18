@@ -42,6 +42,9 @@ def refresh_views():
             "mv_player_gameweek_performance",
             "mv_league_transfer_aggregation",
             "mv_player_owned_leaderboard",
+            "mv_research_player_stats_all",
+            "mv_research_player_stats_last_6",
+            "mv_research_player_stats_last_12",
         ]
         
         for view in views:

@@ -249,7 +249,7 @@ export default function DefconSubpage({ isActive = true }) {
     )
   }
 
-  const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || liveOnly
+  const hasActiveFilters = scopeFilter !== 'owned' || positionFilter !== 'all' || matchupFilter !== 'all'
 
   const showBackdrop = showInfoPopup || showFilterPopup
 

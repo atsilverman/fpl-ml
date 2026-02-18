@@ -4,13 +4,19 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useConfiguration } from '../contexts/ConfigurationContext'
+import { useScheduleData } from '../hooks/useScheduleData'
+import { useToast } from '../contexts/ToastContext'
 import UserAvatar from './UserAvatar'
+import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './OnboardingPage.css'
+import './CustomizeModal.css'
 
 export default function OnboardingPage() {
   const navigate = useNavigate()
   const { user, loading: authLoading, signInWithGoogle, signOut } = useAuth()
   const { config, updateConfig } = useConfiguration()
+  const { scheduleMatrix, teamMap, loading: scheduleLoading } = useScheduleData()
+  const { toast } = useToast()
   const [step, setStep] = useState(1)
 
   useEffect(() => {
@@ -20,6 +26,7 @@ export default function OnboardingPage() {
   }, [config?.leagueId, config?.managerId, navigate])
   const [selectedLeague, setSelectedLeague] = useState(null)
   const [selectedManagerId, setSelectedManagerId] = useState(null)
+  const [draftOverrides, setDraftOverrides] = useState({ strength: null, attack: null, defence: null })
 
   const { data: leagues = [], isLoading: leaguesLoading } = useQuery({
     queryKey: ['leagues'],
@@ -77,9 +84,32 @@ export default function OnboardingPage() {
     setSelectedManagerId(null)
   }
 
-  const handleGetStarted = () => {
+  const handleBackFromDifficulty = () => {
+    setStep(2)
+  }
+
+  const handleNextToDifficulty = () => {
+    if (!selectedLeague || !selectedManagerId) return
+    setStep(3)
+  }
+
+  const handleContinueToDashboard = () => {
     if (!selectedLeague || !selectedManagerId) return
     updateConfig({
+      ...(config || {}),
+      leagueId: parseInt(selectedLeague),
+      managerId: parseInt(selectedManagerId),
+      teamStrengthOverrides: draftOverrides.strength ?? null,
+      teamAttackOverrides: draftOverrides.attack ?? null,
+      teamDefenceOverrides: draftOverrides.defence ?? null,
+    })
+    navigate('/', { replace: true })
+  }
+
+  const handleSkipDifficulty = () => {
+    if (!selectedLeague || !selectedManagerId) return
+    updateConfig({
+      ...(config || {}),
       leagueId: parseInt(selectedLeague),
       managerId: parseInt(selectedManagerId),
     })
@@ -87,6 +117,8 @@ export default function OnboardingPage() {
   }
 
   const canFinish = selectedLeague && selectedManagerId
+  const teamIds = scheduleMatrix?.teamIds ?? []
+  const mapForRow = teamMap ?? {}
 
   return (
     <div className="onboarding">
@@ -201,10 +233,67 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   className="onboarding-cta"
-                  onClick={handleGetStarted}
+                  onClick={handleNextToDifficulty}
                 >
-                  Get started
+                  Next
                 </button>
+              )}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="onboarding-step onboarding-step-difficulty">
+              <button type="button" className="onboarding-back" onClick={handleBackFromDifficulty}>
+                ← Back to manager
+              </button>
+              <h2 className="onboarding-step-title">Schedule difficulty (optional)</h2>
+              <p className="onboarding-step-description onboarding-difficulty-message">
+                Customize how difficult each team is for schedule and data tables. These values replace the default FPL rankings so tables use your own team strength (1 = easiest, 5 = hardest). You can change this later in Customize.
+              </p>
+              {scheduleLoading ? (
+                <div className="onboarding-loading">Loading teams…</div>
+              ) : (
+                <>
+                  <div className="onboarding-difficulty-customizer">
+                    <ScheduleDifficultyCustomizer
+                      embedded
+                      teamIds={teamIds}
+                      teamMap={mapForRow}
+                      savedOverridesByStat={{
+                        strength: draftOverrides.strength ?? null,
+                        attack: draftOverrides.attack ?? null,
+                        defence: draftOverrides.defence ?? null,
+                      }}
+                      onSave={({ strength, attack, defence }) => {
+                        setDraftOverrides({
+                          strength: strength ?? null,
+                          attack: attack ?? null,
+                          defence: defence ?? null,
+                        })
+                        toast('Custom difficulty saved')
+                      }}
+                      onResetStat={(statId) => {
+                        setDraftOverrides((prev) => ({ ...prev, [statId]: null }))
+                      }}
+                    />
+                  </div>
+                  <div className="onboarding-step-actions">
+                    <button
+                      type="button"
+                      className="onboarding-cta"
+                      onClick={handleContinueToDashboard}
+                    >
+                      Continue to dashboard
+                    </button>
+                    <button
+                      type="button"
+                      className="onboarding-skip"
+                      onClick={handleSkipDifficulty}
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           )}
