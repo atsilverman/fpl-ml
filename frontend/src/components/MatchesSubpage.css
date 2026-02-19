@@ -720,6 +720,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-card-details {
   padding: 0 16px 16px;
   border-top: 1px solid var(--border-color);
+  min-width: 0; /* Allow shrink so table scroll gets bounded width (sticky column works on mobile) */
 }
 
 /* Last meeting (H2H) view: thin blue border around player tables (scheduled blue #2563eb) */
@@ -754,6 +755,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 12px;
+  min-width: 0; /* Allow grid to shrink so table scroll div gets bounded width (sticky column works on mobile) */
 }
 
 /* Single merged table (all players): full width on all viewports */
@@ -822,8 +824,10 @@ html[data-theme="dark"] .gw-top-points-pill {
   max-height: 60vh;
   min-width: 0; /* Allow shrink in flex so table can overflow and scroll horizontally */
   border-radius: 0 0 8px 8px;
-  /* Establish containing block so sticky player column works when parent (e.g. gameweek wipe track) has transform */
+  /* Establish containing block so sticky player column works when parent (e.g. gameweek swipe track) has transform */
   transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate; /* Clear scroll container for sticky on mobile/iOS */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
 }

@@ -991,6 +991,7 @@
   box-shadow: none;
   padding-left: 0;
   padding-right: 0;
+  min-width: 0; /* Allow shrink so table wrapper gets bounded width and horizontal scroll happens inside it (sticky column works on mobile) */
 }
 
 @media (hover: hover) {
@@ -1003,12 +1004,15 @@
 .research-stats-page .league-standings-bento-table-wrapper {
   width: 100%;
   max-width: 100%;
+  min-width: 0; /* Shrink in flex so horizontal scroll happens here, not on parent (sticky column works on mobile) */
   flex: 0 1 auto;
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
-  /* Establish scroll container for sticky column on iOS Safari */
+  /* Establish scroll container and layer for sticky column on iOS Safari */
   position: relative;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
   /* Prevent sticky header/column being pulled off on mobile drag */
   overscroll-behavior: none;
 }
