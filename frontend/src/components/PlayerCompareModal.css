@@ -49,8 +49,33 @@
 
 .player-compare-controls .player-compare-gw-filters,
 .player-compare-controls .player-compare-controls-divider,
-.player-compare-controls .player-compare-gw-filter-btn {
+.player-compare-controls .player-compare-gw-filter-btn,
+.player-compare-controls .player-compare-search-toolbar-btn {
   flex-shrink: 0;
+}
+
+.player-compare-search-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  min-height: 26px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+@media (hover: hover) {
+  .player-compare-search-toolbar-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+  }
 }
 
 .player-compare-gw-filters {
@@ -232,6 +257,39 @@
   gap: 6px;
 }
 
+.player-compare-th-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.player-compare-th-empty-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.player-compare-th-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .player-compare-th-add-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--accent-blue);
+  }
+}
+
 .player-compare-th-clear {
   flex-shrink: 0;
   display: inline-flex;
@@ -251,6 +309,92 @@
     background: var(--bg-secondary);
     color: var(--text-primary);
   }
+}
+
+/* Search popup: modal overlay + panel with input and list */
+.player-compare-search-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  padding-top: 60px;
+}
+
+.player-compare-search-popup {
+  width: 100%;
+  max-width: 320px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.player-compare-search-popup-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.player-compare-search-popup-input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.player-compare-search-popup-input:focus {
+  border-color: var(--accent-blue);
+}
+
+.player-compare-search-popup-close {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .player-compare-search-popup-close:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+  }
+}
+
+.player-compare-search-popup-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  max-height: 280px;
+}
+
+.player-compare-search-popup-list.league-ownership-autocomplete {
+  position: static;
+  max-height: 280px;
+  box-shadow: none;
+  border: none;
+  border-radius: 0;
 }
 
 /* position: static so dropdown is positioned relative to .player-compare-table-wrap and aligns with table */

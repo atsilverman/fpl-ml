@@ -266,7 +266,7 @@ export default function HomePage() {
     },
     {
       id: 'captain',
-      label: 'Captaincy',
+      label: 'Captains',
       size: '1x1'
     },
     {

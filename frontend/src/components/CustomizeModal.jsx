@@ -17,7 +17,7 @@ const BENTO_LABELS = {
   'chips': 'Chips',
   'transfers': 'Transfers',
   'league-rank': 'League Rank',
-  'captain': 'Captaincy',
+  'captain': 'Captains',
   'price-changes': 'Price Changes',
   'settings': 'Settings'
 }

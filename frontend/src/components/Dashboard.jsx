@@ -27,7 +27,7 @@ const RESEARCH_VIEWS = [
 
 const LEAGUE_VIEWS = [
   { id: 'table', label: 'Standings', disabled: false },
-  { id: 'captain', label: 'Captaincy', disabled: false },
+  { id: 'captain', label: 'Captains', disabled: false },
   { id: 'transfers', label: 'Transfers', disabled: false },
 ]
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { X } from 'lucide-react'
+import { X, Search } from 'lucide-react'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { usePlayerGameweekStatsRange, usePlayerCompareStatRanks } from '../hooks/usePlayerGameweekStats'
@@ -25,12 +25,8 @@ function useDebounce(value, ms) {
   return debounced
 }
 
-function PlayerSearchSlot({ selectedPlayer, onSelect, onClear, placeholder, slotId, searchContainerRef, dropdownOpen, setDropdownOpen }) {
-  const [searchQuery, setSearchQuery] = useState('')
-  const debouncedQuery = useDebounce(searchQuery, 200)
-  const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedQuery)
-  const listboxId = `player-compare-autocomplete-${slotId}`
-
+/** Display-only slot: selected player (badge + name + clear) or empty state with Add button */
+function PlayerSlotDisplay({ slotLabel, selectedPlayer, onClear, onOpenSearch }) {
   if (selectedPlayer) {
     return (
       <div className="player-compare-th-player">
@@ -54,30 +50,83 @@ function PlayerSearchSlot({ selectedPlayer, onSelect, onClear, placeholder, slot
       </div>
     )
   }
+  return (
+    <div className="player-compare-th-empty">
+      <span className="player-compare-th-empty-label">{slotLabel}</span>
+      <button
+        type="button"
+        className="player-compare-th-add-btn"
+        onClick={onOpenSearch}
+        aria-label={`Search to add ${slotLabel}`}
+      >
+        <Search size={14} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
+/** Modal popup: single search input + player list; on select calls onSelect(player) and onClose */
+function PlayerSearchPopup({ open, onClose, onSelect }) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const debouncedQuery = useDebounce(searchQuery, 200)
+  const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedQuery)
+  const popupRef = useRef(null)
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (open) {
+      setSearchQuery('')
+      setTimeout(() => inputRef.current?.focus(), 0)
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (e) => {
+      if (popupRef.current && !popupRef.current.contains(e.target)) onClose()
+    }
+    const handleEscape = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [open, onClose])
+
+  const handleSelect = (p) => {
+    onSelect(p)
+    onClose()
+  }
+
+  if (!open) return null
 
   return (
-    <div className="player-compare-th-search-wrap" ref={searchContainerRef}>
-      <input
-        type="text"
-        className="player-compare-search-input"
-        placeholder={placeholder}
-        value={searchQuery}
-        onChange={(e) => {
-          setSearchQuery(e.target.value)
-          setDropdownOpen(true)
-        }}
-        onFocus={() => searchQuery.trim().length >= 2 && setDropdownOpen(true)}
-        aria-autocomplete="list"
-        aria-expanded={dropdownOpen}
-        aria-controls={listboxId}
-      />
-      {dropdownOpen && searchQuery.trim().length >= 2 && (
+    <div className="player-compare-search-popup-backdrop" aria-hidden>
+      <div className="player-compare-search-popup" ref={popupRef} role="dialog" aria-label="Search player">
+        <div className="player-compare-search-popup-header">
+          <input
+            ref={inputRef}
+            type="text"
+            className="player-compare-search-popup-input"
+            placeholder="Search player…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-autocomplete="list"
+            aria-controls="player-compare-popup-listbox"
+          />
+          <button type="button" className="player-compare-search-popup-close" onClick={onClose} aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
         <ul
-          id={listboxId}
-          className="player-compare-autocomplete league-ownership-autocomplete"
+          id="player-compare-popup-listbox"
+          className="player-compare-search-popup-list league-ownership-autocomplete"
           role="listbox"
         >
-          {searchLoading ? (
+          {searchQuery.trim().length < 2 ? (
+            <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">Type 2+ characters</li>
+          ) : searchLoading ? (
             <li className="league-ownership-autocomplete-item league-ownership-autocomplete-loading" role="option">Loading…</li>
           ) : searchPlayers.length === 0 ? (
             <li className="league-ownership-autocomplete-item league-ownership-autocomplete-empty" role="option">No players found</li>
@@ -87,28 +136,16 @@ function PlayerSearchSlot({ selectedPlayer, onSelect, onClear, placeholder, slot
                 key={p.fpl_player_id}
                 role="option"
                 className="league-ownership-autocomplete-item"
-                onClick={() => {
-                  onSelect(p)
-                  setSearchQuery('')
-                  setDropdownOpen(false)
-                }}
+                onClick={() => handleSelect(p)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault()
-                    onSelect(p)
-                    setSearchQuery('')
-                    setDropdownOpen(false)
+                    handleSelect(p)
                   }
                 }}
               >
                 {p.team_short_name && (
-                  <img
-                    src={`/badges/${p.team_short_name}.svg`}
-                    alt=""
-                    className="league-ownership-player-badge"
-                    width={16}
-                    height={16}
-                  />
+                  <img src={`/badges/${p.team_short_name}.svg`} alt="" className="league-ownership-player-badge" width={16} height={16} />
                 )}
                 <span className="league-ownership-player-name">{p.web_name}</span>
                 {p.position != null && POSITION_ABBREV[p.position] && (
@@ -120,7 +157,7 @@ function PlayerSearchSlot({ selectedPlayer, onSelect, onClear, placeholder, slot
             ))
           )}
         </ul>
-      )}
+      </div>
     </div>
   )
 }
@@ -134,10 +171,9 @@ export default function CompareSubpage() {
   const [per90, setPer90] = useState(false)
   const [perMillion, setPerMillion] = useState(false)
   const [showRank, setShowRank] = useState(false)
-  const [dropdownOpen1, setDropdownOpen1] = useState(false)
-  const [dropdownOpen2, setDropdownOpen2] = useState(false)
-  const searchContainerRef1 = useRef(null)
-  const searchContainerRef2 = useRef(null)
+  const [searchPopupOpen, setSearchPopupOpen] = useState(false)
+  /** When opening search: 1 | 2 = fill that slot; null = fill first empty */
+  const [searchPopupTargetSlot, setSearchPopupTargetSlot] = useState(null)
   const controlsScrollRef = useRef(null)
 
   const player1Id = selectedPlayer1?.fpl_player_id ?? null
@@ -148,14 +184,21 @@ export default function CompareSubpage() {
   const { ranks: ranks1, loading: ranks1Loading } = usePlayerCompareStatRanks(player1Id, gameweek, gwFilter, rankBy)
   const { ranks: ranks2, loading: ranks2Loading } = usePlayerCompareStatRanks(player2Id, gameweek, gwFilter, rankBy)
 
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchContainerRef1.current && !searchContainerRef1.current.contains(e.target)) setDropdownOpen1(false)
-      if (searchContainerRef2.current && !searchContainerRef2.current.contains(e.target)) setDropdownOpen2(false)
+  const openSearchPopup = (targetSlot) => {
+    setSearchPopupTargetSlot(targetSlot)
+    setSearchPopupOpen(true)
+  }
+
+  const handleSearchSelect = (player) => {
+    if (searchPopupTargetSlot === 1) {
+      setSelectedPlayer1(player)
+    } else if (searchPopupTargetSlot === 2) {
+      setSelectedPlayer2(player)
+    } else {
+      if (!selectedPlayer1) setSelectedPlayer1(player)
+      else setSelectedPlayer2(player)
     }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }
 
   useEffect(() => {
     controlsScrollRef.current?.scrollTo?.({ left: 0 })
@@ -174,8 +217,23 @@ export default function CompareSubpage() {
   const priceTenths2 = selectedPlayer2?.cost_tenths ?? null
 
   return (
-    <div className="compare-subpage">
-      <div className="player-compare-controls" ref={controlsScrollRef}>
+    <div className="research-compare-subpage">
+      <div className="research-compare-card research-card bento-card bento-card-animate bento-card-expanded">
+        <header className="research-page-card-header research-compare-header">
+          <span className="research-page-card-title">Compare</span>
+        </header>
+        <div className="research-compare-content">
+          <div className="compare-subpage">
+            <div className="player-compare-controls" ref={controlsScrollRef}>
+        <button
+          type="button"
+          className="player-compare-search-toolbar-btn"
+          onClick={() => openSearchPopup(null)}
+          aria-label="Search player to compare"
+        >
+          <Search size={14} strokeWidth={2} />
+        </button>
+        <div className="player-compare-controls-divider" aria-hidden="true" />
         <div className="player-compare-gw-filters">
           {GW_FILTERS.map(({ key, label }) => (
             <button
@@ -231,34 +289,32 @@ export default function CompareSubpage() {
         </button>
       </div>
 
+      <PlayerSearchPopup
+        open={searchPopupOpen}
+        onClose={() => setSearchPopupOpen(false)}
+        onSelect={handleSearchSelect}
+      />
+
       <div className="player-stats-wrap">
         <div className="player-compare-table-wrap">
           <table className="player-compare-table">
             <thead>
             <tr>
               <th className="player-compare-th player-compare-th-p1">
-                <PlayerSearchSlot
+                <PlayerSlotDisplay
+                  slotLabel="Player 1"
                   selectedPlayer={selectedPlayer1}
-                  onSelect={setSelectedPlayer1}
                   onClear={() => setSelectedPlayer1(null)}
-                  placeholder="Search player…"
-                  slotId="p1"
-                  searchContainerRef={searchContainerRef1}
-                  dropdownOpen={dropdownOpen1}
-                  setDropdownOpen={setDropdownOpen1}
+                  onOpenSearch={() => openSearchPopup(1)}
                 />
               </th>
               <th className="player-compare-th player-compare-th-stat" aria-label="Stat" />
               <th className="player-compare-th player-compare-th-p2">
-                <PlayerSearchSlot
+                <PlayerSlotDisplay
+                  slotLabel="Player 2"
                   selectedPlayer={selectedPlayer2}
-                  onSelect={setSelectedPlayer2}
                   onClear={() => setSelectedPlayer2(null)}
-                  placeholder="Search player…"
-                  slotId="p2"
-                  searchContainerRef={searchContainerRef2}
-                  dropdownOpen={dropdownOpen2}
-                  setDropdownOpen={setDropdownOpen2}
+                  onOpenSearch={() => openSearchPopup(2)}
                 />
               </th>
             </tr>
@@ -330,6 +386,9 @@ export default function CompareSubpage() {
             })}
             </tbody>
           </table>
+        </div>
+      </div>
+          </div>
         </div>
       </div>
     </div>

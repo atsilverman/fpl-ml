@@ -13,8 +13,14 @@
   position: sticky;
   top: 0;
   z-index: 10;
+  margin-top: 16px;
   margin-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   background: var(--bg-primary);
+  flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Desktop: hide in-page subpage toolbar; use header dropdown (Gameweek → Matches/Bonus/DEFCON/Feed) only */

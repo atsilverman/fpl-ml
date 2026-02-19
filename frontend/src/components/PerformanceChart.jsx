@@ -39,7 +39,7 @@ export default function PerformanceChart({
   
   // Chip display configuration
   const chipInfo = {
-    '3xc': { name: 'TC', color: '#f97316' }, // Orange
+    '3xc': { name: 'TC', color: '#dc2626' }, // Red – distinct from captain (C) orange
     'freehit': { name: 'FH', color: '#3b82f6' }, // Blue
     'wildcard': { name: 'WC', color: '#8b5cf6' }, // Purple
     'bboost': { name: 'BB', color: '#06b6d4' } // Cyan

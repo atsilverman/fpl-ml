@@ -9,7 +9,7 @@ import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import BpsLeadersChart from './BpsLeadersChart'
-import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, MoveDiagonal, Minimize2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, MoveDiagonal, Minimize2 } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -597,31 +597,11 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const [expandedId, setExpandedId] = useState(null)
   const [isTopPerformersExpanded, setIsTopPerformersExpanded] = useState(false)
   const [performerPageIndex, setPerformerPageIndex] = useState(0)
-  const performerSwipeStart = useRef(null)
   const firstScheduledRef = useRef(null)
   const prevShowH2HRef = useRef(false)
 
   const currentStatKey = TOP_PERFORMERS_STAT_KEYS[performerPageIndex]?.key ?? 'points'
-  const currentStatLabel = TOP_PERFORMERS_STAT_KEYS[performerPageIndex]?.label ?? 'Points'
   const currentPerformersList = topPerformersByStat[currentStatKey] ?? []
-
-  const handlePerformerSwipeStart = (e) => {
-    performerSwipeStart.current = e.touches?.[0]?.clientX ?? e.clientX
-  }
-  const handlePerformerSwipeMove = (e) => {}
-  const handlePerformerSwipeEnd = (e) => {
-    const endX = e.changedTouches?.[0]?.clientX ?? e.clientX
-    const startX = performerSwipeStart.current
-    if (startX == null) return
-    const delta = endX - startX
-    const threshold = 50
-    if (delta < -threshold) {
-      setPerformerPageIndex((i) => Math.min(i + 1, TOP_PERFORMERS_STAT_KEYS.length - 1))
-    } else if (delta > threshold) {
-      setPerformerPageIndex((i) => Math.max(i - 1, 0))
-    }
-    performerSwipeStart.current = null
-  }
 
   const sortedFixtures = useMemo(() => {
     if (!fixtures?.length) return []
@@ -687,12 +667,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 aria-expanded={isTopPerformersExpanded}
                 aria-label={isTopPerformersExpanded ? 'Collapse Top Performers' : 'Expand Top Performers'}
               >
-                <span className="gw-top-points-title">
-                  Top Performers
-                  {isTopPerformersExpanded && currentStatLabel ? (
-                    <span className="gw-top-points-title-stat"> | {currentStatLabel}</span>
-                  ) : null}
-                </span>
+                <span className="gw-top-points-title">Top Performers</span>
                 <span className="gw-top-points-expand-icon" title={isTopPerformersExpanded ? 'Collapse' : 'Expand'} aria-hidden>
                   {isTopPerformersExpanded ? (
                     <Minimize2 className="gw-top-points-expand-icon-svg" size={11} strokeWidth={1.5} />
@@ -703,66 +678,54 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
               </div>
               {isTopPerformersExpanded && (
                 <>
+                  <div className="gw-top-performers-stat-buttons" role="tablist" aria-label="Stat to show">
+                    {TOP_PERFORMERS_STAT_KEYS.map((stat, idx) => (
+                      <button
+                        key={stat.key}
+                        type="button"
+                        role="tab"
+                        aria-selected={performerPageIndex === idx}
+                        aria-label={`Show top by ${stat.label}`}
+                        className={`gw-top-performers-stat-btn ${performerPageIndex === idx ? 'gw-top-performers-stat-btn--active' : ''}`}
+                        onClick={() => setPerformerPageIndex(idx)}
+                      >
+                        {stat.label}
+                      </button>
+                    ))}
+                  </div>
                   {topPerformersLoading ? (
                     <div className="gw-top-points-loading">Loading...</div>
                   ) : !currentPerformersList.length ? (
                     <div className="gw-top-points-empty">No data</div>
                   ) : (
-                    <div
-                      className="gw-top-performers-swipe-wrap"
-                      onTouchStart={handlePerformerSwipeStart}
-                      onTouchMove={handlePerformerSwipeMove}
-                      onTouchEnd={handlePerformerSwipeEnd}
-                    >
-                      <div className="gw-top-performers-row">
-                        <button
-                          type="button"
-                          className="gw-top-performers-nav gw-top-performers-nav--prev"
-                          aria-label={performerPageIndex > 0 ? `Previous: ${TOP_PERFORMERS_STAT_KEYS[performerPageIndex - 1]?.label ?? 'stat'}` : 'Previous stat (first page)'}
-                          disabled={performerPageIndex === 0}
-                          onClick={() => setPerformerPageIndex((i) => Math.max(0, i - 1))}
-                        >
-                          <ChevronLeft size={18} strokeWidth={2} />
-                        </button>
-                        <div className="gw-top-points-list">
-                          {currentPerformersList.map((row) => (
-                            <div key={row.player_id} className="gw-top-points-item">
-                              <span className="gw-top-points-badge-slot">
-                                {row.team_short_name ? (
-                                  <img
-                                    src={`/badges/${row.team_short_name}.svg`}
-                                    alt=""
-                                    className="gw-top-points-badge"
-                                    onError={(e) => { e.target.style.display = 'none' }}
-                                  />
-                                ) : (
-                                  <span className="gw-top-points-badge-placeholder" aria-hidden />
-                                )}
-                              </span>
-                              <div className="gw-top-points-name-wrap">
-                                <span className="gw-top-points-name">{row.player_name}</span>
-                                <span
-                                  className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
-                                  title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
-                                  aria-label={row.position_label || 'Position'}
-                                >
-                                  {row.position_label ?? '—'}
-                                </span>
-                              </div>
-                              <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
-                            </div>
-                          ))}
+                    <div className="gw-top-points-list">
+                      {currentPerformersList.map((row) => (
+                        <div key={row.player_id} className="gw-top-points-item">
+                          <span className="gw-top-points-badge-slot">
+                            {row.team_short_name ? (
+                              <img
+                                src={`/badges/${row.team_short_name}.svg`}
+                                alt=""
+                                className="gw-top-points-badge"
+                                onError={(e) => { e.target.style.display = 'none' }}
+                              />
+                            ) : (
+                              <span className="gw-top-points-badge-placeholder" aria-hidden />
+                            )}
+                          </span>
+                          <div className="gw-top-points-name-wrap">
+                            <span className="gw-top-points-name">{row.player_name}</span>
+                            <span
+                              className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
+                              title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
+                              aria-label={row.position_label || 'Position'}
+                            >
+                              {row.position_label ?? '—'}
+                            </span>
+                          </div>
+                          <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
                         </div>
-                        <button
-                          type="button"
-                          className="gw-top-performers-nav gw-top-performers-nav--next"
-                          aria-label={performerPageIndex < TOP_PERFORMERS_STAT_KEYS.length - 1 ? `Next: ${TOP_PERFORMERS_STAT_KEYS[performerPageIndex + 1]?.label ?? 'stat'}` : 'Next stat (last page)'}
-                          disabled={performerPageIndex >= TOP_PERFORMERS_STAT_KEYS.length - 1}
-                          onClick={() => setPerformerPageIndex((i) => Math.min(TOP_PERFORMERS_STAT_KEYS.length - 1, i + 1))}
-                        >
-                          <ChevronRight size={18} strokeWidth={2} />
-                        </button>
-                      </div>
+                      ))}
                     </div>
                   )}
                 </>

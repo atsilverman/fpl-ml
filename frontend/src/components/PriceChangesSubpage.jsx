@@ -113,7 +113,7 @@ export function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) 
   )
 }
 
-export default function PriceChangesSubpage({ showCard = true }) {
+export default function PriceChangesSubpage() {
   const { byDate, loading: actualLoading, error: actualError } = usePlayerPriceChangesByDate()
   const { rises: predRises, falls: predFalls, capturedAt, hasLatestRow, loading: predLoading, error: predError } = usePriceChangePredictions()
   const { getTeamForPlayer } = usePlayerTeamMap()
@@ -202,105 +202,87 @@ export default function PriceChangesSubpage({ showCard = true }) {
     </div>
   )
 
-  if (!showCard) {
-    return (
-      <div className="research-price-changes-inner">
-        {error ? (
-          <div className="price-changes-error">Failed to load price changes.</div>
-        ) : (
-          <>
-            {showPredictionsSection && (
-              <div className="research-price-changes-sub" aria-labelledby="price-changes-predictions-heading">
-                <div className="research-price-changes-sub-header">
-                  <h2 id="price-changes-predictions-heading" className="research-price-changes-sub-title">Predictions</h2>
-                  <span className="price-changes-source-wrap">
-                    <a
-                      href="https://t.co/KBHo75dwC5"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="research-page-source"
-                      aria-label="Source: LiveFPL"
-                    >
-                      Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
-                    </a>
-                    <button
-                      ref={livefplInfoButtonRef}
-                      type="button"
-                      className="bento-card-info-icon"
-                      title="How predictions are updated"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setShowLivefplInfoPopup((v) => !v)
-                      }}
-                      aria-expanded={showLivefplInfoPopup}
-                      aria-haspopup="dialog"
-                    >
-                      <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
-                    </button>
-                    {showLivefplInfoPopup &&
-                      createPortal(
-                        <div
-                          ref={livefplInfoPopupContentRef}
-                          className="gw-legend-popup gw-legend-popup-fixed price-changes-source-info-popup"
-                          role="dialog"
-                          aria-label="Predictions source"
-                          style={{
-                            position: 'fixed',
-                            left: livefplInfoPopupPosition?.left ?? 0,
-                            top: livefplInfoPopupPosition?.top ?? 0,
-                            visibility: livefplInfoPopupPosition ? 'visible' : 'hidden',
-                            zIndex: 9999
-                          }}
-                        >
-                          <div className="gw-legend-popup-title">Predictions source</div>
-                          <p className="price-changes-source-note" style={{ margin: 0 }}>
-                            A web crawler fetches the latest price predictions from{' '}
-                            <a href="https://www.livefpl.net/prices" target="_blank" rel="noopener noreferrer">https://www.livefpl.net/prices</a>
-                            {' '}every 30 minutes.
-                          </p>
-                        </div>,
-                        document.body
-                      )}
-                  </span>
-                </div>
-                <div className="research-price-changes-sub-body">{predictionsContent}</div>
-              </div>
-            )}
-            <div className="research-price-changes-sub" aria-labelledby="price-changes-actual-heading">
-              <h2 id="price-changes-actual-heading" className="research-price-changes-sub-title">Actual by day</h2>
-              <div className="research-price-changes-sub-body">{actualContent}</div>
-            </div>
-          </>
-        )}
-      </div>
-    )
-  }
-
-  const content = (
-    <div className="price-changes-content">
+  const innerContent = (
+    <div className="research-price-changes-inner">
       {error ? (
         <div className="price-changes-error">Failed to load price changes.</div>
       ) : (
         <>
           {showPredictionsSection && (
-            <section className="price-changes-section" aria-labelledby="price-changes-predictions-heading">
-              <h3 id="price-changes-predictions-heading" className="price-changes-section-label">Predictions</h3>
-              {predictionsContent}
-            </section>
+            <div className="research-price-changes-sub" aria-labelledby="price-changes-predictions-heading">
+              <div className="research-price-changes-sub-header">
+                <h2 id="price-changes-predictions-heading" className="research-price-changes-sub-title">Predictions</h2>
+                <span className="price-changes-source-wrap">
+                  <a
+                    href="https://t.co/KBHo75dwC5"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="research-page-source"
+                    aria-label="Source: LiveFPL"
+                  >
+                    Source: <img src="/livefpl-logo.png" alt="LiveFPL" className="research-page-source-logo" />
+                  </a>
+                  <button
+                    ref={livefplInfoButtonRef}
+                    type="button"
+                    className="bento-card-info-icon"
+                    title="How predictions are updated"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowLivefplInfoPopup((v) => !v)
+                    }}
+                    aria-expanded={showLivefplInfoPopup}
+                    aria-haspopup="dialog"
+                  >
+                    <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+                  </button>
+                  {showLivefplInfoPopup &&
+                    createPortal(
+                      <div
+                        ref={livefplInfoPopupContentRef}
+                        className="gw-legend-popup gw-legend-popup-fixed price-changes-source-info-popup"
+                        role="dialog"
+                        aria-label="Predictions source"
+                        style={{
+                          position: 'fixed',
+                          left: livefplInfoPopupPosition?.left ?? 0,
+                          top: livefplInfoPopupPosition?.top ?? 0,
+                          visibility: livefplInfoPopupPosition ? 'visible' : 'hidden',
+                          zIndex: 9999
+                        }}
+                      >
+                        <div className="gw-legend-popup-title">Predictions source</div>
+                        <p className="price-changes-source-note" style={{ margin: 0 }}>
+                          A web crawler fetches the latest price predictions from{' '}
+                          <a href="https://www.livefpl.net/prices" target="_blank" rel="noopener noreferrer">https://www.livefpl.net/prices</a>
+                          {' '}every 30 minutes.
+                        </p>
+                      </div>,
+                      document.body
+                    )}
+                </span>
+              </div>
+              <div className="research-price-changes-sub-body">{predictionsContent}</div>
+            </div>
           )}
-          <section className="price-changes-section price-changes-section-actual" aria-labelledby="price-changes-actual-heading">
-            <h3 id="price-changes-actual-heading" className="price-changes-section-label">Actual by day</h3>
-            {actualContent}
-          </section>
+          <div className="research-price-changes-sub" aria-labelledby="price-changes-actual-heading">
+            <h2 id="price-changes-actual-heading" className="research-price-changes-sub-title">Actual by day</h2>
+            <div className="research-price-changes-sub-body">{actualContent}</div>
+          </div>
         </>
       )}
     </div>
   )
 
   return (
-    <div className="price-changes-subpage">
-      <div className="price-changes-card">
-        {content}
+    <div className="research-price-changes-subpage">
+      <div className="research-price-changes-card research-card bento-card bento-card-animate bento-card-expanded">
+        <header className="research-page-card-header research-price-changes-header">
+          <span className="research-page-card-title">Price Changes</span>
+        </header>
+        <div className="research-price-changes-content">
+          {innerContent}
+        </div>
       </div>
     </div>
   )

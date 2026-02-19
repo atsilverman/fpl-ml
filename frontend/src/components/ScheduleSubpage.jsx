@@ -191,42 +191,46 @@ export default function ScheduleSubpage() {
 
   if (loading) {
     return (
-      <div className="schedule-subpage">
-        <div className="schedule-header-with-filter">
-          <header className="schedule-subpage-header research-page-card-header">
-            <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-            <button
-              type="button"
-              className="schedule-filter-icon-btn"
-              disabled
-              aria-label="Schedule view options (unavailable while loading)"
-            >
-              <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
-            </button>
-          </header>
+      <div className="research-schedule-subpage">
+        <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
+          <div className="schedule-header-with-filter">
+            <header className="schedule-subpage-header research-page-card-header">
+              <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
+              <button
+                type="button"
+                className="schedule-filter-icon-btn"
+                disabled
+                aria-label="Schedule view options (unavailable while loading)"
+              >
+                <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+              </button>
+            </header>
+          </div>
+          <div className="schedule-loading">Loading schedule…</div>
         </div>
-        <div className="schedule-loading">Loading schedule…</div>
       </div>
     )
   }
 
   if (!gameweeks?.length) {
     return (
-      <div className="schedule-subpage">
-        <div className="schedule-header-with-filter">
-          <header className="schedule-subpage-header research-page-card-header">
-            <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-            <button
-              type="button"
-              className="schedule-filter-icon-btn"
-              aria-label="Schedule view options"
-              aria-expanded={false}
-            >
-              <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
-            </button>
-          </header>
+      <div className="research-schedule-subpage">
+        <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
+          <div className="schedule-header-with-filter">
+            <header className="schedule-subpage-header research-page-card-header">
+              <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
+              <button
+                type="button"
+                className="schedule-filter-icon-btn"
+                aria-label="Schedule view options"
+                aria-expanded={false}
+              >
+                <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+              </button>
+            </header>
+          </div>
+          <div className="schedule-empty">No upcoming gameweeks (is_next and beyond).</div>
         </div>
-        <div className="schedule-empty">No upcoming gameweeks (is_next and beyond).</div>
       </div>
     )
   }
@@ -234,9 +238,10 @@ export default function ScheduleSubpage() {
   const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
 
   return (
-    <div className="schedule-subpage">
-      <div className="schedule-header-with-filter">
-        <header className="schedule-subpage-header research-page-card-header">
+    <div className="research-schedule-subpage">
+      <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
+        <div className="schedule-header-with-filter">
+          <header className="schedule-subpage-header research-page-card-header">
           <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
           <div className="schedule-header-icon-group" aria-hidden>
             <button
@@ -528,6 +533,7 @@ export default function ScheduleSubpage() {
         document.body
       )}
 
+      </div>
     </div>
   )
 }

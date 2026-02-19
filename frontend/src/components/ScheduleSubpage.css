@@ -23,6 +23,7 @@
   gap: 12px;
   padding: 0;
   min-width: 0;
+  min-height: 28px;
 }
 
 .schedule-subpage-title {
@@ -48,22 +49,23 @@
   height: 11px;
 }
 
-/* Info (legend) button – match .bento-card-info-icon (36×28, bg-secondary, radius 5px) */
+/* Info (legend) button – match stats toolbar height (28×28) */
+/* Info (legend) button – match .schedule-filter-icon-btn */
 .schedule-legend-icon-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  width: 28px;
   height: 28px;
-  min-width: 36px;
+  min-width: 28px;
   min-height: 28px;
   margin: 0;
   padding: 0;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
+  border-radius: 6px;
   opacity: 0.85;
   cursor: pointer;
   transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
@@ -73,8 +75,7 @@
 @media (hover: hover) {
   .schedule-legend-icon-btn:hover:not(:disabled) {
     opacity: 1;
-    background-color: var(--bg-card);
-    border-color: var(--text-secondary);
+    border-color: var(--collapse-icon-color, #64748b);
   }
 }
 
@@ -85,16 +86,16 @@
   color: var(--accent-blue, #3b82f6);
 }
 
-/* Filter button – match .bento-card-expand-icon--collapse (28×24, collapse badge) */
+/* Filter button – match stats toolbar height (28×28) */
 .schedule-filter-icon-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
-  height: 24px;
+  height: 28px;
   min-width: 28px;
-  min-height: 24px;
+  min-height: 28px;
   margin: 0;
   padding: 0;
   color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
@@ -734,6 +735,17 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   border-bottom: 1px solid var(--border-color);
 }
 
+.schedule-table thead tr {
+  height: 44px;
+  min-height: 44px;
+}
+
+.schedule-table thead th {
+  height: 44px;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
 .schedule-table tbody {
   display: table-row-group;
 }
@@ -877,7 +889,7 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
 }
 
 .schedule-cell-team-name {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -890,22 +902,22 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 
 .schedule-cell-badge {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .schedule-cell-badge-placeholder {
   display: block;
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   background: var(--bg-secondary);
   border-radius: 3px;
@@ -1225,7 +1237,7 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   }
 
   .schedule-cell-team-name {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .schedule-th-gw,
@@ -1251,8 +1263,8 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   .schedule-cell-badge-slot,
   .schedule-cell-badge,
   .schedule-cell-badge-placeholder {
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
   }
 
   .schedule-cell-opponent-badge-slot,

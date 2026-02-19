@@ -1066,6 +1066,22 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   overflow: auto;
 }
 
+/* Manager popup: first-column treatment (schedule-style) for player column */
+.manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
+  background: var(--bg-secondary);
+  box-shadow: 2px 0 0 var(--border-color);
+}
+.manager-detail-modal-chart-wrap .gameweek-points-table .gameweek-points-td-player-fixed {
+  background: var(--bg-secondary);
+  box-shadow: 2px 0 0 var(--border-color);
+}
+.manager-detail-modal-chart-wrap .gameweek-points-tr-autosub-out .gameweek-points-td-player-fixed {
+  background: var(--gw-autosub-out-bg-solid);
+}
+.manager-detail-modal-chart-wrap .gameweek-points-tr-autosub-in .gameweek-points-td-player-fixed {
+  background: var(--gw-autosub-in-bg-solid);
+}
+
 /* Mobile: same axis-locked scroll (horizontal/vertical only, no diagonal) as home bento GW table */
 @media (max-width: 768px) {
   .manager-detail-modal-chart-wrap .gameweek-points-scrollable {

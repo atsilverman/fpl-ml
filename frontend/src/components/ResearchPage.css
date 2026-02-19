@@ -1,4 +1,7 @@
+/* Match Gameweek page: fill height, flex column, same gap so sticky toolbar behaves identically */
 .research-page {
+  height: 100%;
+  min-height: 0;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
@@ -9,9 +12,19 @@
   gap: 8px;
 }
 
-/* Tighter space below subpage toolbar so content sits closer (match mini-league / gameweek) */
+/* Toolbar stays fixed; content below scrolls under it (Stats, Schedule, Compare, Changes). Match Gameweek spacing and layer. */
 .research-page .subpage-toolbar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin-top: 16px;
   margin-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 /* Desktop: hide in-page subpage toolbar; use header dropdown (Research → Changes/Schedule/Compare) only */
@@ -49,7 +62,12 @@
   }
 }
 
-/* Price Changes: same container structure as Schedule/Compare – header inside card, sub-sections inside content */
+/* Price Changes subpage: same container structure as Stats/Schedule (subpage > card > content) */
+.research-price-changes-subpage {
+  position: relative;
+}
+
+/* Price Changes card: match .research-stats-card */
 .research-price-changes-card {
   display: flex;
   flex-direction: column;
@@ -57,7 +75,7 @@
   gap: 6px;
   width: 100%;
   height: auto;
-  min-height: 400px;
+  min-height: 0;
   max-height: none;
   overflow: visible;
 }
@@ -68,13 +86,14 @@
 }
 
 .research-price-changes-content {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
   overflow: visible;
   width: 100%;
-  min-width: 0;
-  min-height: 0;
+  padding-top: 6px; /* match schedule: gap 6px + schedule-scroll-wrap margin-top 6px */
 }
 
 .research-price-changes-inner {
@@ -131,52 +150,53 @@
   padding: 0;
 }
 
-/* Schedule card: all teams in one container, horizontal scroll for gameweeks only; tighter padding so table is wider */
-/* Override bento-card-chart-2x4 fixed height so card grows to fit all teams (no cropping) */
-.research-schedule-card.bento-card-chart-2x4 {
-  height: auto;
-  min-height: 400px;
-  max-height: none;
-  overflow: visible;
-  /* Prevent layout containment from collapsing table columns; table needs normal block layout */
-  contain: none;
+/* Schedule subpage: same container structure as Stats (subpage > card > content) */
+.research-schedule-subpage {
+  position: relative;
 }
 
-/* Same left/right padding as .research-page-card-header (14px) so the Schedule title aligns with Price Changes title */
+/* Schedule card: match .research-stats-card so container encompasses full team list on desktop and mobile */
 .research-schedule-card {
   display: flex;
   flex-direction: column;
   padding: 12px 14px 20px 14px;
   gap: 6px;
-  min-height: 400px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
   overflow: visible;
 }
 
-/* Title positioned like home bento .bento-card-label (same card padding) */
 .research-schedule-card .research-page-card-header {
   flex-shrink: 0;
   padding: 0;
 }
 
 .research-schedule-content {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
   overflow: visible;
   width: 100%;
-  min-width: 0;
 }
 
-/* Compare card: same layout pattern as schedule; height grows with content (override bento-card fixed height) */
+/* Compare subpage: same container structure as Stats/Schedule (subpage > card > content) */
+.research-compare-subpage {
+  position: relative;
+}
+
+/* Compare card: match .research-stats-card */
 .research-compare-card {
-  align-self: flex-start;
   display: flex;
   flex-direction: column;
   padding: 12px 14px 20px 14px;
   gap: 6px;
   width: 100%;
   height: auto;
-  min-height: 400px;
+  min-height: 0;
   max-height: none;
   overflow: visible;
 }
@@ -187,13 +207,13 @@
 }
 
 .research-compare-content {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  min-width: 0;
   overflow: visible;
   width: 100%;
-  min-width: 0;
-  min-height: 0;
 }
 
 .compare-subpage {
