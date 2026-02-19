@@ -247,10 +247,12 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
               return (
                 <tr key={p.player_id} className={`matchup-detail-tr ${isDnp ? 'matchup-detail-tr-dnp' : ''}`}>
                   <td className="matchup-detail-td matchup-detail-td-player">
-                    {p.player_team_short_name && (
-                      <img src={`/badges/${p.player_team_short_name}.svg`} alt="" className="matchup-detail-player-badge" onError={e => { e.target.style.display = 'none' }} />
-                    )}
-                    <span className={`matchup-detail-player-name${isOwnedByYou ? ' matchup-detail-player-name--owned-by-you' : ''}`} title={p.player_name}>{p.player_name}</span>
+                    <div className="matchup-detail-td-player-inner">
+                      {p.player_team_short_name && (
+                        <img src={`/badges/${p.player_team_short_name}.svg`} alt="" className="matchup-detail-player-badge" onError={e => { e.target.style.display = 'none' }} />
+                      )}
+                      <span className={`matchup-detail-player-name${isOwnedByYou ? ' matchup-detail-player-name--owned-by-you' : ''}`} title={p.player_name}>{p.player_name}</span>
+                    </div>
                   </td>
                   <td className={`matchup-detail-td matchup-detail-td-mins ${(isDnp || (isLive && (p.minutes == null || Number(p.minutes) === 0))) ? 'matchup-detail-cell-muted' : ''}`}>
                     {(p.minutes != null && Number(p.minutes) > 0) ? (

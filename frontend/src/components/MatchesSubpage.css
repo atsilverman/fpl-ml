@@ -416,7 +416,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   .matchup-detail-td {
     padding: 6px 4px;
   }
-  .matchup-detail-td-player {
+  .matchup-detail-td-player-inner {
     padding: 5px 6px;
     padding-left: 10px;
     gap: 6px;
@@ -997,8 +997,12 @@ html[data-theme="dark"] .gw-top-points-pill {
   color: var(--text-primary);
 }
 
-/* Player column: same first-column treatment as schedule (bg-secondary + thin shadow) */
+/* Player column: inner div is sticky so iOS Safari keeps column fixed (sticky on td is unreliable) */
 .matchup-detail-td-player {
+  padding: 0;
+  vertical-align: middle;
+}
+.matchup-detail-td-player-inner {
   position: sticky;
   left: 0;
   z-index: 2;
@@ -1007,9 +1011,11 @@ html[data-theme="dark"] .gw-top-points-pill {
   gap: 8px;
   padding: 6px 8px;
   padding-left: 12px;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  /* Promote layer so sticky column paints above scrolling content (e.g. iOS Safari) */
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;

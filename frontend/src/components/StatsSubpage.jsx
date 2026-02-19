@@ -912,14 +912,16 @@ export default function StatsSubpage() {
                             aria-label={`${t.team_name || t.team_short_name || 'Team'}, remove from compare`}
                           >
                             <td className="league-standings-bento-team">
-                              <div className="research-stats-player-cell research-stats-team-cell">
-                                {t.team_short_name && (
-                                  <img src={`/badges/${t.team_short_name}.svg`} alt="" className="research-stats-badge" />
-                                )}
-                                <div className="research-stats-player-cell-lines">
-                                  <span className="league-standings-bento-team-name" title={t.team_name}>
-                                    {t.team_name || t.team_short_name || '—'}
-                                  </span>
+                              <div className="research-stats-sticky-cell-inner">
+                                <div className="research-stats-player-cell research-stats-team-cell">
+                                  {t.team_short_name && (
+                                    <img src={`/badges/${t.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                  )}
+                                  <div className="research-stats-player-cell-lines">
+                                    <span className="league-standings-bento-team-name" title={t.team_name}>
+                                      {t.team_name || t.team_short_name || '—'}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -1024,10 +1026,12 @@ export default function StatsSubpage() {
                     Array.from({ length: 12 }, (_, i) => (
                       <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
                         <td className="league-standings-bento-team">
-                          <div className="research-stats-player-cell">
-                            <span className="skeleton-text research-stats-skeleton-badge" />
-                            <div className="research-stats-player-cell-lines">
-                              <span className="skeleton-text research-stats-skeleton-name" />
+                          <div className="research-stats-sticky-cell-inner">
+                            <div className="research-stats-player-cell">
+                              <span className="skeleton-text research-stats-skeleton-badge" />
+                              <div className="research-stats-player-cell-lines">
+                                <span className="skeleton-text research-stats-skeleton-name" />
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1057,18 +1061,20 @@ export default function StatsSubpage() {
                           aria-label={compareModeActive ? `${t.team_name || t.team_short_name || 'Team'}, add to compare` : undefined}
                         >
                         <td className="league-standings-bento-team">
-                          <div className="research-stats-player-cell research-stats-team-cell">
-                            {t.team_short_name && (
-                              <img
-                                src={`/badges/${t.team_short_name}.svg`}
-                                alt=""
-                                className="research-stats-badge"
-                              />
-                            )}
-                            <div className="research-stats-player-cell-lines">
-                              <span className="league-standings-bento-team-name" title={t.team_name}>
-                                {t.team_name || t.team_short_name || '—'}
-                              </span>
+                          <div className="research-stats-sticky-cell-inner">
+                            <div className="research-stats-player-cell research-stats-team-cell">
+                              {t.team_short_name && (
+                                <img
+                                  src={`/badges/${t.team_short_name}.svg`}
+                                  alt=""
+                                  className="research-stats-badge"
+                                />
+                              )}
+                              <div className="research-stats-player-cell-lines">
+                                <span className="league-standings-bento-team-name" title={t.team_name}>
+                                  {t.team_name || t.team_short_name || '—'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1200,29 +1206,31 @@ export default function StatsSubpage() {
                             aria-label={`${p.web_name || 'Player'}, remove from compare`}
                           >
                             <td className="league-standings-bento-team">
-                              <div className="research-stats-player-cell">
-                                {p.team_short_name && (
-                                  <img src={`/badges/${p.team_short_name}.svg`} alt="" className="research-stats-badge" />
-                                )}
-                                <div className="research-stats-player-cell-lines">
-                                  <span
-                                    className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
-                                    title={p.web_name}
-                                  >
-                                    {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
-                                  </span>
-                                  <div className="research-stats-meta-line">
-                                    {p.position != null && (
-                                      <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
-                                        {POSITION_LABELS[p.position] ?? '—'}
-                                      </span>
-                                    )}
-                                    {p.cost_tenths != null && (
-                                      <>
-                                        <span className="research-stats-meta-dot">·</span>
-                                        <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
-                                      </>
-                                    )}
+                              <div className="research-stats-sticky-cell-inner">
+                                <div className="research-stats-player-cell">
+                                  {p.team_short_name && (
+                                    <img src={`/badges/${p.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                  )}
+                                  <div className="research-stats-player-cell-lines">
+                                    <span
+                                      className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
+                                      title={p.web_name}
+                                    >
+                                      {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
+                                    </span>
+                                    <div className="research-stats-meta-line">
+                                      {p.position != null && (
+                                        <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
+                                          {POSITION_LABELS[p.position] ?? '—'}
+                                        </span>
+                                      )}
+                                      {p.cost_tenths != null && (
+                                        <>
+                                          <span className="research-stats-meta-dot">·</span>
+                                          <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1359,11 +1367,13 @@ export default function StatsSubpage() {
                     Array.from({ length: 12 }, (_, i) => (
                       <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
                         <td className="league-standings-bento-team">
-                          <div className="research-stats-player-cell">
-                            <span className="skeleton-text research-stats-skeleton-badge" />
-                            <div className="research-stats-player-cell-lines">
-                              <span className="skeleton-text research-stats-skeleton-name" />
-                              <span className="skeleton-text research-stats-skeleton-meta" />
+                          <div className="research-stats-sticky-cell-inner">
+                            <div className="research-stats-player-cell">
+                              <span className="skeleton-text research-stats-skeleton-badge" />
+                              <div className="research-stats-player-cell-lines">
+                                <span className="skeleton-text research-stats-skeleton-name" />
+                                <span className="skeleton-text research-stats-skeleton-meta" />
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1391,33 +1401,35 @@ export default function StatsSubpage() {
                         aria-label={compareModeActive ? `${p.web_name || 'Player'}, add to compare` : undefined}
                       >
                         <td className="league-standings-bento-team">
-                          <div className="research-stats-player-cell">
-                            {p.team_short_name && (
-                              <img
-                                src={`/badges/${p.team_short_name}.svg`}
-                                alt=""
-                                className="research-stats-badge"
-                              />
-                            )}
-                            <div className="research-stats-player-cell-lines">
-                              <span
-                                className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
-                                title={p.web_name}
-                              >
-                                {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
-                              </span>
-                              <div className="research-stats-meta-line">
-                                {p.position != null && (
-                                  <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
-                                    {POSITION_LABELS[p.position] ?? '—'}
-                                  </span>
-                                )}
-                                {p.cost_tenths != null && (
-                                  <>
-                                    <span className="research-stats-meta-dot">·</span>
-                                    <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
-                                  </>
-                                )}
+                          <div className="research-stats-sticky-cell-inner">
+                            <div className="research-stats-player-cell">
+                              {p.team_short_name && (
+                                <img
+                                  src={`/badges/${p.team_short_name}.svg`}
+                                  alt=""
+                                  className="research-stats-badge"
+                                />
+                              )}
+                              <div className="research-stats-player-cell-lines">
+                                <span
+                                  className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
+                                  title={p.web_name}
+                                >
+                                  {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
+                                </span>
+                                <div className="research-stats-meta-line">
+                                  {p.position != null && (
+                                    <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
+                                      {POSITION_LABELS[p.position] ?? '—'}
+                                    </span>
+                                  )}
+                                  {p.cost_tenths != null && (
+                                    <>
+                                      <span className="research-stats-meta-dot">·</span>
+                                      <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
+                                    </>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>

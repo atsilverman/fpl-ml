@@ -942,24 +942,40 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky player/team column: stays fixed while stat columns scroll; z above stat cells so values slide underneath */
-.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team,
-.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
+/* Sticky player/team column: header (th) stays fixed; body (td) uses inner div for iOS Safari td sticky bug */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
   left: 0;
   z-index: 5;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   box-sizing: border-box;
-  /* Promote to own layer so on iOS Safari sticky column paints above scrolling content (z-level slide-under) */
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   isolation: isolate;
 }
-/* Header row sticks on vertical scroll; team/player column needs higher z so corner stays on top */
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 6;
+}
+/* Inner div inside td: sticky here so iOS Safari keeps body column fixed (sticky on td is unreliable) */
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 100%;
+  padding: 6px 8px;
+  box-sizing: border-box;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  isolation: isolate;
 }
 
 /* Stat columns: explicit lower z so they slide underneath the sticky player/team column (mobile and desktop) */
@@ -1038,11 +1054,11 @@
   text-overflow: ellipsis;
 }
 .research-stats-page .research-stats-table td.league-standings-bento-team {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  padding: 0;
+  overflow: visible;
+}
+.research-stats-page .research-stats-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
   overflow: hidden;
-  padding: 6px 8px;
 }
 .research-stats-table .league-standings-bento-team .research-stats-player-cell {
   flex: 1 1 0%;
@@ -1160,8 +1176,12 @@
   }
 
   /* Sticky column: higher z so player/team stays on top when PTS etc. scroll underneath */
-  .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team,
-  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
+  .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
+    z-index: 10;
+    isolation: isolate;
+    background: var(--bg-secondary);
+  }
+  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
     z-index: 10;
     isolation: isolate;
     background: var(--bg-secondary);

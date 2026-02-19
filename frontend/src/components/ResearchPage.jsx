@@ -20,7 +20,7 @@ export default function ResearchPage() {
   const setView = (v) => setSearchParams({ view: v }, { replace: true })
 
   return (
-    <div className="research-page">
+    <div className={`research-page ${view === 'schedule' ? 'research-page--schedule-view' : ''}`}>
       <div className="subpage-toolbar-wrap">
         <nav
           className="subpage-view-toggle"

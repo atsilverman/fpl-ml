@@ -139,16 +139,14 @@ export default function OnboardingPage() {
       <div className="onboarding-card">
         <header className="onboarding-header">
           <h1 className="onboarding-title">Welcome to FPL Mini League</h1>
-          <p className="onboarding-description">
-            Track your Fantasy Premier League mini league and your team in one place. Choose your league and manager to get started.
-          </p>
+          <p className="onboarding-description">Pick your league and manager to get started.</p>
         </header>
 
         <div className="onboarding-steps">
           {step === 1 && (
             <div className="onboarding-step">
               <h2 className="onboarding-step-title">Choose your league</h2>
-              <p className="onboarding-step-description">Select the mini league you want to track</p>
+              <p className="onboarding-step-description">Select your mini league</p>
               {leaguesLoading ? (
                 <div className="onboarding-loading">Loading leagues…</div>
               ) : leagues.length === 0 ? (
@@ -203,11 +201,13 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="onboarding-step">
-              <button type="button" className="onboarding-back" onClick={handleBack}>
-                ← Back to leagues
-              </button>
-              <h2 className="onboarding-step-title">Choose your manager</h2>
-              <p className="onboarding-step-description">Select the manager (team) to view on your dashboard</p>
+              <div className="onboarding-step-top">
+                <button type="button" className="onboarding-back" onClick={handleBack}>
+                  ← Back to leagues
+                </button>
+                <h2 className="onboarding-step-title">Choose your manager</h2>
+              </div>
+              <p className="onboarding-step-description">Select the manager to view on your dashboard</p>
               {managersLoading ? (
                 <div className="onboarding-loading">Loading managers…</div>
               ) : managers.length === 0 ? (
@@ -253,19 +253,19 @@ export default function OnboardingPage() {
             const isLastDifficulty = step === 5
             return (
               <div className="onboarding-step onboarding-step-difficulty">
-                <div className="onboarding-wizard-step-indicator">
-                  Step {step} of {WIZARD_TOTAL_STEPS}
+                <div className="onboarding-step-top">
+                  <button type="button" className="onboarding-back" onClick={handleBackFromDifficulty}>
+                    {step === 3 ? '← Back to manager' : `← Back to ${DIFFICULTY_WIZARD_STEPS.find((s) => s.step === step - 1)?.title ?? 'previous'}`}
+                  </button>
+                  <span className="onboarding-wizard-step-indicator">Step {step} of {WIZARD_TOTAL_STEPS}</span>
                 </div>
-                <button type="button" className="onboarding-back" onClick={handleBackFromDifficulty}>
-                  {step === 3 ? '← Back to manager' : `← Back to ${DIFFICULTY_WIZARD_STEPS.find((s) => s.step === step - 1)?.title ?? 'previous'}`}
-                </button>
                 <h2 className="onboarding-step-title">
                   {wizardStep?.title} difficulty (optional)
                 </h2>
                 <p className="onboarding-step-description onboarding-difficulty-message">
                   {step === 3
-                    ? 'Customize how difficult each team is for schedule and data tables. These values replace the default FPL rankings (1 = easiest, 5 = hardest). You can change this later in Customize.'
-                    : `Set ${wizardStep?.title?.toLowerCase()} difficulty per team. 1 = easiest, 5 = hardest.`}
+                    ? 'Set difficulty per team (1 = easiest, 5 = hardest). You can change this later in Customize.'
+                    : `${wizardStep?.title} per team: 1 = easiest, 5 = hardest.`}
                 </p>
                 {scheduleLoading ? (
                   <div className="onboarding-loading">Loading teams…</div>
@@ -302,32 +302,20 @@ export default function OnboardingPage() {
                       />
                     </div>
                     <div className="onboarding-step-actions">
-                      {isLastDifficulty ? (
-                        <>
-                          <button
-                            type="button"
-                            className="onboarding-cta"
-                            onClick={handleContinueToDashboard}
-                          >
-                            Continue to dashboard
-                          </button>
-                          <button
-                            type="button"
-                            className="onboarding-skip"
-                            onClick={handleSkipDifficulty}
-                          >
-                            Skip
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          className="onboarding-cta"
-                          onClick={handleNextDifficultyStep}
-                        >
-                          Next
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        className="onboarding-cta"
+                        onClick={isLastDifficulty ? handleContinueToDashboard : handleNextDifficultyStep}
+                      >
+                        {isLastDifficulty ? 'Continue to dashboard' : 'Next'}
+                      </button>
+                      <button
+                        type="button"
+                        className="onboarding-skip"
+                        onClick={handleSkipDifficulty}
+                      >
+                        Skip
+                      </button>
                     </div>
                   </>
                 )}

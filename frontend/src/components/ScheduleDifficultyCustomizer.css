@@ -56,7 +56,7 @@
   border-radius: 6px;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-close:hover {
     color: var(--text-primary);
     background: var(--bg-secondary);
@@ -87,7 +87,7 @@
   cursor: pointer;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-stat-tab:hover {
     color: var(--text-primary);
     background: var(--bg-secondary);
@@ -151,7 +151,7 @@
   cursor: pointer;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-baseline-btn:hover {
     color: var(--text-primary);
     border-color: var(--accent-blue);
@@ -176,7 +176,7 @@
   cursor: pointer;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-reset:hover {
     background: var(--bg-card);
     color: var(--text-primary);
@@ -347,7 +347,7 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: var(--text-primary);
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-btn--cancel:hover {
     background: var(--bg-card);
   }
@@ -359,7 +359,7 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: white;
 }
 
-@media (hover: hover) {
+@media (hover: hover) and (min-width: 769px) {
   .schedule-customizer-btn--save:hover {
     filter: brightness(1.05);
   }

@@ -45,6 +45,69 @@
   }
 }
 
+/* Mobile landscape only: Schedule view – subpage selectors on left, stacked vertically, table on right */
+@media (max-width: 768px) and (orientation: landscape) {
+  .research-page.research-page--schedule-view {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .research-page.research-page--schedule-view .subpage-toolbar-wrap {
+    flex-shrink: 0;
+    width: auto;
+    margin: 0;
+    padding: 8px 6px;
+    align-self: stretch;
+    position: relative;
+    top: auto;
+  }
+
+  .research-page.research-page--schedule-view .subpage-view-toggle {
+    flex-direction: column;
+    height: auto;
+    width: 48px;
+    min-width: 48px;
+    flex: 0 0 auto;
+    padding: 6px 0;
+    gap: 6px;
+  }
+
+  /* Vertical slider for 4 options: 26px button height + 6px gap = 32px per slot */
+  .research-page.research-page--schedule-view .subpage-view-toggle[data-options="4"] .subpage-view-toggle-slider {
+    width: 26px;
+    height: 26px;
+    left: 50%;
+    margin-left: -13px;
+    top: 6px;
+    transform: translateY(calc(var(--slider-offset, 0) * 32px));
+  }
+
+  .research-page.research-page--schedule-view .subpage-view-toggle-button {
+    flex: 0 0 26px;
+    min-width: 26px;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    margin: 0 auto;
+  }
+
+  .research-page.research-page--schedule-view .subpage-view-toggle-label {
+    display: none;
+  }
+
+  .research-page.research-page--schedule-view .subpage-view-toggle-icon {
+    margin: 0;
+  }
+
+  .research-page.research-page--schedule-view .research-page-content {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
 .research-card {
   flex: 1 1 auto;
   min-height: 0;
