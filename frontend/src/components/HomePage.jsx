@@ -117,10 +117,10 @@ export default function HomePage() {
     if (!currentGameweekPlayers?.length) return null
     const starters = currentGameweekPlayers.filter((p) => p.position >= 1 && p.position <= 11)
     let total = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
-    const subbedOut = currentGameweekPlayers.find((p) => p.was_auto_subbed_out)
-    const subbedIn = currentGameweekPlayers.find((p) => p.was_auto_subbed_in)
-    if (subbedOut && subbedIn) {
-      total = total - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    const subbedOutRows = currentGameweekPlayers.filter((p) => p.was_auto_subbed_out)
+    const subbedInRows = currentGameweekPlayers.filter((p) => p.was_auto_subbed_in)
+    if (subbedOutRows.length && subbedInRows.length) {
+      total = total - subbedOutRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0) + subbedInRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0)
     }
     const transferCost = managerData?.transferCost ?? 0
     return total - transferCost

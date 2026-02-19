@@ -824,6 +824,10 @@
   background: var(--bg-secondary);
   box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
   box-sizing: border-box;
+  /* Promote to own layer so on iOS Safari sticky column paints above scrolling content (z-level slide-under) */
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 /* Header row sticks on vertical scroll; team/player column needs higher z so corner stays on top */
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
@@ -853,6 +857,8 @@
   overflow-x: auto;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
+  /* Establish scroll container for sticky column on iOS Safari */
+  position: relative;
 }
 
 /* Player/team column: 120px, single-line layout so names and info fit without extra rows */

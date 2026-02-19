@@ -1176,7 +1176,7 @@ export default function StatsSubpage() {
                                     {p.cost_tenths != null && (
                                       <>
                                         <span className="research-stats-meta-dot">·</span>
-                                        <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}M</span>
+                                        <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
                                       </>
                                     )}
                                   </div>
@@ -1371,7 +1371,7 @@ export default function StatsSubpage() {
                                 {p.cost_tenths != null && (
                                   <>
                                     <span className="research-stats-meta-dot">·</span>
-                                    <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}M</span>
+                                    <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
                                   </>
                                 )}
                               </div>

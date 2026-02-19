@@ -179,10 +179,10 @@ export default function MiniLeaguePage() {
     if (!configuredManagerPlayers?.length) return configuredManagerData?.gameweekPoints ?? null
     const starters = configuredManagerPlayers.filter((p) => p.position >= 1 && p.position <= 11)
     let total = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
-    const subbedOut = configuredManagerPlayers.find((p) => p.was_auto_subbed_out)
-    const subbedIn = configuredManagerPlayers.find((p) => p.was_auto_subbed_in)
-    if (subbedOut && subbedIn) {
-      total = total - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    const subbedOutRows = configuredManagerPlayers.filter((p) => p.was_auto_subbed_out)
+    const subbedInRows = configuredManagerPlayers.filter((p) => p.was_auto_subbed_in)
+    if (subbedOutRows.length && subbedInRows.length) {
+      total = total - subbedOutRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0) + subbedInRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0)
     }
     const transferCost = configuredManagerData?.transferCost ?? 0
     return total - transferCost
@@ -196,10 +196,10 @@ export default function MiniLeaguePage() {
     if (!selectedManagerPlayers?.length || selectedManagerSummary?.transferCost == null) return null
     const starters = selectedManagerPlayers.filter((p) => p.position >= 1 && p.position <= 11)
     let raw = starters.reduce((sum, p) => sum + (p.contributedPoints ?? 0), 0)
-    const subbedOut = selectedManagerPlayers.find((p) => p.was_auto_subbed_out)
-    const subbedIn = selectedManagerPlayers.find((p) => p.was_auto_subbed_in)
-    if (subbedOut && subbedIn) {
-      raw = raw - (subbedOut.contributedPoints ?? 0) + (subbedIn.contributedPoints ?? 0)
+    const subbedOutRows = selectedManagerPlayers.filter((p) => p.was_auto_subbed_out)
+    const subbedInRows = selectedManagerPlayers.filter((p) => p.was_auto_subbed_in)
+    if (subbedOutRows.length && subbedInRows.length) {
+      raw = raw - subbedOutRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0) + subbedInRows.reduce((s, p) => s + (p.contributedPoints ?? 0), 0)
     }
     return raw - (selectedManagerSummary.transferCost ?? 0)
   }, [selectedManagerPlayers, selectedManagerSummary?.transferCost])

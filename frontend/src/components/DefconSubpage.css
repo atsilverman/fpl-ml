@@ -503,11 +503,19 @@
   text-overflow: ellipsis;
 }
 
+.defcon-position-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .defcon-v-opp {
-  font-size: 10px;
-  font-weight: 400;
+  font-size: 8px;
+  font-weight: 500;
   color: var(--text-secondary, #666);
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 /* Same greyish pill as matches page top-points position fallback */
@@ -675,9 +683,17 @@ html[data-theme="dark"] .defcon-position-badge {
     font-size: 13px;
   }
 
+  .defcon-position-row {
+    gap: 5px;
+  }
+
   .defcon-position-badge {
     font-size: 7px;
     padding: 1px 3px;
+  }
+
+  .defcon-v-opp {
+    font-size: 9px;
   }
 
   .defcon-fraction {

@@ -95,7 +95,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       case 'player': return (player.player_name || '').toLowerCase()
       case 'minutes': return player.minutes ?? -1
       case 'opp': return (player.opponent_team_short_name || '').toLowerCase()
-      case 'points': return player.contributedPoints ?? player.points ?? 0
+      case 'points': return player.totalContributedPointsForSlot ?? player.contributedPoints ?? player.points ?? 0
       case 'impact': return (typeof impactByPlayerId[pid] === 'number' ? impactByPlayerId[pid] : -Infinity)
       case 'goals_scored': return player.goals_scored ?? 0
       case 'assists': return player.assists ?? 0
@@ -131,29 +131,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     bench.sort(cmp)
     return [...starters, ...bench]
   }, [data, sortColumn, sortDirection, impactByPlayerId])
-
-  // DGW: when points are a merged total (one row has total, other has 0), collapse PTS cell like player name.
-  // Group by (position, player_id) so we find pairs even when sort separates the two rows.
-  const dgwAggregateKeys = useMemo(() => {
-    const set = new Set()
-    const list = sortedData ?? []
-    const byKey = new Map()
-    for (const row of list) {
-      if (!row?.isDgwRow) continue
-      const key = `${Number(row.position)}-${Number(row.player_id)}`
-      if (!byKey.has(key)) byKey.set(key, [])
-      byKey.get(key).push(row)
-    }
-    byKey.forEach((rows, key) => {
-      if (rows.length !== 2) return
-      const p0 = Number(rows[0].points) || 0
-      const p1 = Number(rows[1].points) || 0
-      const total0 = Number(rows[0].contributedPoints ?? rows[0].points) || 0
-      const total1 = Number(rows[1].contributedPoints ?? rows[1].points) || 0
-      if ((total0 > 0 && p1 === 0) || (total1 > 0 && p0 === 0)) set.add(key)
-    })
-    return set
-  }, [sortedData])
 
   const handleSort = (key) => {
     if (!sortable) return
@@ -209,7 +186,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   const IMPACT_BAR_MAX = 100
 
-  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick, isDgwAggregateFirstRow = false, hideDgwPointsCell = false }) => {
+  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick }) => {
     const isDgwFirstRow = Boolean(player.isDgwRow && player.dgwRowIndex === 0)
     const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
     const captainLabel = !isDgwSecondRow && player.is_captain
@@ -372,13 +349,10 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <span className="gameweek-points-col-sep" aria-hidden />
           </td>
         )}
-        {!hideDgwPointsCell && (
-          <td
-            rowSpan={isDgwAggregateFirstRow ? 2 : undefined}
-            className={`gameweek-points-td gameweek-points-td-pts ${isDgwAggregateFirstRow ? ' gameweek-points-td-pts-dgw-span' : ''} ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
-            title={isDgwAggregateFirstRow ? 'GW total (both games) – per-game breakdown not yet available' : ((player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined)}
-          >
-            {isDgwAggregateFirstRow && <span className="gameweek-points-pts-aggregate-label" aria-hidden>total </span>}
+        <td
+          className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
+          title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
+        >
             {isTop10Pts ? (
               <span
                 className="gameweek-points-player-points-badge rank-highlight"
@@ -389,8 +363,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             ) : (
               formatNumber(ptsDisplay)
             )}
-          </td>
-        )}
+        </td>
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
@@ -619,24 +592,14 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <tbody>
               {(() => {
                 const firstBenchRowIndex = sortedData.findIndex((p) => p.position >= 12)
-                return sortedData.map((player, index) => {
-                  const key = `${Number(player.position)}-${Number(player.player_id)}`
-                  const isAggregatePair = dgwAggregateKeys.has(key)
-                  const nextRow = sortedData[index + 1]
-                  const isNextRowSameDgwSecond = nextRow?.isDgwRow && nextRow.dgwRowIndex === 1 && Number(nextRow.position) === Number(player.position) && Number(nextRow.player_id) === Number(player.player_id)
-                  const prevRow = index > 0 ? sortedData[index - 1] : null
-                  const isPrevRowSameDgwFirst = prevRow?.isDgwRow && prevRow.dgwRowIndex === 0 && Number(prevRow.position) === Number(player.position) && Number(prevRow.player_id) === Number(player.player_id)
-                  return (
+                return sortedData.map((player, index) => (
                   <PlayerTableRow
                     key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
                     player={player}
                     isFirstBenchRow={index === firstBenchRowIndex}
                     onRowClick={onPlayerRowClick}
-                    isDgwAggregateFirstRow={player.isDgwRow && player.dgwRowIndex === 0 && isAggregatePair && isNextRowSameDgwSecond}
-                    hideDgwPointsCell={player.isDgwRow && player.dgwRowIndex === 1 && isAggregatePair && isPrevRowSameDgwFirst}
                   />
-                  )
-                })
+                ))
               })()}
             </tbody>
           </table>

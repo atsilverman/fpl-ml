@@ -23,11 +23,7 @@ function DefconRow({ player, opponentShortName, isDoubleGameweek }) {
 
   const statusDot = is_live
     ? { className: 'defcon-status-dot defcon-status-dot--live', title: 'Live', ariaLabel: 'Live' }
-    : match_provisional
-      ? { className: 'defcon-status-dot defcon-status-dot--provisional', title: 'Match finished (provisional, stats may update)', ariaLabel: 'Provisional' }
-      : match_confirmed
-        ? { className: 'defcon-status-dot defcon-status-dot--complete', title: 'Match finished (confirmed)', ariaLabel: 'Confirmed' }
-        : null
+    : null
 
   return (
     <div className={`defcon-row-card${defconAchieved ? ' defcon-row-card--achieved' : ''}`}>
@@ -42,7 +38,6 @@ function DefconRow({ player, opponentShortName, isDoubleGameweek }) {
       <div className="defcon-player-info">
         <div className="defcon-name-row">
           <span className="defcon-name">{web_name}</span>
-          {isDoubleGameweek && opponentShortName && <span className="defcon-v-opp"> vs {opponentShortName}</span>}
           {statusDot && (
             <span className="defcon-status-dot-wrap" aria-hidden>
               <span
@@ -53,9 +48,12 @@ function DefconRow({ player, opponentShortName, isDoubleGameweek }) {
             </span>
           )}
         </div>
-        <span className={`defcon-position-badge defcon-position-badge--${position}`}>
-          {positionLabel}
-        </span>
+        <div className="defcon-position-row">
+          <span className={`defcon-position-badge defcon-position-badge--${position}`}>
+            {positionLabel}
+          </span>
+          {isDoubleGameweek && opponentShortName && <span className="defcon-v-opp">vs {opponentShortName}</span>}
+        </div>
       </div>
       {notches > 0 && (
         <div className="defcon-notch-badge">
@@ -322,20 +320,8 @@ export default function DefconSubpage({ isActive = true }) {
           <Info size={14} strokeWidth={2} />
         </button>
         {showInfoPopup && (
-          <div className="gw-legend-popup" ref={infoPopupRef} role="dialog" aria-label="Status indicators">
+          <div className="gw-legend-popup" ref={infoPopupRef} role="dialog" aria-label="Legend">
             <div className="gw-legend-popup-title">Legend</div>
-            <div className="gw-legend-popup-row">
-              <span className="gw-legend-popup-row-icon">
-                <span className="gw-legend-popup-dot gw-legend-popup-dot--complete" aria-hidden />
-              </span>
-              <span className="gw-legend-popup-text">Match finished (confirmed)</span>
-            </div>
-            <div className="gw-legend-popup-row">
-              <span className="gw-legend-popup-row-icon">
-                <span className="gw-legend-popup-dot gw-legend-popup-dot--provisional" aria-hidden />
-              </span>
-              <span className="gw-legend-popup-text">Match finished (provisional, stats may update)</span>
-            </div>
             <div className="gw-legend-popup-row">
               <span className="gw-legend-popup-live-dot-wrap">
                 <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />

@@ -357,19 +357,10 @@
 .gameweek-points-td-player-dgw-span {
   vertical-align: middle;
 }
+/* DGW: second row PTS is per-match; optional subtle styling so both rows stay readable */
 .gameweek-points-tr-dgw-second .gameweek-points-td-pts {
   font-size: 0.95em;
   color: var(--text-secondary);
-}
-
-/* DGW merged total: PTS cell spans both rows (like player name) when per-fixture breakdown not available */
-.gameweek-points-td-pts-dgw-span {
-  vertical-align: middle;
-}
-.gameweek-points-pts-aggregate-label {
-  font-size: 0.75em;
-  color: var(--text-secondary);
-  margin-right: 2px;
 }
 
 /* Autosub row highlighting: subtle red = subbed out, subtle green = subbed in */
