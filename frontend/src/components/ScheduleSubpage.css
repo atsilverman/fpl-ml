@@ -19,8 +19,8 @@
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 0;
   min-width: 0;
 }
@@ -35,38 +35,138 @@
   letter-spacing: 0.5px;
 }
 
+/* Match BentoCard expand icons: info (i) + filter/collapse badge */
+.schedule-header-icon-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.schedule-header-icon-svg {
+  width: 11px;
+  height: 11px;
+}
+
+/* Info (legend) button – match .bento-card-info-icon (36×28, bg-secondary, radius 5px) */
+.schedule-legend-icon-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 28px;
+  min-width: 36px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  opacity: 0.85;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+@media (hover: hover) {
+  .schedule-legend-icon-btn:hover:not(:disabled) {
+    opacity: 1;
+    background-color: var(--bg-card);
+    border-color: var(--text-secondary);
+  }
+}
+
+.schedule-legend-icon-btn--active {
+  opacity: 1;
+  background-color: var(--accent-blue-bg, rgba(59, 130, 246, 0.15));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+
+/* Filter button – match .bento-card-expand-icon--collapse (28×24, collapse badge) */
 .schedule-filter-icon-btn {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
-  height: 28px;
-  min-height: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
+  margin: 0;
   padding: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
   border-radius: 6px;
-  color: var(--text-secondary);
+  opacity: 0.85;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition: opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  box-sizing: border-box;
 }
 
 @media (hover: hover) {
   .schedule-filter-icon-btn:hover:not(:disabled) {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
+    opacity: 1;
+    border-color: var(--collapse-icon-color, #64748b);
   }
 }
 
 .schedule-filter-icon-btn--active {
-  color: var(--accent-blue);
-  border-color: var(--accent-blue);
+  opacity: 1;
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.15));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
 }
 
 .schedule-filter-icon-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+.schedule-legend-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 8px;
+  min-width: 140px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.schedule-legend-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.schedule-legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.schedule-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.schedule-legend-row .schedule-cell-difficulty-pill {
+  flex-shrink: 0;
+}
+.schedule-legend-row .schedule-cell-abbr-display {
+  font-size: 10px;
+}
+.schedule-legend-label {
+  font-size: 11px;
+  color: var(--text-primary);
 }
 
 .schedule-filter-popover {
@@ -1053,29 +1153,66 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   flex-shrink: 0;
 }
 
-/* Opponent difficulty (FPL strength 1–5): green = easier, red = harder; theme-aware. 1 and 5 emphasised. */
-.schedule-cell-difficulty-1 {
-  background: color-mix(in srgb, var(--accent-green, #10b981) 40%, var(--bg-primary));
-  font-weight: 700;
-}
-.schedule-cell-difficulty-1 .schedule-cell-abbr-display {
-  font-weight: 800;
-}
-.schedule-cell-difficulty-2 {
-  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-primary));
-}
-.schedule-cell-difficulty-3 {
+/* Opponent difficulty pill (FPL strength 1–5): same language as stats subpage leader pill – rounded pill, green = easier, red = harder. */
+.schedule-cell-difficulty-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 34px;
+  min-height: 22px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-color);
   background: var(--bg-card);
+  box-sizing: border-box;
+  white-space: nowrap;
 }
-.schedule-cell-difficulty-4 {
-  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-primary));
+.schedule-cell-difficulty-pill--1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 48%, var(--border-color));
 }
-.schedule-cell-difficulty-5 {
-  background: color-mix(in srgb, var(--accent-red, #ef4444) 40%, var(--bg-primary));
-  font-weight: 700;
+.schedule-cell-difficulty-pill--1 .schedule-cell-abbr-display {
+  font-weight: 900;
+  color: var(--accent-green, #10b981);
 }
-.schedule-cell-difficulty-5 .schedule-cell-abbr-display {
-  font-weight: 800;
+.schedule-cell-difficulty-pill--2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 6%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--border-color));
+}
+.schedule-cell-difficulty-pill--2 .schedule-cell-abbr-display {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent-green, #10b981) 75%, white); /* brighter green vs darker 1 */
+}
+.schedule-cell-difficulty-pill--3 {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+.schedule-cell-difficulty-pill--3 .schedule-cell-abbr-display {
+  font-weight: 600;
+}
+.schedule-cell-difficulty-pill--4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 6%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 22%, var(--border-color));
+}
+.schedule-cell-difficulty-pill--4 .schedule-cell-abbr-display {
+  font-weight: 600;
+  color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, white); /* brighter red vs darker 5 */
+}
+.schedule-cell-difficulty-pill--5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 48%, var(--border-color));
+}
+.schedule-cell-difficulty-pill--5 .schedule-cell-abbr-display {
+  font-weight: 900;
+  color: var(--accent-red, #ef4444);
+}
+
+.schedule-cell--compact .schedule-cell-difficulty-pill {
+  min-width: 28px;
+  min-height: 18px;
+  padding: 1px 4px;
+  border-radius: 4px;
 }
 
 @media (max-width: 768px) {

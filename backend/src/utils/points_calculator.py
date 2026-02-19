@@ -6,6 +6,7 @@ automatic substitutions, multipliers, and transfer costs.
 """
 
 import logging
+from collections import defaultdict
 from typing import Dict, List, Optional, Set
 
 from database.supabase_client import SupabaseClient
@@ -47,23 +48,25 @@ class PointsCalculator:
         if not stats:
             return {"points": 0, "bonus": 0, "bonus_status": "confirmed"}
         
-        stats_data = stats[0]
-        points = stats_data.get("total_points", 0)
-        bonus = stats_data.get("bonus", 0)
-        bonus_status = stats_data.get("bonus_status", "provisional")
-        bps = stats_data.get("bps", 0)
-        match_finished = stats_data.get("match_finished", False)
-        match_finished_provisional = stats_data.get("match_finished_provisional", False)
-        
-        # Only add provisional when in provisional period; when official, total_points already includes bonus
-        if match_finished or match_finished_provisional:
-            if bonus_status == "provisional" and bonus == 0:
-                provisional_bonus = stats_data.get("provisional_bonus", 0)
-                points = points + provisional_bonus
-            elif bonus_status == "confirmed" and bonus > 0:
-                # Bonus already included in total_points from FPL
-                pass
-        
+        # DGW: sum total_points and bonus across all fixture rows
+        points = 0
+        bonus = 0
+        any_provisional = False
+        for stats_data in stats:
+            row_pts = stats_data.get("total_points", 0)
+            row_bonus = stats_data.get("bonus", 0)
+            bonus_status = stats_data.get("bonus_status", "provisional")
+            match_finished = stats_data.get("match_finished", False)
+            match_finished_provisional = stats_data.get("match_finished_provisional", False)
+            if bonus_status == "provisional":
+                any_provisional = True
+            if match_finished or match_finished_provisional:
+                if bonus_status == "provisional" and row_bonus == 0:
+                    provisional_bonus = stats_data.get("provisional_bonus", 0)
+                    row_pts = row_pts + provisional_bonus
+            points += row_pts
+            bonus += row_bonus
+        bonus_status = "provisional" if any_provisional else "confirmed"
         return {
             "points": points,
             "bonus": bonus,
@@ -75,20 +78,23 @@ class PointsCalculator:
         picks: List[Dict],
         automatic_subs: List[Dict],
         player_minutes: Dict[int, int],
-        player_fixtures: Dict[int, Dict]
+        player_fixtures: Dict[int, Dict],
+        position_by_player_id: Optional[Dict[int, int]] = None,
     ) -> List[Dict]:
         """
         Apply automatic substitutions with match status checks.
-        
+
         Uses FPL API automatic_subs array if available, otherwise calculates
         auto-subs based on FPL rules (0 minutes + match finished).
-        
+
         Args:
             picks: List of pick dictionaries
             automatic_subs: List of automatic substitution dictionaries from FPL API
             player_minutes: Dictionary mapping player_id to minutes
             player_fixtures: Dictionary mapping player_id to fixture data
-            
+            position_by_player_id: Optional map player_id -> position (1=GK,2=DEF,3=MID,4=FWD).
+                When provided, no DB calls are made for position lookups.
+
         Returns:
             List of adjusted picks
         """
@@ -96,105 +102,94 @@ class PointsCalculator:
         sub_map = {}
         for sub in automatic_subs:
             sub_map[sub.get("element_out")] = sub.get("element_in")
-        
-        # If FPL API provided auto-subs, use them (but still verify conditions)
-        # Otherwise, calculate auto-subs based on rules
+
         use_fpl_api_subs = len(sub_map) > 0
-        
+        use_position_map = position_by_player_id is not None and len(position_by_player_id) > 0
+
         adjusted_picks = []
-        used_bench_positions = set()  # Track which bench positions have been used
-        
+        used_bench_positions = set()
+
         for pick in picks:
             player_id = pick["player_id"]
             position = pick["position"]
-            
-            # Only check starters (position <= 11) for auto-sub
+
             if position <= 11:
                 minutes = player_minutes.get(player_id, 0)
                 fixture = player_fixtures.get(player_id, {})
-                
-                # Check if match is finished
+
                 match_finished = fixture.get("finished") or fixture.get("finished_provisional")
-                
-                # Check if auto-sub should be applied
                 should_substitute = match_finished and minutes == 0
-                
+
                 if should_substitute:
                     substitute_id = None
-                    
+
                     if use_fpl_api_subs and player_id in sub_map:
-                        # Use FPL API's substitution
                         substitute_id = sub_map[player_id]
                     else:
-                        # Calculate auto-sub: find first available bench player
-                        # Bench players are ordered by position (12, 13, 14, 15)
                         bench_players = [p for p in picks if p["position"] > 11]
                         bench_players.sort(key=lambda x: x["position"])
-                        
-                        # Get starter's position type (1=GK, 2=DEF, 3=MID, 4=FWD)
+
                         starter_position_type = None
-                        starter_player = self.db_client.client.table("players").select(
-                            "position"
-                        ).eq("fpl_player_id", player_id).execute()
-                        if starter_player.data:
-                            starter_position_type = starter_player.data[0].get("position")
-                        
+                        if use_position_map:
+                            starter_position_type = position_by_player_id.get(player_id)
+                        else:
+                            starter_player = self.db_client.client.table("players").select(
+                                "position"
+                            ).eq("fpl_player_id", player_id).execute()
+                            if starter_player.data:
+                                starter_position_type = starter_player.data[0].get("position")
+
                         for bench_pick in bench_players:
                             bench_player_id = bench_pick["player_id"]
                             bench_position = bench_pick["position"]
-                            
-                            # Skip if already used
+
                             if bench_position in used_bench_positions:
                                 continue
-                            
-                            # Check position compatibility
-                            # GK (position 1) can only replace GK
-                            # Outfield (positions 2/3/4) can replace any outfield
-                            bench_player = self.db_client.client.table("players").select(
-                                "position"
-                            ).eq("fpl_player_id", bench_player_id).execute()
-                            
-                            if bench_player.data:
-                                bench_position_type = bench_player.data[0].get("position")
-                                
-                                # Position compatibility check
-                                if starter_position_type == 1:  # Starter is GK
-                                    if bench_position_type != 1:  # Bench must be GK
-                                        continue  # Skip non-GK bench players
-                                else:  # Starter is outfield (DEF/MID/FWD)
-                                    if bench_position_type == 1:  # Bench is GK
-                                        continue  # Skip GK bench players (can't replace outfield)
-                            
-                            # Check if bench player's match is finished and they played
+
+                            bench_position_type = None
+                            if use_position_map:
+                                bench_position_type = position_by_player_id.get(bench_player_id)
+                            else:
+                                bench_player = self.db_client.client.table("players").select(
+                                    "position"
+                                ).eq("fpl_player_id", bench_player_id).execute()
+                                if bench_player.data:
+                                    bench_position_type = bench_player.data[0].get("position")
+
+                            if bench_position_type is None:
+                                continue
+
+                            if starter_position_type == 1:
+                                if bench_position_type != 1:
+                                    continue
+                            else:
+                                if bench_position_type == 1:
+                                    continue
+
                             bench_minutes = player_minutes.get(bench_player_id, 0)
                             bench_fixture = player_fixtures.get(bench_player_id, {})
                             bench_match_finished = (
                                 bench_fixture.get("finished") or
                                 bench_fixture.get("finished_provisional")
                             )
-                            
-                            # Use this bench player if their match finished and they played
+
                             if bench_match_finished and bench_minutes > 0:
                                 substitute_id = bench_player_id
                                 used_bench_positions.add(bench_position)
                                 break
-                    
+
                     if substitute_id:
-                        # Apply substitution
                         adjusted_pick = pick.copy()
                         adjusted_pick["player_id"] = substitute_id
                         adjusted_pick["was_auto_subbed"] = True
                         adjusted_picks.append(adjusted_pick)
                     else:
-                        # No valid substitute found, keep original
                         adjusted_picks.append(pick)
                 else:
-                    # Conditions not met, keep original pick
                     adjusted_picks.append(pick)
             else:
-                # Bench player, keep as-is
                 adjusted_picks.append(pick)
-        
+
         return adjusted_picks
     
     def infer_automatic_subs_from_db(
@@ -216,16 +211,25 @@ class PointsCalculator:
             "player_id, minutes, match_finished, match_finished_provisional"
         ).eq("gameweek", gameweek).in_("player_id", player_ids).execute()
         stats_list = stats_result.data if stats_result.data else []
-        player_minutes: Dict[int, int] = {}
-        player_fixtures: Dict[int, Dict] = {}
+        # Group by player_id so DGW: sum minutes and require all fixtures finished for autosub
+        rows_by_player: Dict[int, List[Dict]] = defaultdict(list)
         for row in stats_list:
             pid = row.get("player_id")
             if pid is not None:
-                player_minutes[pid] = row.get("minutes", 0)
-                player_fixtures[pid] = {
-                    "finished": row.get("match_finished", False),
-                    "finished_provisional": row.get("match_finished_provisional", False),
-                }
+                rows_by_player[pid].append(row)
+        player_minutes: Dict[int, int] = {}
+        player_fixtures: Dict[int, Dict] = {}
+        for pid, rows in rows_by_player.items():
+            player_minutes[pid] = sum(r.get("minutes", 0) or 0 for r in rows)
+            all_finished = all(
+                r.get("match_finished", False) or r.get("match_finished_provisional", False)
+                for r in rows
+            )
+            any_provisional = any(r.get("match_finished_provisional", False) for r in rows)
+            player_fixtures[pid] = {
+                "finished": all_finished and not any_provisional,
+                "finished_provisional": any_provisional and all_finished,
+            }
         # Fetch position (1=GK, 2=DEF, 3=MID, 4=FWD) for position compatibility
         players_result = self.db_client.client.table("players").select(
             "fpl_player_id, position"
@@ -364,15 +368,36 @@ class PointsCalculator:
             
             stats = stats_result.data if stats_result.data else []
             if stats:
-                player_minutes[player_id] = stats[0].get("minutes", 0)
-                fixture_id = stats[0].get("fixture_id")
+                # DGW: sum minutes across all fixture rows; autosub only when total is 0
+                player_minutes[player_id] = sum(s.get("minutes", 0) or 0 for s in stats)
+                # Match "finished" for autosub when all of the player's fixtures are finished
+                all_finished = all(
+                    s.get("match_finished", False) or s.get("match_finished_provisional", False)
+                    for s in stats
+                )
+                any_provisional = any(s.get("match_finished_provisional", False) for s in stats)
+                # Use last fixture for fixture dict; set finished from aggregated stats
+                fixture_id = stats[-1].get("fixture_id")
                 if fixture_id:
                     fixture_result = self.db_client.client.table("fixtures").select(
                         "*"
                     ).eq("fpl_fixture_id", fixture_id).execute()
                     fixture = fixture_result.data if fixture_result.data else []
                     if fixture:
-                        player_fixtures[player_id] = fixture[0]
+                        f = dict(fixture[0])
+                        f["finished"] = all_finished and not any_provisional
+                        f["finished_provisional"] = any_provisional and all_finished
+                        player_fixtures[player_id] = f
+                    else:
+                        player_fixtures[player_id] = {
+                            "finished": all_finished and not any_provisional,
+                            "finished_provisional": any_provisional and all_finished,
+                        }
+                else:
+                    player_fixtures[player_id] = {
+                        "finished": all_finished and not any_provisional,
+                        "finished_provisional": any_provisional and all_finished,
+                    }
         
         # Fallback for players with no stats row (e.g. DNP): derive fixture from team so auto-sub can apply
         missing_fixture_ids = [pid for pid in player_ids if pid not in player_fixtures]

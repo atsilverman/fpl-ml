@@ -232,21 +232,23 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
       const fixturesById = {}
       const fixtureList = fixturesResult.data || []
 
-      // Auto-sub state: from DB first, then infer from stats (and fixture when no stats) when DB has no flags
+      // Auto-sub state: when we have stats, use inferred (correct DGW total minutes); else use DB
       const subbedOutSet = new Set()
       const replacedBySubIn = new Map() // sub_in_player_id -> replaced_player_id (element_out)
       const norm = (id) => (id != null ? Number(id) : id)
-      picks.forEach((p) => {
-        if (p.was_auto_subbed_in && p.auto_sub_replaced_player_id != null) {
-          subbedOutSet.add(norm(p.auto_sub_replaced_player_id))
-          replacedBySubIn.set(norm(p.player_id), norm(p.auto_sub_replaced_player_id))
-        }
-      })
       const inferredSubs = inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList)
-      if (subbedOutSet.size === 0 && inferredSubs.length > 0) {
+      const hasStats = Object.keys(statsByPlayer).length > 0
+      if (hasStats) {
         inferredSubs.forEach((s) => {
           subbedOutSet.add(norm(s.element_out))
           replacedBySubIn.set(norm(s.element_in), norm(s.element_out))
+        })
+      } else {
+        picks.forEach((p) => {
+          if (p.was_auto_subbed_in && p.auto_sub_replaced_player_id != null) {
+            subbedOutSet.add(norm(p.auto_sub_replaced_player_id))
+            replacedBySubIn.set(norm(p.player_id), norm(p.auto_sub_replaced_player_id))
+          }
         })
       }
       const fixtureTeamIds = new Set()
@@ -461,18 +463,29 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
             match_finished_provisional: false,
             started: false
           })
+          const kickoffEq = (a, b) => {
+            if (a == null && b == null) return true
+            if (a == null || b == null) return false
+            const tA = typeof a === 'string' ? new Date(a).getTime() : (a && a.getTime ? a.getTime() : 0)
+            const tB = typeof b === 'string' ? new Date(b).getTime() : (b && b.getTime ? b.getTime() : 0)
+            return tA === tB || (tA > 0 && tB > 0 && Math.abs(tA - tB) < 60000)
+          }
+          const schedOpponentId = (f, teamId) => {
+            if (!f || teamId == null) return null
+            return f.home_team_id === teamId ? (f.away_team_id ?? null) : (f.home_team_id ?? null)
+          }
           const usedStatsIndices = new Set()
           return scheduleFixturesForDgw.map((scheduleFixture, scheduleIdx) => {
-            const matched = statsRows.find((s, i) => {
+            const schedFid = scheduleFixture.fpl_fixture_id != null ? Number(scheduleFixture.fpl_fixture_id) : null
+            const schedKickoff = scheduleFixture.kickoff_time ?? null
+            const schedOpponent = schedOpponentId(scheduleFixture, teamIdForDgw)
+            // 1) Match by fixture_id (normalize to number so "123" === 123)
+            let matched = statsRows.find((s, i) => {
               if (usedStatsIndices.has(i)) return false
-              const fid = s.fixture_id != null && s.fixture_id !== 0 ? s.fixture_id : null
-              const schedFid = scheduleFixture.fpl_fixture_id ?? null
-              if (schedFid != null && fid != null) {
-                if (fid === schedFid || Number(fid) === Number(schedFid)) {
-                  usedStatsIndices.add(i)
-                  return true
-                }
-                return false
+              const fid = s.fixture_id != null && s.fixture_id !== 0 ? Number(s.fixture_id) : null
+              if (schedFid != null && fid != null && fid === schedFid) {
+                usedStatsIndices.add(i)
+                return true
               }
               if ((fid == null || fid === 0) && scheduleIdx === 0) {
                 usedStatsIndices.add(i)
@@ -480,6 +493,32 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
               }
               return false
             })
+            // 2) Fallback: match by kickoff_time so correct minutes land on correct row
+            if (!matched && schedKickoff) {
+              const byKickoff = statsRows.find((s, i) => {
+                if (usedStatsIndices.has(i)) return false
+                if (kickoffEq(s.kickoff_time, schedKickoff)) {
+                  usedStatsIndices.add(i)
+                  return true
+                }
+                return false
+              })
+              if (byKickoff) matched = byKickoff
+            }
+            // 3) Fallback: match by opponent_team_id (e.g. WOL-ARS row gets stats with opponent = Wolves)
+            if (!matched && schedOpponent != null) {
+              const oppId = Number(schedOpponent)
+              const byOpponent = statsRows.find((s, i) => {
+                if (usedStatsIndices.has(i)) return false
+                const so = s.opponent_team_id != null ? Number(s.opponent_team_id) : null
+                if (so != null && so === oppId) {
+                  usedStatsIndices.add(i)
+                  return true
+                }
+                return false
+              })
+              if (byOpponent) matched = byOpponent
+            }
             if (matched) return matched
             return zeroRowForScheduleFixture(scheduleFixture)
           })
@@ -596,8 +635,8 @@ export function useCurrentGameweekPlayers() {
       return result
     },
     enabled: !!MANAGER_ID && !!gameweek && !gwLoading,
-    staleTime: isLive ? 10 * 1000 : 30 * 1000, // 10s when live so GW points stay current
-    refetchInterval: isLive ? 12 * 1000 : 60 * 1000, // 12s when live, 1 min otherwise
+    staleTime: isLive ? 6 * 1000 : 30 * 1000, // 6s when live so GW points / MP stay in sync with debug
+    refetchInterval: isLive ? 8 * 1000 : 60 * 1000, // 8s when live so minutes don't lag
     refetchIntervalInBackground: true,
   })
 

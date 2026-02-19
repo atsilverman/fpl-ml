@@ -639,7 +639,158 @@ class ManagerDataRefresher:
                     logger.warning("Live-only mgh update failed", extra={"manager_id": manager_id, "error": str(e)})
                     any_failed = True
         return not any_failed
-    
+
+    async def refresh_manager_gameweek_points_from_live_data(
+        self,
+        manager_ids: List[int],
+        gameweek: int,
+        live_data: Dict[str, Any],
+        fixtures_by_fixture_id: Dict[int, Dict[str, Any]],
+    ) -> bool:
+        """
+        Update manager_gameweek_history gameweek_points and total_points from live_data in memory.
+        Uses 4 batched DB reads + in-memory computation + parallel writes. No per-manager/per-player DB loops.
+        Call when event-live payload is available (e.g. fast cycle during live matches).
+
+        fixtures_by_fixture_id: fpl_fixture_id -> fixture dict with team_h, team_a, finished, finished_provisional.
+
+        Returns:
+            True if all managers were updated successfully; False if any failed.
+        """
+        if not manager_ids or not live_data or not live_data.get("elements"):
+            return False
+
+        elements = live_data.get("elements", [])
+        live_elements = {int(e["id"]): e for e in elements if "id" in e}
+
+        # 1. Batched picks
+        picks_result = self.db_client.client.table("manager_picks").select(
+            "manager_id, player_id, position, multiplier"
+        ).eq("gameweek", gameweek).in_("manager_id", manager_ids).execute()
+        picks_all = picks_result.data or []
+
+        if not picks_all:
+            return True
+
+        # 2. Batched history (current gw)
+        history_result = self.db_client.client.table("manager_gameweek_history").select(
+            "manager_id, baseline_total_points, transfer_cost, active_chip"
+        ).eq("gameweek", gameweek).in_("manager_id", manager_ids).execute()
+        history_by_manager = {r["manager_id"]: r for r in (history_result.data or [])}
+
+        # Previous gameweek totals for managers with no baseline
+        need_prev = [mid for mid in manager_ids if (history_by_manager.get(mid) or {}).get("baseline_total_points") is None]
+        prev_by_manager: Dict[int, int] = {}
+        if need_prev and gameweek > 1:
+            prev_result = self.db_client.client.table("manager_gameweek_history").select(
+                "manager_id, total_points"
+            ).eq("gameweek", gameweek - 1).in_("manager_id", need_prev).execute()
+            prev_by_manager = {r["manager_id"]: r["total_points"] for r in (prev_result.data or [])}
+
+        # 3. Players: position and team_id for all picked player_ids
+        player_ids = list(set(p["player_id"] for p in picks_all))
+        players_result = self.db_client.client.table("players").select(
+            "fpl_player_id, position, team_id"
+        ).in_("fpl_player_id", player_ids).execute()
+        players_list = players_result.data or []
+        position_by_player_id = {p["fpl_player_id"]: p["position"] for p in players_list}
+        team_id_by_player_id = {p["fpl_player_id"]: p["team_id"] for p in players_list}
+
+        # 4. Build player_minutes and player_fixtures from live_data + fixtures_by_fixture_id
+        player_minutes: Dict[int, int] = {}
+        player_fixtures: Dict[int, Dict[str, Any]] = {}
+        for pid in player_ids:
+            elem = live_elements.get(pid)
+            player_minutes[pid] = 0
+            if elem and elem.get("stats") is not None:
+                player_minutes[pid] = int(elem.get("stats", {}).get("minutes") or 0)
+            team_id = team_id_by_player_id.get(pid)
+            if team_id is not None and fixtures_by_fixture_id:
+                matching = [
+                    f for f in fixtures_by_fixture_id.values()
+                    if f.get("team_h") == team_id or f.get("team_a") == team_id
+                ]
+                if matching:
+                    all_finished = all(m.get("finished", False) for m in matching)
+                    any_provisional = any(m.get("finished_provisional", False) for m in matching)
+                    player_fixtures[pid] = {
+                        "finished": all_finished and not any_provisional,
+                        "finished_provisional": any_provisional and all_finished,
+                    }
+                else:
+                    player_fixtures[pid] = {"finished": False, "finished_provisional": False}
+            else:
+                player_fixtures[pid] = {"finished": False, "finished_provisional": False}
+
+        # Group picks by manager
+        picks_by_manager: Dict[int, List[Dict]] = {}
+        for p in picks_all:
+            mid = p["manager_id"]
+            if mid not in picks_by_manager:
+                picks_by_manager[mid] = []
+            picks_by_manager[mid].append(dict(p))
+
+        # Compute and write per manager (sync work run in thread pool for parallel writes)
+        def update_one(manager_id: int) -> None:
+            manager_picks = picks_by_manager.get(manager_id, [])
+            if not manager_picks:
+                return
+            hist = history_by_manager.get(manager_id) or {}
+            transfer_cost = int(hist.get("transfer_cost") or 0)
+            active_chip = hist.get("active_chip")
+            baseline = hist.get("baseline_total_points")
+            prev_total = prev_by_manager.get(manager_id)
+
+            adjusted_picks = self.points_calculator.apply_automatic_subs(
+                manager_picks,
+                [],
+                player_minutes,
+                player_fixtures,
+                position_by_player_id=position_by_player_id,
+            )
+            starters = [p for p in adjusted_picks if p["position"] <= 11]
+            bench = [p for p in adjusted_picks if p["position"] > 11]
+
+            raw_points = 0
+            for pick in starters:
+                pid = pick["player_id"]
+                mult = int(pick.get("multiplier") or 1)
+                pts = 0
+                if pid in live_elements and live_elements[pid].get("stats") is not None:
+                    pts = int(live_elements[pid].get("stats", {}).get("total_points") or 0)
+                raw_points += pts * mult
+            if active_chip == "bboost":
+                for pick in bench:
+                    pid = pick["player_id"]
+                    pts = 0
+                    if pid in live_elements and live_elements[pid].get("stats") is not None:
+                        pts = int(live_elements[pid].get("stats", {}).get("total_points") or 0)
+                    raw_points += pts
+
+            gameweek_points = max(0, raw_points - transfer_cost)
+            if baseline is not None:
+                total_points = baseline + gameweek_points
+            elif prev_total is not None:
+                total_points = prev_total + gameweek_points
+            else:
+                total_points = gameweek_points
+
+            self.db_client.update_manager_gameweek_history_points(
+                manager_id, gameweek, gameweek_points, total_points
+            )
+
+        try:
+            loop = asyncio.get_event_loop()
+            await asyncio.gather(*[loop.run_in_executor(None, lambda m=mid: update_one(m)) for mid in manager_ids])
+            return True
+        except Exception as e:
+            logger.warning(
+                "Manager points from live_data update failed",
+                extra={"gameweek": gameweek, "error": str(e)},
+                exc_info=True,
+            )
+            return False
+
     async def refresh_manager_gameweek_history(
         self,
         manager_id: int,

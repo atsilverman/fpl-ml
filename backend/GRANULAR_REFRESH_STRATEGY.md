@@ -144,17 +144,19 @@ If < 80%: Stay in TRANSFER_DEADLINE → Retry Next Cycle
 | `id` | Once per season | Season start | Primary key, never changes |
 | `name` | Once per season | Season start | Only changes if gameweek name changes |
 | `deadline_time` | Once per season | Season start | Only changes if deadline rescheduled |
-| `is_current` | **30-60 seconds** | Always | **CRITICAL**: Drives all refresh decisions |
+| `release_time` | **30-60 seconds** | Always | When FPL releases this GW (post-deadline wait) |
+| `is_current` | **30-60 seconds** | Always | **CRITICAL**: Drives all refresh decisions; OUTSIDE_GAMEWEEK when false |
 | `is_previous` | **30-60 seconds** | Always | Used for baseline calculations |
-| `is_next` | **30-60 seconds** | Always | Used for deadline detection |
-| `finished` | **30-60 seconds** | Always | Used to determine gameweek state |
-| `data_checked` | **30-60 seconds** | Always | Indicates FPL data finalization |
+| `is_next` | **30-60 seconds** | Always | Used for deadline detection; is_next → is_current triggers deadline batch |
+| `finished` | **30-60 seconds** | Always | Gameweek fully finished; past GWs have fpl_ranks_updated set |
+| `data_checked` | **30-60 seconds** | Always | **CRITICAL**: From API; when true we set fpl_ranks_updated and refresh all managers for ranks |
+| `fpl_ranks_updated` | We set it only | When rank finality detected | **Not in API**. Set when data_checked true or rank-change poll; frontend stale rank indicator. Never from bootstrap. |
 | `highest_score` | Once per gameweek | After gameweek finishes | Only updates after completion |
 | `average_entry_score` | Once per gameweek | After gameweek finishes | Only updates after completion |
 | `created_at` | Never | Auto-set | Database managed |
 | `updated_at` | **30-60 seconds** | Always | Updated on every refresh |
 
-**Refresh Trigger**: Always (foundational table)
+**Refresh Trigger**: Always (foundational table). See **LIVE_STATE_REFERENCE.md** for critical gates (deadline batch, baselines, fpl_ranks_updated).
 
 ---
 
@@ -445,18 +447,18 @@ If < 80%: Stay in TRANSFER_DEADLINE → Retry Next Cycle
 | `gameweek` | Once per season | Season start | Set at season start |
 | `home_team_id` | Once per season | Season start | Set at season start |
 | `away_team_id` | Once per season | Season start | Set at season start |
-| `home_score` | **60 seconds** | During live matches | Updates in real-time |
-| `away_score` | **60 seconds** | During live matches | Updates in real-time |
-| `started` | **60 seconds** | During live matches | **CRITICAL**: Detects match start |
-| `finished` | **60 seconds** | During live matches | **CRITICAL**: Detects match end |
-| `finished_provisional` | **60 seconds** | During live matches | **CRITICAL**: Detects bonus pending |
-| `minutes` | **60 seconds** | During live matches | Updates in real-time |
-| `kickoff_time` | Once per season | Season start | Only changes if rescheduled |
+| `home_score` | **60 seconds** | During live matches | From /fixtures/; event-live can augment (DGW-safe: API only for scoreline) |
+| `away_score` | **60 seconds** | During live matches | From /fixtures/; event-live can augment (DGW-safe: API only for scoreline) |
+| `started` | **60 seconds** | Always (fast loop) | **CRITICAL**: From /fixtures/ only. LIVE_MATCHES = started && !finished_provisional; baseline gate (skip if any started) |
+| `finished` | **60 seconds** | Always (fast loop) | **CRITICAL**: From /fixtures/ only. FPL confirmed; final status. |
+| `finished_provisional` | **60 seconds** | Always (fast loop) | **CRITICAL**: From /fixtures/ only. BONUS_PENDING = all finished_provisional && !finished. |
+| `minutes` | **60 seconds** | During live matches | From /fixtures/; event-live can augment (max of API clock and player minutes). Clock display. |
+| `kickoff_time` | **60 seconds** | Always (fast loop) | From /fixtures/. Kickoff window, last-match-of-day rank monitor, idle sleep cap. |
 | `deadline_time` | Once per gameweek | At gameweek start | Set from gameweeks table |
 | `created_at` | Never | Auto-set | Database managed |
 | `updated_at` | **60 seconds** | During live matches | Updated on every refresh |
 
-**Refresh Trigger**: 60 seconds during live matches (foundational for match state)
+**Refresh Trigger**: Fast loop (fixtures + gameweeks); foundational for match state. Source: GET /fixtures/. Event-live used only to augment scores/minutes, not started/finished*. See **LIVE_STATE_REFERENCE.md** for state definitions and critical gates.
 
 ---
 

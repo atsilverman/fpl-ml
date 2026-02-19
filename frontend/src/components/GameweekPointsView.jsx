@@ -21,7 +21,7 @@ function fixtureBool(v) {
   return false
 }
 
-export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null }) {
+export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null, sortable = true }) {
   const { fixtures: debugFixtures = [] } = useGameweekDebugData()
   const fixtures = (fixturesProp != null && Array.isArray(fixturesProp)) ? fixturesProp : debugFixtures
   // Support lookup by number or string (Supabase/API can return either) so we always resolve fixture and use fixture table state
@@ -132,7 +132,31 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     return [...starters, ...bench]
   }, [data, sortColumn, sortDirection, impactByPlayerId])
 
+  // DGW: when points are a merged total (one row has total, other has 0), collapse PTS cell like player name.
+  // Group by (position, player_id) so we find pairs even when sort separates the two rows.
+  const dgwAggregateKeys = useMemo(() => {
+    const set = new Set()
+    const list = sortedData ?? []
+    const byKey = new Map()
+    for (const row of list) {
+      if (!row?.isDgwRow) continue
+      const key = `${Number(row.position)}-${Number(row.player_id)}`
+      if (!byKey.has(key)) byKey.set(key, [])
+      byKey.get(key).push(row)
+    }
+    byKey.forEach((rows, key) => {
+      if (rows.length !== 2) return
+      const p0 = Number(rows[0].points) || 0
+      const p1 = Number(rows[1].points) || 0
+      const total0 = Number(rows[0].contributedPoints ?? rows[0].points) || 0
+      const total1 = Number(rows[1].contributedPoints ?? rows[1].points) || 0
+      if ((total0 > 0 && p1 === 0) || (total1 > 0 && p0 === 0)) set.add(key)
+    })
+    return set
+  }, [sortedData])
+
   const handleSort = (key) => {
+    if (!sortable) return
     if (sortColumn === key) {
       setSortDirection((d) => (d === 'desc' ? 'asc' : 'desc'))
     } else {
@@ -185,7 +209,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
 
   const IMPACT_BAR_MAX = 100
 
-  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick }) => {
+  const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick, isDgwAggregateFirstRow = false, hideDgwPointsCell = false }) => {
     const isDgwFirstRow = Boolean(player.isDgwRow && player.dgwRowIndex === 0)
     const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
     const captainLabel = !isDgwSecondRow && player.is_captain
@@ -200,11 +224,12 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const impact = impactByPlayerId[playerId]
     const hasImpact = typeof impact === 'number'
     const impactWidth = hasImpact ? Math.min(IMPACT_BAR_MAX, Math.abs(impact)) / IMPACT_BAR_MAX : 0
-    const isTop10Pts = playerId != null && top10Pts.has(Number(playerId))
+    const fid = player.fixture_id != null && player.fixture_id !== 0 ? player.fixture_id : null
+    const top10Key = playerId != null ? `${Number(playerId)}-${fid != null && fid !== 0 ? Number(fid) : 0}` : null
+    const isTop10Pts = top10Key != null && top10Pts.has(top10Key)
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
-    const fid = player.fixture_id != null && player.fixture_id !== 0 ? player.fixture_id : null
     const fixtureForPlayer = fixturesById && fid != null
       ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)])
       : null
@@ -241,7 +266,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const renderStatCell = (value, statKey, opts = {}) => {
       const numVal = Number(value) || 0
       const isZero = numVal === 0
-      const isTop10ForColumn = playerId != null && top10ByStat?.[statKey]?.has(Number(playerId))
+      const isTop10ForColumn = top10Key != null && top10ByStat?.[statKey]?.has(top10Key)
       const isDefColumn = statKey === 'defensive_contribution'
       const isSavesColumn = statKey === 'saves'
       const isProvisionalBonus = opts.isProvisionalBonus ?? false
@@ -347,10 +372,13 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <span className="gameweek-points-col-sep" aria-hidden />
           </td>
         )}
-        <td
-            className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
-            title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined}
+        {!hideDgwPointsCell && (
+          <td
+            rowSpan={isDgwAggregateFirstRow ? 2 : undefined}
+            className={`gameweek-points-td gameweek-points-td-pts ${isDgwAggregateFirstRow ? ' gameweek-points-td-pts-dgw-span' : ''} ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
+            title={isDgwAggregateFirstRow ? 'GW total (both games) – per-game breakdown not yet available' : ((player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : undefined)}
           >
+            {isDgwAggregateFirstRow && <span className="gameweek-points-pts-aggregate-label" aria-hidden>total </span>}
             {isTop10Pts ? (
               <span
                 className="gameweek-points-player-points-badge rank-highlight"
@@ -362,11 +390,12 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
               formatNumber(ptsDisplay)
             )}
           </td>
+        )}
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
               <>
-                {formatMinutes(player.minutes)}
+                {formatMinutes(Math.min(90, player.minutes ?? 0))}
                 {showMinsLiveDot && (
                   <span
                     className={`live-updating-indicator ${minsDotProvisional ? 'gameweek-points-mins-provisional' : 'gameweek-points-mins-live'}`}
@@ -458,56 +487,66 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <thead>
               <tr>
                 <th
-                  className={`gameweek-points-th gameweek-points-th-player gameweek-points-th-sortable${sortColumn === 'player' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('player')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('player') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'player' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by player name"
+                  className={`gameweek-points-th gameweek-points-th-player${sortable ? ` gameweek-points-th-sortable${sortColumn === 'player' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                  {...(sortable && {
+                    onClick: () => handleSort('player'),
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('player') } },
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-sort': sortColumn === 'player' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                    title: 'Sort by player name'
+                  })}
                 >
                   PLAYER
-                  {sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                  {sortable && sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   <span className="gameweek-points-col-sep" aria-hidden />
                 </th>
                 <th
-                  className={`gameweek-points-th gameweek-points-th-pts gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('points')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('points') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by points"
-                >PTS{sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                  className={`gameweek-points-th gameweek-points-th-pts${sortable ? ` gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                  {...(sortable && {
+                    onClick: () => handleSort('points'),
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('points') } },
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-sort': sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                    title: 'Sort by points'
+                  })}
+                >PTS{sortable && sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
-                  className={`gameweek-points-th gameweek-points-th-mins gameweek-points-th-sortable${sortColumn === 'minutes' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('minutes')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('minutes') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'minutes' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by minutes played"
-                >MP{sortColumn === 'minutes' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                  className={`gameweek-points-th gameweek-points-th-mins${sortable ? ` gameweek-points-th-sortable${sortColumn === 'minutes' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                  {...(sortable && {
+                    onClick: () => handleSort('minutes'),
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('minutes') } },
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-sort': sortColumn === 'minutes' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                    title: 'Sort by minutes played'
+                  })}
+                >MP{sortable && sortColumn === 'minutes' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
-                  className={`gameweek-points-th gameweek-points-th-opp gameweek-points-th-sortable${sortColumn === 'opp' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('opp')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('opp') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'opp' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by opponent"
-                >OPP{sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                  className={`gameweek-points-th gameweek-points-th-opp${sortable ? ` gameweek-points-th-sortable${sortColumn === 'opp' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                  {...(sortable && {
+                    onClick: () => handleSort('opp'),
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('opp') } },
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-sort': sortColumn === 'opp' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                    title: 'Sort by opponent'
+                  })}
+                >OPP{sortable && sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
-                  className={`gameweek-points-th gameweek-points-th-impact gameweek-points-th-impact--has-popup gameweek-points-th-sortable${sortColumn === 'impact' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                  onClick={() => handleSort('impact')}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('impact') } }}
-                  role="button"
-                  tabIndex={0}
-                  aria-sort={sortColumn === 'impact' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                  title="Sort by importance"
+                  className={`gameweek-points-th gameweek-points-th-impact gameweek-points-th-impact--has-popup${sortable ? ` gameweek-points-th-sortable${sortColumn === 'impact' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                  {...(sortable && {
+                    onClick: () => handleSort('impact'),
+                    onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort('impact') } },
+                    role: 'button',
+                    tabIndex: 0,
+                    'aria-sort': sortColumn === 'impact' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                    title: 'Sort by importance'
+                  })}
                 >
                   <span className="gameweek-points-th-impact-label">Imp</span>
-                  {sortColumn === 'impact' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                  {sortable && sortColumn === 'impact' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   <button
                     type="button"
                     ref={impactIconRef}
@@ -561,16 +600,18 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 ].map(({ key, label, title }) => (
                   <th
                     key={key}
-                    className={`gameweek-points-th gameweek-points-th-stat gameweek-points-th-sortable${sortColumn === key ? ` gameweek-points-th-sorted-${sortDirection}` : ''}`}
-                    onClick={() => handleSort(key)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort(key) } }}
-                    role="button"
-                    tabIndex={0}
-                    aria-sort={sortColumn === key ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined}
-                    title={`Sort by ${title}`}
+                    className={`gameweek-points-th gameweek-points-th-stat${sortable ? ` gameweek-points-th-sortable${sortColumn === key ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
+                    {...(sortable && {
+                      onClick: () => handleSort(key),
+                      onKeyDown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSort(key) } },
+                      role: 'button',
+                      tabIndex: 0,
+                      'aria-sort': sortColumn === key ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
+                      title: `Sort by ${title}`
+                    })}
                   >
                     {label}
-                    {sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                    {sortable && sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   </th>
                 ))}
               </tr>
@@ -578,14 +619,24 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <tbody>
               {(() => {
                 const firstBenchRowIndex = sortedData.findIndex((p) => p.position >= 12)
-                return sortedData.map((player, index) => (
+                return sortedData.map((player, index) => {
+                  const key = `${Number(player.position)}-${Number(player.player_id)}`
+                  const isAggregatePair = dgwAggregateKeys.has(key)
+                  const nextRow = sortedData[index + 1]
+                  const isNextRowSameDgwSecond = nextRow?.isDgwRow && nextRow.dgwRowIndex === 1 && Number(nextRow.position) === Number(player.position) && Number(nextRow.player_id) === Number(player.player_id)
+                  const prevRow = index > 0 ? sortedData[index - 1] : null
+                  const isPrevRowSameDgwFirst = prevRow?.isDgwRow && prevRow.dgwRowIndex === 0 && Number(prevRow.position) === Number(player.position) && Number(prevRow.player_id) === Number(player.player_id)
+                  return (
                   <PlayerTableRow
                     key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
                     player={player}
                     isFirstBenchRow={index === firstBenchRowIndex}
                     onRowClick={onPlayerRowClick}
+                    isDgwAggregateFirstRow={player.isDgwRow && player.dgwRowIndex === 0 && isAggregatePair && isNextRowSameDgwSecond}
+                    hideDgwPointsCell={player.isDgwRow && player.dgwRowIndex === 1 && isAggregatePair && isPrevRowSameDgwFirst}
                   />
-                ))
+                  )
+                })
               })()}
             </tbody>
           </table>

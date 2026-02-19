@@ -307,17 +307,137 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
 }
 
-/* matchup-grid: same as reference container */
+/* matchup-grid: multi-column on mobile; desktop = single column list, same width as top performers / 2-bento content. */
 .matchup-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
 }
 
-/* Desktop: expanded match card spans 2 bento columns so details aren't cramped */
-@media (min-width: 641px) {
-  .matchup-grid-item--expanded {
-    grid-column: span 2;
+/* Desktop: single column list; matchups same width as Top Performers container above (align with home content width). */
+@media (min-width: 769px) {
+  .matches-subpage {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 24px;
+    box-sizing: border-box;
+  }
+  .matchup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Desktop: compact Show details / expanded matchup to fit single-column format */
+@media (min-width: 769px) {
+  .matchup-card-main {
+    padding: 10px 12px;
+    gap: 6px;
+  }
+  .matchup-card-headline {
+    gap: 8px 16px;
+  }
+  .matchup-card-badge {
+    width: 26px;
+    height: 26px;
+  }
+  .matchup-card-team-name {
+    font-size: 0.8125rem;
+  }
+  .matchup-card-score {
+    font-size: 1.125rem;
+  }
+  .expand-button {
+    margin: 6px auto 8px;
+    padding: 6px 12px;
+    min-height: 28px;
+    font-size: 0.6875rem;
+    max-width: 320px;
+  }
+  .matchup-card-details {
+    padding: 0 12px 12px;
+  }
+  .matchup-card-details--bps-chart {
+    padding: 8px 12px 12px;
+  }
+  .matchup-card-details--bonus-default {
+    padding-bottom: 10px;
+  }
+  .matchup-detail-loading {
+    padding: 10px 0;
+  }
+  .matchup-detail-tables {
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .matchup-detail-table-wrap {
+    gap: 6px;
+  }
+  .matchup-detail-table-header {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+  .matchup-detail-table-badge {
+    width: 24px;
+    height: 24px;
+  }
+  .matchup-detail-table-empty {
+    padding: 10px 8px;
+    font-size: 0.6875rem;
+  }
+  .matchup-detail-table-scroll {
+    max-height: 45vh;
+  }
+  .matchup-detail-table {
+    min-width: 300px;
+    font-size: 10px;
+  }
+  .matchup-detail-th {
+    height: 24px;
+    padding: 6px 4px;
+    font-size: 8px;
+  }
+  .matchup-detail-th-sort-btn {
+    min-height: 24px;
+    padding: 6px 4px;
+    font-size: 8px;
+  }
+  .matchup-detail-th-player {
+    padding-left: 10px;
+    min-width: 88px;
+  }
+  .matchup-detail-th-mins,
+  .matchup-detail-th-pts {
+    min-width: 32px;
+  }
+  .matchup-detail-th-stat {
+    min-width: 24px;
+  }
+  .matchup-detail-td {
+    padding: 6px 4px;
+  }
+  .matchup-detail-td-player {
+    padding: 5px 6px;
+    padding-left: 10px;
+    gap: 6px;
+  }
+  .matchup-detail-player-badge {
+    width: 22px;
+    height: 22px;
+  }
+  .matchup-detail-player-name {
+    max-width: 100px;
+  }
+  .matchup-detail-dnp-badge {
+    width: 12px;
+    height: 12px;
+    font-size: 9px;
+  }
+  .matchup-detail-stat-badge {
+    padding: 1px 4px;
+    font-size: 0.65rem;
   }
 }
 
@@ -635,6 +755,11 @@ html[data-theme="dark"] .gw-top-points-pill {
   margin-top: 12px;
 }
 
+/* Single merged table (all players): full width on all viewports */
+.matchup-detail-tables--merged {
+  grid-template-columns: 1fr;
+}
+
 @media (max-width: 640px) {
   .matchup-detail-tables {
     grid-template-columns: 1fr;
@@ -820,12 +945,18 @@ html[data-theme="dark"] .gw-top-points-pill {
   border-bottom: none;
 }
 
+/* Body cells: default row background so player column can use a different fill */
+.matchup-detail-table tbody td {
+  background: var(--bg-primary);
+}
+
 .matchup-detail-td {
   padding: 8px 6px;
   vertical-align: middle;
   color: var(--text-primary);
 }
 
+/* Player column: distinct background so name + badge sit on a different color than pts/stat cells */
 .matchup-detail-td-player {
   position: sticky;
   left: 0;
@@ -833,10 +964,11 @@ html[data-theme="dark"] .gw-top-points-pill {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 6px 8px;
   padding-left: 12px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 2px 0 4px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
 }
 
 .matchup-detail-player-badge {

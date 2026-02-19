@@ -10,7 +10,7 @@ import './DefconSubpage.css'
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
-function DefconRow({ player, opponentShortName }) {
+function DefconRow({ player, opponentShortName, isDoubleGameweek }) {
   const { web_name, team_short_name, defcon, threshold, position, is_live, match_provisional, match_confirmed } = player
   const isGk = threshold >= 999
   const denomDisplay = isGk ? '—' : threshold
@@ -42,7 +42,7 @@ function DefconRow({ player, opponentShortName }) {
       <div className="defcon-player-info">
         <div className="defcon-name-row">
           <span className="defcon-name">{web_name}</span>
-          {opponentShortName && <span className="defcon-v-opp"> v {opponentShortName}</span>}
+          {isDoubleGameweek && opponentShortName && <span className="defcon-v-opp"> vs {opponentShortName}</span>}
           {statusDot && (
             <span className="defcon-status-dot-wrap" aria-hidden>
               <span
@@ -137,6 +137,14 @@ export default function DefconSubpage({ isActive = true }) {
     staleTime: 60 * 1000,
   })
   const ownedPlayerIdSet = useMemo(() => new Set(managerPlayerIds), [managerPlayerIds])
+
+  /** Player IDs that have more than one fixture this gameweek (double/triple gameweek) */
+  const dgwPlayerIds = useMemo(() => {
+    if (!players?.length) return new Set()
+    const count = {}
+    players.forEach(p => { count[p.player_id] = (count[p.player_id] || 0) + 1 })
+    return new Set(Object.keys(count).filter(id => count[id] > 1).map(Number))
+  }, [players])
 
   const matchups = useMemo(() => {
     return (fixtures || []).map(f => ({
@@ -473,6 +481,7 @@ export default function DefconSubpage({ isActive = true }) {
               key={`${player.player_id}-${player.fixture_id ?? 0}`}
               player={player}
               opponentShortName={player.opponent_team_id != null ? (teamsMap[player.opponent_team_id] ?? null) : null}
+              isDoubleGameweek={dgwPlayerIds.has(player.player_id)}
             />
           ))
         )}

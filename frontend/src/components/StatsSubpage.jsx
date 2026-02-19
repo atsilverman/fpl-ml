@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Search, Filter, X, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Construction, Scale } from 'lucide-react'
+import { Search, Filter, X, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale } from 'lucide-react'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
@@ -142,6 +142,8 @@ export default function StatsSubpage() {
   const [compareModeActive, setCompareModeActive] = useState(false)
   /** When true, show toast "Select more than 1 player to compare" */
   const [showCompareMessage, setShowCompareMessage] = useState(false)
+  /** When true, show modal with transposed compare table (vertical stat-by-stat view) */
+  const [showCompareDetailsModal, setShowCompareDetailsModal] = useState(false)
 
   const { players, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter)
   const { data: currentGameweekPlayers } = useCurrentGameweekPlayers()
@@ -562,10 +564,6 @@ export default function StatsSubpage() {
   return (
     <div className="research-stats-subpage research-stats-page league-standings-page">
       <div className="research-stats-card research-card bento-card bento-card-animate bento-card-expanded">
-        <div className="research-stats-under-construction research-stats-under-construction-banner" role="status" aria-live="polite">
-          <Construction size={20} strokeWidth={2} aria-hidden />
-          <span>Under construction</span>
-        </div>
         <div className="research-stats-toolbar">
           <button
             type="button"
@@ -798,34 +796,27 @@ export default function StatsSubpage() {
               <div className="research-stats-compare-section" role="region" aria-label="Compare selected teams">
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
-                  {compareSelectedTeams.length > 1 && (
-                    <span className="research-stats-compare-legend" aria-hidden>
-                      <span className="research-stats-compare-legend-item">
-                        <span className="research-stats-compare-legend-text">Stat leader</span>
-                      </span>
-                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
-                        <span className="research-stats-compare-legend-item">
-                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
-                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
-                          </span>
-                          <span className="research-stats-compare-legend-text">
-                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
-                          </span>
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="research-stats-compare-clear"
-                    onClick={() => {
-                      setCompareSelectedTeamKeys([])
-                      setCompareModeActive(false)
-                    }}
-                    aria-label="Clear compare selection"
-                  >
-                    Clear
-                  </button>
+                  <div className="research-stats-compare-header-actions">
+                    <button
+                      type="button"
+                      className="research-stats-compare-details"
+                      onClick={() => setShowCompareDetailsModal(true)}
+                      aria-label="View compare details"
+                    >
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      className="research-stats-compare-clear"
+                      onClick={() => {
+                        setCompareSelectedTeamKeys([])
+                        setCompareModeActive(false)
+                      }}
+                      aria-label="Clear compare selection"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
                 <div
                   ref={compareTableWrapperRef}
@@ -897,7 +888,7 @@ export default function StatsSubpage() {
                               const showPill = N != null && fieldRank != null && fieldRank <= N
                               const isDemoted = N != null && fieldRank != null && fieldRank > N
                               const demotedOpacity = isDemoted ? Math.max(0.35, 0.6 - (fieldRank - N) * 0.02) : null
-                              const isCompareBest = false /* no stat-leader styling in team mode */
+                              const isCompareBest = compareSelectedTeams.length > 1 && compareBestTeamKeyByField[field] === teamKey
                               const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
                               const title = isCompareBest ? (showPill ? `Best in ${label} (#${fieldRank})` : `Best in ${label}`) : (showPill ? `#${fieldRank} in ${label}` : undefined)
                               const topOn = N != null
@@ -939,6 +930,16 @@ export default function StatsSubpage() {
                     </tbody>
                   </table>
                 </div>
+                {compareSelectedTeams.length > 1 && (
+                  <div className="research-stats-compare-legend-wrap">
+                    <span className="research-stats-compare-legend" aria-hidden>
+                      <span className="research-stats-compare-legend-item">
+                        <span className="research-stats-compare-legend-swatch" aria-hidden />
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             <div
@@ -1084,34 +1085,27 @@ export default function StatsSubpage() {
               <div className="research-stats-compare-section" role="region" aria-label="Compare selected players">
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
-                  {compareSelectedPlayers.length > 1 && (
-                    <span className="research-stats-compare-legend" aria-hidden>
-                      <span className="research-stats-compare-legend-item">
-                        <span className="research-stats-compare-legend-text">Stat leader</span>
-                      </span>
-                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
-                        <span className="research-stats-compare-legend-item">
-                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
-                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
-                          </span>
-                          <span className="research-stats-compare-legend-text">
-                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
-                          </span>
-                        </span>
-                      )}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="research-stats-compare-clear"
-                    onClick={() => {
-                      setCompareSelectedIds([])
-                      setCompareModeActive(false)
-                    }}
-                    aria-label="Clear compare selection"
-                  >
-                    Clear
-                  </button>
+                  <div className="research-stats-compare-header-actions">
+                    <button
+                      type="button"
+                      className="research-stats-compare-details"
+                      onClick={() => setShowCompareDetailsModal(true)}
+                      aria-label="View compare details"
+                    >
+                      Details
+                    </button>
+                    <button
+                      type="button"
+                      className="research-stats-compare-clear"
+                      onClick={() => {
+                        setCompareSelectedIds([])
+                        setCompareModeActive(false)
+                      }}
+                      aria-label="Clear compare selection"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
                 <div
                   ref={compareTableWrapperRef}
@@ -1261,6 +1255,26 @@ export default function StatsSubpage() {
                     </tbody>
                   </table>
                 </div>
+                {compareSelectedPlayers.length > 1 && (
+                  <div className="research-stats-compare-legend-wrap">
+                    <span className="research-stats-compare-legend" aria-hidden>
+                      <span className="research-stats-compare-legend-item">
+                        <span className="research-stats-compare-legend-swatch" aria-hidden />
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
+                      </span>
+                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
+                        <span className="research-stats-compare-legend-item">
+                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
+                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
+                          </span>
+                          <span className="research-stats-compare-legend-text">
+                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
             <div
@@ -1421,6 +1435,106 @@ export default function StatsSubpage() {
           </p>
         )}
       </div>
+
+      {showCompareDetailsModal && (teamView ? compareTableTeams : compareTablePlayers).length > 0 && (
+        <div
+          className="research-stats-compare-details-overlay"
+          onClick={() => setShowCompareDetailsModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="research-stats-compare-details-title"
+        >
+          <div
+            className="research-stats-compare-details-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="research-stats-compare-details-header">
+              <h2 id="research-stats-compare-details-title" className="research-stats-compare-details-title">
+                {teamView ? 'Compare teams' : 'Compare players'}
+              </h2>
+              <button
+                type="button"
+                className="research-stats-compare-details-close"
+                onClick={() => setShowCompareDetailsModal(false)}
+                aria-label="Close"
+              >
+                <X size={20} strokeWidth={2} />
+              </button>
+            </div>
+            <div className="research-stats-compare-details-body">
+              <div className="research-stats-compare-details-table-wrap">
+                <table className="research-stats-compare-details-table">
+                  <thead>
+                    <tr>
+                      <th className="research-stats-compare-details-th-stat">Stat</th>
+                      {teamView
+                        ? compareTableTeams.map((t) => {
+                            const teamKey = getTeamKey(t)
+                            return (
+                              <th key={teamKey} className="research-stats-compare-details-th-entity">
+                                <div className="research-stats-compare-details-entity">
+                                  {t.team_short_name && (
+                                    <img src={`/badges/${t.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                  )}
+                                  <span>{t.team_name || t.team_short_name || '—'}</span>
+                                </div>
+                              </th>
+                            )
+                          })
+                        : compareTablePlayers.map((p) => (
+                            <th key={p.player_id} className="research-stats-compare-details-th-entity">
+                              <div className="research-stats-compare-details-entity">
+                                {p.team_short_name && (
+                                  <img src={`/badges/${p.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                )}
+                                <span>{p.web_name || '—'}</span>
+                                {p.position != null && (
+                                  <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
+                                    {POSITION_LABELS[p.position]}
+                                  </span>
+                                )}
+                              </div>
+                            </th>
+                          ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleColumns.map(({ key, label, field }) => {
+                      const entities = teamView ? compareTableTeams : compareTablePlayers
+                      const bestKey = teamView
+                        ? compareBestTeamKeyByField[field]
+                        : compareBestPlayerIdByField[field]
+                      return (
+                        <tr key={key} className="research-stats-compare-details-tr">
+                          <td className="research-stats-compare-details-td-stat">{label}</td>
+                          {entities.map((entity) => {
+                            const entityKey = teamView ? getTeamKey(entity) : entity.player_id
+                            const value = entity[field] ?? 0
+                            const { main, sub } = teamView
+                              ? formatStatValue(value, field, 'total', entity.minutes, null, false)
+                              : formatStatValue(value, field, displayMode, entity.minutes, entity.cost_tenths, showPerM)
+                            const isBest = entityKey === bestKey && entities.length > 1
+                            return (
+                              <td key={entityKey} className="research-stats-compare-details-td-value">
+                                <span
+                                  className={`research-stats-compare-details-pill${isBest ? ' research-stats-compare-details-pill--leader' : ''}`}
+                                >
+                                  {main}
+                                  {sub && <span className="research-stats-compare-details-pill-sub">{sub}</span>}
+                                </span>
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

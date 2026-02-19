@@ -50,6 +50,9 @@ class Config:
     # Post-deadline: picks+transfers batch size (managers per batch) and sleep between batches (seconds)
     deadline_batch_size: int = int(os.getenv("DEADLINE_BATCH_SIZE", "15"))
     deadline_batch_sleep_seconds: float = float(os.getenv("DEADLINE_BATCH_SLEEP_SECONDS", "1.0"))
+    # Manager points refresh (all tracked managers): batch size and sleep between batches (aggressive defaults; increase sleep if 429s)
+    manager_points_batch_size: int = int(os.getenv("MANAGER_POINTS_BATCH_SIZE", "10"))
+    manager_points_batch_sleep_seconds: float = float(os.getenv("MANAGER_POINTS_BATCH_SLEEP_SECONDS", "0.5"))
     # Post-deadline: run picks+transfers batch for this many minutes so transfers endpoint has time to update (FPL can lag vs is_current)
     deadline_refresh_window_minutes: int = int(os.getenv("DEADLINE_REFRESH_WINDOW_MINUTES", "45"))
     # Slow loop (manager points + MVs) during live matches — 60s for responsive standings

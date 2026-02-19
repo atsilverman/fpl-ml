@@ -663,6 +663,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   gap: 12px;
 }
 
+@media (min-width: 769px) {
+  .gw-debug-bento-content {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .gw-debug-bento-content::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .gw-debug-bento-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gw-debug-bento-content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
+}
+
 .gw-debug-empty {
   font-size: 0.8125rem;
   color: var(--text-secondary);
@@ -717,6 +735,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   overflow: auto;
 }
 
+@media (min-width: 769px) {
+  .gw-debug-fixtures-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .gw-debug-fixtures-wrap::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .gw-debug-fixtures-wrap::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gw-debug-fixtures-wrap::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
+}
+
 .gw-debug-fixtures-title {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -749,6 +785,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   gap: 10px;
 }
 
+@media (min-width: 769px) {
+  .updates-debug-bento-content {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .updates-debug-bento-content::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .updates-debug-bento-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .updates-debug-bento-content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
+}
+
 .updates-debug-now {
   font-size: 0.6875rem;
   font-weight: 600;
@@ -763,6 +817,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
+}
+
+@media (min-width: 769px) {
+  .updates-debug-table-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .updates-debug-table-wrapper::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .updates-debug-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .updates-debug-table-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
 }
 
 .updates-debug-table {
@@ -983,7 +1055,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   position: relative;
 }
 
-/* Scroll wrapper: takes row height, scrolls when list overflows; scrollbar hidden */
+/* Scroll wrapper: takes row height, scrolls when list overflows; scrollbar hidden on mobile */
 .bento-card-transfers-list-scroll {
   flex: 1 1 0;
   min-height: 0;
@@ -996,6 +1068,24 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 .bento-card-transfers-list-scroll::-webkit-scrollbar {
   display: none;
+}
+
+@media (min-width: 769px) {
+  .bento-card-transfers-list-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .bento-card-transfers-list-scroll::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
+  .bento-card-transfers-list-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .bento-card-transfers-list-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
 }
 
 /* Subtle chevron at bottom when > 3 transfers to indicate scroll for more */
@@ -1150,6 +1240,24 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
 
 .transfers-summary-content::-webkit-scrollbar {
   display: none;
+}
+
+@media (min-width: 769px) {
+  .transfers-summary-content {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .transfers-summary-content::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
+  .transfers-summary-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .transfers-summary-content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
 }
 
 .transfers-summary-header-row {
@@ -1369,6 +1477,24 @@ html[data-theme="dark"] .transfers-summary-column-count {
   display: none;
 }
 
+@media (min-width: 769px) {
+  .chips-status-list {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .chips-status-list::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+  }
+  .chips-status-list::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .chips-status-list::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
+}
+
 .chips-status-row {
   display: grid;
   grid-template-columns: 14fr 26fr 15fr 15fr 15fr 15fr;
@@ -1450,6 +1576,25 @@ html[data-theme="dark"] .transfers-summary-column-count {
 
 .league-standings-bento-table-wrapper::-webkit-scrollbar {
   display: none;
+}
+
+@media (min-width: 769px) {
+  .league-standings-bento-table-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .league-standings-bento-table-wrapper::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+    height: 6px;
+  }
+  .league-standings-bento-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .league-standings-bento-table-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
 }
 
 .league-standings-bento-loading,

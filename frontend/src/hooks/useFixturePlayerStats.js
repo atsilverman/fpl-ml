@@ -15,6 +15,7 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
         .from('player_gameweek_stats')
         .select(`
           player_id,
+          fixture_id,
           team_id,
           minutes,
           total_points,
@@ -74,6 +75,7 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
         const displayBonus = isBonusConfirmed ? officialBonus : provisionalBonus
         return {
           player_id: s.player_id,
+          fixture_id: s.fixture_id ?? fixtureId,
           team_id: s.team_id,
           player_name: info.web_name || 'Unknown',
           position: info.position ?? 0,

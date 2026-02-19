@@ -3,9 +3,9 @@ import { useFixtures } from './useFixtures'
 export function useLiveGameweekStatus(gameweek) {
   const { fixtures } = useFixtures(gameweek)
   
-  // Check if any fixtures are currently live (started but not finished)
+  // Live = started && !finished_provisional (matches backend LIVE_MATCHES; not just !finished)
   const hasLiveGames = fixtures.some(
-    fixture => fixture.started && !fixture.finished
+    fixture => fixture.started && !fixture.finished_provisional
   )
   
   return { hasLiveGames }

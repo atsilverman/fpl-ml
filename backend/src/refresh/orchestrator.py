@@ -14,7 +14,7 @@ from typing import Optional, List, Dict, Any
 
 from config import Config
 from database.supabase_client import SupabaseClient
-from fpl_api.client import FPLAPIClient
+from fpl_api.client import FPLAPIClient, FPLAPIRateLimitError
 from refresh.players import PlayerDataRefresher
 from refresh.managers import ManagerDataRefresher
 from refresh.baseline_capture import BaselineCapture
@@ -763,12 +763,17 @@ class RefreshOrchestrator:
                     away_goals += goals
                     if mins > max_minutes:
                         max_minutes = mins
-            # Hybrid: never show less than fixtures API (avoids stale scoreline/goal and low live minute)
+            # Score: use fixtures API only. Do NOT use event-live derived goals for the scoreline:
+            # live_data "elements" are aggregated per player per gameweek, so for DGW we would sum
+            # total GW goals (e.g. Arsenal 2+1) and show wrong score on this fixture.
             api_home = fixture.get("team_h_score")
             api_away = fixture.get("team_a_score")
             api_minutes = fixture.get("minutes") or 0
-            home_score = max((api_home if api_home is not None else 0), home_goals)
-            away_score = max((api_away if api_away is not None else 0), away_goals)
+            if api_home is None or api_away is None:
+                # Skip score update until API has both; never use event-live goals (DGW-safe).
+                continue
+            home_score = api_home
+            away_score = api_away
             minutes_value = max(api_minutes, max_minutes) if (api_minutes > 0 or max_minutes > 0) else 0
             try:
                 self.db_client.update_fixture_scores(
@@ -965,23 +970,26 @@ class RefreshOrchestrator:
                 })
                 return
             
-            # Refresh managers in parallel batches to optimize performance
-            # Rate limit: 30 calls/min = 0.5 calls/sec = 2 sec per call
-            # Process 5 managers concurrently, then wait 2 seconds
-            batch_size = 5
+            # Refresh managers in parallel batches (batch size and sleep configurable for rate-limit tuning)
+            batch_size = self.config.manager_points_batch_size
+            batch_sleep = self.config.manager_points_batch_sleep_seconds
             total_batches = (len(manager_ids) + batch_size - 1) // batch_size
-            
+            rate_limit_events = 0
+
             for batch_num in range(0, len(manager_ids), batch_size):
                 batch = manager_ids[batch_num:batch_num + batch_size]
                 batch_index = (batch_num // batch_size) + 1
-                
-                logger.debug("Processing manager batch", extra={
-                    "batch": batch_index,
-                    "total_batches": total_batches,
-                    "batch_size": len(batch)
-                })
-                
-                # Process batch in parallel
+
+                logger.debug(
+                    "Manager points batch start",
+                    extra={
+                        "batch": batch_index,
+                        "total_batches": total_batches,
+                        "batch_size": len(batch),
+                        "gameweek": self.current_gameweek,
+                    },
+                )
+
                 tasks = [
                     self.manager_refresher.refresh_manager_gameweek_history(
                         manager_id,
@@ -989,29 +997,58 @@ class RefreshOrchestrator:
                     )
                     for manager_id in batch
                 ]
-                
                 results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # Log any errors
+
                 for manager_id, result in zip(batch, results):
                     if isinstance(result, Exception):
+                        if isinstance(result, FPLAPIRateLimitError):
+                            rate_limit_events += 1
+                            logger.warning(
+                                "Manager points refresh rate limited (429)",
+                                extra={
+                                    "manager_id": manager_id,
+                                    "gameweek": self.current_gameweek,
+                                    "rate_limit_events_so_far": rate_limit_events,
+                                },
+                            )
                         logger.error("Manager points refresh failed", extra={
                             "manager_id": manager_id,
                             "gameweek": self.current_gameweek,
                             "error": str(result)
                         }, exc_info=True)
-                
-                # Rate limiting: Wait 2 seconds between batches to stay under 30 calls/min
-                # Each manager makes ~2 API calls, so 5 managers = 10 calls
-                # 10 calls / 0.5 calls/sec = 20 seconds needed, but we batch so wait 2 sec
-                if batch_num + batch_size < len(manager_ids):
-                    await asyncio.sleep(2.0)
-                # Heartbeat every 5 batches so "Since backend" doesn't sit at 10+ min during long runs
+
+                logger.debug(
+                    "Manager points batch completed",
+                    extra={
+                        "batch": batch_index,
+                        "total_batches": total_batches,
+                        "rate_limit_events_so_far": rate_limit_events,
+                    },
+                )
+
+                if batch_num + batch_size < len(manager_ids) and batch_sleep > 0:
+                    await asyncio.sleep(batch_sleep)
                 if (batch_index % 5) == 0:
                     try:
                         self.db_client.insert_refresh_event("slow")
                     except Exception:
                         pass
+
+            if rate_limit_events > 0:
+                logger.warning(
+                    "Manager points refresh finished with rate limit events; consider increasing MANAGER_POINTS_BATCH_SLEEP_SECONDS or reducing MANAGER_POINTS_BATCH_SIZE",
+                    extra={
+                        "gameweek": self.current_gameweek,
+                        "rate_limit_events": rate_limit_events,
+                        "batch_size": batch_size,
+                        "batch_sleep_seconds": batch_sleep,
+                    },
+                )
+            else:
+                logger.debug(
+                    "Manager points refresh completed with no rate limit events (safe to remove debug logging if stable)",
+                    extra={"gameweek": self.current_gameweek},
+                )
             
             # Recalculate mini-league ranks only when at least one fixture has started (or GW finished).
             # Before any kickoff, ranks stay at deadline order; recalc would use same totals but can overwrite.
@@ -1072,6 +1109,7 @@ class RefreshOrchestrator:
                 })
                 await self._refresh_manager_points(force_all_managers=True)
                 self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
+                logger.info("fpl_ranks_updated set (data_checked)", extra={"gameweek": self.current_gameweek})
                 return
             await self._check_fpl_rank_change_and_refresh(force_all_managers=True)
         except Exception as e:
@@ -1111,6 +1149,7 @@ class RefreshOrchestrator:
             if rank_changed:
                 logger.info("FPL ranks updated, refreshing all managers", extra={"gameweek": self.current_gameweek})
                 self.db_client.update_gameweek_fpl_ranks_updated(self.current_gameweek, True)
+                logger.info("fpl_ranks_updated set (rank-change poll)", extra={"gameweek": self.current_gameweek})
                 await self._refresh_manager_points(force_all_managers=force_all_managers)
         except Exception as e:
             logger.error("FPL rank check failed", extra={"gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
@@ -1252,6 +1291,8 @@ class RefreshOrchestrator:
                     "from": self.current_state.value,
                     "to": new_state.value
                 })
+                if new_state == RefreshState.LIVE_MATCHES and self.current_state != RefreshState.LIVE_MATCHES:
+                    logger.info("First fixture started, entering LIVE_MATCHES", extra={"gameweek": self.current_gameweek})
                 # When leaving live, reset standings throttle so next time we enter live we run standings on first cycle
                 if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING) and new_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     self._last_live_standings_in_fast_cycle = None
@@ -1316,23 +1357,43 @@ class RefreshOrchestrator:
                     self.db_client.insert_refresh_duration_log("gw_players", "fast", self.current_state.value, duration_ms)
                 except Exception:
                     pass
-                # Live-only manager points + ranks + MV: run at most every live_standings_in_fast_interval_seconds
-                # so most fast cycles stay short and "Since backend" updates every ~10–30s
+                # Live standings: when live_data is available use in-memory path (every cycle).
+                # When live_data is missing fall back to DB path and throttle by interval.
                 now_utc = datetime.now(timezone.utc)
+                use_live_data_path = live_data is not None and fixtures_by_gameweek is not None
                 interval_sec = self.config.live_standings_in_fast_interval_seconds
-                should_run_standings = (
-                    self._last_live_standings_in_fast_cycle is None
-                    or (now_utc - self._last_live_standings_in_fast_cycle).total_seconds() >= interval_sec
-                )
+                if use_live_data_path:
+                    should_run_standings = True
+                else:
+                    should_run_standings = (
+                        self._last_live_standings_in_fast_cycle is None
+                        or (now_utc - self._last_live_standings_in_fast_cycle).total_seconds() >= interval_sec
+                    )
                 if should_run_standings:
                     try:
                         t_live_standings = datetime.now(timezone.utc)
                         manager_ids = self._get_tracked_manager_ids()
                         all_managers_updated = True
                         if manager_ids and self.current_gameweek:
-                            all_managers_updated = await self.manager_refresher.refresh_manager_gameweek_points_live_only(
-                                manager_ids, self.current_gameweek
-                            )
+                            if use_live_data_path:
+                                logger.info(
+                                    "Manager points from live_data",
+                                    extra={"gameweek": self.current_gameweek, "count": len(manager_ids)},
+                                )
+                                all_managers_updated = await self.manager_refresher.refresh_manager_gameweek_points_from_live_data(
+                                    manager_ids,
+                                    self.current_gameweek,
+                                    live_data,
+                                    fixtures_by_gameweek,
+                                )
+                            else:
+                                logger.info(
+                                    "Manager points from DB (live_data unavailable)",
+                                    extra={"gameweek": self.current_gameweek, "count": len(manager_ids)},
+                                )
+                                all_managers_updated = await self.manager_refresher.refresh_manager_gameweek_points_live_only(
+                                    manager_ids, self.current_gameweek
+                                )
                             any_fixture_started = False
                             try:
                                 fixtures = self.db_client.client.table("fixtures").select("started").eq(

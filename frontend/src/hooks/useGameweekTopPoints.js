@@ -21,7 +21,7 @@ export function useGameweekTopPoints() {
 
       const { data: stats, error: statsError } = await supabase
         .from('player_gameweek_stats')
-        .select('player_id, total_points, bonus_status, provisional_bonus')
+        .select('player_id, fixture_id, total_points, bonus_status, provisional_bonus')
         .eq('gameweek', gameweek)
         .order('total_points', { ascending: false })
         .limit(TOP_LIMIT)
@@ -66,6 +66,7 @@ export function useGameweekTopPoints() {
 
         return {
           player_id: s.player_id,
+          fixture_id: s.fixture_id ?? null,
           player_name: info.web_name,
           team_short_name: info.team_short_name,
           position: info.position,

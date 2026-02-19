@@ -68,7 +68,7 @@ function formatExpected(v) {
   return n.toFixed(2)
 }
 
-export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, fixtureStatus, onTableAreaClick }) {
+export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, fixtureStatus, fixtureId, onTableAreaClick }) {
   const [sortKey, setSortKey] = useState('points')
   const [sortDir, setSortDir] = useState('asc')
   const tableScrollRef = useRef(null)
@@ -126,12 +126,15 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     )
   }
 
+  const effectiveFixtureId = fixtureId != null ? Number(fixtureId) : (players?.[0]?.fixture_id != null && players[0].fixture_id !== 0 ? Number(players[0].fixture_id) : 0)
   const renderStatCell = (player, { key, col }) => {
     const value = player[col] ?? 0
     const numVal = Number(value) || 0
     const isZero = numVal === 0
     const playerId = player.player_id != null ? Number(player.player_id) : null
-    const isTop10ForColumn = playerId != null && top10ByStat?.[key]?.has(playerId)
+    const rowFixtureId = player.fixture_id != null && player.fixture_id !== 0 ? Number(player.fixture_id) : effectiveFixtureId
+    const top10Key = playerId != null ? `${playerId}-${rowFixtureId}` : null
+    const isTop10ForColumn = top10Key != null && top10ByStat?.[key]?.has(top10Key)
     const isDefColumn = key === 'defensive_contribution'
     const isSavesColumn = key === 'saves'
     const isBonusColumn = key === 'bonus'
@@ -234,7 +237,9 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
           <tbody>
             {displayedPlayers.map(p => {
               const playerId = p.player_id != null ? Number(p.player_id) : null
-              const isTop10Pts = playerId != null && top10ByStat?.pts?.has(playerId)
+              const rowFid = p.fixture_id != null && p.fixture_id !== 0 ? Number(p.fixture_id) : effectiveFixtureId
+              const top10Key = playerId != null ? `${playerId}-${rowFid}` : null
+              const isTop10Pts = top10Key != null && top10ByStat?.pts?.has(top10Key)
               const isDnp = false
               const isOwnedByYou = ownedPlayerIds != null && playerId != null && ownedPlayerIds.has(playerId)
               const ptsIncludesProvisional = p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0
@@ -285,8 +290,6 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     </div>
   )
 }
-
-const MOBILE_BREAKPOINT = 768
 
 /** FPL bonus tiebreaker: BPS desc, then goals, assists, clean_sheets. Used to get top 3 / bonus-only list. */
 function sortByBpsAndTiebreakers(players) {
@@ -352,9 +355,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
     ? (lastHadSameHome ? (h2hPlayerSource.awayPlayers ?? []) : (h2hPlayerSource.homePlayers ?? []))
     : awayPlayers
   const displayStatsLoading = useH2HStats ? (h2hStats ? lastH2HPlayerStatsLoading : reverseStatsLoading) : statsLoading
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
   const mergedPlayersByPoints = useMemo(() => {
-    if (!isMobile || !displayHomePlayers?.length && !displayAwayPlayers?.length) return []
+    if (!displayHomePlayers?.length && !displayAwayPlayers?.length) return []
     const merged = [...(displayHomePlayers ?? []), ...(displayAwayPlayers ?? [])]
     const seen = new Set()
     const deduped = merged.filter((p) => {
@@ -364,30 +366,24 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
       return true
     })
     return deduped.sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
-  }, [isMobile, displayHomePlayers, displayAwayPlayers])
+  }, [displayHomePlayers, displayAwayPlayers])
   const mergedPlayersForBps = useMemo(() => {
     if (!homePlayers?.length && !awayPlayers?.length) return []
     const merged = [...(homePlayers ?? []), ...(awayPlayers ?? [])]
     const seen = new Set()
+    const validTeamIds = new Set([home_team_id, away_team_id].filter(Boolean))
     return merged.filter((p) => {
+      if (validTeamIds.size && p.team_id != null && !validTeamIds.has(Number(p.team_id))) return false
       const id = p.player_id != null ? Number(p.player_id) : null
       if (id == null || seen.has(id)) return false
       seen.add(id)
       return true
     })
-  }, [homePlayers, awayPlayers])
+  }, [homePlayers, awayPlayers, home_team_id, away_team_id])
   const bonusOnlyPlayers = useMemo(() => {
     if (!showBonusChart || !mergedPlayersForBps.length) return []
     return bonusPlayersOnly(mergedPlayersForBps, fixtureStatus === 'live' || fixtureStatus === 'provisional')
   }, [showBonusChart, mergedPlayersForBps, fixtureStatus])
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`)
-    const handle = () => setIsMobile(mql.matches)
-    mql.addEventListener('change', handle)
-    handle()
-    return () => mql.removeEventListener('change', handle)
-  }, [])
 
   const status = fixtureStatus
   const hasStarted = fixture.started
@@ -527,39 +523,18 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
               <div className="matchup-detail-loading">
                 <div className="skeleton-text" />
               </div>
-            ) : isMobile ? (
+            ) : (
                 <div className="matchup-detail-tables matchup-detail-tables--merged">
                   <MatchPlayerTable
                     players={mergedPlayersByPoints}
                     teamShortName={null}
                     teamName={useH2HStats ? 'Last meeting – by points' : 'By points'}
                     top10ByStat={top10ByStat}
+                    ownedPlayerIds={ownedPlayerIds}
                     hideHeader
                     useDashForDnp={useH2HStats || status === 'scheduled'}
                     fixtureStatus={status}
-                    onTableAreaClick={onToggle}
-                  />
-                </div>
-              ) : (
-                <div className="matchup-detail-tables">
-                  <MatchPlayerTable
-                    players={displayHomePlayers}
-                    teamShortName={homeTeam?.short_name}
-                    teamName={homeTeam?.team_name}
-                    top10ByStat={top10ByStat}
-                    ownedPlayerIds={ownedPlayerIds}
-                    useDashForDnp={useH2HStats || status === 'scheduled'}
-                    fixtureStatus={status}
-                    onTableAreaClick={onToggle}
-                  />
-                  <MatchPlayerTable
-                    players={displayAwayPlayers}
-                    teamShortName={awayTeam?.short_name}
-                    teamName={awayTeam?.team_name}
-                    top10ByStat={top10ByStat}
-                    ownedPlayerIds={ownedPlayerIds}
-                    useDashForDnp={useH2HStats || status === 'scheduled'}
-                    fixtureStatus={status}
+                    fixtureId={fpl_fixture_id}
                     onTableAreaClick={onToggle}
                   />
                 </div>

@@ -30,6 +30,25 @@
   display: none;
 }
 
+@media (min-width: 769px) {
+  .gameweek-points-scrollable {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .gameweek-points-scrollable::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+    height: 6px;
+  }
+  .gameweek-points-scrollable::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gameweek-points-scrollable::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 3px;
+  }
+}
+
 /* Wrapper for table only – no overflow so thead sticky works relative to .gameweek-points-scrollable */
 .gameweek-points-box-content {
   width: 100%;
@@ -341,6 +360,16 @@
 .gameweek-points-tr-dgw-second .gameweek-points-td-pts {
   font-size: 0.95em;
   color: var(--text-secondary);
+}
+
+/* DGW merged total: PTS cell spans both rows (like player name) when per-fixture breakdown not available */
+.gameweek-points-td-pts-dgw-span {
+  vertical-align: middle;
+}
+.gameweek-points-pts-aggregate-label {
+  font-size: 0.75em;
+  color: var(--text-secondary);
+  margin-right: 2px;
 }
 
 /* Autosub row highlighting: subtle red = subbed out, subtle green = subbed in */

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
-import { ClockFading, Filter } from 'lucide-react'
+import { ClockFading, Filter, Info } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -40,9 +40,9 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
   const strength = useCustomDifficulty
     ? getEffectiveStrength(baseDifficulty, overrides, opponent.team_id)
     : (baseDifficulty != null ? Math.min(5, Math.max(1, baseDifficulty)) : null)
-  const difficultyClass =
+  const difficultyPillClass =
     strength != null && strength >= 1 && strength <= 5
-      ? `schedule-cell-difficulty-${strength}`
+      ? `schedule-cell-difficulty-pill schedule-cell-difficulty-pill--${strength}`
       : ''
   const canShowReverse = lastH2H && lastH2H.home_score != null && lastH2H.away_score != null
   const scoreline = lastH2H ? `${lastH2H.home_score ?? '–'}–${lastH2H.away_score ?? '–'}` : ''
@@ -70,7 +70,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
   return (
     <td
       colSpan={colSpan}
-      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${difficultyClass} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}`}
+      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}`}
       title={opponent.team_name ?? short}
       role={canOpenPopup ? 'button' : undefined}
       tabIndex={canOpenPopup ? 0 : undefined}
@@ -79,7 +79,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
       aria-label={canOpenPopup ? (canShowReverse ? `View last meeting: ${short}` : `View matchup: ${short}`) : undefined}
     >
       <span className="schedule-cell-opponent-content">
-        <span className="schedule-cell-opponent-inner">
+        <span className={`schedule-cell-opponent-inner${difficultyPillClass ? ` ${difficultyPillClass}` : ''}`}>
           <span className="schedule-cell-abbr-display">{display}</span>
           {opponent.isHome && (
             <svg className="schedule-cell-home-indicator" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
@@ -113,11 +113,11 @@ export default function ScheduleSubpage() {
   const [difficultyDimension, setDifficultyDimension] = useState('overall')
   const [showReverseScores, setShowReverseScores] = useState(false)
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
+  const [legendOpen, setLegendOpen] = useState(false)
   const [popupCell, setPopupCell] = useState(null)
   const filterPopoverRef = useRef(null)
+  const legendPopoverRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
-  const POPUP_MOBILE_BREAKPOINT = 640
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= POPUP_MOBILE_BREAKPOINT)
 
   const popupLastH2H = popupCell ? lastH2HMap[pairKey(popupCell.rowTeamId, popupCell.opponentTeamId)] ?? null : null
   const reverseFixtureId = popupLastH2H?.fpl_fixture_id ?? null
@@ -138,7 +138,7 @@ export default function ScheduleSubpage() {
   const homeTeam = reverseHomeId != null ? mapForRow[reverseHomeId] : null
   const awayTeam = reverseAwayId != null ? mapForRow[reverseAwayId] : null
   const mergedPopupPlayers = useMemo(() => {
-    if (!isMobile || (!homePlayers?.length && !awayPlayers?.length)) return []
+    if (!homePlayers?.length && !awayPlayers?.length) return []
     const merged = [...(homePlayers ?? []), ...(awayPlayers ?? [])]
     const seen = new Set()
     const deduped = merged.filter((p) => {
@@ -148,15 +148,7 @@ export default function ScheduleSubpage() {
       return true
     })
     return deduped.sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
-  }, [isMobile, homePlayers, awayPlayers])
-
-  useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${POPUP_MOBILE_BREAKPOINT}px)`)
-    const handle = () => setIsMobile(mql.matches)
-    mql.addEventListener('change', handle)
-    handle()
-    return () => mql.removeEventListener('change', handle)
-  }, [])
+  }, [homePlayers, awayPlayers])
 
   useEffect(() => {
     if (!popupCell) return
@@ -182,10 +174,16 @@ export default function ScheduleSubpage() {
       ) {
         setFilterPopoverOpen(false)
       }
+      if (
+        legendPopoverRef.current && !legendPopoverRef.current.contains(e.target) &&
+        !e.target.closest('.schedule-legend-icon-btn')
+      ) {
+        setLegendOpen(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [filterPopoverOpen])
+  }, [filterPopoverOpen, legendOpen])
 
   const handleMatchupClick = (rowTeamId, opponentTeamId) => {
     setPopupCell({ rowTeamId, opponentTeamId })
@@ -203,7 +201,7 @@ export default function ScheduleSubpage() {
               disabled
               aria-label="Schedule view options (unavailable while loading)"
             >
-              <Filter size={14} strokeWidth={2} aria-hidden />
+              <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
             </button>
           </header>
         </div>
@@ -224,7 +222,7 @@ export default function ScheduleSubpage() {
               aria-label="Schedule view options"
               aria-expanded={false}
             >
-              <Filter size={14} strokeWidth={2} aria-hidden />
+              <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
             </button>
           </header>
         </div>
@@ -240,17 +238,46 @@ export default function ScheduleSubpage() {
       <div className="schedule-header-with-filter">
         <header className="schedule-subpage-header research-page-card-header">
           <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-          <button
-            type="button"
-            className={`schedule-filter-icon-btn ${filterPopoverOpen || hasActiveScheduleFilters ? 'schedule-filter-icon-btn--active' : ''}`}
-            onClick={() => setFilterPopoverOpen((open) => !open)}
-            aria-label="Schedule view options"
-            aria-expanded={filterPopoverOpen}
-            aria-haspopup="dialog"
-          >
-            <Filter size={14} strokeWidth={2} aria-hidden />
-          </button>
+          <div className="schedule-header-icon-group" aria-hidden>
+            <button
+              type="button"
+              className={`schedule-legend-icon-btn ${legendOpen ? 'schedule-legend-icon-btn--active' : ''}`}
+              onClick={() => setLegendOpen((open) => !open)}
+              aria-label="Opponent difficulty legend"
+              aria-expanded={legendOpen}
+              aria-haspopup="dialog"
+            >
+              <Info className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`schedule-filter-icon-btn ${filterPopoverOpen || hasActiveScheduleFilters ? 'schedule-filter-icon-btn--active' : ''}`}
+              onClick={() => setFilterPopoverOpen((open) => !open)}
+              aria-label="Schedule view options"
+              aria-expanded={filterPopoverOpen}
+              aria-haspopup="dialog"
+            >
+              <Filter className="schedule-header-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+            </button>
+          </div>
         </header>
+        {legendOpen && (
+          <div className="schedule-legend-popover" ref={legendPopoverRef} role="dialog" aria-label="Opponent difficulty legend">
+            <div className="schedule-legend-title">Opponent difficulty</div>
+            <div className="schedule-legend-items">
+              {[1, 2, 3, 4, 5].map((d) => (
+                <div key={d} className="schedule-legend-row">
+                  <span className={`schedule-cell-difficulty-pill schedule-cell-difficulty-pill--${d}`}>
+                    <span className="schedule-cell-abbr-display">{d === 1 ? '1' : d === 5 ? '5' : String(d)}</span>
+                  </span>
+                  <span className="schedule-legend-label">
+                    {d === 1 ? 'Easiest' : d === 5 ? 'Hardest' : d === 3 ? 'Medium' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {filterPopoverOpen && (
           <div className="schedule-filter-popover" ref={filterPopoverRef} role="dialog" aria-label="Schedule view options">
             <div className="schedule-filter-popover-section">
@@ -479,7 +506,7 @@ export default function ScheduleSubpage() {
                     <div className="matchup-detail-loading">
                       <div className="skeleton-text" />
                     </div>
-                  ) : isMobile ? (
+                  ) : (
                     <div className="matchup-detail-tables matchup-detail-tables--merged">
                       <MatchPlayerTable
                         key={reverseFixtureId}
@@ -488,27 +515,6 @@ export default function ScheduleSubpage() {
                         teamName="Last meeting – by points"
                         top10ByStat={null}
                         hideHeader
-                        useDashForDnp
-                      />
-                    </div>
-                  ) : (
-                    <div className="matchup-detail-tables">
-                      <MatchPlayerTable
-                        key={`${reverseFixtureId}-home`}
-                        players={homePlayers}
-                        teamShortName={homeTeam?.short_name}
-                        teamName={homeTeam?.team_name}
-                        top10ByStat={null}
-                        ownedPlayerIds={null}
-                        useDashForDnp
-                      />
-                      <MatchPlayerTable
-                        key={`${reverseFixtureId}-away`}
-                        players={awayPlayers}
-                        teamShortName={awayTeam?.short_name}
-                        teamName={awayTeam?.team_name}
-                        top10ByStat={null}
-                        ownedPlayerIds={null}
                         useDashForDnp
                       />
                     </div>

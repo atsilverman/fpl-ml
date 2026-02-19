@@ -40,7 +40,7 @@ export function useGameweekTopPerformersByStat() {
       const { data: stats, error: statsError } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'player_id, total_points, bonus_status, provisional_bonus, goals_scored, assists, expected_goals, expected_assists, bps, defensive_contribution'
+          'player_id, fixture_id, total_points, bonus_status, provisional_bonus, goals_scored, assists, expected_goals, expected_assists, bps, defensive_contribution'
         )
         .eq('gameweek', gameweek)
 
@@ -82,6 +82,7 @@ export function useGameweekTopPerformersByStat() {
             : (s.total_points ?? 0) + provisionalBonus
         return {
           player_id: s.player_id,
+          fixture_id: s.fixture_id ?? null,
           player_name: info.web_name,
           team_short_name: info.team_short_name,
           position: info.position,
@@ -107,6 +108,7 @@ export function useGameweekTopPerformersByStat() {
         })
         const top5 = sorted.slice(0, TOP_LIMIT).map((r) => ({
           player_id: r.player_id,
+          fixture_id: r.fixture_id ?? null,
           player_name: r.player_name,
           team_short_name: r.team_short_name,
           position: r.position,

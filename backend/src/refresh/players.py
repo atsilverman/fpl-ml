@@ -574,6 +574,59 @@ class PlayerDataRefresher:
                 for fid, plist in fixture_players.items()
             }
 
+            # DGW: fetch element-summary for players with 2+ fixtures for accurate per-fixture points
+            dgw_player_ids = set()
+            for pid in active_player_ids:
+                team_id = players_map.get(pid, {}).get("team", 0)
+                if not team_id or not fixtures_by_id:
+                    continue
+                count = sum(
+                    1 for _f_id, f in fixtures_by_id.items()
+                    if f.get("team_h") == team_id or f.get("team_a") == team_id
+                )
+                if count >= 2:
+                    dgw_player_ids.add(pid)
+            dgw_history_by_player: Dict[int, List[Dict[str, Any]]] = {}
+            if dgw_player_ids:
+                dgw_list = list(dgw_player_ids)
+                for i in range(0, len(dgw_list), 10):
+                    batch = dgw_list[i : i + 10]
+                    summaries = await asyncio.gather(
+                        *[self.fpl_client.get_element_summary(pid) for pid in batch],
+                        return_exceptions=True,
+                    )
+                    for pid, summary in zip(batch, summaries):
+                        if isinstance(summary, Exception):
+                            logger.debug(
+                                "Element-summary failed for DGW player",
+                                extra={"player_id": pid, "error": str(summary)},
+                            )
+                            continue
+                        history = summary.get("history", [])
+                        gw_data_list = [h for h in history if h.get("round") == gameweek]
+                        gw_data_list.sort(key=lambda h: h.get("kickoff_time") or "")
+                        if gw_data_list:
+                            pos = players_map.get(pid, {}).get("element_type", 0)
+                            dgw_history_by_player[pid] = []
+                            for h in gw_data_list:
+                                defcon = self._calculate_defcon(h, pos)
+                                dgw_history_by_player[pid].append({
+                                    "fixture": h.get("fixture") or 0,
+                                    "total_points": h.get("total_points", 0) or 0,
+                                    "minutes": min(90, h.get("minutes", 0) or 0),
+                                    "goals_scored": h.get("goals_scored", 0) or 0,
+                                    "assists": h.get("assists", 0) or 0,
+                                    "bps": h.get("bps", 0) or 0,
+                                    "bonus": h.get("bonus", 0) or 0,
+                                    "bonus_status": "confirmed" if (h.get("bonus") or 0) > 0 else "provisional",
+                                    "defensive_contribution": defcon,
+                                })
+                if dgw_history_by_player:
+                    logger.debug(
+                        "Fetched element-summary for DGW players",
+                        extra={"gameweek": gameweek, "count": len(dgw_history_by_player)},
+                    )
+
             for player_id in active_player_ids:
                 live_elem = live_elements.get(player_id)
                 if not live_elem:
@@ -598,43 +651,74 @@ class PlayerDataRefresher:
                 if not player_fixtures:
                     player_fixtures = [(0, {})]
                 
+                # First fixture id (by kickoff order). Legacy single row with fixture_id 0/None is
+                # attributed to this fixture only so DGW second row gets remainder, not zero.
+                first_fixture_id = player_fixtures[0][0] if player_fixtures else None
+                if first_fixture_id is not None and first_fixture_id != 0:
+                    first_fixture_id = int(first_fixture_id)
+                else:
+                    first_fixture_id = None  # single-GW placeholder; (player_id, 0) already matches
+                
                 # DGW with live data: FPL gives one aggregated stats blob. Split by preserving existing
                 # stats for finished fixtures and putting the remainder on the in-progress fixture.
                 def _existing_for_fid(fid):
                     s = existing_stats_by_player_fixture.get((player_id, fid), {})
-                    if not s and fid and fid != 0:
-                        s = existing_stats_by_player_fixture.get((player_id, None), {})
+                    if not s and first_fixture_id is not None and fid == first_fixture_id:
+                        # Legacy single row (fixture_id 0 or None): treat as first fixture's stats only
+                        s = existing_stats_by_player_fixture.get((player_id, 0), {}) or existing_stats_by_player_fixture.get((player_id, None), {})
                     return s
                 def _fixture_finished(fid):
                     if not fid or fid not in fixtures_by_id:
                         return False
                     f = fixtures_by_id[fid]
                     return f.get("finished", False) or f.get("finished_provisional", False)
-                sum_finished_minutes = 0
-                sum_finished_points = 0
-                sum_finished_goals = 0
-                sum_finished_assists = 0
-                sum_finished_bps = 0
-                for (of_id, _) in player_fixtures:
-                    ofid = of_id if of_id else 0
-                    if _fixture_finished(of_id):
-                        ex = _existing_for_fid(ofid)
-                        sum_finished_minutes += ex.get("minutes") or 0
-                        sum_finished_points += ex.get("total_points") or 0
-                        sum_finished_goals += ex.get("goals_scored") or 0
-                        sum_finished_assists += ex.get("assists") or 0
-                        sum_finished_bps += ex.get("bps") or 0
+                # Cap per-fixture at 90 mins so we never treat aggregated/legacy data as one game
+                MAX_MINUTES_PER_FIXTURE = 90
                 live_minutes = stats.get("minutes", 0) or 0
                 live_points = stats.get("total_points", 0) or 0
                 live_goals = stats.get("goals_scored", 0) or 0
                 live_assists = stats.get("assists", 0) or 0
                 live_bps = stats.get("bps", 0) or 0
+                sum_finished_minutes = 0
+                sum_finished_points = 0
+                sum_finished_goals = 0
+                sum_finished_assists = 0
+                sum_finished_bps = 0
+                sum_finished_defcon = 0
+                for (of_id, _) in player_fixtures:
+                    ofid = of_id if of_id else 0
+                    if _fixture_finished(of_id):
+                        ex = _existing_for_fid(ofid)
+                        raw_mins = ex.get("minutes") or 0
+                        capped_mins = min(MAX_MINUTES_PER_FIXTURE, raw_mins)
+                        sum_finished_minutes += capped_mins
+                        # When existing row is aggregated (>90 mins), split points proportionally
+                        ex_pts = ex.get("total_points") or 0
+                        if raw_mins > MAX_MINUTES_PER_FIXTURE and live_minutes > 0:
+                            sum_finished_points += round(live_points * capped_mins / live_minutes)
+                        else:
+                            sum_finished_points += ex_pts
+                        sum_finished_goals += ex.get("goals_scored") or 0
+                        sum_finished_assists += ex.get("assists") or 0
+                        sum_finished_bps += ex.get("bps") or 0
+                        sum_finished_defcon += ex.get("defensive_contribution") or 0
                 # Remainder for the live (non-finished) fixture row
                 remainder_minutes = max(0, live_minutes - sum_finished_minutes)
                 remainder_points = max(0, live_points - sum_finished_points)
                 remainder_goals = max(0, live_goals - sum_finished_goals)
                 remainder_assists = max(0, live_assists - sum_finished_assists)
                 remainder_bps = max(0, live_bps - sum_finished_bps)
+                live_defcon = self._calculate_defcon(
+                    {
+                        "defensive_contribution": stats.get("defensive_contribution"),
+                        "defensive_contributions": stats.get("defensive_contributions"),
+                        "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
+                        "tackles": stats.get("tackles", 0),
+                        "recoveries": stats.get("recoveries", 0),
+                    },
+                    position,
+                )
+                remainder_defcon = max(0, live_defcon - sum_finished_defcon)
                 
                 # One row per fixture; preserve per-fixture stats for finished, use remainder for live
                 for idx, (f_id, fixture) in enumerate(player_fixtures):
@@ -668,29 +752,58 @@ class PlayerDataRefresher:
                             all_in_fixture,
                         )
                     
-                    stats_for_defcon = {
-                        "defensive_contribution": stats.get("defensive_contribution"),
-                        "defensive_contributions": stats.get("defensive_contributions"),
-                        "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0),
-                        "tackles": stats.get("tackles", 0),
-                        "recoveries": stats.get("recoveries", 0)
-                    }
-                    defcon = self._calculate_defcon(stats_for_defcon, position)
-                    
                     is_first_row = idx == 0
                     this_fixture_finished = match_finished or match_finished_provisional
-                    # Use existing stats for finished fixture; for live fixture use remainder (DGW split)
-                    if this_fixture_finished and existing_stat:
-                        row_minutes = existing_stat.get("minutes", 0) or 0
-                        row_points = existing_stat.get("total_points", 0) or 0
+                    # Row DEFCON: finished = from existing; live = remainder when DGW split, else full live on first row
+                    use_remainder = len(player_fixtures) > 1 and (sum_finished_minutes > 0 or sum_finished_points > 0)
+                    row_defcon = (
+                        remainder_defcon if (use_remainder and not this_fixture_finished)
+                        else (live_defcon if (is_first_row and not this_fixture_finished) else 0)
+                    )
+                    # DGW: prefer accurate per-fixture points from element-summary when available
+                    if len(player_fixtures) > 1 and player_id in dgw_history_by_player:
+                        dgw_history_by_fid = {e["fixture"]: e for e in dgw_history_by_player[player_id]}
+                        h_entry = dgw_history_by_fid.get(fixture_id) if fixture_id else None
+                        if h_entry is not None:
+                            row_points = h_entry["total_points"]
+                            row_minutes = h_entry["minutes"]
+                            row_goals = h_entry["goals_scored"]
+                            row_assists = h_entry["assists"]
+                            row_bps = h_entry["bps"]
+                            row_bonus = h_entry["bonus"]
+                            bonus_status = h_entry["bonus_status"]
+                            row_defcon = h_entry["defensive_contribution"]
+                            provisional_bonus_val = row_bonus if bonus_status == "provisional" else 0
+                        else:
+                            hist_entries = dgw_history_by_player[player_id]
+                            sum_hist_pts = sum(e["total_points"] for e in hist_entries)
+                            sum_hist_mins = sum(e["minutes"] for e in hist_entries)
+                            sum_hist_goals = sum(e["goals_scored"] for e in hist_entries)
+                            sum_hist_assists = sum(e["assists"] for e in hist_entries)
+                            sum_hist_bps = sum(e["bps"] for e in hist_entries)
+                            sum_hist_defcon = sum(e["defensive_contribution"] for e in hist_entries)
+                            row_points = max(0, live_points - sum_hist_pts)
+                            row_minutes = min(MAX_MINUTES_PER_FIXTURE, max(0, live_minutes - sum_hist_mins))
+                            row_goals = max(0, live_goals - sum_hist_goals)
+                            row_assists = max(0, live_assists - sum_hist_assists)
+                            row_bps = max(0, live_bps - sum_hist_bps)
+                            row_defcon = max(0, live_defcon - sum_hist_defcon)
+                            row_bonus = bonus if (is_first_row or provisional_bonus_val == bonus) else 0
+                    elif this_fixture_finished and existing_stat:
+                        raw_ex_mins = existing_stat.get("minutes", 0) or 0
+                        row_minutes = min(MAX_MINUTES_PER_FIXTURE, raw_ex_mins)
+                        if raw_ex_mins > MAX_MINUTES_PER_FIXTURE and live_minutes > 0:
+                            row_points = round(live_points * row_minutes / live_minutes)
+                        else:
+                            row_points = existing_stat.get("total_points", 0) or 0
                         row_goals = existing_stat.get("goals_scored", 0) or 0
                         row_assists = existing_stat.get("assists", 0) or 0
                         row_bps = existing_stat.get("bps", 0) or 0
                         row_bonus = existing_stat.get("bonus", 0) if (existing_stat.get("bonus_status") == "confirmed" or (existing_stat.get("bonus") or 0) > 0) else (existing_stat.get("provisional_bonus", 0) or existing_stat.get("bonus", 0))
                     else:
-                        # Use remainder only when at least one other fixture is finished (so we can split). Else first row gets live totals, rest 0.
                         use_remainder = len(player_fixtures) > 1 and (sum_finished_minutes > 0 or sum_finished_points > 0)
-                        row_minutes = remainder_minutes if use_remainder else (live_minutes if is_first_row else 0)
+                        raw_mins = remainder_minutes if use_remainder else (live_minutes if is_first_row else 0)
+                        row_minutes = min(MAX_MINUTES_PER_FIXTURE, raw_mins)
                         row_points = remainder_points if use_remainder else (live_points if is_first_row else 0)
                         row_goals = remainder_goals if use_remainder else (live_goals if is_first_row else 0)
                         row_assists = remainder_assists if use_remainder else (live_assists if is_first_row else 0)
@@ -783,7 +896,7 @@ class PlayerDataRefresher:
                             "tackles": stats.get("tackles", 0) if not this_fixture_finished else 0,
                             "clearances_blocks_interceptions": stats.get("clearances_blocks_interceptions", 0) if not this_fixture_finished else 0,
                             "recoveries": stats.get("recoveries", 0) if not this_fixture_finished else 0,
-                            "defensive_contribution": defcon if not this_fixture_finished else 0,
+                            "defensive_contribution": row_defcon if not this_fixture_finished else 0,
                             "saves": stats.get("saves", 0) if not this_fixture_finished else 0,
                             "clean_sheets": stats.get("clean_sheets", 0) if not this_fixture_finished else 0,
                             "goals_conceded": stats.get("goals_conceded", 0) if not this_fixture_finished else 0,
@@ -915,6 +1028,7 @@ class PlayerDataRefresher:
                                 match_finished = fixture.get("finished", False)
                                 match_finished_provisional = fixture.get("finished_provisional", False)
                         
+                        _mins = min(90, gw_data.get("minutes", 0) or 0)  # no single fixture > 90
                         stats_data = {
                             "player_id": player_id,
                             "gameweek": gameweek,
@@ -923,8 +1037,8 @@ class PlayerDataRefresher:
                             "opponent_team_id": gw_data.get("opponent_team"),
                             "was_home": gw_data.get("was_home"),
                             "kickoff_time": gw_data.get("kickoff_time"),
-                            "minutes": gw_data.get("minutes", 0),
-                            "started": gw_data.get("minutes", 0) > 0,
+                            "minutes": _mins,
+                            "started": _mins > 0,
                             "total_points": gw_data.get("total_points", 0),
                             "bonus": bonus,
                             "provisional_bonus": 0,

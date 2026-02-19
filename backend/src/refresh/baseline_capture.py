@@ -304,16 +304,15 @@ class BaselineCapture:
             # Baselines already captured
             return False
         
-        # Check if matches have started (if so, too late to capture baselines)
+        # Critical gate: do not capture baselines after any fixture has started (wrong delta baseline)
         fixtures = self.db_client.client.table("fixtures").select(
             "started"
-        ).eq("gameweek", gameweek).limit(1).execute().data
+        ).eq("gameweek", gameweek).execute().data
         
-        if fixtures and fixtures[0].get("started"):
-            # Matches have started - should have captured baselines earlier
-            logger.warning("Matches have started but baselines not captured", extra={
+        if fixtures and any(f.get("started") for f in fixtures):
+            logger.warning("Skipping baseline capture: at least one fixture has started", extra={
                 "gameweek": gameweek
             })
-            # Still allow capture (better late than never, but log warning)
+            return False
         
         return True
