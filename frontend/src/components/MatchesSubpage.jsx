@@ -701,27 +701,29 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                     <div className="gw-top-points-list">
                       {currentPerformersList.map((row) => (
                         <div key={row.player_id} className="gw-top-points-item">
-                          <span className="gw-top-points-badge-slot">
-                            {row.team_short_name ? (
-                              <img
-                                src={`/badges/${row.team_short_name}.svg`}
-                                alt=""
-                                className="gw-top-points-badge"
-                                onError={(e) => { e.target.style.display = 'none' }}
-                              />
-                            ) : (
-                              <span className="gw-top-points-badge-placeholder" aria-hidden />
-                            )}
-                          </span>
-                          <div className="gw-top-points-name-wrap">
-                            <span className="gw-top-points-name">{row.player_name}</span>
-                            <span
-                              className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
-                              title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
-                              aria-label={row.position_label || 'Position'}
-                            >
-                              {row.position_label ?? '—'}
+                          <div className="gw-top-points-item-identity">
+                            <span className="gw-top-points-badge-slot">
+                              {row.team_short_name ? (
+                                <img
+                                  src={`/badges/${row.team_short_name}.svg`}
+                                  alt=""
+                                  className="gw-top-points-badge"
+                                  onError={(e) => { e.target.style.display = 'none' }}
+                                />
+                              ) : (
+                                <span className="gw-top-points-badge-placeholder" aria-hidden />
+                              )}
                             </span>
+                            <div className="gw-top-points-name-wrap">
+                              <span className="gw-top-points-name">{row.player_name}</span>
+                              <span
+                                className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
+                                title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
+                                aria-label={row.position_label || 'Position'}
+                              >
+                                {row.position_label ?? '—'}
+                              </span>
+                            </div>
                           </div>
                           <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
                         </div>

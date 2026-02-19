@@ -644,6 +644,12 @@
   pointer-events: none;
 }
 
+/* 2 options (e.g. Stats Player/Team) */
+.subpage-view-toggle[data-options="2"] .subpage-view-toggle-slider {
+  width: calc((100% - 12px - 8px) / 2);
+  transform: translateX(calc(var(--slider-offset, 0) * (100% + 8px)));
+}
+
 /* 3 options (e.g. League, Research) */
 .subpage-view-toggle[data-options="3"] .subpage-view-toggle-slider {
   width: calc((100% - 12px - 16px) / 3);

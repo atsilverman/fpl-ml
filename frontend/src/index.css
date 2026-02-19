@@ -44,6 +44,8 @@ html[data-theme="dark"] {
   /* BPS chart value on bar: dark text on light bars, light text on dark bars */
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
+  /* Stats page Player/Team slider – teal to distinguish from subpage selector blue */
+  --stats-view-toggle-accent: #14b8a6;
 }
 
 /* Light mode */
@@ -85,6 +87,8 @@ html[data-theme="light"] {
   /* BPS chart value on bar: dark text on light bars, light text on dark bars */
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
+  /* Stats page Player/Team slider – teal to distinguish from subpage selector blue */
+  --stats-view-toggle-accent: #0d9488;
 }
 
 /* Prevent rubber-band / scroll past the end on all devices */

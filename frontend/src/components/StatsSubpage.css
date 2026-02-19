@@ -100,15 +100,117 @@
   width: 48px;
 }
 
-/* Stats toolbar: search + filter (same pattern as Defcon/Feed) */
+/* Match subpage selector width: no horizontal inset */
+.research-stats-subpage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0;
+}
+
+/* Sticky header: toolbar + compare message + filter summary; above table sticky thead so content slides underneath */
+.research-stats-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--bg-primary, #fff);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Full-bleed background so scrolling content doesn’t show through at edges; shadow extends opaque block below */
+  padding-top: 2px;
+  /* Extend opaque block up (above header/tabs) and down so scrolling content doesn’t show through */
+  box-shadow:
+    0 -80px 0 var(--bg-primary, #fff),
+    0 6px 16px -4px var(--bg-primary, #fff);
+}
+
+/* Stats toolbar: left = Player/Team, right = Search + Compare + Filter */
 .research-stats-toolbar {
   position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-bottom: 8px;
+  margin-top: 4px;
+  margin-bottom: 0;
   flex-shrink: 0;
+}
+
+.research-stats-toolbar-left {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.research-stats-toolbar-right {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  justify-content: flex-end;
+}
+
+/* Mobile: single Player/Team button; desktop: slider with full labels */
+.research-stats-view-toggle {
+  display: none;
+}
+
+.stats-view-toggle-btn-mobile {
+  display: inline-flex;
+}
+
+.stats-view-toggle-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
+}
+
+.stats-view-toggle-btn--active svg {
+  fill: currentColor;
+}
+
+@media (min-width: 769px) {
+  .research-stats-view-toggle {
+    display: flex;
+    width: 180px;
+    min-width: 180px;
+    flex: 0 0 auto;
+  }
+
+  .research-stats-view-toggle .subpage-view-toggle-label {
+    white-space: nowrap;
+  }
+
+  /* Teal slider so it’s distinct from subpage selector blue; works in light/dark */
+  .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
+    background: var(--stats-view-toggle-accent, #14b8a6);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(20, 184, 166, 0.25);
+  }
+
+  html[data-theme="light"] .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
+    background: var(--stats-view-toggle-accent, #0d9488);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(13, 148, 136, 0.28);
+  }
+
+  /* Single button only on mobile; hide on desktop */
+  .research-stats-page .research-stats-toolbar-left .stats-view-toggle-btn-mobile {
+    display: none !important;
+  }
+
+  .research-stats-toolbar-right {
+    max-width: 520px;
+  }
+}
+
+/* Filter summary: match Defcon/Feed filter summary spacing */
+.research-stats-sticky-header .research-stats-filter-summary {
+  margin: 8px 0 0;
+  padding: 0 0 4px;
 }
 
 .research-stats-search-wrap {
@@ -156,6 +258,11 @@
   border-color: var(--accent-blue);
 }
 
+/* Toolbar button label: hidden on mobile, shown on desktop */
+.stats-toolbar-btn-label {
+  display: none;
+}
+
 .stats-filter-btn {
   flex-shrink: 0;
   display: inline-flex;
@@ -173,6 +280,21 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
+@media (min-width: 769px) {
+  .stats-toolbar-btn-label {
+    display: inline;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .stats-filter-btn {
+    width: auto;
+    min-width: 28px;
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 8px;
+  }
+}
+
 @media (hover: hover) {
   .stats-filter-btn:hover {
     color: var(--text-primary);
@@ -182,16 +304,6 @@
 
 .stats-filter-btn-close {
   color: var(--text-primary);
-}
-
-.stats-view-toggle-btn--active {
-  color: var(--accent-blue);
-  border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
-}
-
-.stats-view-toggle-btn--active svg {
-  fill: currentColor;
 }
 
 .stats-compare-btn {
@@ -205,7 +317,7 @@
 }
 
 .research-stats-compare-message {
-  margin: 0 0 8px;
+  margin: 16px 0 16px;
   padding: 8px 12px;
   font-size: 12px;
   color: var(--accent-blue);
@@ -546,8 +658,8 @@
   padding: 0 0 8px;
   font-size: 11px;
   color: var(--text-secondary);
-  text-align: center;
   opacity: 0.9;
+  text-align: center;
 }
 
 .research-stats-count-footer {
@@ -559,16 +671,17 @@
   opacity: 0.8;
 }
 
-/* Filter overlay popup (same pattern as MiniLeaguePage search overlay) */
+/* Filter overlay popup: anchored near filter button (top-right), not over table */
 .stats-filter-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-end;
   justify-content: flex-start;
   padding: 12px;
+  padding-top: 72px;
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -589,8 +702,7 @@
   flex: 0 1 auto;
   width: 100%;
   max-width: 400px;
-  max-height: 85vh;
-  margin-left: auto;
+  max-height: calc(100vh - 96px);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -829,10 +941,19 @@
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+  isolation: isolate;
 }
 /* Header row sticks on vertical scroll; team/player column needs higher z so corner stays on top */
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 6;
+}
+
+/* Stat columns: explicit lower z so they slide underneath the sticky player/team column (mobile and desktop) */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-gw,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-gw {
+  z-index: 0;
 }
 
 /* Stat column widths; name column gets fixed width below */
@@ -847,8 +968,20 @@
 }
 
 /* Allow table wrapper to scroll; card must not clip so scrollbar is visible */
+/* No redundant card container: table sits on page background */
 .research-stats-page .research-stats-card.research-card {
   overflow: visible;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (hover: hover) {
+  .research-stats-page .research-stats-card.research-card:hover {
+    border-color: transparent;
+    box-shadow: none;
+  }
 }
 /* Full-height table: container grows with content; page scrolls to view all rows */
 .research-stats-page .league-standings-bento-table-wrapper {
@@ -998,8 +1131,26 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Mobile: narrower stat columns with reduced padding */
+/* Mobile: narrower stat columns, and ensure sticky player/team column stays frozen above scrolling stats */
 @media (max-width: 640px) {
+  .research-stats-page .league-standings-bento-table-wrapper {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  /* Sticky column: higher z so player/team stays on top when PTS etc. scroll underneath */
+  .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team,
+  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
+    z-index: 10;
+    isolation: isolate;
+    background: var(--bg-secondary);
+  }
+  .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
+    z-index: 11;
+  }
+
+  /* Stat columns explicitly below sticky column */
   .research-stats-page .research-stats-table th.league-standings-bento-total,
   .research-stats-page .research-stats-table th.league-standings-bento-gw,
   .research-stats-page .research-stats-table td.league-standings-bento-total,
@@ -1008,6 +1159,7 @@
     min-width: 48px;
     padding: 4px 4px;
     text-align: center;
+    z-index: 0;
   }
   .research-stats-page .research-stats-table th.league-standings-bento-total .league-standings-sort-header,
   .research-stats-page .research-stats-table th.league-standings-bento-gw .league-standings-sort-header {

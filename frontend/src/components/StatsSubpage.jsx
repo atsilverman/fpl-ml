@@ -563,53 +563,95 @@ export default function StatsSubpage() {
 
   return (
     <div className="research-stats-subpage research-stats-page league-standings-page">
-      <div className="research-stats-card research-card bento-card bento-card-animate bento-card-expanded">
+      <div className="research-stats-sticky-header">
         <div className="research-stats-toolbar">
-          <button
-            type="button"
-            className={`stats-filter-btn stats-view-toggle-btn ${teamView ? 'stats-view-toggle-btn--active' : ''}`}
-            onClick={() => setTeamView((v) => !v)}
-            aria-label={teamView ? 'Show player stats' : 'Show team stats'}
-            aria-pressed={teamView}
-          >
-            {teamView ? (
-              <UsersRound size={14} strokeWidth={2} fill="currentColor" />
-            ) : (
-              <UserRound size={14} strokeWidth={2} />
-            )}
-          </button>
-          <div className="research-stats-search-wrap">
-            <Search className="research-stats-search-icon" size={14} strokeWidth={2} aria-hidden />
-            <input
-              type="search"
-              className="research-stats-search-input"
-              placeholder={teamView ? 'Search team' : 'Search player or team'}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label={teamView ? 'Search teams' : 'Search players'}
-            />
+          <div className="research-stats-toolbar-left">
+            {/* Desktop: slider with full Player | Team labels */}
+            <nav
+              className="subpage-view-toggle research-stats-view-toggle"
+              role="tablist"
+              aria-label="Player or team stats"
+              data-options="2"
+              style={{ '--slider-offset': teamView ? 1 : 0 }}
+            >
+              <span className="subpage-view-toggle-slider" aria-hidden />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!teamView}
+                className={`subpage-view-toggle-button ${!teamView ? 'active' : ''}`}
+                onClick={() => setTeamView(false)}
+                aria-label="Player stats"
+                title="Player stats"
+              >
+                <UserRound size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                <span className="subpage-view-toggle-label">Player</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={teamView}
+                className={`subpage-view-toggle-button ${teamView ? 'active' : ''}`}
+                onClick={() => setTeamView(true)}
+                aria-label="Team stats"
+                title="Team stats"
+              >
+                <UsersRound size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden fill={teamView ? 'currentColor' : undefined} />
+                <span className="subpage-view-toggle-label">Team</span>
+              </button>
+            </nav>
+            {/* Mobile: single toggle button */}
+            <button
+              type="button"
+              className="stats-filter-btn stats-view-toggle-btn stats-view-toggle-btn-mobile"
+              onClick={() => setTeamView((v) => !v)}
+              aria-label={teamView ? 'Show player stats' : 'Show team stats'}
+              aria-pressed={teamView}
+            >
+              {teamView ? (
+                <UsersRound size={14} strokeWidth={2} fill="currentColor" />
+              ) : (
+                <UserRound size={14} strokeWidth={2} />
+              )}
+              <span className="stats-toolbar-btn-label">{teamView ? 'Team' : 'Player'}</span>
+            </button>
           </div>
-          <button
-            type="button"
-            className={`stats-filter-btn stats-compare-btn ${(teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0) ? 'stats-compare-btn--active' : ''}`}
-            onClick={handleCompareClick}
-            aria-label={teamView ? 'Compare selected teams' : 'Compare selected players'}
-            aria-pressed={teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0}
-            title={teamView
-              ? (compareModeActive ? (compareSelectedTeamKeys.length > 0 ? 'Compare mode: tap rows to add or remove teams' : 'Compare mode: tap rows to add teams (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add teams')
-              : (compareModeActive ? (compareSelectedIds.length > 0 ? 'Compare mode: tap rows to add or remove' : 'Compare mode: tap rows to add players (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add players')}
-          >
-            <Scale size={14} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            className={`stats-filter-btn ${showFilters ? 'stats-filter-btn-close' : ''}`}
-            onClick={() => setShowFilters((v) => !v)}
-            aria-label={showFilters ? 'Close filters' : 'Show filters'}
-            aria-expanded={showFilters}
-          >
-            <Filter size={14} strokeWidth={2} />
-          </button>
+          <div className="research-stats-toolbar-right">
+            <div className="research-stats-search-wrap">
+              <Search className="research-stats-search-icon" size={14} strokeWidth={2} aria-hidden />
+              <input
+                type="search"
+                className="research-stats-search-input"
+                placeholder={teamView ? 'Search team' : 'Search player or team'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label={teamView ? 'Search teams' : 'Search players'}
+              />
+            </div>
+            <button
+              type="button"
+              className={`stats-filter-btn stats-compare-btn ${(teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0) ? 'stats-compare-btn--active' : ''}`}
+              onClick={handleCompareClick}
+              aria-label={teamView ? 'Compare selected teams' : 'Compare selected players'}
+              aria-pressed={teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0}
+              title={teamView
+                ? (compareModeActive ? (compareSelectedTeamKeys.length > 0 ? 'Compare mode: tap rows to add or remove teams' : 'Compare mode: tap rows to add teams (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add teams')
+                : (compareModeActive ? (compareSelectedIds.length > 0 ? 'Compare mode: tap rows to add or remove' : 'Compare mode: tap rows to add players (need 2+ to compare)') : 'Press to enter compare mode, then tap rows to add players')}
+            >
+              <Scale size={14} strokeWidth={2} />
+              <span className="stats-toolbar-btn-label">Compare</span>
+            </button>
+            <button
+              type="button"
+              className={`stats-filter-btn ${showFilters ? 'stats-filter-btn-close' : ''}`}
+              onClick={() => setShowFilters((v) => !v)}
+              aria-label={showFilters ? 'Close filters' : 'Show filters'}
+              aria-expanded={showFilters}
+            >
+              <Filter size={14} strokeWidth={2} />
+              <span className="stats-toolbar-btn-label">Filter</span>
+            </button>
+          </div>
         </div>
         {showCompareMessage && (
           <p className="research-stats-compare-message" role="alert">
@@ -619,6 +661,8 @@ export default function StatsSubpage() {
         <p className="research-stats-filter-summary" aria-live="polite">
           {filterSummaryText}
         </p>
+      </div>
+      <div className="research-stats-card research-card bento-card bento-card-animate bento-card-expanded">
         {showFilters && (
           <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Stats filters">
             <div className="stats-filter-overlay-backdrop" onClick={() => setShowFilters(false)} aria-hidden />
