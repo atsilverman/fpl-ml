@@ -5,6 +5,7 @@ import { formatNumber } from '../utils/formatNumbers'
 import { ArrowDownRight, ArrowUpRight, HelpCircle, ArrowDown, ArrowUp } from 'lucide-react'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
+import AnimatedValue from './AnimatedValue'
 
 const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
 
@@ -260,7 +261,9 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         const title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
         return (
           <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-provisional">
-            <span className="gameweek-points-player-points-badge gameweek-points-stat-provisional" title={title}>{displayVal}</span>
+            <AnimatedValue value={value}>
+              <span className="gameweek-points-player-points-badge gameweek-points-stat-provisional" title={title}>{displayVal}</span>
+            </AnimatedValue>
           </td>
         )
       }
@@ -283,11 +286,13 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       }
       return (
         <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat${isProvisionalBonus ? ' gameweek-points-cell-provisional' : ''}`}>
-          {showBadge ? (
-            <span className={badgeClass} title={title}>{displayVal}</span>
-          ) : (
-            displayVal
-          )}
+          <AnimatedValue value={value}>
+            {showBadge ? (
+              <span className={badgeClass} title={title}>{displayVal}</span>
+            ) : (
+              displayVal
+            )}
+          </AnimatedValue>
         </td>
       )
     }
@@ -353,30 +358,34 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
           title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
         >
-            {isTop10Pts ? (
-              <span
-                className="gameweek-points-player-points-badge rank-highlight"
-                title="Top 10 in GW for points"
-              >
-                {formatNumber(ptsDisplay)}
-              </span>
-            ) : (
-              formatNumber(ptsDisplay)
-            )}
+            <AnimatedValue value={ptsDisplay}>
+              {isTop10Pts ? (
+                <span
+                  className="gameweek-points-player-points-badge rank-highlight"
+                  title="Top 10 in GW for points"
+                >
+                  {formatNumber(ptsDisplay)}
+                </span>
+              ) : (
+                formatNumber(ptsDisplay)
+              )}
+            </AnimatedValue>
         </td>
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
-              <>
-                {formatMinutes(Math.min(90, player.minutes ?? 0))}
-                {showMinsLiveDot && (
-                  <span
-                    className={`live-updating-indicator ${minsDotProvisional ? 'gameweek-points-mins-provisional' : 'gameweek-points-mins-live'}`}
-                    title={minsDotProvisional ? 'Match finished (provisional); stats may update' : 'Minutes can change during live games'}
-                    aria-hidden
-                  />
-                )}
-              </>
+              <AnimatedValue value={player.minutes ?? 0}>
+                <>
+                  {formatMinutes(Math.min(90, player.minutes ?? 0))}
+                  {showMinsLiveDot && (
+                    <span
+                      className={`live-updating-indicator ${minsDotProvisional ? 'gameweek-points-mins-provisional' : 'gameweek-points-mins-live'}`}
+                      title={minsDotProvisional ? 'Match finished (provisional); stats may update' : 'Minutes can change during live games'}
+                      aria-hidden
+                    />
+                  )}
+                </>
+              </AnimatedValue>
             ) : !matchStartedOrFinished ? (
               (() => {
                 const kickoff = formatKickoffShort(effectiveKickoffTime)

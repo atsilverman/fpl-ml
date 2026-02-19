@@ -6,6 +6,7 @@ import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { supabase } from '../lib/supabase'
+import AnimatedValue from './AnimatedValue'
 import './DefconSubpage.css'
 
 const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
@@ -74,11 +75,11 @@ function DefconRow({ player, opponentShortName, isDoubleGameweek }) {
           </div>
         </div>
       )}
-      <span className="defcon-fraction" title={fractionTitle}>
+      <AnimatedValue value={defcon ?? 0} className="defcon-fraction" title={fractionTitle}>
         <span className="defcon-num">{numDisplay}</span>
         <span className="defcon-sep">/</span>
         <span className="defcon-denom">{denomDisplay}</span>
-      </span>
+      </AnimatedValue>
       </div>
     </div>
   )

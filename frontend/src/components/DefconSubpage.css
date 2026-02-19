@@ -647,7 +647,7 @@ html[data-theme="dark"] .defcon-position-badge {
   left: var(--progress-pct, 0%);
   background: var(--progress-bg);
   border-radius: 0 3px 3px 0;
-  transition: left 0.2s ease;
+  transition: left 0.4s ease-out;
 }
 
 .defcon-notch-dividers {

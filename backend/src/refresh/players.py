@@ -426,6 +426,38 @@ class PlayerDataRefresher:
         players_map = {e["id"]: e for e in elements if "id" in e}
         self._sync_players_ownership_from_bootstrap(bootstrap, players_map)
 
+    def _player_ids_needing_refresh(
+        self,
+        gameweek: int,
+        player_ids: Set[int],
+        fixtures_by_id: Dict[int, Dict],
+    ) -> Set[int]:
+        """
+        Return player IDs that need an element-summary fetch: missing stats for this
+        gameweek, or have provisional bonus in a finished fixture (so we re-fetch for confirmed).
+        """
+        if not player_ids:
+            return set()
+        finished_fixture_ids = {
+            fid for fid, f in fixtures_by_id.items() if f.get("finished")
+        }
+        rows = (
+            self.db_client.client.table("player_gameweek_stats")
+            .select("player_id, fixture_id, bonus_status")
+            .eq("gameweek", gameweek)
+            .in_("player_id", list(player_ids))
+            .execute()
+        ).data or []
+        players_with_any_stats = {r["player_id"] for r in rows}
+        players_missing = player_ids - players_with_any_stats
+        players_provisional_in_finished = {
+            r["player_id"]
+            for r in rows
+            if r.get("bonus_status") == "provisional"
+            and (r.get("fixture_id") in finished_fixture_ids)
+        }
+        return players_missing | players_provisional_in_finished
+
     async def refresh_player_gameweek_stats(
         self,
         gameweek: int,
@@ -436,6 +468,7 @@ class PlayerDataRefresher:
         live_only: bool = False,
         expect_live_unavailable: bool = False,
         element_summary_batch_size: int = 10,
+        use_delta: bool = True,
     ):
         """
         Refresh player gameweek stats for active players.
@@ -454,6 +487,7 @@ class PlayerDataRefresher:
             live_only: If True, skip updating expected stats and ICT stats (static per match)
             expect_live_unavailable: If True, log fallback to element-summary at debug (e.g. backfill)
             element_summary_batch_size: Batch size for element-summary fallback (default 10).
+            use_delta: If True, only fetch element-summary for players who need refresh (default True).
         """
         if not active_player_ids:
             logger.debug("No active players to refresh", extra={"gameweek": gameweek})
@@ -968,6 +1002,24 @@ class PlayerDataRefresher:
             else:
                 logger.warning("Live data unavailable, using element-summary", extra={"gameweek": gameweek})
             
+            # Delta: only fetch element-summary for players who need refresh (missing stats or provisional in finished fixture)
+            if use_delta:
+                ids_to_fetch = self._player_ids_needing_refresh(
+                    gameweek, active_player_ids, fixtures_by_id
+                )
+                if not ids_to_fetch:
+                    logger.info(
+                        "Delta: no players need refresh, skipping element-summary",
+                        extra={"gameweek": gameweek, "requested_count": len(active_player_ids)},
+                    )
+                    return
+                logger.debug(
+                    "Delta: fetching subset of players",
+                    extra={"gameweek": gameweek, "to_fetch": len(ids_to_fetch), "requested": len(active_player_ids)},
+                )
+            else:
+                ids_to_fetch = active_player_ids
+
             # Load existing stats with stat fields so we can emit feed events from deltas
             existing_stat_fields = (
                 "player_id, fixture_id, goals_scored, assists, minutes, bonus, own_goals, "
@@ -983,7 +1035,7 @@ class PlayerDataRefresher:
             occurred_at = datetime.now(timezone.utc).isoformat()
 
             # Refresh players in batches to avoid overwhelming API
-            player_list = list(active_player_ids)
+            player_list = list(ids_to_fetch)
             for i in range(0, len(player_list), element_summary_batch_size):
                 batch = player_list[i : i + element_summary_batch_size]
                 batch_stats = []

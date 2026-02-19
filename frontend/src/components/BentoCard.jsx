@@ -6,6 +6,7 @@ import PerformanceChart from './PerformanceChart'
 import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
+import AnimatedValue from './AnimatedValue'
 import { useTheme } from '../contexts/ThemeContext'
 import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
 
@@ -612,7 +613,7 @@ export default function BentoCard({
         <>
           {!(id === 'league-rank' && isExpanded) && (
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
-              {value}
+              <AnimatedValue value={value}>{value}</AnimatedValue>
               {isStale && <span className="stale-indicator" title="Data may be out of date during live games">!</span>}
               {isLiveUpdating && (
                 <span

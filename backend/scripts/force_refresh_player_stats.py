@@ -72,6 +72,7 @@ async def force_refresh_player_stats(gameweek_override: Optional[int] = None) ->
         bootstrap=None,
         live_only=False,
         expect_live_unavailable=True,
+        use_delta=False,
     )
 
     print("Done. player_gameweek_stats for this gameweek now have per-fixture data (e.g. DEFCON per game).")

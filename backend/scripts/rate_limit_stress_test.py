@@ -11,6 +11,8 @@ Usage (from backend directory):
     python scripts/rate_limit_stress_test.py --workload players --runs-per-strategy 3
     python scripts/rate_limit_stress_test.py --workload both --log-dir logs --runs-per-strategy 5
     python scripts/rate_limit_stress_test.py --workload managers --sustained-minutes 10
+    # Find ceiling: run highest first, then taper (max=180, ultra=150, very_aggressive=120)
+    python scripts/rate_limit_stress_test.py --workload players --runs-per-strategy 1 --log-dir logs --strategies max,ultra,very_aggressive
 """
 
 import argparse
@@ -71,6 +73,31 @@ STRATEGIES = [
         "manager_points_batch_size": 30,
         "manager_points_batch_sleep_seconds": 0.0,
         "element_summary_batch_size": 40,
+    },
+    # Ceiling finders: run these first to trigger 429s, then taper to find limit
+    {
+        "name": "ultra",
+        "max_requests_per_minute": 150,
+        "min_request_interval": 0.2,
+        "manager_points_batch_size": 35,
+        "manager_points_batch_sleep_seconds": 0.0,
+        "element_summary_batch_size": 50,
+    },
+    {
+        "name": "max",
+        "max_requests_per_minute": 180,
+        "min_request_interval": 0.17,
+        "manager_points_batch_size": 40,
+        "manager_points_batch_sleep_seconds": 0.0,
+        "element_summary_batch_size": 50,
+    },
+    {
+        "name": "ceiling_400",
+        "max_requests_per_minute": 400,
+        "min_request_interval": 0.15,
+        "manager_points_batch_size": 50,
+        "manager_points_batch_sleep_seconds": 0.0,
+        "element_summary_batch_size": 50,
     },
 ]
 
@@ -136,6 +163,7 @@ async def _run_players_workload(
                 live_only=False,
                 expect_live_unavailable=True,
                 element_summary_batch_size=batch_size,
+                use_delta=False,
             )
             m = fpl.get_metrics()
             total_requests += m["request_count"]
@@ -155,6 +183,7 @@ async def _run_players_workload(
             live_only=False,
             expect_live_unavailable=True,
             element_summary_batch_size=batch_size,
+            use_delta=False,
         )
         duration_sec = time.time() - start
         m = fpl.get_metrics()
@@ -350,6 +379,13 @@ async def main() -> None:
         default=400,
         help="Max player IDs for players workload (default: 400)",
     )
+    parser.add_argument(
+        "--strategies",
+        type=str,
+        default=None,
+        metavar="NAMES",
+        help="Comma-separated strategy names to run (default: all). e.g. aggressive,very_aggressive",
+    )
     args = parser.parse_args()
 
     log_dir = args.log_dir.resolve()
@@ -403,7 +439,16 @@ async def main() -> None:
     else:
         workloads = ["players", "managers"]
 
-    for strategy in STRATEGIES:
+    strategies_to_run = STRATEGIES
+    if args.strategies:
+        names = [s.strip().lower() for s in args.strategies.split(",") if s.strip()]
+        strategies_to_run = [s for s in STRATEGIES if s["name"].lower() in names]
+        if not strategies_to_run:
+            print(f"No strategies match: {args.strategies}. Available: {[s['name'] for s in STRATEGIES]}")
+            sys.exit(1)
+        print(f"Strategies: {[s['name'] for s in strategies_to_run]}\n")
+
+    for strategy in strategies_to_run:
         for wl in workloads:
             if wl == "players" and not player_ids:
                 continue

@@ -1,0 +1,17 @@
+/* Subtle highlight when a numeric/text value updates (e.g. after refetch) */
+@keyframes value-just-changed-bump {
+  0% {
+    background-color: transparent;
+  }
+  15% {
+    background-color: var(--value-change-highlight, rgba(16, 185, 129, 0.2));
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.value-just-changed {
+  animation: value-just-changed-bump 0.4s ease-out;
+  border-radius: 3px;
+}
