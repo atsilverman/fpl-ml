@@ -322,9 +322,10 @@
 }
 
 .player-compare-pill--leader {
-  background: var(--compare-leader-bg, rgba(34, 197, 94, 0.2));
-  border-color: var(--compare-leader-border, rgba(34, 197, 94, 0.5));
-  color: var(--compare-leader-text, #15803d);
+  background: var(--bg-card);
+  border: 2px solid var(--accent-green, #10b981);
+  color: var(--accent-green, #10b981);
+  font-weight: 700;
 }
 
 /* Ties use default pill (grey/card) – no blue colorization */
