@@ -204,6 +204,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary, #f9fafb);
+  overscroll-behavior: none;
 }
 
 

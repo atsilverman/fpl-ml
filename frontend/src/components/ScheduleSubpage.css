@@ -698,6 +698,8 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   border-radius: 8px;
   background: var(--bg-secondary);
   margin-top: 6px;
+  /* Prevent sticky column being pulled off on mobile drag */
+  overscroll-behavior: none;
 }
 
 .schedule-scroll-wrap::-webkit-scrollbar {

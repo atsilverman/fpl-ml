@@ -521,9 +521,10 @@ export default function FeedSubpage({ isActive = true }) {
       )}
       {sortedEvents.length > 0 && (
         <>
-          <div className="feed-search-row">
-            <div className="feed-search-wrap" ref={dropdownRef}>
-              <input
+          <div className="feed-subpage-sticky-header">
+            <div className="feed-search-row">
+              <div className="feed-search-wrap" ref={dropdownRef}>
+                <input
                 ref={inputRef}
                 type="text"
                 className="feed-search-input"
@@ -536,47 +537,92 @@ export default function FeedSubpage({ isActive = true }) {
                 aria-expanded={showSuggestions && suggestions.length > 0}
                 aria-controls="feed-search-suggestions"
                 id="feed-search"
-              />
-              {showSuggestions && suggestions.length > 0 && (
-                <ul
-                  id="feed-search-suggestions"
-                  className="feed-search-suggestions"
-                  role="listbox"
+                />
+                {showSuggestions && suggestions.length > 0 && (
+                  <ul
+                    id="feed-search-suggestions"
+                    className="feed-search-suggestions"
+                    role="listbox"
+                  >
+                    {suggestions.map((s, i) => (
+                      <li
+                        key={`${s}-${i}`}
+                        role="option"
+                        className="feed-search-suggestion"
+                        onMouseDown={(e) => {
+                          e.preventDefault()
+                          setSearchQuery(s)
+                          setShowSuggestions(false)
+                          inputRef.current?.blur()
+                        }}
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div className="feed-search-row-actions">
+                <button
+                  type="button"
+                  className={`feed-filter-btn ${hasActiveFilters ? 'feed-filter-btn--active' : ''}`}
+                  onClick={() => setShowFilterPopup(open => !open)}
+                  aria-label="Filter feed events"
+                  aria-expanded={showFilterPopup}
+                  aria-haspopup="dialog"
                 >
-                  {suggestions.map((s, i) => (
-                    <li
-                      key={`${s}-${i}`}
-                      role="option"
-                      className="feed-search-suggestion"
-                      onMouseDown={(e) => {
-                        e.preventDefault()
-                        setSearchQuery(s)
-                        setShowSuggestions(false)
-                        inputRef.current?.blur()
-                      }}
-                    >
-                      {s}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                  <Filter size={14} strokeWidth={2} />
+                </button>
+              </div>
             </div>
-            <div className="feed-search-row-actions">
-              <button
-                type="button"
-                className={`feed-filter-btn ${hasActiveFilters ? 'feed-filter-btn--active' : ''}`}
-                onClick={() => setShowFilterPopup(open => !open)}
-                aria-label="Filter feed events"
-                aria-expanded={showFilterPopup}
-                aria-haspopup="dialog"
-              >
-                <Filter size={14} strokeWidth={2} />
-              </button>
-            </div>
+            <p className="feed-filter-summary" aria-live="polite">
+              {filterSummaryText}
+            </p>
+            {sortedFilteredEvents.length > 0 && (
+              <div className="gameweek-list-header" aria-hidden="true">
+                <div className="gameweek-list-header__player">Player</div>
+                <div className="gameweek-list-header__center">Event</div>
+                <div className="gameweek-list-header__end gameweek-list-header__end--with-popup">
+                  <span className="gameweek-list-header__end-label">Impact</span>
+                  <button
+                    type="button"
+                    ref={impactIconRef}
+                    className="feed-impact-icon-wrap"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      const next = !showImpactPopup
+                      if (next) updateImpactPopupPlacement()
+                      setShowImpactPopup(next)
+                    }}
+                    title="What is Impact?"
+                    aria-expanded={showImpactPopup}
+                    aria-haspopup="dialog"
+                  >
+                    <HelpCircle size={12} className="feed-impact-icon" aria-hidden />
+                  </button>
+                  {showImpactPopup &&
+                    createPortal(
+                      <div
+                        ref={impactPopupRef}
+                        className="feed-impact-popup feed-impact-popup--portal"
+                        role="dialog"
+                        aria-label="Impact explained"
+                        style={{
+                          position: 'fixed',
+                          top: popupPlacement.top,
+                          left: popupPlacement.left,
+                          width: popupPlacement.width
+                        }}
+                      >
+                        <div className="feed-impact-popup__title">Impact</div>
+                        <p className="feed-impact-popup__text">{IMPACT_TOOLTIP}</p>
+                      </div>,
+                      document.body
+                    )}
+                </div>
+              </div>
+            )}
           </div>
-          <p className="feed-filter-summary" aria-live="polite">
-            {filterSummaryText}
-          </p>
           {showFilterPopup && (
             <div className="feed-filter-popup" ref={filterPopupRef} role="dialog" aria-label="Feed filters">
               <div className="feed-filter-section">
@@ -705,48 +751,6 @@ export default function FeedSubpage({ isActive = true }) {
         </div>
       ) : (
         <>
-          <div className="feed-event-list__header" aria-hidden="true">
-            <div className="feed-event-list__header-player">Player</div>
-            <div className="feed-event-list__header-event">Event</div>
-            <div className="feed-event-list__header-impact feed-event-list__header-impact--has-popup">
-              <span className="feed-event-list__header-impact-label">Impact</span>
-              <button
-                type="button"
-                ref={impactIconRef}
-                className="feed-event-list__header-impact-icon-wrap"
-                onClick={(e) => {
-                  e.preventDefault()
-                  const next = !showImpactPopup
-                  if (next) updateImpactPopupPlacement()
-                  setShowImpactPopup(next)
-                }}
-                title="What is Impact?"
-                aria-expanded={showImpactPopup}
-                aria-haspopup="dialog"
-              >
-                <HelpCircle size={12} className="feed-event-list__header-impact-icon" aria-hidden />
-              </button>
-              {showImpactPopup &&
-                createPortal(
-                  <div
-                    ref={impactPopupRef}
-                    className="feed-impact-popup feed-impact-popup--portal"
-                    role="dialog"
-                    aria-label="Impact explained"
-                    style={{
-                      position: 'fixed',
-                      top: popupPlacement.top,
-                      left: popupPlacement.left,
-                      width: popupPlacement.width
-                    }}
-                  >
-                    <div className="feed-impact-popup__title">Impact</div>
-                    <p className="feed-impact-popup__text">{IMPACT_TOOLTIP}</p>
-                  </div>,
-                  document.body
-                )}
-            </div>
-          </div>
           <div className="feed-event-list" role="list">
           {sortedFilteredEvents.map((event) => {
             const player = playersMap[event.player_id]

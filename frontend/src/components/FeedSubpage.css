@@ -6,6 +6,19 @@
   padding: 0 4px;
 }
 
+/* Sticky: search bar + filter + summary + list header stay fixed; event list scrolls under */
+.feed-subpage-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-primary);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+  /* Promote layer so sticky is reliable (e.g. iOS) */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
 .feed-subpage-loading,
 .feed-subpage-empty {
   color: var(--text-secondary);
@@ -13,60 +26,8 @@
   padding: 16px 0;
 }
 
-.feed-event-list__header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 12px 4px;
-  border-bottom: 1px solid var(--border-color);
-  margin-bottom: 6px;
-  flex-shrink: 0;
-}
-
-.feed-event-list__header-player {
-  flex: 0 1 40%;
-  min-width: 0;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.feed-event-list__header-event {
-  flex: 1 1 auto;
-  min-width: 0;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  text-align: center;
-}
-
-.feed-event-list__header-impact {
-  flex-shrink: 0;
-  width: 56px;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  text-align: center;
-}
-
-.feed-event-list__header-impact--has-popup {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.feed-event-list__header-impact-label {
-  flex-shrink: 0;
-}
-
-.feed-event-list__header-impact-icon-wrap {
+/* Feed list header uses shared .gameweek-list-header (GameweekPage.css); only Impact button styles here */
+.feed-impact-icon-wrap {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -82,17 +43,17 @@
   flex-shrink: 0;
 }
 
-.feed-event-list__header-impact-icon-wrap:hover {
+.feed-impact-icon-wrap:hover {
   color: var(--text-primary);
   background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
 }
 
-.feed-event-list__header-impact-icon-wrap:focus-visible {
+.feed-impact-icon-wrap:focus-visible {
   outline: 2px solid var(--focus-ring, #0ea5e9);
   outline-offset: 2px;
 }
 
-.feed-event-list__header-impact-icon {
+.feed-impact-icon {
   display: block;
   flex-shrink: 0;
 }
@@ -438,7 +399,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 
 .feed-filter-summary {
-  margin: 0;
+  margin: 8px 0 0;
   padding: 0 0 4px;
   font-size: 11px;
   color: var(--text-secondary);

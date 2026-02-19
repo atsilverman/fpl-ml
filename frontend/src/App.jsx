@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ConfigurationProvider } from './contexts/ConfigurationContext'
@@ -13,6 +14,15 @@ import ResearchPage from './components/ResearchPage'
 import LivePage from './components/LivePage'
 import AuthCallback from './components/AuthCallback'
 import OnboardingPage from './components/OnboardingPage'
+import { trackPageView } from './analytics'
+
+function AnalyticsTracker() {
+  const location = useLocation()
+  useEffect(() => {
+    trackPageView(location.pathname + location.search)
+  }, [location.pathname, location.search])
+  return null
+}
 
 function App() {
   return (
@@ -23,6 +33,7 @@ function App() {
             <BentoOrderProvider>
               <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
                 <ScrollToTop />
+                <AnalyticsTracker />
                 <Routes>
                   <Route path="/auth/callback" element={<AuthCallback />} />
                   <Route path="/welcome" element={<OnboardingPage />} />

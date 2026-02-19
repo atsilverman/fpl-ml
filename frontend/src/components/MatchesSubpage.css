@@ -258,53 +258,58 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding: 4px 0;
 }
 
-/* GW Top Performers: swipe wrapper + page dots */
+/* GW Top Performers: swipe wrapper + left/right page buttons */
 .gw-top-performers-swipe-wrap {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   /* Allow horizontal swipe for stat change (Points / xG / etc.) despite parent touchAction: pan-y */
   touch-action: pan-x pan-y;
 }
 
-.gw-top-performers-dots {
+.gw-top-performers-row {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gw-top-performers-nav {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding: 4px 0 0;
-}
-
-.gw-top-performers-dot {
-  width: 8px;
-  height: 8px;
-  min-width: 8px;
-  min-height: 8px;
-  border-radius: 50%;
-  border: 1.5px solid var(--text-secondary);
-  background: transparent;
+  width: 32px;
+  min-width: 32px;
   padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.gw-top-performers-nav:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 @media (hover: hover) {
-  .gw-top-performers-dot:hover {
-    border-color: var(--text-primary);
+  .gw-top-performers-nav:not(:disabled):hover {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+    color: var(--text-primary);
+    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
   }
 }
 
-.gw-top-performers-dot--active {
-  background: var(--text-secondary);
-  border-color: var(--text-secondary);
+.gw-top-performers-nav:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
-@media (hover: hover) {
-  .gw-top-performers-dot--active:hover {
-    background: var(--text-primary);
-    border-color: var(--text-primary);
-  }
+.gw-top-performers-row .gw-top-points-list {
+  flex: 1;
+  min-width: 0;
 }
 
 /* matchup-grid: multi-column on mobile; desktop = single column list, same width as top performers / 2-bento content. */
@@ -459,7 +464,10 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
 }
 
-/* Expanded card width is controlled by .matchup-grid-item--expanded (span 2 on desktop) */
+/* When expanded, card spans all columns so details table gets full width (avoids ~300px squeeze in 2-col layout) */
+.matchup-grid-item--expanded {
+  grid-column: 1 / -1;
+}
 .matchup-card--expanded {
   min-width: 0;
 }
@@ -775,6 +783,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
+  min-width: 0; /* Allow shrink so inner scroll container can overflow horizontally */
 }
 
 .matchup-detail-table-wrap--tap-to-close {
@@ -818,23 +827,54 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-detail-table-scroll {
   overflow: auto;
   max-height: 60vh;
+  min-width: 0; /* Allow shrink in flex so table can overflow and scroll horizontally */
   border-radius: 0 0 8px 8px;
   /* Establish containing block so sticky player column works when parent (e.g. gameweek wipe track) has transform */
   transform: translateZ(0);
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
+}
+
+@media (min-width: 769px) {
+  .matchup-detail-table-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .matchup-detail-table-scroll::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+    height: 8px;
+  }
+  .matchup-detail-table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .matchup-detail-table-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+}
+
+/* Wrapper so table can extend and trigger horizontal scroll (like GameweekPointsView) */
+.matchup-detail-table-box {
+  width: 100%;
+  min-width: min-content;
 }
 
 .matchup-detail-table {
-  width: 100%;
-  min-width: 420px;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 11px;
+  table-layout: auto;
 }
 
-/* Keep header row above body when scrolling (stacking context so thead always wins) */
+/* Sticky header row – stays visible when scrolling (like GameweekPointsView / StatsSubpage) */
 .matchup-detail-table thead {
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 5;
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 0 var(--border-color);
 }
 
 .matchup-detail-table thead th {
@@ -872,6 +912,10 @@ html[data-theme="dark"] .gw-top-points-pill {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   box-shadow: 4px 0 6px -2px rgba(0, 0, 0, 0.12);
+  /* Promote layer so sticky column paints above scrolling content (e.g. iOS Safari) */
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .matchup-detail-th-mins,
@@ -956,7 +1000,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   color: var(--text-primary);
 }
 
-/* Player column: distinct background so name + badge sit on a different color than pts/stat cells */
+/* Player column: sticky on horizontal scroll; distinct background (like GameweekPointsView / StatsSubpage) */
 .matchup-detail-td-player {
   position: sticky;
   left: 0;
@@ -969,6 +1013,10 @@ html[data-theme="dark"] .gw-top-points-pill {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  /* Promote layer so sticky column paints above scrolling content (e.g. iOS Safari) */
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .matchup-detail-player-badge {

@@ -9,7 +9,7 @@ import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import BpsLeadersChart from './BpsLeadersChart'
-import { ChevronDown, ChevronUp, MoveDiagonal, Minimize2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, ChevronLeft, ChevronRight, MoveDiagonal, Minimize2 } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -194,6 +194,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
         </div>
       )}
       <div ref={tableScrollRef} className="matchup-detail-table-scroll">
+        <div className="matchup-detail-table-box">
         <table className="matchup-detail-table">
           <thead>
             <tr>
@@ -286,6 +287,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )
@@ -712,47 +714,54 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                       onTouchMove={handlePerformerSwipeMove}
                       onTouchEnd={handlePerformerSwipeEnd}
                     >
-                      <div className="gw-top-points-list">
-                        {currentPerformersList.map((row) => (
-                          <div key={row.player_id} className="gw-top-points-item">
-                            <span className="gw-top-points-badge-slot">
-                              {row.team_short_name ? (
-                                <img
-                                  src={`/badges/${row.team_short_name}.svg`}
-                                  alt=""
-                                  className="gw-top-points-badge"
-                                  onError={(e) => { e.target.style.display = 'none' }}
-                                />
-                              ) : (
-                                <span className="gw-top-points-badge-placeholder" aria-hidden />
-                              )}
-                            </span>
-                            <div className="gw-top-points-name-wrap">
-                              <span className="gw-top-points-name">{row.player_name}</span>
-                              <span
-                                className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
-                                title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
-                                aria-label={row.position_label || 'Position'}
-                              >
-                                {row.position_label ?? '—'}
+                      <div className="gw-top-performers-row">
+                        <button
+                          type="button"
+                          className="gw-top-performers-nav gw-top-performers-nav--prev"
+                          aria-label={performerPageIndex > 0 ? `Previous: ${TOP_PERFORMERS_STAT_KEYS[performerPageIndex - 1]?.label ?? 'stat'}` : 'Previous stat (first page)'}
+                          disabled={performerPageIndex === 0}
+                          onClick={() => setPerformerPageIndex((i) => Math.max(0, i - 1))}
+                        >
+                          <ChevronLeft size={18} strokeWidth={2} />
+                        </button>
+                        <div className="gw-top-points-list">
+                          {currentPerformersList.map((row) => (
+                            <div key={row.player_id} className="gw-top-points-item">
+                              <span className="gw-top-points-badge-slot">
+                                {row.team_short_name ? (
+                                  <img
+                                    src={`/badges/${row.team_short_name}.svg`}
+                                    alt=""
+                                    className="gw-top-points-badge"
+                                    onError={(e) => { e.target.style.display = 'none' }}
+                                  />
+                                ) : (
+                                  <span className="gw-top-points-badge-placeholder" aria-hidden />
+                                )}
                               </span>
+                              <div className="gw-top-points-name-wrap">
+                                <span className="gw-top-points-name">{row.player_name}</span>
+                                <span
+                                  className={`gw-top-points-position ${row.position != null ? `gw-top-points-position--${row.position}` : ''}`}
+                                  title={row.position_label ? `Position: ${row.position_label}` : 'Position'}
+                                  aria-label={row.position_label || 'Position'}
+                                >
+                                  {row.position_label ?? '—'}
+                                </span>
+                              </div>
+                              <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
                             </div>
-                            <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="gw-top-performers-dots" role="tablist" aria-label="Stat pages">
-                        {TOP_PERFORMERS_STAT_KEYS.map(({ key, label }, i) => (
-                          <button
-                            key={key}
-                            type="button"
-                            role="tab"
-                            aria-selected={i === performerPageIndex}
-                            aria-label={`${label} (page ${i + 1} of ${TOP_PERFORMERS_STAT_KEYS.length})`}
-                            className={`gw-top-performers-dot ${i === performerPageIndex ? 'gw-top-performers-dot--active' : ''}`}
-                            onClick={() => setPerformerPageIndex(i)}
-                          />
-                        ))}
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="gw-top-performers-nav gw-top-performers-nav--next"
+                          aria-label={performerPageIndex < TOP_PERFORMERS_STAT_KEYS.length - 1 ? `Next: ${TOP_PERFORMERS_STAT_KEYS[performerPageIndex + 1]?.label ?? 'stat'}` : 'Next stat (last page)'}
+                          disabled={performerPageIndex >= TOP_PERFORMERS_STAT_KEYS.length - 1}
+                          onClick={() => setPerformerPageIndex((i) => Math.min(TOP_PERFORMERS_STAT_KEYS.length - 1, i + 1))}
+                        >
+                          <ChevronRight size={18} strokeWidth={2} />
+                        </button>
                       </div>
                     </div>
                   )}

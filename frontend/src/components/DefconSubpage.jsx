@@ -268,89 +268,104 @@ export default function DefconSubpage({ isActive = true }) {
           }}
         />
       )}
-      <div className="defcon-search-row">
-        <div className="defcon-search-wrap" ref={dropdownRef}>
-          <input
-            ref={inputRef}
-            type="text"
-            className="defcon-search-input"
-            placeholder="Player name or team (e.g. NEW, LIV)"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onFocus={() => setShowSuggestions(true)}
-            onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            aria-autocomplete="list"
-            aria-expanded={showSuggestions && suggestions.length > 0}
-            aria-controls="defcon-search-suggestions"
-            id="defcon-search"
-          />
-          {showSuggestions && suggestions.length > 0 && (
-            <ul
-              id="defcon-search-suggestions"
-              className="defcon-search-suggestions"
-              role="listbox"
+      <div className="defcon-subpage-sticky-header">
+        <div className="defcon-search-row">
+          <div className="defcon-search-wrap" ref={dropdownRef}>
+            <input
+              ref={inputRef}
+              type="text"
+              className="defcon-search-input"
+              placeholder="Player name or team (e.g. NEW, LIV)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+              aria-autocomplete="list"
+              aria-expanded={showSuggestions && suggestions.length > 0}
+              aria-controls="defcon-search-suggestions"
+              id="defcon-search"
+            />
+            {showSuggestions && suggestions.length > 0 && (
+              <ul
+                id="defcon-search-suggestions"
+                className="defcon-search-suggestions"
+                role="listbox"
+              >
+                {suggestions.map((s, i) => (
+                  <li
+                    key={`${s}-${i}`}
+                    role="option"
+                    className="defcon-search-suggestion"
+                    onMouseDown={(e) => {
+                      e.preventDefault()
+                      setSearchQuery(s)
+                      setShowSuggestions(false)
+                      inputRef.current?.blur()
+                    }}
+                  >
+                    {s}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div className="defcon-search-row-actions">
+            <button
+              type="button"
+              className="defcon-info-btn"
+              onClick={() => setShowInfoPopup(open => !open)}
+              aria-label="Status indicators explained"
+              aria-expanded={showInfoPopup}
+              aria-haspopup="dialog"
             >
-              {suggestions.map((s, i) => (
-                <li
-                  key={`${s}-${i}`}
-                  role="option"
-                  className="defcon-search-suggestion"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setSearchQuery(s)
-                    setShowSuggestions(false)
-                    inputRef.current?.blur()
-                  }}
-                >
-                  {s}
-                </li>
-              ))}
-            </ul>
-          )}
+              <Info size={14} strokeWidth={2} />
+            </button>
+            {showInfoPopup && (
+              <div className="gw-legend-popup" ref={infoPopupRef} role="dialog" aria-label="Legend">
+                <div className="gw-legend-popup-title">Legend</div>
+                <div className="gw-legend-popup-row">
+                  <span className="gw-legend-popup-live-dot-wrap">
+                    <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />
+                  </span>
+                  <span className="gw-legend-popup-text">Match in progress (live)</span>
+                </div>
+                <div className="gw-legend-popup-row">
+                  <span className="gw-legend-popup-row-icon">
+                    <span className="gw-legend-popup-defcon-achieved-sample" aria-hidden />
+                  </span>
+                  <span className="gw-legend-popup-text">DEFCON achieved</span>
+                </div>
+                <div className="gw-legend-popup-row">
+                  <span className="gw-legend-popup-row-icon">
+                    <span className="defcon-v-opp">vs X</span>
+                  </span>
+                  <span className="gw-legend-popup-text">Double GW</span>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              className={`defcon-filter-btn ${hasActiveFilters ? 'defcon-filter-btn--active' : ''}`}
+              onClick={() => setShowFilterPopup(open => !open)}
+              aria-label="Filter DEFCON players"
+              aria-expanded={showFilterPopup}
+              aria-haspopup="dialog"
+            >
+              <Filter size={14} strokeWidth={2} />
+            </button>
+          </div>
         </div>
-        <div className="defcon-search-row-actions">
-        <button
-          type="button"
-          className="defcon-info-btn"
-          onClick={() => setShowInfoPopup(open => !open)}
-          aria-label="Status indicators explained"
-          aria-expanded={showInfoPopup}
-          aria-haspopup="dialog"
-        >
-          <Info size={14} strokeWidth={2} />
-        </button>
-        {showInfoPopup && (
-          <div className="gw-legend-popup" ref={infoPopupRef} role="dialog" aria-label="Legend">
-            <div className="gw-legend-popup-title">Legend</div>
-            <div className="gw-legend-popup-row">
-              <span className="gw-legend-popup-live-dot-wrap">
-                <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />
-              </span>
-              <span className="gw-legend-popup-text">Match in progress (live)</span>
-            </div>
-            <div className="gw-legend-popup-row">
-              <span className="gw-legend-popup-row-icon">
-                <span className="gw-legend-popup-defcon-achieved-sample" aria-hidden />
-              </span>
-              <span className="gw-legend-popup-text">DEFCON achieved</span>
-            </div>
+        <p className="defcon-filter-summary" aria-live="polite">
+          {filterSummaryText}
+        </p>
+        {filteredPlayers.length > 0 && (
+          <div className="gameweek-list-header" aria-hidden="true">
+            <div className="gameweek-list-header__player">Player</div>
+            <div className="gameweek-list-header__center">Progress</div>
+            <div className="gameweek-list-header__end">DEFCON</div>
           </div>
         )}
-        <button
-          type="button"
-          className={`defcon-filter-btn ${hasActiveFilters ? 'defcon-filter-btn--active' : ''}`}
-          onClick={() => setShowFilterPopup(open => !open)}
-          aria-label="Filter DEFCON players"
-          aria-expanded={showFilterPopup}
-          aria-haspopup="dialog"
-        >
-          <Filter size={14} strokeWidth={2} />
-        </button>
-        </div>
       </div>
-      <p className="defcon-filter-summary" aria-live="polite">
-        {filterSummaryText}
-      </p>
       {showFilterPopup && (
         <div className="defcon-filter-popup" ref={filterPopupRef} role="dialog" aria-label="DEFCON filters">
           <div className="defcon-filter-section">

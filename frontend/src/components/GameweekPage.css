@@ -8,9 +8,13 @@
   color: var(--text-primary);
 }
 
-/* Tighter space below toolbar so content sits higher */
+/* Toolbar stays fixed; content below scrolls under it (Matches, Bonus, DEFCON, Feed) */
 .gameweek-page .subpage-toolbar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   margin-bottom: 8px;
+  background: var(--bg-primary);
 }
 
 /* Desktop: hide in-page subpage toolbar; use header dropdown (Gameweek → Matches/Bonus/DEFCON/Feed) only */
@@ -88,4 +92,59 @@
   .gameweek-swipe-track {
     transition: none;
   }
+}
+
+/* Shared list header (Feed + DEFCON): labels row with line, same sizing/placement */
+.gameweek-list-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.gameweek-list-header__player {
+  flex: 0 1 40%;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.gameweek-list-header__center {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+.gameweek-list-header__end {
+  flex-shrink: 0;
+  width: 56px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: center;
+}
+
+/* Feed Impact column: label + help button */
+.gameweek-list-header__end--with-popup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.gameweek-list-header__end-label {
+  flex-shrink: 0;
 }

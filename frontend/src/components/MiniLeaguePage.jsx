@@ -335,6 +335,23 @@ export default function MiniLeaguePage() {
 
   const displayRows = sortedRows
 
+  /** Top 5 by GW points (league page only): manager_id -> 1..5 for tapering fill on GW column */
+  const gwTopRankByManagerId = useMemo(() => {
+    if (!standings.length) return new Map()
+    const withGw = standings.map((s) => {
+      const gw = currentManagerId != null && s.manager_id === currentManagerId
+        ? (currentManagerGwPointsDisplay ?? 0)
+        : (s.gameweek_points ?? 0)
+      return { manager_id: s.manager_id, gw: Number(gw) || 0 }
+    })
+    const sorted = [...withGw].sort((a, b) => b.gw - a.gw || a.manager_id - b.manager_id)
+    const map = new Map()
+    for (let i = 0; i < Math.min(5, sorted.length); i++) {
+      map.set(sorted[i].manager_id, i + 1)
+    }
+    return map
+  }, [standings, currentManagerId, currentManagerGwPointsDisplay])
+
   const managerIdsOwningAnySet = useMemo(
     () => new Set(managerIdsOwningAny),
     [managerIdsOwningAny]
@@ -565,10 +582,10 @@ export default function MiniLeaguePage() {
           <p className="league-ownership-filter-hint">
             <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
               <strong>{selectedPlayers[0].web_name}</strong>
+            ) : selectedPlayers.length === 2 ? (
+              <strong>{selectedPlayers[0].web_name} and {selectedPlayers[1].web_name}</strong>
             ) : (
-              <>
-                <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
-              </>
+              <strong>{selectedPlayers.slice(0, -1).map((p) => p.web_name).join(', ')} and {selectedPlayers[selectedPlayers.length - 1].web_name}</strong>
             )}{' '}
             this gameweek
           </p>
@@ -686,10 +703,10 @@ export default function MiniLeaguePage() {
               <p className="league-ownership-filter-hint">
                 <strong className="league-ownership-filter-hint-count">{managerIdsOwningAny.length}</strong> manager{managerIdsOwningAny.length !== 1 ? 's' : ''} own {selectedPlayers.length === 1 ? (
                   <strong>{selectedPlayers[0].web_name}</strong>
+                ) : selectedPlayers.length === 2 ? (
+                  <strong>{selectedPlayers[0].web_name} and {selectedPlayers[1].web_name}</strong>
                 ) : (
-                  <>
-                    <strong>{selectedPlayers.map((p) => p.web_name).join(', ')}</strong>
-                  </>
+                  <strong>{selectedPlayers.slice(0, -1).map((p) => p.web_name).join(', ')} and {selectedPlayers[selectedPlayers.length - 1].web_name}</strong>
                 )}{' '}
                 this gameweek
               </p>
@@ -699,8 +716,8 @@ export default function MiniLeaguePage() {
         <div className="league-standings-bento-body">
         {showTransfersView && <div className="league-standings-transfers-spacer" aria-hidden="true" />}
         {showTransfersView && (() => {
-          const outList = leagueTopTransfersOut || []
-          const inList = leagueTopTransfersIn || []
+          const outList = (leagueTopTransfersOut || []).slice(0, 5)
+          const inList = (leagueTopTransfersIn || []).slice(0, 5)
           const transfersSummary = configuredManagerData != null
             ? {
                 used: configuredManagerData.transfersMade ?? 0,
@@ -721,9 +738,9 @@ export default function MiniLeaguePage() {
                     onClick={() => setTransfersSummaryExpanded((v) => !v)}
                     onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTransfersSummaryExpanded((v) => !v); } }}
                     aria-expanded={transfersSummaryExpanded}
-                    aria-label={transfersSummaryExpanded ? 'Collapse League Transfers' : 'Expand League Transfers'}
+                    aria-label={transfersSummaryExpanded ? 'Collapse Top League Transfers' : 'Expand Top League Transfers'}
                   >
-                    <span className="gw-top-points-title">League Transfers</span>
+                    <span className="gw-top-points-title">Top League Transfers</span>
                     <span className="gw-top-points-expand-icon" title={transfersSummaryExpanded ? 'Collapse' : 'Expand'} aria-hidden>
                       {transfersSummaryExpanded ? (
                         <Minimize2 className="gw-top-points-expand-icon-svg" size={11} strokeWidth={1.5} />
@@ -986,7 +1003,7 @@ export default function MiniLeaguePage() {
                               ? selectedManagerTotalDisplay
                               : (s.total_points ?? '—')}
                         </td>
-                        <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
+                        <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}${(gwTopRankByManagerId.get(s.manager_id) != null) ? ` league-standings-gw-top-${gwTopRankByManagerId.get(s.manager_id)}` : ''}`}>
                           {currentManagerId != null && s.manager_id === currentManagerId
                             ? (currentManagerGwPointsDisplay ?? '—')
                             : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null

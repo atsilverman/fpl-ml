@@ -1,10 +1,24 @@
 /* Compact list: badge | name | num/denom | notch bar | percent bar (original arrangement) */
+/* Match Feed: same horizontal padding so left/right edges align when switching subpages */
 .defcon-subpage {
   position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 0 4px;
+}
+
+/* Sticky: search bar + filter + summary + list header stay fixed; player list scrolls under */
+.defcon-subpage-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg-primary);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .defcon-search-row {
@@ -38,13 +52,23 @@
   }
 }
 
+/* Match Feed filter summary: sizing and placement; extra space below to match feed spacing before list header */
 .defcon-filter-summary {
-  margin: 0;
+  margin: 8px 0 0;
   padding: 0 0 4px;
   font-size: 11px;
   color: var(--text-secondary);
   text-align: center;
   opacity: 0.9;
+}
+
+.defcon-subpage-sticky-header .gameweek-list-header {
+  margin-top: 8px;
+}
+
+/* Shift Progress label left so it aligns with the centered progress bar below */
+.defcon-subpage-sticky-header .gameweek-list-header__center {
+  padding-right: 28%;
 }
 
 .defcon-search-input {
@@ -251,6 +275,10 @@
   background: transparent;
 }
 
+.defcon-subpage .gw-legend-popup-row .defcon-v-opp {
+  font-size: 10px;
+}
+
 .defcon-filter-btn {
   flex-shrink: 0;
   display: inline-flex;
@@ -414,10 +442,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  width: calc(100% - 10px);
-  max-width: calc(100% - 10px);
-  margin-left: auto;
-  margin-right: auto;
+  width: 100%;
   box-sizing: border-box;
 }
 
@@ -425,7 +450,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 8px 12px;
 }
 
 .defcon-row-card--achieved {
@@ -513,7 +538,7 @@
 .defcon-v-opp {
   font-size: 8px;
   font-weight: 500;
-  color: var(--text-secondary, #666);
+  color: var(--accent-blue, #3b82f6);
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -593,11 +618,14 @@ html[data-theme="dark"] .defcon-position-badge {
   min-width: 80px;
   padding: 0;
   margin-right: 16px;
+  display: flex;
+  justify-content: center;
 }
 
 .defcon-notch-bar {
   position: relative;
   width: 100%;
+  max-width: 260px;
   height: 7px;
   /* Full gradient fixed to bar: 0% = cool, 100% = red; no green; cover hides right portion so only 0→progress shows */
   background: linear-gradient(
@@ -661,7 +689,7 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-row-card {
-    padding: 10px 14px;
+    padding: 10px 12px;
     border-radius: 10px;
   }
 

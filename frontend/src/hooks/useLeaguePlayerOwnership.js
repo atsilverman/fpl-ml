@@ -31,7 +31,7 @@ export function useLeaguePlayerOwnership(playerId, gameweek) {
 }
 
 /**
- * Returns manager_ids that own at least one of the given players in the given gameweek.
+ * Returns manager_ids that own all of the given players in the given gameweek (AND).
  * Used to filter league standings when multiple players are selected.
  * leagueManagerIds: when provided, only counts managers in this list (current league).
  */
@@ -39,6 +39,7 @@ export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek, leagueMana
   const ids = Array.isArray(playerIds) ? playerIds.filter((id) => id != null) : []
   const leagueIds = Array.isArray(leagueManagerIds) ? leagueManagerIds : []
   const enabled = ids.length > 0 && !!gameweek && (leagueManagerIds == null || leagueIds.length > 0)
+  const idSet = new Set(ids)
 
   const { data: managerIds = [], isLoading, error } = useQuery({
     queryKey: ['league-player-ownership-multiple', ids.slice().sort((a, b) => a - b), gameweek, leagueIds.length ? leagueIds.slice().sort((a, b) => Number(a) - Number(b)) : null],
@@ -47,7 +48,7 @@ export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek, leagueMana
 
       let query = supabase
         .from('manager_picks')
-        .select('manager_id')
+        .select('manager_id, player_id')
         .in('player_id', ids)
         .eq('gameweek', gameweek)
         .lte('position', 11)
@@ -58,8 +59,24 @@ export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek, leagueMana
 
       if (err) throw err
 
-      const unique = [...new Set((data || []).map((r) => r.manager_id))]
-      return unique
+      const byManager = new Map()
+      for (const r of data || []) {
+        if (!byManager.has(r.manager_id)) byManager.set(r.manager_id, new Set())
+        byManager.get(r.manager_id).add(r.player_id)
+      }
+      const result = []
+      for (const [managerId, playerSet] of byManager.entries()) {
+        if (playerSet.size !== idSet.size) continue
+        let hasAll = true
+        for (const pid of idSet) {
+          if (!playerSet.has(pid)) {
+            hasAll = false
+            break
+          }
+        }
+        if (hasAll) result.push(managerId)
+      }
+      return result
     },
     enabled,
     staleTime: 60000

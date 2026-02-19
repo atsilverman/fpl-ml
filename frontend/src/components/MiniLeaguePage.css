@@ -806,6 +806,8 @@
   width: 100%;
   background: var(--bg-primary); /* match row bg so no fill strip shows in manager column */
   transition: opacity 0.2s ease;
+  /* Prevent sticky header/column being pulled off on mobile drag */
+  overscroll-behavior: none;
 }
 
 /* Mobile: full-height content, page scrolls so nav bar slide animation works with window scroll */
@@ -822,6 +824,7 @@
     overflow-x: auto;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
   }
 
   /* Sticky thead sticks to viewport when page scrolls */
@@ -1369,6 +1372,26 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 .league-standings-page .league-standings-bento-table .league-standings-bento-in-play {
   text-align: center;
   white-space: nowrap;
+}
+
+/* GW column: tapering fill for top 5 in gameweek (league page only) – promotes biggest GW scores */
+.league-standings-page .league-standings-bento-table td.league-standings-bento-gw.league-standings-gw-top-1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 22%, var(--bg-primary));
+  font-weight: 700;
+}
+.league-standings-page .league-standings-bento-table td.league-standings-bento-gw.league-standings-gw-top-2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 14%, var(--bg-primary));
+  font-weight: 600;
+}
+.league-standings-page .league-standings-bento-table td.league-standings-bento-gw.league-standings-gw-top-3 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 9%, var(--bg-primary));
+  font-weight: 600;
+}
+.league-standings-page .league-standings-bento-table td.league-standings-bento-gw.league-standings-gw-top-4 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 5%, var(--bg-primary));
+}
+.league-standings-page .league-standings-bento-table td.league-standings-bento-gw.league-standings-gw-top-5 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 3%, var(--bg-primary));
 }
 
 /* Rank cell inner: flex so rank value + arrow/badge stay on one line, no overlap */

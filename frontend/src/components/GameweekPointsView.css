@@ -24,6 +24,8 @@
   border-radius: 6px;
   background: transparent;
   scrollbar-width: none;
+  /* Prevent sticky header/column being pulled off on mobile drag */
+  overscroll-behavior: none;
 }
 
 .gameweek-points-scrollable::-webkit-scrollbar {
