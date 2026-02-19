@@ -309,13 +309,15 @@ export default function OnboardingPage() {
                       >
                         {isLastDifficulty ? 'Continue to dashboard' : 'Next'}
                       </button>
-                      <button
-                        type="button"
-                        className="onboarding-skip"
-                        onClick={handleSkipDifficulty}
-                      >
-                        Skip
-                      </button>
+                      {!isLastDifficulty && (
+                        <button
+                          type="button"
+                          className="onboarding-skip"
+                          onClick={handleSkipDifficulty}
+                        >
+                          Skip
+                        </button>
+                      )}
                     </div>
                   </>
                 )}
