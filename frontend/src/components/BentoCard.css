@@ -1728,6 +1728,12 @@ html[data-theme="dark"] .transfers-summary-column-count {
   font-weight: 600;
 }
 
+/* Vertical line separating manager/team name from stats (Total, GW) – same as other data tables */
+.league-standings-bento-table th.league-standings-bento-team,
+.league-standings-bento-table td.league-standings-bento-team {
+  border-right: 1px solid var(--border-color);
+}
+
 .league-standings-bento-table td.league-standings-bento-total {
   font-weight: 500;
 }

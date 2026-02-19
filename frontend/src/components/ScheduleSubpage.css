@@ -779,7 +779,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   left: 0;
   z-index: 11;
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .schedule-th-gw {
@@ -859,7 +862,10 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   position: sticky;
   left: 0;
   z-index: 1;
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
 
 .schedule-cell-team {

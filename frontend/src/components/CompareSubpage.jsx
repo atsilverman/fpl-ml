@@ -25,8 +25,8 @@ function useDebounce(value, ms) {
   return debounced
 }
 
-/** Display-only slot: selected player (badge + name + clear) or empty state with Add button */
-function PlayerSlotDisplay({ slotLabel, selectedPlayer, onClear, onOpenSearch }) {
+/** Display-only slot: selected player (badge + name + clear) or empty state (label only; use toolbar Search to add) */
+function PlayerSlotDisplay({ slotLabel, selectedPlayer, onClear }) {
   if (selectedPlayer) {
     return (
       <div className="player-compare-th-player">
@@ -53,14 +53,6 @@ function PlayerSlotDisplay({ slotLabel, selectedPlayer, onClear, onOpenSearch })
   return (
     <div className="player-compare-th-empty">
       <span className="player-compare-th-empty-label">{slotLabel}</span>
-      <button
-        type="button"
-        className="player-compare-th-add-btn"
-        onClick={onOpenSearch}
-        aria-label={`Search to add ${slotLabel}`}
-      >
-        <Search size={14} strokeWidth={2} />
-      </button>
     </div>
   )
 }
@@ -305,7 +297,6 @@ export default function CompareSubpage() {
                   slotLabel="Player 1"
                   selectedPlayer={selectedPlayer1}
                   onClear={() => setSelectedPlayer1(null)}
-                  onOpenSearch={() => openSearchPopup(1)}
                 />
               </th>
               <th className="player-compare-th player-compare-th-stat" aria-label="Stat" />
@@ -314,7 +305,6 @@ export default function CompareSubpage() {
                   slotLabel="Player 2"
                   selectedPlayer={selectedPlayer2}
                   onClear={() => setSelectedPlayer2(null)}
-                  onOpenSearch={() => openSearchPopup(2)}
                 />
               </th>
             </tr>

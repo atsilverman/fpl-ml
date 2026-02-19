@@ -351,7 +351,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 </span>
               </div>
             </div>
-            <span className="gameweek-points-col-sep" aria-hidden />
           </td>
         )}
         <td
@@ -481,7 +480,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 >
                   PLAYER
                   {sortable && sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
-                  <span className="gameweek-points-col-sep" aria-hidden />
                 </th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-pts${sortable ? ` gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}

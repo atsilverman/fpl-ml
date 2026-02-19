@@ -85,6 +85,7 @@
   z-index: 11;
   background: color-mix(in srgb, var(--bg-secondary) 75%, var(--bg-primary));
   padding-left: 16px;
+  border-right: 1px solid var(--border-color);
 }
 
 .gameweek-points-th {
@@ -320,18 +321,7 @@
   background: color-mix(in srgb, var(--bg-secondary) 14%, var(--bg-primary));
   min-width: 0;
   overflow: visible;
-}
-
-/* Vertical separator on right of player column – drawn as element so it stays visible when scrolling (border collapses with next cell) */
-.gameweek-points-col-sep {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: var(--border-color);
-  z-index: 1;
-  pointer-events: none;
+  border-right: 1px solid var(--border-color);
 }
 
 .gameweek-points-tr:last-child .gameweek-points-td {
@@ -1069,11 +1059,11 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 /* Manager popup: first-column treatment (schedule-style) for player column */
 .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
 }
 .manager-detail-modal-chart-wrap .gameweek-points-table .gameweek-points-td-player-fixed {
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
 }
 .manager-detail-modal-chart-wrap .gameweek-points-tr-autosub-out .gameweek-points-td-player-fixed {
   background: var(--gw-autosub-out-bg-solid);

@@ -149,7 +149,7 @@ html[data-theme="dark"] .gw-top-points-item {
   background: var(--bg-primary);
 }
 
-/* Manager/team/player identity block – darker fill so distinct from pts/value (!important beats any parent/card overrides) */
+/* Manager/team/player identity – no separate fill; row background shows through */
 .gw-top-points-card .gw-top-points-item-identity {
   display: flex;
   align-items: center;
@@ -157,12 +157,7 @@ html[data-theme="dark"] .gw-top-points-item {
   min-width: 0;
   flex: 1;
   padding: 3px 9px 3px 9px;
-  background: color-mix(in srgb, var(--text-secondary) 18%, var(--bg-primary)) !important;
-  box-shadow: 2px 0 0 var(--border-color);
-}
-
-html[data-theme="dark"] .gw-top-points-card .gw-top-points-item-identity {
-  background: color-mix(in srgb, var(--text-primary) 18%, var(--bg-primary)) !important;
+  background: transparent;
 }
 
 .gw-top-points-badge-slot {
@@ -207,7 +202,7 @@ html[data-theme="dark"] .gw-top-points-card .gw-top-points-item-identity {
   white-space: nowrap;
 }
 
-/* Position badge – same style as Defcon (small, colored by position) */
+/* Position badge – colored text only, no fill; row background shows through */
 .gw-top-points-position {
   flex-shrink: 0;
   display: inline-block;
@@ -219,36 +214,28 @@ html[data-theme="dark"] .gw-top-points-card .gw-top-points-item-identity {
   border-radius: 2px;
   text-transform: uppercase;
   line-height: 1.2;
+  background: transparent;
 }
 
 .gw-top-points-position--1 {
-  background: rgba(148, 163, 184, 0.25);
   color: #94a3b8;
 }
 
 .gw-top-points-position--2 {
-  background: rgba(59, 130, 246, 0.2);
   color: #60a5fa;
 }
 
 .gw-top-points-position--3 {
-  background: rgba(234, 179, 8, 0.25);
   color: #eab308;
 }
 
 .gw-top-points-position--4 {
-  background: rgba(239, 68, 68, 0.2);
   color: #f87171;
 }
 
 /* Fallback when position unknown */
 .gw-top-points-position:not([class*="gw-top-points-position--"]) {
-  background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
   color: var(--text-secondary);
-}
-
-html[data-theme="dark"] .gw-top-points-position:not([class*="gw-top-points-position--"]) {
-  background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
 }
 
 .gw-top-points-pill {
@@ -917,7 +904,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding-left: 12px;
   min-width: 100px;
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
   /* Promote layer so sticky column paints above scrolling content (e.g. iOS Safari) */
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1017,7 +1004,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding: 6px 8px;
   padding-left: 12px;
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
+  border-right: 1px solid var(--border-color);
   /* Promote layer so sticky column paints above scrolling content (e.g. iOS Safari) */
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
