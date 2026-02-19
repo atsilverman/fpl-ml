@@ -50,11 +50,12 @@ export default function ResearchPage() {
           })}
         </nav>
       </div>
-      {view === 'price-changes' && <PriceChangesSubpage />}
-      {view === 'schedule' && <ScheduleSubpage />}
-      {view === 'compare' && <CompareSubpage />}
-
-      {view === 'stats' && <StatsSubpage />}
+      <div className="research-page-content">
+        {view === 'price-changes' && <PriceChangesSubpage />}
+        {view === 'schedule' && <ScheduleSubpage />}
+        {view === 'compare' && <CompareSubpage />}
+        {view === 'stats' && <StatsSubpage />}
+      </div>
     </div>
   )
 }

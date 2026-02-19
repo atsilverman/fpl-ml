@@ -62,6 +62,8 @@
   box-sizing: border-box;
   flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Desktop: hide in-page subpage tabs (use header dropdown); show sticky strip only on Standings for search bar */
@@ -622,28 +624,40 @@
   overscroll-behavior: none;
 }
 
-/* Mobile: full-height content, page scrolls so nav bar slide animation works with window scroll */
+/* Mobile: scroll happens inside the table container (under header); header row stays fixed at top of container */
 @media (max-width: 768px) {
   .mini-league-page {
-    padding-bottom: 24px;
+    padding-bottom: 0;
   }
 
   .mini-league-page .league-standings-transfers-spacer {
     display: none;
   }
 
-  .mini-league-page .league-standings-bento-table-wrapper {
-    overflow-x: auto;
-    overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: none;
+  /* Bento body: take remaining height, column layout, so table wrapper can be the scroll area */
+  .mini-league-page .league-standings-bento.league-standings-page .league-standings-bento-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  /* Sticky thead sticks to viewport when page scrolls */
+  /* Table wrapper is the scroll container: fills remaining space, scrolls vertically (and horizontally) */
+  .mini-league-page .league-standings-bento-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto;
+  }
+
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table-wrap {
     overflow: visible;
   }
 
+  /* Sticky thead sticks to top of the table wrapper (scroll container) */
   .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead,
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead {
     position: sticky;
@@ -1116,19 +1130,17 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   background: var(--bg-primary);
 }
 
-/* First-column treatment (schedule-style): rank and manager columns */
+/* First-column treatment (schedule-style): rank and manager columns; no line between rank and manager */
 .league-standings-page .league-standings-bento-table th.league-standings-bento-rank {
   position: sticky;
   left: 0;
   z-index: 2;
-  box-shadow: 2px 0 0 var(--border-color);
 }
 .league-standings-page .league-standings-bento-table th.league-standings-bento-team {
   box-shadow: 2px 0 0 var(--border-color);
 }
 .league-standings-page .league-standings-bento-table td.league-standings-bento-rank {
   background: var(--bg-secondary);
-  box-shadow: 2px 0 0 var(--border-color);
   position: sticky;
   left: 0;
   z-index: 1;

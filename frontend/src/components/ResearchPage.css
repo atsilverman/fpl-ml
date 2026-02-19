@@ -34,6 +34,17 @@
   }
 }
 
+/* Mobile: scroll happens inside the content container (under subpage tabs); tabs stay fixed at top */
+@media (max-width: 768px) {
+  .research-page .research-page-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
 .research-card {
   flex: 1 1 auto;
   min-height: 0;

@@ -95,9 +95,9 @@ export function useAxisLockedScroll(ref, options = {}) {
       }
       lastTime = now
 
-      /* Only preventDefault when this element actually has scrollable space in the locked direction.
-         Otherwise the touch would be swallowed and the page/body could not scroll (e.g. Mini League
-         table wrapper has overflow-y: visible; standings table is not a vertical scroll container). */
+      /* Only preventDefault when this element actually scrolls in the locked direction.
+         If the element has overflow-y: visible (e.g. Mini League table wrapper), it does not
+         scroll vertically; we must not preventDefault so the page/body can scroll. */
       if (lock === 'h') {
         const maxScrollLeft = el.scrollWidth - el.clientWidth
         if (maxScrollLeft > 0) {
@@ -105,8 +105,10 @@ export function useAxisLockedScroll(ref, options = {}) {
           el.scrollLeft = Math.max(0, Math.min(maxScrollLeft, el.scrollLeft - dx))
         }
       } else if (lock === 'v') {
+        const overflowY = typeof getComputedStyle !== 'undefined' ? getComputedStyle(el).overflowY : 'visible'
+        const canScrollV = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay'
         const maxScrollTop = el.scrollHeight - el.clientHeight
-        if (maxScrollTop > 0) {
+        if (canScrollV && maxScrollTop > 0) {
           e.preventDefault()
           el.scrollTop = Math.max(0, Math.min(maxScrollTop, el.scrollTop - dy))
         }
