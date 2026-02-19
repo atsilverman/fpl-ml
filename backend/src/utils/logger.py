@@ -48,44 +48,54 @@ class JSONFormatter(logging.Formatter):
         return traceback.format_exception(*exc_info)
 
 
-def setup_logging(config=None):
+def setup_logging(config=None, log_file=None):
     """
     Set up logging configuration.
-    
+
     Args:
         config: Optional Config object. If None, uses environment variables.
+        log_file: Optional path (str or Path) to also write logs to a file (append mode).
     """
     import os
-    
+    from pathlib import Path
+
     log_level = os.getenv("LOG_LEVEL", "INFO")
     log_format = os.getenv("LOG_FORMAT", "json")
-    
+
     if config:
         log_level = config.log_level
         log_format = config.log_format
-    
+
     # Set root logger level
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, log_level.upper()))
-    
+
     # Remove existing handlers
     root_logger.handlers.clear()
-    
-    # Create console handler
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(getattr(logging, log_level.upper()))
-    
-    # Set formatter
+
+    # Set formatter (shared by console and optional file)
     if log_format == "json":
         formatter = JSONFormatter()
     else:
         formatter = logging.Formatter(
             "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-    
+
+    # Console handler
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(getattr(logging, log_level.upper()))
     handler.setFormatter(formatter)
     root_logger.addHandler(handler)
-    
+
+    # Optional file handler (append mode)
+    if log_file is not None:
+        path = Path(log_file)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(path, mode="a", encoding="utf-8")
+        file_handler.setLevel(getattr(logging, log_level.upper()))
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+
     # Set levels for third-party loggers
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)

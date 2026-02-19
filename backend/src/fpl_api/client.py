@@ -8,6 +8,7 @@ import asyncio
 import logging
 import random
 import time
+from collections import deque
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from urllib.parse import urljoin
@@ -69,7 +70,34 @@ class FPLAPIClient:
                 "Referer": "https://fantasy.premierleague.com/"
             }
         )
-    
+
+        # Optional metrics for stress testing (off by default; no production impact)
+        self._metrics_enabled: bool = False
+        self._request_timestamps: deque = deque(maxlen=2000)
+        self._count_429: int = 0
+
+    def enable_metrics(self) -> None:
+        """Enable request and 429 counting for stress tests."""
+        self._metrics_enabled = True
+
+    def disable_metrics(self) -> None:
+        """Disable metrics (default)."""
+        self._metrics_enabled = False
+
+    def reset_metrics(self) -> None:
+        """Clear metrics; call before each stress-test run."""
+        self._request_timestamps.clear()
+        self._count_429 = 0
+
+    def get_metrics(self) -> Dict[str, Any]:
+        """Return current metrics: request_count, request_timestamps, count_429."""
+        ts = list(self._request_timestamps)
+        return {
+            "request_count": len(ts),
+            "request_timestamps": ts,
+            "count_429": self._count_429,
+        }
+
     async def _wait_for_rate_limit(self):
         """Wait to respect rate limiting."""
         await self.throttler.acquire()
@@ -128,7 +156,9 @@ class FPLAPIClient:
             try:
                 # Wait for rate limit
                 await self._wait_for_rate_limit()
-                
+                if self._metrics_enabled:
+                    self._request_timestamps.append(time.time())
+
                 # Make request with explicit headers
                 request_headers = {
                     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -152,6 +182,8 @@ class FPLAPIClient:
                 
                 # Handle rate limiting
                 if status_code == 429:
+                    if self._metrics_enabled:
+                        self._count_429 += 1
                     retry_after = int(response.headers.get("Retry-After", 60))
                     logger.warning(
                         "Rate limited by FPL API",

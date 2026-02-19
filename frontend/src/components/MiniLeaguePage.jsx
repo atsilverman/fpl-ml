@@ -132,6 +132,7 @@ export default function MiniLeaguePage() {
   const showTransfersView = leagueViewMode === 'transfers'
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
   const searchContainerRef = useRef(null)
+  const mobileSearchInputRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
   const standingsTableScrollRef = useRef(null)
   const transfersTableScrollRef = useRef(null)
@@ -156,7 +157,8 @@ export default function MiniLeaguePage() {
 
   useEffect(() => {
     if (mobileSearchOpen) {
-      const t = setTimeout(() => document.getElementById('league-ownership-search')?.focus(), 0)
+      const focusInput = () => mobileSearchInputRef.current?.focus()
+      const t = setTimeout(focusInput, 50)
       return () => clearTimeout(t)
     }
   }, [mobileSearchOpen])
@@ -414,6 +416,7 @@ export default function MiniLeaguePage() {
         <div className="league-ownership-search-bar">
           <Search className="league-ownership-search-icon" size={16} aria-hidden />
           <input
+            ref={mobileSearchInputRef}
             type="text"
             className="league-ownership-search-input"
             placeholder="Search player to view league ownership"

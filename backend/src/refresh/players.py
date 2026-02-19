@@ -435,15 +435,16 @@ class PlayerDataRefresher:
         bootstrap: Optional[Dict] = None,
         live_only: bool = False,
         expect_live_unavailable: bool = False,
+        element_summary_batch_size: int = 10,
     ):
         """
         Refresh player gameweek stats for active players.
-        
+
         Optimized to use live endpoint data directly when available, avoiding
         300+ element-summary API calls. "Live data" is the FPL API response from
         /event/{gameweek}/live; it is often unavailable for past/finished gameweeks
         or outside match windows, in which case we fall back to element-summary calls.
-        
+
         Args:
             gameweek: Gameweek number
             active_player_ids: Set of active player IDs to refresh
@@ -452,6 +453,7 @@ class PlayerDataRefresher:
             bootstrap: Optional bootstrap-static data (avoids refetch when e.g. backfilling)
             live_only: If True, skip updating expected stats and ICT stats (static per match)
             expect_live_unavailable: If True, log fallback to element-summary at debug (e.g. backfill)
+            element_summary_batch_size: Batch size for element-summary fallback (default 10).
         """
         if not active_player_ids:
             logger.debug("No active players to refresh", extra={"gameweek": gameweek})
@@ -979,13 +981,11 @@ class PlayerDataRefresher:
             feed_events: List[Dict[str, Any]] = []
             feed_reversals: List[Dict[str, Any]] = []
             occurred_at = datetime.now(timezone.utc).isoformat()
-            
+
             # Refresh players in batches to avoid overwhelming API
-            batch_size = 10
             player_list = list(active_player_ids)
-            
-            for i in range(0, len(player_list), batch_size):
-                batch = player_list[i:i + batch_size]
+            for i in range(0, len(player_list), element_summary_batch_size):
+                batch = player_list[i : i + element_summary_batch_size]
                 batch_stats = []
                 
                 # Fetch player summaries in parallel
@@ -1109,7 +1109,7 @@ class PlayerDataRefresher:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)
                 
                 # Small delay between batches
-                if i + batch_size < len(player_list):
+                if i + element_summary_batch_size < len(player_list):
                     await asyncio.sleep(0.5)
             
             # Compute and persist provisional_bonus for provisional fixtures (BPS rank 3/2/1)
