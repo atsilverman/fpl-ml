@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
-import { ClockFading, Filter, Info } from 'lucide-react'
+import { ClockFading, Filter, Info, X } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -119,6 +119,14 @@ export default function ScheduleSubpage() {
   const legendPopoverRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
 
+  const scheduleFilterSummaryText = useMemo(() => {
+    const sourceLabel = difficultySource === 'fpl' ? 'FPL Strength' : 'Custom Strength'
+    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall rating' : difficultyDimension === 'attack' ? 'Attacking rating' : 'Defending rating'
+    const parts = [sourceLabel, dimensionLabel]
+    if (showReverseScores) parts.push('Last H2H')
+    return parts.join(' · ')
+  }, [difficultySource, difficultyDimension, showReverseScores])
+
   const popupLastH2H = popupCell ? lastH2HMap[pairKey(popupCell.rowTeamId, popupCell.opponentTeamId)] ?? null : null
   const reverseFixtureId = popupLastH2H?.fpl_fixture_id ?? null
   const reverseGameweek = popupLastH2H?.gameweek ?? null
@@ -195,7 +203,6 @@ export default function ScheduleSubpage() {
         <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
           <div className="schedule-header-with-filter">
             <header className="schedule-subpage-header research-page-card-header">
-              <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
               <button
                 type="button"
                 className="schedule-filter-icon-btn"
@@ -218,7 +225,6 @@ export default function ScheduleSubpage() {
         <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
           <div className="schedule-header-with-filter">
             <header className="schedule-subpage-header research-page-card-header">
-              <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
               <button
                 type="button"
                 className="schedule-filter-icon-btn"
@@ -237,13 +243,18 @@ export default function ScheduleSubpage() {
 
   const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
 
+  const handleResetScheduleFilters = () => {
+    setDifficultySource('fpl')
+    setDifficultyDimension('overall')
+    setShowReverseScores(false)
+  }
+
   return (
     <div className="research-schedule-subpage">
       <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
         <div className="schedule-header-with-filter">
           <header className="schedule-subpage-header research-page-card-header">
-          <span className="research-page-card-title bento-card-label schedule-subpage-title">Schedule</span>
-          <div className="schedule-header-icon-group" aria-hidden>
+          <div className="schedule-header-icon-group">
             <button
               type="button"
               className={`schedule-legend-icon-btn ${legendOpen ? 'schedule-legend-icon-btn--active' : ''}`}
@@ -267,8 +278,20 @@ export default function ScheduleSubpage() {
           </div>
         </header>
         {legendOpen && (
-          <div className="schedule-legend-popover" ref={legendPopoverRef} role="dialog" aria-label="Opponent difficulty legend">
-            <div className="schedule-legend-title">Opponent difficulty</div>
+          <div className="schedule-legend-popover" ref={legendPopoverRef} role="dialog" aria-label={difficultyDimension === 'attack' ? 'Opponent attack legend' : difficultyDimension === 'defence' ? 'Opponent defence legend' : 'Opponent difficulty legend'}>
+            <div className="schedule-legend-title">
+              {difficultyDimension === 'attack'
+                ? 'Opponent attack'
+                : difficultyDimension === 'defence'
+                  ? 'Opponent defence'
+                  : 'Opponent difficulty'}
+            </div>
+            {difficultyDimension === 'attack' && (
+              <div className="schedule-legend-hint">Higher = more risk for your defenders</div>
+            )}
+            {difficultyDimension === 'defence' && (
+              <div className="schedule-legend-hint">Higher = harder for your attackers to score</div>
+            )}
             <div className="schedule-legend-items">
               {[1, 2, 3, 4, 5].map((d) => (
                 <div key={d} className="schedule-legend-row">
@@ -276,7 +299,7 @@ export default function ScheduleSubpage() {
                     <span className="schedule-cell-abbr-display">{d === 1 ? '1' : d === 5 ? '5' : String(d)}</span>
                   </span>
                   <span className="schedule-legend-label">
-                    {d === 1 ? 'Easiest' : d === 5 ? 'Hardest' : d === 3 ? 'Medium' : ''}
+                    {d === 1 ? 'Easiest' : d === 5 ? 'Hardest' : d === 3 ? 'Medium' : d === 2 ? 'Easy' : 'Hard'}
                   </span>
                 </div>
               ))}
@@ -284,7 +307,26 @@ export default function ScheduleSubpage() {
           </div>
         )}
         {filterPopoverOpen && (
-          <div className="schedule-filter-popover" ref={filterPopoverRef} role="dialog" aria-label="Schedule view options">
+          <div className="schedule-filter-popover" ref={filterPopoverRef} role="dialog" aria-label="Schedule filters">
+            <div className="schedule-filter-popover-header">
+              <span className="schedule-filter-popover-title">Filters</span>
+              <div className="schedule-filter-popover-header-actions">
+                {hasActiveScheduleFilters && (
+                  <button
+                    type="button"
+                    className="schedule-filter-popover-reset"
+                    onClick={handleResetScheduleFilters}
+                    aria-label="Reset all filters to default"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button type="button" className="schedule-filter-popover-close" onClick={() => setFilterPopoverOpen(false)} aria-label="Close filters">
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="schedule-filter-popover-body">
             <div className="schedule-filter-popover-section">
               <span className="schedule-filter-popover-label">Difficulty source</span>
               <div className="schedule-filter-popover-buttons">
@@ -309,7 +351,7 @@ export default function ScheduleSubpage() {
               </div>
             </div>
             <div className="schedule-filter-popover-section">
-              <span className="schedule-filter-popover-label">Dimension</span>
+              <span className="schedule-filter-popover-label">Opponent strength</span>
               <div className="schedule-filter-popover-buttons">
                 <button
                   type="button"
@@ -358,10 +400,14 @@ export default function ScheduleSubpage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         )}
       </div>
       <div className="research-schedule-content">
+        <p className="research-schedule-filter-summary" aria-live="polite">
+          {scheduleFilterSummaryText}
+        </p>
       <div ref={scheduleScrollRef} className="schedule-scroll-wrap">
         <table className="schedule-table">
           <thead>
@@ -386,8 +432,13 @@ export default function ScheduleSubpage() {
             {teamIds.map((teamId) => {
               const team = mapForRow[teamId]
               const short = team?.short_name ?? '?'
+              const teamName = team?.team_name ?? short
+              const displayName = teamName && teamName.length > 10 ? `${teamName.slice(0, 10)}..` : teamName
               return (
-                <tr key={teamId} className="schedule-row">
+                <tr
+                  key={`schedule-row-${teamId}`}
+                  className="schedule-row"
+                >
                   <td className="schedule-cell schedule-cell-team schedule-cell-sticky">
                     <span className="schedule-cell-opponent">
                       <span className="schedule-cell-badge-slot">
@@ -404,7 +455,7 @@ export default function ScheduleSubpage() {
                           <span className="schedule-cell-badge-placeholder" aria-hidden />
                         )}
                       </span>
-                      <span className="schedule-cell-team-name">{team?.team_name ?? short}</span>
+                      <span className="schedule-cell-team-name" title={teamName}>{displayName}</span>
                     </span>
                   </td>
                   {gameweeks.flatMap((gw) => {

@@ -821,6 +821,8 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 .matchup-detail-table-scroll {
   overflow: auto;
+  overflow-x: scroll;
+  overflow-y: auto;
   max-height: 60vh;
   min-width: 0; /* Allow shrink in flex so table can overflow and scroll horizontally */
   border-radius: 0 0 8px 8px;
@@ -830,6 +832,8 @@ html[data-theme="dark"] .gw-top-points-pill {
   isolation: isolate; /* Clear scroll container for sticky on mobile/iOS */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
+  /* On mobile: allow horizontal scroll inside table so gesture isn't captured by swipe container */
+  touch-action: pan-x pan-y;
 }
 
 @media (min-width: 769px) {
@@ -901,6 +905,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 /* Player column: same first-column treatment as schedule (bg-secondary + thin shadow) */
 .matchup-detail-th-player {
   position: sticky;
+  position: -webkit-sticky;
   top: 0;
   left: 0;
   z-index: 10;
@@ -1004,6 +1009,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 .matchup-detail-td-player-inner {
   position: sticky;
+  position: -webkit-sticky;
   left: 0;
   z-index: 2;
   display: flex;
@@ -1013,6 +1019,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding-left: 12px;
   width: 100%;
   min-height: 100%;
+  min-width: 0; /* Allow shrink so sticky column doesn't overflow on narrow viewports */
   box-sizing: border-box;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);

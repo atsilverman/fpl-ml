@@ -12,6 +12,15 @@
   gap: 8px;
 }
 
+/* Content area: fills below toolbar; single subpage (Stats/Schedule/Compare/Changes) fills and scrolls as needed */
+.research-page .research-page-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 /* Toolbar stays fixed; content below scrolls under it (Stats, Schedule, Compare, Changes). Match Gameweek spacing and layer. */
 .research-page .subpage-toolbar-wrap {
   position: sticky;
@@ -154,11 +163,6 @@
   overflow: visible;
 }
 
-.research-price-changes-card .research-page-card-header {
-  flex-shrink: 0;
-  padding: 0;
-}
-
 .research-price-changes-content {
   flex: 1 1 auto;
   display: flex;
@@ -293,8 +297,13 @@
 .compare-subpage {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding-top: 4px;
+  gap: 6px;
+  padding-top: 0;
+}
+
+/* Match schedule: extra space above table (schedule has margin-top: 6px on .schedule-scroll-wrap) */
+.research-compare-content .player-stats-wrap {
+  margin-top: 6px;
 }
 
 /* Card header: title (bento font) + source link, inside the card */

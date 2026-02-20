@@ -1,37 +1,80 @@
 /**
  * Shared compare-stats config and helpers for PlayerCompareModal and CompareSubpage.
- * Position: 1 = GK, 2 = DEF, 3 = MID, 4 = FWD.
+ * Stats are filtered by category (all | attacking | defending | goalie | discipline) like Stats subpage.
  */
 
+/** Section for "All" view: general | attacking | defending | discipline. */
+const SECTION_ORDER = ['general', 'attacking', 'defending', 'discipline']
+
+/** Category can be a string or array of strings (stat shown if selected category matches). */
 export const COMPARE_STATS = [
-  { key: 'points', label: 'Points', higherBetter: true },
-  { key: 'minutes', label: 'Minutes', higherBetter: true },
-  { key: 'goals_scored', label: 'Goals', higherBetter: true },
-  { key: 'assists', label: 'Assists', higherBetter: true },
-  { key: 'clean_sheets', label: 'Clean sheets', higherBetter: true, showIfForward: true },
-  { key: 'saves', label: 'Saves', higherBetter: true, showIfKeeper: true },
-  { key: 'bps', label: 'BPS', higherBetter: true },
-  { key: 'bonus', label: 'Bonus', higherBetter: true },
-  { key: 'defensive_contribution', label: 'DEFCON', higherBetter: true, showIfForward: true },
-  { key: 'yellow_cards', label: 'Yellow cards', higherBetter: false },
-  { key: 'red_cards', label: 'Red cards', higherBetter: false },
-  { key: 'expected_goals', label: 'xG', higherBetter: true, hideIfBothKeepers: true },
-  { key: 'expected_assists', label: 'xA', higherBetter: true, hideIfBothKeepers: true },
-  { key: 'expected_goal_involvements', label: 'xGI', higherBetter: true, hideIfBothKeepers: true },
-  { key: 'expected_goals_conceded', label: 'xGC', higherBetter: false, showIfForward: true },
+  { key: 'points', label: 'Points', higherBetter: true, category: 'all', section: 'general' },
+  { key: 'minutes', label: 'Minutes', higherBetter: true, category: 'all', section: 'general' },
+  { key: 'cost_tenths', label: 'Cost', higherBetter: false, category: 'all', fromPlayer: true, section: 'general' },
+  { key: 'selected_by_percent', label: 'TSB%', higherBetter: true, category: 'all', fromPlayer: true, section: 'general' },
+  { key: 'position', label: 'Position', higherBetter: true, category: 'all', fromPlayer: true, section: 'general', noLeader: true },
+  { key: 'bps', label: 'BPS', higherBetter: true, category: 'all', section: 'general' },
+  { key: 'bonus', label: 'Bonus', higherBetter: true, category: 'all', section: 'general' },
+  { key: 'goals_scored', label: 'Goals', higherBetter: true, category: 'attacking', section: 'attacking' },
+  { key: 'assists', label: 'Assists', higherBetter: true, category: 'attacking', section: 'attacking' },
+  { key: 'expected_goals', label: 'xG', higherBetter: true, category: 'attacking', section: 'attacking' },
+  { key: 'expected_assists', label: 'xA', higherBetter: true, category: 'attacking', section: 'attacking' },
+  { key: 'expected_goal_involvements', label: 'xGI', higherBetter: true, category: 'attacking', section: 'attacking' },
+  { key: 'clean_sheets', label: 'CS', higherBetter: true, category: ['defending', 'goalie'], section: 'defending' },
+  { key: 'saves', label: 'Saves', higherBetter: true, category: 'goalie', section: 'defending' },
+  { key: 'defensive_contribution', label: 'DEFCON', higherBetter: true, category: 'defending', section: 'defending' },
+  { key: 'goals_conceded', label: 'GC', higherBetter: false, category: ['defending', 'goalie'], section: 'defending' },
+  { key: 'expected_goals_conceded', label: 'xGC', higherBetter: false, category: ['defending', 'goalie'], section: 'defending' },
+  { key: 'yellow_cards', label: 'YC', higherBetter: false, category: 'discipline', section: 'discipline' },
+  { key: 'red_cards', label: 'RC', higherBetter: false, category: 'discipline', section: 'discipline' },
 ]
 
-/** pos1, pos2: 1=GK, 2=DEF, 3=MID, 4=FWD or null if player not selected */
-export function getVisibleStats(pos1, pos2) {
-  const hasKeeper = pos1 === 1 || pos2 === 1
-  const hasForward = pos1 === 4 || pos2 === 4
-  const bothKeepers = pos1 === 1 && pos2 === 1
+export const COMPARE_SECTION_LABELS = {
+  general: 'General',
+  attacking: 'Attacking',
+  defending: 'Defending',
+  discipline: 'Discipline',
+}
+
+export const COMPARE_STAT_CATEGORIES = [
+  { key: 'all', label: 'All' },
+  { key: 'attacking', label: 'Attacking' },
+  { key: 'defending', label: 'Defending' },
+  { key: 'goalie', label: 'Goalie' },
+]
+
+/** Returns stats visible for the selected category (like Stats subpage). */
+export function getVisibleStatsByCategory(category) {
+  if (category === 'all') return [...COMPARE_STATS]
   return COMPARE_STATS.filter((stat) => {
-    if (stat.hideIfBothKeepers && bothKeepers) return false
-    if (stat.showIfKeeper && !hasKeeper) return false
-    if (stat.showIfForward && !hasForward) return false
-    return true
+    const c = stat.category
+    if (Array.isArray(c)) return c.includes(category)
+    return c === category
   })
+}
+
+/** Returns stats visible for compare view; pos1/pos2 are player positions (optional, for future position-based filtering). */
+export function getVisibleStats(pos1, pos2) {
+  return getVisibleStatsByCategory('all')
+}
+
+/**
+ * When category is 'all', returns groups of { sectionKey, sectionLabel, stats } for section headers + rows.
+ * Otherwise returns null (render visibleStats as a flat list).
+ */
+export function getCompareTableGroups(category, visibleStats) {
+  if (category !== 'all' || !visibleStats.length) return null
+  const bySection = {}
+  for (const stat of visibleStats) {
+    const sec = stat.section || 'general'
+    if (!bySection[sec]) bySection[sec] = []
+    bySection[sec].push(stat)
+  }
+  return SECTION_ORDER.filter((sec) => bySection[sec]?.length).map((sectionKey) => ({
+    sectionKey,
+    sectionLabel: COMPARE_SECTION_LABELS[sectionKey] || sectionKey,
+    stats: bySection[sectionKey],
+  }))
 }
 
 const DECIMAL_STAT_KEYS = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
@@ -44,8 +87,22 @@ const DECIMAL_STAT_KEYS = ['expected_goals', 'expected_assists', 'expected_goal_
  */
 export function formatStatValue(key, value, options = {}) {
   const { per90 = false, perMillion = false, minutes, priceTenths } = options
-  if (value == null) return '—'
+  if (value == null && key !== 'cost_tenths' && key !== 'selected_by_percent') return '—'
   const num = Number(value)
+
+  if (key === 'cost_tenths') {
+    if (value == null) return '—'
+    return `£${(num / 10).toFixed(1)}`
+  }
+  if (key === 'selected_by_percent') {
+    if (value == null) return '—'
+    return `${num.toFixed(1)}%`
+  }
+  if (key === 'position') {
+    const labels = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
+    return value != null && labels[value] ? labels[value] : '—'
+  }
+
   if (key === 'minutes') {
     if (perMillion) return '—'
     if (per90) return String(Math.round(num))
@@ -72,8 +129,11 @@ export function formatStatValue(key, value, options = {}) {
  * When per90 is on and player has minutes >= 90, returns per-90 rate. When perMillion and priceTenths > 0, returns value per £1m.
  */
 export function getCompareValue(key, value, minutes, per90, perMillion = false, priceTenths = null) {
-  if (value == null) return 0
+  if (value == null) return key === 'cost_tenths' ? Infinity : 0
   const num = Number(value)
+  if (key === 'cost_tenths') return num
+  if (key === 'selected_by_percent') return num
+  if (key === 'position') return num
   if (key === 'minutes') return num
   if (perMillion && priceTenths != null && priceTenths > 0) {
     const priceMillions = priceTenths / 10
@@ -83,7 +143,7 @@ export function getCompareValue(key, value, minutes, per90, perMillion = false, 
   return num
 }
 
-/** Returns 'p1' | 'p2' | 'tie' */
+/** Returns 'p1' | 'p2' | 'tie'. For cost_tenths, lower is better so higherBetter is false. */
 export function getLeader(key, higherBetter, v1, v2) {
   const a = Number(v1) ?? 0
   const b = Number(v2) ?? 0

@@ -1862,6 +1862,7 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
+  padding-left: 14px;
 }
 
 .captain-standings-bento-player-cell {

@@ -733,6 +733,15 @@
 .league-standings-page .league-standings-bento-table.league-standings-c-view-table td.league-standings-c-view-manager-cell {
   padding-left: 14px;
 }
+/* Captain and Vice columns: indent header and value cells off left edge */
+.league-standings-page .league-standings-bento-table.league-standings-c-view-table th.league-standings-c-view-th-captain,
+.league-standings-page .league-standings-bento-table.league-standings-c-view-table th.league-standings-c-view-th-vice {
+  padding-left: 14px;
+}
+.league-standings-page .league-standings-bento-table.league-standings-c-view-table tbody td.league-standings-c-view-td-captain,
+.league-standings-page .league-standings-bento-table.league-standings-c-view-table tbody td.league-standings-c-view-td-vice {
+  padding-left: 14px;
+}
 
 /* C view: manager cell — chip badge next to name (not pushed right) */
 .league-standings-c-view-table .league-standings-c-view-manager-cell {
@@ -1343,7 +1352,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 .league-standings-page .league-standings-sort-header {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   width: 100%;
   padding: 0;
   border: none;
@@ -1372,8 +1381,8 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 8px;
-  width: 8px;
+  min-width: 6px;
+  width: 6px;
   flex-shrink: 0;
 }
 .league-standings-page .league-standings-sort-triangle {

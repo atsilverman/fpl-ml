@@ -226,7 +226,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                       <span className="matchup-detail-th-label">{label}</span>
                       {isActive && (
                         <span className="matchup-detail-th-sort-icon" aria-hidden>
-                          {sortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+                          {sortDir === 'desc' ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
                         </span>
                       )}
                     </button>

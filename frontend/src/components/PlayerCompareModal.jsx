@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { usePlayerGameweekStatsRange, usePlayerCompareStatRanks } from '../hooks/usePlayerGameweekStats'
 import { useToast } from '../contexts/ToastContext'
-import { getVisibleStats, formatStatValue, formatRankDisplay, getCompareValue, getLeader } from '../utils/compareStats'
+import { getVisibleStatsByCategory, getCompareTableGroups, COMPARE_STAT_CATEGORIES, formatStatValue, formatRankDisplay, getCompareValue, getLeader } from '../utils/compareStats'
 import './MiniLeaguePage.css'
 import './PlayerCompareModal.css'
 
@@ -34,6 +34,7 @@ function statsFromRow(player) {
     expected_assists: Number(player.expected_assists) || 0,
     expected_goal_involvements: Number(player.expected_goal_involvements) || 0,
     expected_goals_conceded: Number(player.expected_goals_conceded) || 0,
+    goals_conceded: player.goals_conceded ?? 0,
   }
 }
 
@@ -47,6 +48,7 @@ export default function PlayerCompareModal({
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [selectedPlayer2, setSelectedPlayer2] = useState(null)
   const [gwFilter, setGwFilter] = useState('all')
+  const [compareStatCategory, setCompareStatCategory] = useState('all')
   const [per90, setPer90] = useState(false)
   const [perMillion, setPerMillion] = useState(false)
   const [showRank, setShowRank] = useState(false)
@@ -89,13 +91,21 @@ export default function PlayerCompareModal({
   const stats2 = player2Stats
   const player1Name = player1.player_name ?? 'Player 1'
   const player2Name = selectedPlayer2?.web_name ?? '—'
-  const pos1 = player1.player_position ?? null
-  const pos2 = selectedPlayer2?.position ?? null
-  const visibleStats = getVisibleStats(pos1, pos2)
+  const visibleStats = getVisibleStatsByCategory(compareStatCategory)
+  const tableGroups = getCompareTableGroups(compareStatCategory, visibleStats)
   const minutes1 = stats1?.minutes ?? 0
   const minutes2 = stats2?.minutes ?? 0
   const priceTenths1 = player1?.cost_tenths ?? null
   const priceTenths2 = selectedPlayer2?.cost_tenths ?? null
+  /** For fromPlayer stats (Cost, TSB%, Position) use player object; player1 may have position as player_position from row */
+  const player1ForFromPlayer = {
+    cost_tenths: player1?.cost_tenths ?? null,
+    selected_by_percent: player1?.selected_by_percent ?? null,
+    position: player1?.position ?? player1?.player_position ?? null,
+  }
+  const player2ForFromPlayer = selectedPlayer2
+    ? { cost_tenths: selectedPlayer2.cost_tenths ?? null, selected_by_percent: selectedPlayer2.selected_by_percent ?? null, position: selectedPlayer2.position ?? null }
+    : null
 
   return (
     <div
@@ -126,6 +136,20 @@ export default function PlayerCompareModal({
                   type="button"
                   className={`player-compare-gw-filter-btn ${gwFilter === key ? 'active' : ''}`}
                   onClick={() => setGwFilter(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="player-compare-controls-divider" aria-hidden="true" />
+            <div className="player-compare-stat-category-filters">
+              {COMPARE_STAT_CATEGORIES.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`player-compare-gw-filter-btn ${compareStatCategory === key ? 'active' : ''}`}
+                  onClick={() => setCompareStatCategory(key)}
+                  aria-pressed={compareStatCategory === key}
                 >
                   {label}
                 </button>
@@ -174,7 +198,8 @@ export default function PlayerCompareModal({
             </button>
           </div>
 
-          <div className="player-compare-table-wrap">
+          <div className="player-stats-wrap">
+            <div className="player-compare-table-wrap">
             <table className="player-compare-table">
               <thead>
                 <tr>
@@ -293,62 +318,137 @@ export default function PlayerCompareModal({
                 </tr>
               </thead>
               <tbody>
-                {visibleStats.map(({ key, label, higherBetter }) => {
-                  const v1 = stats1[key]
-                  const v2 = stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined)
-                  const r1 = showRank ? ranks1?.[key] : null
-                  const r2 = showRank ? ranks2?.[key] : null
-                  const compareV1 = showRank ? (r1 != null ? r1 : Infinity) : getCompareValue(key, v1, minutes1, per90, perMillion, priceTenths1)
-                  const compareV2 = showRank ? (r2 != null ? r2 : Infinity) : getCompareValue(key, v2, minutes2, per90, perMillion, priceTenths2)
-                  const leader = stats2 != null
-                    ? showRank
-                      ? getLeader(key, false, compareV1, compareV2)
-                      : getLeader(key, higherBetter, compareV1, compareV2)
-                    : null
-                  const fmtOpts1 = { per90, perMillion, minutes: minutes1, priceTenths: priceTenths1 }
-                  const fmtOpts2 = { per90, perMillion, minutes: minutes2, priceTenths: priceTenths2 }
-                  const display1 = showRank ? formatRankDisplay(ranks1, key) : formatStatValue(key, v1, fmtOpts1)
-                  const display2 = showRank ? formatRankDisplay(ranks2, key) : (stats2 != null ? formatStatValue(key, v2, fmtOpts2) : '—')
-                  return (
-                    <tr key={key} className="player-compare-tr">
-                      <td className="player-compare-td player-compare-td-p1">
-                        {showRank && (ranks1Loading || ranks1 == null) ? (
-                          <span className="player-compare-loading">…</span>
-                        ) : (
-                          <span
-                            className={`player-compare-pill ${leader === 'p1' ? 'player-compare-pill--leader' : ''}`}
-                          >
-                            {display1}
-                          </span>
-                        )}
-                      </td>
-                      <td className="player-compare-td player-compare-td-stat">{label}</td>
-                      <td className="player-compare-td player-compare-td-p2">
-                        {!selectedPlayer2 ? (
-                          <span className="player-compare-pill">—</span>
-                        ) : showRank ? (ranks2Loading || ranks2 == null ? (
-                          <span className="player-compare-loading">…</span>
-                        ) : (
-                          <span
-                            className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''}`}
-                          >
-                            {display2}
-                          </span>
-                        )) : p2StatsLoading && !stats2 ? (
-                          <span className="player-compare-loading">…</span>
-                        ) : (
-                          <span
-                            className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''}`}
-                          >
-                            {display2}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  )
-                })}
+                {tableGroups
+                  ? tableGroups.flatMap(({ sectionKey, sectionLabel, stats }) => [
+                      <tr key={sectionKey} className="player-compare-tr-section" aria-label={sectionLabel}>
+                        <td colSpan={3} className="player-compare-td-section">
+                          {sectionLabel}
+                        </td>
+                      </tr>,
+                      ...stats.map(({ key, label, higherBetter, fromPlayer, noLeader }) => {
+                        const v1 = fromPlayer
+                          ? (key === 'cost_tenths' ? player1ForFromPlayer.cost_tenths : key === 'selected_by_percent' ? player1ForFromPlayer.selected_by_percent : key === 'position' ? player1ForFromPlayer.position : undefined)
+                          : stats1[key]
+                        const v2 = fromPlayer
+                          ? (player2ForFromPlayer ? (key === 'cost_tenths' ? player2ForFromPlayer.cost_tenths : key === 'selected_by_percent' ? player2ForFromPlayer.selected_by_percent : key === 'position' ? player2ForFromPlayer.position : undefined) : undefined)
+                          : (stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined))
+                        const r1 = showRank ? ranks1?.[key] : null
+                        const r2 = showRank ? ranks2?.[key] : null
+                        const compareV1 = showRank ? (r1 != null ? r1 : Infinity) : getCompareValue(key, v1, minutes1, per90, perMillion, priceTenths1)
+                        const compareV2 = showRank ? (r2 != null ? r2 : Infinity) : getCompareValue(key, v2, minutes2, per90, perMillion, priceTenths2)
+                        const rowLeader = !noLeader && stats2 != null
+                          ? showRank
+                            ? getLeader(key, false, compareV1, compareV2)
+                            : getLeader(key, higherBetter, compareV1, compareV2)
+                          : null
+                        const fmtOpts1 = { per90, perMillion, minutes: minutes1, priceTenths: priceTenths1 }
+                        const fmtOpts2 = { per90, perMillion, minutes: minutes2, priceTenths: priceTenths2 }
+                        const display1 = showRank ? formatRankDisplay(ranks1, key) : formatStatValue(key, v1, fmtOpts1)
+                        const display2 = showRank ? formatRankDisplay(ranks2, key) : (stats2 != null ? formatStatValue(key, v2, fmtOpts2) : '—')
+                        return (
+                          <tr key={key} className="player-compare-tr">
+                            <td className="player-compare-td player-compare-td-p1">
+                              {showRank && (ranks1Loading || ranks1 == null) ? (
+                                <span className="player-compare-loading">…</span>
+                              ) : (
+                                <span className={`player-compare-pill ${rowLeader === 'p1' ? 'player-compare-pill--leader' : ''}`}>{display1}</span>
+                              )}
+                            </td>
+                            <td className="player-compare-td player-compare-td-stat">
+                              {key === 'yellow_cards' ? (
+                                <span className="player-compare-stat-label-with-icon" title="Yellow cards">
+                                  <span className="player-compare-stat-icon player-compare-stat-icon--yc" aria-hidden />
+                                  {label}
+                                </span>
+                              ) : key === 'red_cards' ? (
+                                <span className="player-compare-stat-label-with-icon" title="Red cards">
+                                  <span className="player-compare-stat-icon player-compare-stat-icon--rc" aria-hidden />
+                                  {label}
+                                </span>
+                              ) : (
+                                label
+                              )}
+                            </td>
+                            <td className="player-compare-td player-compare-td-p2">
+                              {!selectedPlayer2 ? (
+                                <span className="player-compare-pill">—</span>
+                              ) : showRank ? (ranks2Loading || ranks2 == null ? (
+                                <span className="player-compare-loading">…</span>
+                              ) : (
+                                <span className={`player-compare-pill ${rowLeader === 'p2' ? 'player-compare-pill--leader' : ''}`}>{display2}</span>
+                              )) : p2StatsLoading && !stats2 ? (
+                                <span className="player-compare-loading">…</span>
+                              ) : (
+                                <span className={`player-compare-pill ${rowLeader === 'p2' ? 'player-compare-pill--leader' : ''}`}>{display2}</span>
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      })
+                    ])
+                  : visibleStats.map(({ key, label, higherBetter, fromPlayer, noLeader }) => {
+                      const v1 = fromPlayer
+                        ? (key === 'cost_tenths' ? player1ForFromPlayer.cost_tenths : key === 'selected_by_percent' ? player1ForFromPlayer.selected_by_percent : key === 'position' ? player1ForFromPlayer.position : undefined)
+                        : stats1[key]
+                      const v2 = fromPlayer
+                        ? (player2ForFromPlayer ? (key === 'cost_tenths' ? player2ForFromPlayer.cost_tenths : key === 'selected_by_percent' ? player2ForFromPlayer.selected_by_percent : key === 'position' ? player2ForFromPlayer.position : undefined) : undefined)
+                        : (stats2?.[key] ?? (key === 'points' && stats2 ? stats2.points : undefined))
+                      const r1 = showRank ? ranks1?.[key] : null
+                      const r2 = showRank ? ranks2?.[key] : null
+                      const compareV1 = showRank ? (r1 != null ? r1 : Infinity) : getCompareValue(key, v1, minutes1, per90, perMillion, priceTenths1)
+                      const compareV2 = showRank ? (r2 != null ? r2 : Infinity) : getCompareValue(key, v2, minutes2, per90, perMillion, priceTenths2)
+                      const leader = !noLeader && stats2 != null
+                        ? showRank
+                          ? getLeader(key, false, compareV1, compareV2)
+                          : getLeader(key, higherBetter, compareV1, compareV2)
+                        : null
+                      const fmtOpts1 = { per90, perMillion, minutes: minutes1, priceTenths: priceTenths1 }
+                      const fmtOpts2 = { per90, perMillion, minutes: minutes2, priceTenths: priceTenths2 }
+                      const display1 = showRank ? formatRankDisplay(ranks1, key) : formatStatValue(key, v1, fmtOpts1)
+                      const display2 = showRank ? formatRankDisplay(ranks2, key) : (stats2 != null ? formatStatValue(key, v2, fmtOpts2) : '—')
+                      return (
+                        <tr key={key} className="player-compare-tr">
+                          <td className="player-compare-td player-compare-td-p1">
+                            {showRank && (ranks1Loading || ranks1 == null) ? (
+                              <span className="player-compare-loading">…</span>
+                            ) : (
+                              <span className={`player-compare-pill ${leader === 'p1' ? 'player-compare-pill--leader' : ''}`}>{display1}</span>
+                            )}
+                          </td>
+                          <td className="player-compare-td player-compare-td-stat">
+                            {key === 'yellow_cards' ? (
+                              <span className="player-compare-stat-label-with-icon" title="Yellow cards">
+                                <span className="player-compare-stat-icon player-compare-stat-icon--yc" aria-hidden />
+                                {label}
+                              </span>
+                            ) : key === 'red_cards' ? (
+                              <span className="player-compare-stat-label-with-icon" title="Red cards">
+                                <span className="player-compare-stat-icon player-compare-stat-icon--rc" aria-hidden />
+                                {label}
+                              </span>
+                            ) : (
+                              label
+                            )}
+                          </td>
+                          <td className="player-compare-td player-compare-td-p2">
+                            {!selectedPlayer2 ? (
+                              <span className="player-compare-pill">—</span>
+                            ) : showRank ? (ranks2Loading || ranks2 == null ? (
+                              <span className="player-compare-loading">…</span>
+                            ) : (
+                              <span className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''}`}>{display2}</span>
+                            )) : p2StatsLoading && !stats2 ? (
+                              <span className="player-compare-loading">…</span>
+                            ) : (
+                              <span className={`player-compare-pill ${leader === 'p2' ? 'player-compare-pill--leader' : ''}`}>{display2}</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>

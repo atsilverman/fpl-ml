@@ -15,7 +15,7 @@ export function usePlayerGameweekStats(playerId, gameweek) {
       const { data: rows, error: err } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
         )
         .eq('player_id', playerId)
         .eq('gameweek', gameweek)
@@ -39,6 +39,7 @@ export function usePlayerGameweekStats(playerId, gameweek) {
         expected_assists: 0,
         expected_goal_involvements: 0,
         expected_goals_conceded: 0,
+        goals_conceded: 0,
       }
       for (const r of rows) {
         agg.points += r.total_points ?? 0
@@ -56,6 +57,7 @@ export function usePlayerGameweekStats(playerId, gameweek) {
         agg.expected_assists += Number(r.expected_assists) || 0
         agg.expected_goal_involvements += Number(r.expected_goal_involvements) || 0
         agg.expected_goals_conceded += Number(r.expected_goals_conceded) || 0
+        agg.goals_conceded += r.goals_conceded ?? 0
       }
       return agg
     },
@@ -86,7 +88,7 @@ export function usePlayerGameweekStatsRange(playerId, currentGameweek, filter) {
       const { data: rows, error: err } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
         )
         .eq('player_id', playerId)
         .gte('gameweek', minGw)
@@ -111,6 +113,7 @@ export function usePlayerGameweekStatsRange(playerId, currentGameweek, filter) {
         expected_assists: 0,
         expected_goal_involvements: 0,
         expected_goals_conceded: 0,
+        goals_conceded: 0,
       }
       for (const r of rows) {
         agg.points += r.total_points ?? 0
@@ -128,6 +131,7 @@ export function usePlayerGameweekStatsRange(playerId, currentGameweek, filter) {
         agg.expected_assists += Number(r.expected_assists) || 0
         agg.expected_goal_involvements += Number(r.expected_goal_involvements) || 0
         agg.expected_goals_conceded += Number(r.expected_goals_conceded) || 0
+        agg.goals_conceded += r.goals_conceded ?? 0
       }
       return agg
     },

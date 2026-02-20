@@ -277,9 +277,6 @@ export default function PriceChangesSubpage() {
   return (
     <div className="research-price-changes-subpage">
       <div className="research-price-changes-card research-card bento-card bento-card-animate bento-card-expanded">
-        <header className="research-page-card-header research-price-changes-header">
-          <span className="research-page-card-title">Price Changes</span>
-        </header>
         <div className="research-price-changes-content">
           {innerContent}
         </div>

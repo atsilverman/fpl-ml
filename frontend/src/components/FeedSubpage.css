@@ -151,8 +151,8 @@
 }
 
 .feed-event-card__team-badge {
-  width: 23.5px;
-  height: 23.5px;
+  width: 25.85px;
+  height: 25.85px;
   flex-shrink: 0;
   object-fit: contain;
 }

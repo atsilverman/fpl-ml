@@ -441,7 +441,7 @@
 .defcon-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -451,6 +451,7 @@
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px 12px;
+  min-height: 48px;
 }
 
 .defcon-row-card--achieved {
@@ -458,6 +459,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
+/* Match feed-event-card__player: 6px between badge and player info */
 .defcon-row {
   display: flex;
   align-items: center;
@@ -466,16 +468,17 @@
 }
 
 .defcon-badge {
-  width: 30px;
-  height: 30px;
+  width: 25.85px;
+  height: 25.85px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
+/* Match feed-event-card__player-info: no gap; position row has margin-top for 1px spacing below name */
 .defcon-player-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
   min-width: 0;
   flex: 0 1 90px;
 }
@@ -520,7 +523,7 @@
 }
 
 .defcon-name {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -533,6 +536,7 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .defcon-v-opp {
@@ -543,15 +547,15 @@
   white-space: nowrap;
 }
 
-/* Same greyish pill as matches page top-points position fallback */
+/* Same greyish pill as feed event card position badge (spacing from .defcon-position-row margin-top) */
 .defcon-position-badge {
   display: inline-block;
   width: fit-content;
-  font-size: 6px;
+  font-size: 0.5rem;
   font-weight: 600;
-  letter-spacing: 0.1px;
-  padding: 1px 2px;
-  border-radius: 2px;
+  letter-spacing: 0.05em;
+  padding: 1.5px 3px;
+  border-radius: 2.5px;
   text-transform: uppercase;
   background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
   color: var(--text-secondary);
@@ -684,23 +688,24 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-list {
-    gap: 12px;
+    gap: 4px;
     width: 100%;
   }
 
   .defcon-row-card {
-    padding: 10px 12px;
-    border-radius: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    min-height: 48px;
   }
 
   .defcon-row {
-    gap: 10px;
-    min-height: 40px;
+    gap: 6px;
+    min-height: 32px;
   }
 
   .defcon-badge {
-    width: 35px;
-    height: 35px;
+    width: 25.85px;
+    height: 25.85px;
   }
 
   .defcon-player-info {
@@ -708,7 +713,7 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-name {
-    font-size: 13px;
+    font-size: 0.75rem;
   }
 
   .defcon-position-row {
@@ -716,8 +721,9 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-position-badge {
-    font-size: 7px;
-    padding: 1px 3px;
+    font-size: 0.5rem;
+    padding: 1.5px 3px;
+    border-radius: 2.5px;
   }
 
   .defcon-v-opp {

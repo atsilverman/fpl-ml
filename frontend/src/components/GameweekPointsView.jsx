@@ -358,16 +358,12 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
         >
             <AnimatedValue value={ptsDisplay}>
-              {isTop10Pts ? (
-                <span
-                  className="gameweek-points-player-points-badge rank-highlight"
-                  title="Top 10 in GW for points"
-                >
-                  {formatNumber(ptsDisplay)}
-                </span>
-              ) : (
-                formatNumber(ptsDisplay)
-              )}
+              <span
+                className={`gameweek-points-player-points-badge${isTop10Pts ? ' rank-highlight' : ''}`}
+                title={isTop10Pts ? 'Top 10 in GW for points' : undefined}
+              >
+                {formatNumber(ptsDisplay)}
+              </span>
             </AnimatedValue>
         </td>
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
@@ -479,7 +475,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   })}
                 >
                   PLAYER
-                  {sortable && sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                  {sortable && sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
                 </th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-pts${sortable ? ` gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
@@ -491,7 +487,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by points'
                   })}
-                >PTS{sortable && sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                >PTS{sortable && sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-mins${sortable ? ` gameweek-points-th-sortable${sortColumn === 'minutes' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
@@ -502,7 +498,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'minutes' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by minutes played'
                   })}
-                >MP{sortable && sortColumn === 'minutes' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                >MP{sortable && sortColumn === 'minutes' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-opp${sortable ? ` gameweek-points-th-sortable${sortColumn === 'opp' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
@@ -513,7 +509,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'opp' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by opponent'
                   })}
-                >OPP{sortable && sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
+                >OPP{sortable && sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
                   className={`gameweek-points-th gameweek-points-th-impact gameweek-points-th-impact--has-popup${sortable ? ` gameweek-points-th-sortable${sortColumn === 'impact' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
@@ -526,7 +522,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   })}
                 >
                   <span className="gameweek-points-th-impact-label">Imp</span>
-                  {sortable && sortColumn === 'impact' && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                  {sortable && sortColumn === 'impact' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   <button
                     type="button"
                     ref={impactIconRef}
@@ -591,7 +587,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     })}
                   >
                     {label}
-                    {sortable && sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={10} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={10} className="gameweek-points-th-sort-icon" aria-hidden />)}
+                    {sortable && sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   </th>
                 ))}
               </tr>

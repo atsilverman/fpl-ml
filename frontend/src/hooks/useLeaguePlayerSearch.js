@@ -21,6 +21,7 @@ export function useLeaguePlayerSearch(query) {
           web_name,
           position,
           cost_tenths,
+          selected_by_percent,
           teams(short_name)
         `)
         .ilike('web_name', `%${trimmed}%`)
@@ -34,7 +35,8 @@ export function useLeaguePlayerSearch(query) {
         web_name: p.web_name || '—',
         team_short_name: p.teams?.short_name ?? null,
         position: p.position ?? null,
-        cost_tenths: p.cost_tenths ?? null
+        cost_tenths: p.cost_tenths ?? null,
+        selected_by_percent: p.selected_by_percent ?? null
       }))
     },
     enabled,

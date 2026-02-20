@@ -78,12 +78,12 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky player header (corner): top + left; z above header row and body player column. Subtle fill to differentiate from data columns. */
+/* Sticky player header (corner): top + left; z above header row and body player column. Subtle fill so player column reads distinct from PTS/MP data columns. */
 .gameweek-points-table thead .gameweek-points-th-player {
   position: sticky;
   left: 0;
   z-index: 11;
-  background: color-mix(in srgb, var(--bg-secondary) 75%, var(--bg-primary));
+  background: color-mix(in srgb, var(--bg-secondary) 85%, var(--bg-primary));
   padding-left: 16px;
   border-right: 1px solid var(--border-color);
 }
@@ -111,7 +111,7 @@
   }
 }
 .gameweek-points-th-sort-icon {
-  margin-left: 4px;
+  margin-left: 2px;
   vertical-align: middle;
   flex-shrink: 0;
   display: inline-flex;
@@ -304,6 +304,7 @@
   color: var(--text-secondary);
 }
 
+/* Data cells (MP, PTS, Opp, etc.): --bg-primary. Player column uses a different background below. */
 .gameweek-points-td {
   padding: 8px 8px;
   border-bottom: 1px solid var(--border-color);
@@ -313,12 +314,12 @@
   font-size: 8px;
 }
 
-/* Player column – sticky on horizontal scroll; z below thead so header always wins when scrolling vertically. Very subtle fill to differentiate from data columns. */
+/* Player column – sticky; background distinct from data columns (MP/PTS use --bg-primary). */
 .gameweek-points-td-player-fixed {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: color-mix(in srgb, var(--bg-secondary) 14%, var(--bg-primary));
+  background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
   min-width: 0;
   overflow: visible;
   border-right: 1px solid var(--border-color);
@@ -336,9 +337,21 @@
 .gameweek-points-tr-clickable {
   cursor: pointer;
 }
+/* Row hover only on devices with hover (desktop); no hover effect on mobile/touch */
 @media (hover: hover) {
   .gameweek-points-tr-clickable:hover .gameweek-points-td {
     background: var(--bg-secondary);
+  }
+  .gameweek-points-tr-clickable:hover .gameweek-points-td-player-fixed {
+    background: color-mix(in srgb, var(--bg-secondary) 92%, var(--bg-primary));
+  }
+}
+@media (max-width: 768px) {
+  .gameweek-points-tr-clickable:hover .gameweek-points-td {
+    background: var(--bg-primary);
+  }
+  .gameweek-points-tr-clickable:hover .gameweek-points-td-player-fixed {
+    background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
   }
 }
 
@@ -648,6 +661,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 /* Top 10 gameweek scorer points badge – green; font inherits so points match other points */
+/* Subtle pill behind all pts; rank-highlight / defcon / saves override */
 .gameweek-points-player-points-badge {
   display: inline-flex;
   align-items: center;
@@ -659,6 +673,10 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   font-size: inherit;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  background: var(--pts-badge-subtle-bg, rgba(0, 0, 0, 0.06));
+}
+html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight):not(.defcon-achieved):not(.saves-achieved) {
+  background: var(--pts-badge-subtle-bg, rgba(255, 255, 255, 0.06));
 }
 .gameweek-points-player-points-badge.rank-highlight {
   background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2));
