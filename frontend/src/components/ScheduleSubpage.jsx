@@ -170,6 +170,20 @@ export default function ScheduleSubpage() {
     setPopupCell({ rowTeamId, opponentTeamId })
   }
 
+  const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
+  const scheduleFilterSummaryText = useMemo(() => {
+    const sourceLabel = difficultySource === 'fpl' ? 'FPL' : 'Custom'
+    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall' : difficultyDimension === 'attack' ? 'Attack' : 'Defence'
+    const parts = ['Fixtures', sourceLabel, dimensionLabel]
+    if (showReverseScores) parts.push('Last H2H')
+    return parts.join(' · ')
+  }, [difficultySource, difficultyDimension, showReverseScores])
+  const handleResetScheduleFilters = useCallback(() => {
+    setDifficultySource('fpl')
+    setDifficultyDimension('overall')
+    setShowReverseScores(false)
+  }, [])
+
   if (loading) {
     return (
       <div className="research-schedule-subpage">
@@ -197,7 +211,7 @@ export default function ScheduleSubpage() {
             </div>
           </div>
         </div>
-        <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
+        <div className="research-schedule-card research-card">
           <div className="schedule-loading">Loading schedule…</div>
         </div>
       </div>
@@ -238,22 +252,6 @@ export default function ScheduleSubpage() {
         </div>
       </div>
     )
-  }
-
-  const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
-
-  const scheduleFilterSummaryText = useMemo(() => {
-    const sourceLabel = difficultySource === 'fpl' ? 'FPL' : 'Custom'
-    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall' : difficultyDimension === 'attack' ? 'Attack' : 'Defence'
-    const parts = ['Fixtures', sourceLabel, dimensionLabel]
-    if (showReverseScores) parts.push('Last H2H')
-    return parts.join(' · ')
-  }, [difficultySource, difficultyDimension, showReverseScores])
-
-  const handleResetScheduleFilters = () => {
-    setDifficultySource('fpl')
-    setDifficultyDimension('overall')
-    setShowReverseScores(false)
   }
 
   return (
@@ -451,9 +449,7 @@ export default function ScheduleSubpage() {
           </div>,
           document.body
         )}
-      </div>
       <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
-      <div className="research-schedule-content">
       <div ref={scheduleScrollRef} className="schedule-scroll-wrap">
         <table className="schedule-table">
           <thead>
@@ -475,7 +471,7 @@ export default function ScheduleSubpage() {
             </tr>
           </thead>
           <tbody>
-            {teamIds.map((teamId) => {
+            {teamIds.map((teamId, index) => {
               const team = mapForRow[teamId]
               const short = team?.short_name ?? '?'
               const teamName = team?.team_name ?? short
@@ -483,7 +479,8 @@ export default function ScheduleSubpage() {
               return (
                 <tr
                   key={`schedule-row-${teamId}`}
-                  className="schedule-row"
+                  className="schedule-row schedule-row-animate"
+                  style={{ animationDelay: `${index * 28}ms` }}
                 >
                   <td className="schedule-cell schedule-cell-team schedule-cell-sticky">
                     <span className="schedule-cell-opponent">
@@ -551,7 +548,6 @@ export default function ScheduleSubpage() {
             })}
           </tbody>
         </table>
-      </div>
       </div>
       </div>
 

@@ -1076,12 +1076,13 @@ export default function StatsSubpage() {
                       </tr>
                     ))
                   ) : (
-                    mainTableTeams.map((t) => {
+                    mainTableTeams.map((t, index) => {
                       const teamKey = getTeamKey(t)
                       return (
                         <tr
                           key={teamKey}
-                          className="league-standings-bento-row"
+                          className="league-standings-bento-row research-stats-row-animate"
+                          style={{ animationDelay: `${index * 28}ms` }}
                           onClick={() => compareModeActive && toggleCompareSelectionTeam(teamKey)}
                           role={compareModeActive ? 'button' : undefined}
                           tabIndex={compareModeActive ? 0 : undefined}
@@ -1418,10 +1419,11 @@ export default function StatsSubpage() {
                       </tr>
                     ))
                   ) : (
-                    mainTablePlayers.map((p) => (
+                    mainTablePlayers.map((p, index) => (
                       <tr
                         key={p.player_id}
-                        className="league-standings-bento-row"
+                        className="league-standings-bento-row research-stats-row-animate"
+                        style={{ animationDelay: `${index * 28}ms` }}
                         onClick={() => compareModeActive && toggleCompareSelection(p.player_id)}
                         role={compareModeActive ? 'button' : undefined}
                         tabIndex={compareModeActive ? 0 : undefined}

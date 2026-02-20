@@ -15,7 +15,7 @@
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -54,8 +54,8 @@
 
 /* Match Feed filter summary: sizing and placement; extra space below to match feed spacing before list header */
 .defcon-filter-summary {
-  margin: 8px 0 0;
-  padding: 0 0 4px;
+  margin: 4px 0 0;
+  padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);
   text-align: center;
@@ -63,7 +63,7 @@
 }
 
 .defcon-subpage-sticky-header .gameweek-list-header {
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 /* Shift Progress label left so it aligns with the centered progress bar below */
@@ -436,6 +436,21 @@
   font-size: 12px;
   color: var(--text-secondary);
   opacity: 0.9;
+}
+
+/* Staggered row entrance (match league/Stats) */
+@keyframes defcon-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.defcon-list .defcon-row-animate {
+  animation: defcon-row-in 0.16s ease-out both;
 }
 
 .defcon-list {

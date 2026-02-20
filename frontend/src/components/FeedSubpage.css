@@ -12,7 +12,7 @@
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   flex-shrink: 0;
   /* Promote layer so sticky is reliable (e.g. iOS) */
   transform: translateZ(0);
@@ -96,6 +96,21 @@
   word-break: break-word;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Staggered row entrance (match league/Stats/Defcon) */
+@keyframes feed-event-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.feed-event-list .feed-event-card-animate {
+  animation: feed-event-card-in 0.16s ease-out both;
 }
 
 .feed-event-list {
@@ -399,8 +414,8 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 
 .feed-filter-summary {
-  margin: 8px 0 0;
-  padding: 0 0 4px;
+  margin: 4px 0 0;
+  padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);
   text-align: center;

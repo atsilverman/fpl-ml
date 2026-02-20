@@ -4,11 +4,29 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   padding: 0;
   max-width: 1400px;
   margin: 0 auto;
   color: var(--text-primary);
+}
+
+/* Staggered row entrance: standings and captains table rows */
+@keyframes league-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.mini-league-page .league-standings-bento-table tbody tr.league-standings-row-animate {
+  animation: league-row-in 0.16s ease-out both;
+}
+.mini-league-page .league-transfers-table tbody tr.league-transfers-row-animate {
+  animation: league-row-in 0.16s ease-out both;
 }
 
 /* Sticky strip: search bar (Standings only) + subpage tabs; content below scrolls underneath. */
@@ -16,15 +34,15 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  margin-top: 16px;
-  margin-bottom: 8px;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+  padding-top: 4px;
+  padding-bottom: 4px;
   background: var(--bg-primary);
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }
@@ -222,7 +240,7 @@
 
 /* League Transfers summary – uses gw-top-points-card (MatchesSubpage) format/sizing; OUT/IN columns keep colors */
 .league-page-transfers-summary {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   width: 100%;
   min-width: 0;
 }
@@ -293,7 +311,7 @@
 
 .league-ownership-search-container {
   position: relative;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   width: 100%;
   max-width: 200px;
 }

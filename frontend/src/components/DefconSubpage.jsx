@@ -474,17 +474,22 @@ export default function DefconSubpage({ isActive = true }) {
           </div>
         </div>
       )}
-      <div className="defcon-list">
+      <div className="defcon-list" key={isActive ? 'active' : 'inactive'}>
         {filteredPlayers.length === 0 ? (
           <p className="defcon-list-empty">No players fit the current criteria.</p>
         ) : (
-          filteredPlayers.map(player => (
-            <DefconRow
+          filteredPlayers.map((player, index) => (
+            <div
               key={`${player.player_id}-${player.fixture_id ?? 0}`}
-              player={player}
-              opponentShortName={player.opponent_team_id != null ? (teamsMap[player.opponent_team_id] ?? null) : null}
-              isDoubleGameweek={dgwPlayerIds.has(player.player_id)}
-            />
+              className="defcon-row-animate"
+              style={{ animationDelay: `${index * 28}ms` }}
+            >
+              <DefconRow
+                player={player}
+                opponentShortName={player.opponent_team_id != null ? (teamsMap[player.opponent_team_id] ?? null) : null}
+                isDoubleGameweek={dgwPlayerIds.has(player.player_id)}
+              />
+            </div>
           ))
         )}
       </div>

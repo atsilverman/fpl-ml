@@ -820,8 +820,8 @@ export default function MiniLeaguePage() {
                 )}
               </tr>
             </thead>
-            <tbody>
-              {displayRows.map((s) => {
+            <tbody key={`standings-${showCView ? 'captain' : 'table'}`}>
+              {displayRows.map((s, index) => {
                 const rank = s._rank
                 const change = s._rankChange != null ? s._rankChange : null
                 const displayName = s._displayName
@@ -839,7 +839,8 @@ export default function MiniLeaguePage() {
                 return (
                   <tr
                     key={s.manager_id}
-                    className={`league-standings-bento-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''} ${ownsSelected ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
+                    className={`league-standings-bento-row league-standings-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''} ${ownsSelected ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
+                    style={{ animationDelay: `${index * 28}ms` }}
                     onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -980,11 +981,11 @@ export default function MiniLeaguePage() {
                   <th className="league-transfers-th-transfers">Transfers</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody key="transfers">
                 {leagueTransfersLoading ? (
                   <tr><td colSpan={2} className="league-transfers-loading">Loading transfers…</td></tr>
                 ) : (
-                  displayRows.map((s) => {
+                  displayRows.map((s, index) => {
                     const rank = s._rank
                     const change = s._rankChange != null ? s._rankChange : null
                     const displayName = s._displayName
@@ -999,7 +1000,8 @@ export default function MiniLeaguePage() {
                     return (
                       <tr
                         key={s.manager_id}
-                        className={`league-transfers-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''}`}
+                        className={`league-transfers-row league-transfers-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''}`}
+                        style={{ animationDelay: `${index * 28}ms` }}
                         onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {

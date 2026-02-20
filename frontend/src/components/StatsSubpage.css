@@ -6,6 +6,21 @@
   font-size: 13px;
 }
 
+/* Staggered row entrance: rows lay in one by one when stats table first shows data */
+@keyframes research-stats-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.research-stats-page .research-stats-table.league-standings-bento-table tbody tr.research-stats-row-animate {
+  animation: research-stats-row-in 0.16s ease-out both;
+}
+
 /* Configured owner: green player name (matches Matches/Feed) */
 .research-stats-player-name--owned {
   color: var(--accent-green, #10b981);
@@ -73,7 +88,17 @@
   opacity: 0.4;
 }
 
-/* Loading skeleton: reuse BentoCard skeleton-text animation with smaller cell sizes */
+/* Loading skeleton: static placeholder (no shimmer/wavy animation) */
+.research-stats-page .research-stats-table .skeleton-text,
+.research-stats-page .research-stats-table .research-stats-skeleton-cell,
+.research-stats-page .research-stats-table .research-stats-skeleton-badge,
+.research-stats-page .research-stats-table .research-stats-skeleton-name,
+.research-stats-page .research-stats-table .research-stats-skeleton-meta,
+.research-stats-page .research-stats-row-skeleton .skeleton-text {
+  animation: none !important;
+  background: var(--bg-secondary) !important;
+  background-size: auto !important;
+}
 .research-stats-table .research-stats-skeleton-cell {
   display: inline-block;
   height: 14px;
@@ -147,7 +172,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 2px;
   margin-bottom: 0;
   flex-shrink: 0;
 }
@@ -223,7 +248,7 @@
 
 /* Filter summary: match Defcon/Feed filter summary spacing; tight bottom so table sits close */
 .research-stats-sticky-header .research-stats-filter-summary {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   padding: 0 0 2px;
 }
 
@@ -674,7 +699,7 @@
 
 .research-stats-filter-summary {
   margin: 0;
-  padding: 0 0 8px;
+  padding: 0 0 4px;
   font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.9;

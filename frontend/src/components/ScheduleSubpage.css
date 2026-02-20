@@ -32,6 +32,7 @@
   padding-left: 0;
   padding-right: 0;
   min-width: 0;
+  margin-top: 2px; /* tight gap below filter summary */
 }
 
 @media (hover: hover) {
@@ -51,7 +52,7 @@
   align-items: stretch;
   background: var(--bg-primary, #fff);
   padding-top: 2px;
-  padding-bottom: 6px;
+  padding-bottom: 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -95,8 +96,8 @@
 /* Filter summary line (Viewing: Fixtures · …) – same place as Stats; reserve space so content below is pushed down */
 .research-schedule-sticky-header .research-stats-filter-summary {
   flex-shrink: 0;
-  margin: 8px 0 0;
-  padding: 0 0 4px;
+  margin: 4px 0 0;
+  padding: 0 0 2px;
   min-height: 1.5em;
   line-height: 1.4;
   text-align: center;
@@ -105,7 +106,7 @@
 /* Filter summary: match Stats (.research-stats-filter-summary) */
 .research-schedule-filter-summary {
   margin: 0;
-  padding: 0 0 8px;
+  padding: 0 0 4px;
   font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.9;
@@ -330,28 +331,43 @@
   }
 }
 
-/* Legend inside customize popup: spacing and optional slightly larger pills */
+/* Legend inside filter overlay: use full width, bigger pills */
 .schedule-legend-inline--popup {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
   margin-bottom: 12px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--border-color);
 }
 .schedule-legend-inline--popup .schedule-legend-inline-pills {
-  gap: 2px;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
 }
 .schedule-legend-inline--popup .schedule-legend-inline-pill {
-  width: 14px;
-  min-width: 14px;
-  max-width: 14px;
-  height: 14px;
-  min-height: 14px;
+  flex: 1;
+  min-width: 0;
+  min-height: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  box-sizing: border-box;
 }
-.schedule-legend-inline--popup .schedule-cell-abbr-display {
-  font-size: 8px;
+.schedule-legend-inline--popup .schedule-legend-inline-pill .schedule-cell-abbr-display {
+  font-size: 13px;
 }
 .schedule-legend-inline--popup .schedule-legend-inline-label {
-  font-size: 9px;
-  margin-top: 2px;
+  font-size: 11px;
+  margin-top: 6px;
+  color: var(--text-secondary);
 }
 
 .schedule-filter-popover-label {
@@ -848,6 +864,11 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   color: var(--text-secondary);
 }
 
+/* Direct child of card: take remaining space (replaces .research-schedule-content) */
+.research-schedule-card .schedule-scroll-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .schedule-scroll-wrap {
   width: 100%;
   overflow-x: auto;
@@ -855,7 +876,7 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
-  margin-top: 6px;
+  margin-top: 4px;
   /* Prevent sticky column being pulled off on mobile drag */
   overscroll-behavior: none;
 }
@@ -952,6 +973,21 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
 .schedule-th-gw--compact {
   min-width: 40px;
   font-size: 9px;
+}
+
+/* Staggered row entrance (match league/Stats/Defcon/Feed) */
+@keyframes schedule-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.schedule-table tbody tr.schedule-row-animate {
+  animation: schedule-row-in 0.16s ease-out both;
 }
 
 .schedule-row {

@@ -751,24 +751,30 @@ export default function FeedSubpage({ isActive = true }) {
         </div>
       ) : (
         <>
-          <div className="feed-event-list" role="list">
-          {sortedFilteredEvents.map((event) => {
+          <div className="feed-event-list" role="list" key={isActive ? 'active' : 'inactive'}>
+          {sortedFilteredEvents.map((event, index) => {
             const player = playersMap[event.player_id]
             const teamShortName = player?.team_id != null ? teamsMap[player.team_id] : null
             const playerName = player?.web_name ?? null
             const position = player?.position ?? null
             const playerNameLoading = playersLoading && playerName == null
             return (
-              <FeedEventCard
+              <div
                 key={event.id}
-                event={event}
-                playerName={playerName}
-                playerNameLoading={playerNameLoading}
-                teamShortName={teamShortName}
-                position={position}
-                impact={impactByEventId[event.id]}
-                isOwned={ownedPlayerIdSet.has(Number(event.player_id))}
-              />
+                className="feed-event-card-animate"
+                style={{ animationDelay: `${index * 28}ms` }}
+                role="listitem"
+              >
+                <FeedEventCard
+                  event={event}
+                  playerName={playerName}
+                  playerNameLoading={playerNameLoading}
+                  teamShortName={teamShortName}
+                  position={position}
+                  impact={impactByEventId[event.id]}
+                  isOwned={ownedPlayerIdSet.has(Number(event.player_id))}
+                />
+              </div>
             )
           })}
           </div>
