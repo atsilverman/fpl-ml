@@ -54,7 +54,7 @@
 
 /* Match Feed filter summary: sizing and placement; extra space below to match feed spacing before list header */
 .defcon-filter-summary {
-  margin: 4px 0 10px;
+  margin: 14px 0 10px;
   padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);
@@ -95,6 +95,40 @@
 
 .defcon-search-input:focus {
   border-color: var(--accent-blue);
+}
+
+.defcon-search-wrap--has-value .defcon-search-input {
+  padding-right: 28px;
+}
+
+.defcon-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.defcon-search-clear:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.defcon-search-clear:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
 }
 
 .defcon-search-suggestions {

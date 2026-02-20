@@ -390,6 +390,40 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   border-color: var(--accent-blue);
 }
 
+.feed-search-wrap--has-value .feed-search-input {
+  padding-right: 28px;
+}
+
+.feed-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.feed-search-clear:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.feed-search-clear:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
+}
+
 .feed-search-suggestions {
   position: absolute;
   top: 100%;
@@ -450,7 +484,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 
 .feed-filter-summary {
-  margin: 4px 0 10px;
+  margin: 14px 0 10px;
   padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);

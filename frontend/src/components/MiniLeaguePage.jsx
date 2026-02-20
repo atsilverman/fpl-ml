@@ -439,7 +439,7 @@ export default function MiniLeaguePage() {
 
   const leagueOwnershipSearchContent = (
       <div className="league-ownership-search-container" ref={searchContainerRef}>
-        <div className="league-ownership-search-bar">
+        <div className={`league-ownership-search-bar${searchQuery.length > 0 ? ' league-ownership-search-bar--has-value' : ''}`}>
           <Search className="league-ownership-search-icon" size={16} aria-hidden />
           <input
             type="text"
@@ -456,6 +456,17 @@ export default function MiniLeaguePage() {
             aria-controls="league-player-autocomplete"
             id="league-ownership-search"
           />
+          {searchQuery.length > 0 && (
+            <button
+              type="button"
+              className="league-ownership-search-clear"
+              onClick={() => setSearchQuery('')}
+              onMouseDown={(e) => e.preventDefault()}
+              aria-label="Clear search"
+            >
+              <X size={14} strokeWidth={2} aria-hidden />
+            </button>
+          )}
         </div>
         {selectedPlayers.length > 0 && (
           <div className="league-ownership-selected-container">
@@ -710,11 +721,11 @@ export default function MiniLeaguePage() {
               ) : (
                 <>
                   <col style={{ width: '12%' }} />
-                  <col className="league-standings-bento-col-manager" style={{ width: '24%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '16%' }} />
-                  <col style={{ width: '16%' }} />
+                  <col className="league-standings-bento-col-manager" style={{ width: '32%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '14%' }} />
+                  <col style={{ width: '14%' }} />
                 </>
               )}
             </colgroup>

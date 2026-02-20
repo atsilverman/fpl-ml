@@ -332,6 +332,7 @@
   border-radius: 6px;
   height: 36px;
   box-sizing: border-box;
+  position: relative;
 }
 
 .league-ownership-search-icon {
@@ -352,6 +353,37 @@
 
 .league-ownership-search-input::placeholder {
   color: var(--text-secondary);
+}
+
+.league-ownership-search-bar--has-value .league-ownership-search-input {
+  padding-right: 4px;
+}
+
+.league-ownership-search-clear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.league-ownership-search-clear:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.league-ownership-search-clear:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
 }
 
 @media (max-width: 768px) {

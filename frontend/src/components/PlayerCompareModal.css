@@ -175,6 +175,44 @@
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
 }
 
+.player-compare-th-search-wrap {
+  position: relative;
+}
+
+.player-compare-th-search-wrap--has-value .player-compare-search-input {
+  padding-right: 28px;
+}
+
+.player-compare-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.player-compare-search-clear:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.player-compare-search-clear:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
+}
+
 .player-compare-autocomplete {
   position: absolute;
   top: 100%;
@@ -407,7 +445,6 @@
 
 /* position: static so dropdown is positioned relative to .player-compare-table-wrap and aligns with table */
 .player-compare-th-search-wrap {
-  position: static;
   width: 100%;
   min-width: 100px;
 }

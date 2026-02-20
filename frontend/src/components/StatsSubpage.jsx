@@ -621,16 +621,27 @@ export default function StatsSubpage() {
             </nav>
           </div>
           <div className="research-stats-toolbar-right">
-            <div className="research-stats-search-wrap">
+            <div className={`research-stats-search-wrap${searchQuery.length > 0 ? ' research-stats-search-wrap--has-value' : ''}`}>
               <Search className="research-stats-search-icon" size={14} strokeWidth={2} aria-hidden />
               <input
-                type="search"
+                type="text"
                 className="research-stats-search-input"
                 placeholder={teamView ? 'Search team' : 'Search player or team'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label={teamView ? 'Search teams' : 'Search players'}
               />
+              {searchQuery.length > 0 && (
+                <button
+                  type="button"
+                  className="research-stats-search-clear"
+                  onClick={() => setSearchQuery('')}
+                  onMouseDown={(e) => e.preventDefault()}
+                  aria-label="Clear search"
+                >
+                  <X size={14} strokeWidth={2} aria-hidden />
+                </button>
+              )}
             </div>
             <button
               type="button"

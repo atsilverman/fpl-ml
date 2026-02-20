@@ -305,34 +305,14 @@ html[data-theme="dark"] .gw-top-points-pill {
   outline-offset: 2px;
 }
 
-/* Fixtures card + scroll-wrap: same treatment as Schedule subpage (bordered, rounded, themed background). */
-.matches-fixtures-card {
-  display: flex;
-  flex-direction: column;
-  margin-top: 4px;
-  width: 100%;
-}
-
+/* Scroll-wrap: no outer card; grid fills available space. */
 .matches-scroll-wrap {
   width: 100%;
+  margin-top: 4px;
   overflow-x: auto;
   overflow-y: visible;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  /* Match Statistics subpage: subtle tint + card shadow (light theme) */
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 2%, var(--bg-primary));
-  box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
-  padding: 12px 14px;
   box-sizing: border-box;
-  /* Prevent sticky column being pulled off on mobile drag */
   overscroll-behavior: none;
-}
-
-/* Dark theme: very subtle tint (same as light) so it stays low-key */
-/* Dark: no tint, use theme surface for consistency */
-html[data-theme="dark"] .matches-scroll-wrap {
-  background: var(--bg-secondary);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .matches-scroll-wrap::-webkit-scrollbar {
@@ -349,11 +329,13 @@ html[data-theme="dark"] .matches-scroll-wrap {
   border-radius: 4px;
 }
 
-/* matchup-grid: multi-column on mobile; desktop = single column list, same width as top performers / 2-bento content. */
+/* Matchup grid: single column (stacked) on mobile, single column on desktop. */
 .matchup-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  padding: 0 2px;
+  box-sizing: border-box;
 }
 
 @keyframes matchup-card-in {
@@ -366,11 +348,15 @@ html[data-theme="dark"] .matches-scroll-wrap {
     transform: translateY(0);
   }
 }
+.matchup-grid .matchup-grid-item {
+  min-width: 0; /* allow cards to shrink and fill grid cell */
+}
+
 .matchup-grid .matchup-grid-item-animate {
   animation: matchup-card-in 0.4s ease-out both;
 }
 
-/* Desktop: single column list; matchups same width as Top Performers container above (align with home content width). */
+/* Desktop: single column; matchups align with content width. */
 @media (min-width: 769px) {
   .matches-subpage {
     max-width: 1400px;
@@ -383,6 +369,8 @@ html[data-theme="dark"] .matches-scroll-wrap {
   }
   .matchup-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 0;
   }
 }
 
@@ -497,8 +485,9 @@ html[data-theme="dark"] .matches-scroll-wrap {
   }
 }
 
-/* matchup-card: finished / live / scheduled – reference style; subtle shadow always on */
+/* matchup-card: finished / live / scheduled – reference style; fills grid cell */
 .matchup-card {
+  min-width: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-hover, rgba(0, 0, 0, 0.12));
   border-radius: 8px;
@@ -939,6 +928,14 @@ html[data-theme="dark"] .matches-scroll-wrap {
   z-index: 15;
   background: var(--bg-secondary);
   box-shadow: 0 1px 0 var(--border-color);
+}
+
+/* When there’s no separate table-header (merged table), round thead top corners to match wrap */
+.matchup-detail-table-wrap:not(:has(.matchup-detail-table-header)) .matchup-detail-table thead tr th:first-child {
+  border-top-left-radius: 8px;
+}
+.matchup-detail-table-wrap:not(:has(.matchup-detail-table-header)) .matchup-detail-table thead tr th:last-child {
+  border-top-right-radius: 8px;
 }
 
 .matchup-detail-table thead th {

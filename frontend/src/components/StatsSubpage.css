@@ -215,7 +215,7 @@
 
 /* Filter summary: match Defcon/Feed filter summary spacing; tight bottom so table sits close */
 .research-stats-sticky-header .research-stats-filter-summary {
-  margin: 4px 0 0;
+  margin: 14px 0 0;
   padding: 0 0 2px;
 }
 
@@ -259,9 +259,38 @@
   border-color: var(--accent-blue);
 }
 
-/* Native search clear (X) button: white */
-.research-stats-search-input::-webkit-search-cancel-button {
-  filter: invert(1);
+.research-stats-search-wrap--has-value .research-stats-search-input {
+  padding-right: 32px;
+}
+
+.research-stats-search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+
+.research-stats-search-clear:hover {
+  opacity: 1;
+  color: var(--text-primary);
+}
+
+.research-stats-search-clear:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
 }
 
 /* Toolbar button label: hidden on mobile except Compare; shown on desktop for all */
@@ -1078,7 +1107,8 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   background: var(--bg-secondary);
 }
 
-/* Sticky player/team column: header (th) and body (td) stay fixed on horizontal scroll; stat columns must not overlap */
+/* Sticky player/team column: header (th) and body (td) stay fixed on horizontal scroll; stat columns must not overlap.
+   Shadow only on body cells to avoid stacked double shadow (header + body) especially in light mode. */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
   left: 0;
@@ -1090,8 +1120,6 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   isolation: isolate;
-  /* Shadow so scrolled stat columns are clearly behind the player column */
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 11;

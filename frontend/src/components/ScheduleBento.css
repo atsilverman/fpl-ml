@@ -152,8 +152,12 @@
 
 .schedule-bento-home-icon {
   flex-shrink: 0;
-  opacity: 0.8;
-  color: var(--text-secondary);
+  opacity: 0.9;
+  color: #525252; /* dark grey in light mode */
+}
+
+html[data-theme="dark"] .schedule-bento-home-icon {
+  color: rgba(255, 255, 255, 0.85); /* light grey/white in dark mode */
 }
 
 .schedule-bento-vs {

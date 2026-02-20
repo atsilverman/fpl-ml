@@ -280,7 +280,7 @@ export default function DefconSubpage({ isActive = true }) {
       )}
       <div className="defcon-subpage-sticky-header">
         <div className="defcon-search-row">
-          <div className="defcon-search-wrap" ref={dropdownRef}>
+          <div className={`defcon-search-wrap${searchQuery.length > 0 ? ' defcon-search-wrap--has-value' : ''}`} ref={dropdownRef}>
             <input
               ref={inputRef}
               type="text"
@@ -295,6 +295,17 @@ export default function DefconSubpage({ isActive = true }) {
               aria-controls="defcon-search-suggestions"
               id="defcon-search"
             />
+            {searchQuery.length > 0 && (
+              <button
+                type="button"
+                className="defcon-search-clear"
+                onClick={() => setSearchQuery('')}
+                onMouseDown={(e) => e.preventDefault()}
+                aria-label="Clear search"
+              >
+                <X size={14} strokeWidth={2} aria-hidden />
+              </button>
+            )}
             {showSuggestions && suggestions.length > 0 && (
               <ul
                 id="defcon-search-suggestions"

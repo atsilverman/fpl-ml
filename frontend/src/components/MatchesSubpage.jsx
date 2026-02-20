@@ -758,9 +758,8 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             </div>
           </div>
           )}
-          <div className="matches-fixtures-card">
-            <div ref={matchesScrollRef} className="matches-scroll-wrap">
-              <div key={animationKey} ref={matchupGridRef} className="matchup-grid">
+          <div ref={matchesScrollRef} className="matches-scroll-wrap">
+            <div key={animationKey} ref={matchupGridRef} className="matchup-grid">
           {displayedFixtures.map((f, index) => {
             const row = Math.floor(index / gridColumns)
             const col = index % gridColumns
@@ -791,7 +790,6 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             </div>
             )
           })}
-              </div>
             </div>
           </div>
         </>

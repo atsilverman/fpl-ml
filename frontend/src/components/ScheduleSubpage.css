@@ -44,7 +44,7 @@
 
 /* Schedule Target / Avoid bento – expand/collapse like Top Performers */
 .schedule-recommendations-bento {
-  margin-top: 20px;
+  margin-top: 8px;
   margin-bottom: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -128,6 +128,10 @@
 .schedule-recommendations-bento-info-btn:focus-visible {
   outline: 2px solid var(--focus-ring, #3b82f6);
   outline-offset: 2px;
+}
+
+.schedule-recommendations-bento--collapsed .schedule-recommendations-bento-info-btn {
+  display: none;
 }
 
 .schedule-recommendations-bento-info-icon {
@@ -341,7 +345,7 @@
 /* Filter summary line (Viewing: Fixtures · …) – tight to fixtures table below */
 .research-schedule-sticky-header .research-stats-filter-summary {
   flex-shrink: 0;
-  margin: 4px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   min-height: 1.5em;
   line-height: 1.4;
@@ -1673,14 +1677,22 @@ html[data-theme="dark"] .schedule-scroll-wrap {
 .schedule-cell-home-indicator {
   flex-shrink: 0;
   display: inline-block;
-  color: var(--text-secondary);
-  opacity: 0.8;
+  color: #525252; /* dark grey in light mode */
+  opacity: 0.9;
 }
 
-/* Home icon in difficulty pill: blue so it pops */
+html[data-theme="dark"] .schedule-cell-home-indicator {
+  color: rgba(255, 255, 255, 0.85); /* light grey/white in dark mode */
+}
+
+/* Home icon in difficulty pill: same theme (dark grey / light grey) */
 .schedule-cell-difficulty-pill .schedule-cell-home-indicator {
-  color: var(--accent-blue, #3b82f6);
+  color: #525252;
   opacity: 1;
+}
+
+html[data-theme="dark"] .schedule-cell-difficulty-pill .schedule-cell-home-indicator {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .schedule-cell-reverse-score {

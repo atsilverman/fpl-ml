@@ -247,7 +247,7 @@ export default function PlayerCompareModal({
                         </button>
                       </div>
                     ) : (
-                      <div className="player-compare-th-search-wrap" ref={searchContainerRef}>
+                      <div className={`player-compare-th-search-wrap${searchQuery.length > 0 ? ' player-compare-th-search-wrap--has-value' : ''}`} ref={searchContainerRef}>
                         <input
                           type="text"
                           className="player-compare-search-input"
@@ -262,6 +262,17 @@ export default function PlayerCompareModal({
                           aria-expanded={dropdownOpen}
                           aria-controls="player-compare-autocomplete"
                         />
+                        {searchQuery.length > 0 && (
+                          <button
+                            type="button"
+                            className="player-compare-search-clear"
+                            onClick={() => setSearchQuery('')}
+                            onMouseDown={(e) => e.preventDefault()}
+                            aria-label="Clear search"
+                          >
+                            <X size={14} strokeWidth={2} aria-hidden />
+                          </button>
+                        )}
                         {dropdownOpen && searchQuery.trim().length >= 2 && (
                           <ul
                             id="player-compare-autocomplete"

@@ -514,7 +514,7 @@ export default function FeedSubpage({ isActive = true }) {
         <>
           <div className="feed-subpage-sticky-header">
             <div className="feed-search-row">
-              <div className="feed-search-wrap" ref={dropdownRef}>
+              <div className={`feed-search-wrap${searchQuery.length > 0 ? ' feed-search-wrap--has-value' : ''}`} ref={dropdownRef}>
                 <input
                 ref={inputRef}
                 type="text"
@@ -529,6 +529,17 @@ export default function FeedSubpage({ isActive = true }) {
                 aria-controls="feed-search-suggestions"
                 id="feed-search"
                 />
+                {searchQuery.length > 0 && (
+                  <button
+                    type="button"
+                    className="feed-search-clear"
+                    onClick={() => setSearchQuery('')}
+                    onMouseDown={(e) => e.preventDefault()}
+                    aria-label="Clear search"
+                  >
+                    <X size={14} strokeWidth={2} aria-hidden />
+                  </button>
+                )}
                 {showSuggestions && suggestions.length > 0 && (
                   <ul
                     id="feed-search-suggestions"

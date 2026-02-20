@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
-import { ClockFading, Filter, X, SlidersHorizontal, Minimize2, MoveDiagonal, Info } from 'lucide-react'
+import { Filter, X, SlidersHorizontal, Minimize2, MoveDiagonal, Info } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -196,9 +196,9 @@ export default function ScheduleSubpage() {
 
   const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
   const scheduleFilterSummaryText = useMemo(() => {
-    const sourceLabel = difficultySource === 'fpl' ? 'FPL' : 'Custom'
-    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall' : difficultyDimension === 'attack' ? 'Attack' : 'Defence'
-    const parts = ['Fixtures', sourceLabel, dimensionLabel]
+    const sourceLabel = difficultySource === 'fpl' ? 'FPL Difficulty' : 'Custom Difficulty'
+    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall Rating' : difficultyDimension === 'attack' ? 'Attacking Rating' : 'Defensive Rating'
+    const parts = [sourceLabel, dimensionLabel]
     if (showReverseScores) parts.push('Last H2H')
     return parts.join(' · ')
   }, [difficultySource, difficultyDimension, showReverseScores])
@@ -227,7 +227,7 @@ export default function ScheduleSubpage() {
   const scheduleRecommendations = useMemo(() => {
     if (!gameweeks?.length || !teamIds?.length || typeof getOpponent !== 'function') {
       return {
-        summaryText: 'Buy: easiest run. Sell: hardest run (by avg opponent strength 1-5).',
+        summaryText: 'Buy: easiest run. Sell: hardest run (by avg Opponent Category 1-5).',
         buyShort: [],
         buyLong: [],
         sellShort: [],
@@ -296,7 +296,7 @@ export default function ScheduleSubpage() {
     const topSell = byAvoidShort[0]
     const topBuyName = topBuy && mapForRow[topBuy.teamId]?.short_name
     const topSellName = topSell && mapForRow[topSell.teamId]?.short_name
-    let summaryText = 'Buy: easiest run. Sell: hardest run (by avg opponent strength 1-5).'
+    let summaryText = 'Buy: easiest run. Sell: hardest run (by avg Opponent Category 1-5).'
     if (topBuyName && topSellName) {
       summaryText = `Buy: ${topBuyName} (easiest next ${SHORT_TERM_GWS} GWs). Sell: ${topSellName} (hardest run).`
     } else if (topBuyName) {
@@ -475,15 +475,15 @@ export default function ScheduleSubpage() {
           </div>
           {showBuySellInfo && recommendationsExpanded && (
             <p className="schedule-recommendations-bento-formula-desc">
-              Average opponent strength (1–5) over the next 4 or 10 gameweeks. Buy = lowest avg (easiest run). Sell = highest avg (hardest run).
+              Average Opponent Category (1–5) over the next 4 or 10 gameweeks. Buy = lowest avg (easiest run). Sell = highest avg (hardest run).
             </p>
           )}
           {recommendationsExpanded && (
             <section className="research-schedule-recommendations" aria-live="polite" aria-label="Buy and sell teams by run">
               <div className="schedule-recommendations-grid">
                 <div className="schedule-recommendations-corner" aria-hidden />
-                <div className="schedule-recommendations-col-header">Short (4 GW)</div>
-                <div className="schedule-recommendations-col-header">Long (10 GW)</div>
+                <div className="schedule-recommendations-col-header">Short Term (4 GW)</div>
+                <div className="schedule-recommendations-col-header">Long Term (10 GW)</div>
                 <div className="schedule-recommendations-row-header">Buy</div>
                 <div className="schedule-recommendations-panel schedule-recommendations-panel--buy">
                   <ul className="research-schedule-recommendations-list">
@@ -661,13 +661,14 @@ export default function ScheduleSubpage() {
               </div>
             </div>
             <div className="schedule-filter-popover-section">
-              <span className="schedule-filter-popover-label">Opponent strength</span>
+              <span className="schedule-filter-popover-label">Opponent Category</span>
               <div className="schedule-filter-popover-buttons">
                 <button
                   type="button"
                   className={`schedule-filter-btn ${difficultyDimension === 'overall' ? 'schedule-filter-btn--active' : ''}`}
                   onClick={() => setDifficultyDimension('overall')}
                   aria-pressed={difficultyDimension === 'overall'}
+                  aria-label="Overall rating"
                 >
                   Overall
                 </button>
@@ -676,16 +677,18 @@ export default function ScheduleSubpage() {
                   className={`schedule-filter-btn ${difficultyDimension === 'attack' ? 'schedule-filter-btn--active' : ''}`}
                   onClick={() => setDifficultyDimension('attack')}
                   aria-pressed={difficultyDimension === 'attack'}
+                  aria-label="Attacking rating"
                 >
-                  Attack
+                  Attacking
                 </button>
                 <button
                   type="button"
                   className={`schedule-filter-btn ${difficultyDimension === 'defence' ? 'schedule-filter-btn--active' : ''}`}
                   onClick={() => setDifficultyDimension('defence')}
                   aria-pressed={difficultyDimension === 'defence'}
+                  aria-label="Defensive rating"
                 >
-                  Defence
+                  Defending
                 </button>
               </div>
             </div>
@@ -695,17 +698,33 @@ export default function ScheduleSubpage() {
                 <div className="schedule-filter-popover-buttons">
                   <button
                     type="button"
-                    className={`schedule-filter-btn schedule-filter-btn-icon ${showReverseScores ? 'schedule-filter-btn--active' : ''}`}
+                    className={`schedule-filter-btn ${showReverseScores ? 'schedule-filter-btn--active' : ''}`}
                     onClick={() => {
-                      const next = !showReverseScores
-                      setShowReverseScores(next)
-                      setTimeout(() => toast(next ? 'Showing last H2H' : 'Hiding last H2H'), 0)
+                      if (!showReverseScores) {
+                        setShowReverseScores(true)
+                        setTimeout(() => toast('Showing last H2H'), 0)
+                      }
                     }}
                     aria-pressed={showReverseScores}
-                    aria-label={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
-                    title={showReverseScores ? 'Hide reverse fixture scores' : 'Show reverse fixture scores'}
+                    aria-label="Show reverse fixture scores"
+                    title="Show reverse fixture scores"
                   >
-                    <ClockFading size={11} strokeWidth={1.5} aria-hidden />
+                    Show
+                  </button>
+                  <button
+                    type="button"
+                    className={`schedule-filter-btn ${!showReverseScores ? 'schedule-filter-btn--active' : ''}`}
+                    onClick={() => {
+                      if (showReverseScores) {
+                        setShowReverseScores(false)
+                        setTimeout(() => toast('Hiding last H2H'), 0)
+                      }
+                    }}
+                    aria-pressed={!showReverseScores}
+                    aria-label="Hide reverse fixture scores"
+                    title="Hide reverse fixture scores"
+                  >
+                    Hide
                   </button>
                 </div>
               </div>
