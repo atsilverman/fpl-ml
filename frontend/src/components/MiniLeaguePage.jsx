@@ -15,8 +15,9 @@ import { useManagerData, useManagerDataForManager } from '../hooks/useManagerDat
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
+import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, ListOrdered, ArrowRightLeft } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, ListOrdered, ArrowRightLeft, Sparkles } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -75,9 +76,9 @@ function getChipDisplayLabel(activeChip, gameweek) {
 
 const POSITION_ABBREV = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
-const LEAGUE_VIEW_ORDER = ['table', 'captain', 'transfers']
-const LEAGUE_VIEW_LABELS = { table: 'Standings', captain: 'Captains', transfers: 'Transfers' }
-const LEAGUE_VIEW_ICONS = { table: ListOrdered, captain: null, transfers: ArrowRightLeft }
+const LEAGUE_VIEW_ORDER = ['table', 'captain', 'transfers', 'chips']
+const LEAGUE_VIEW_LABELS = { table: 'Standings', captain: 'Captains', transfers: 'Transfers', chips: 'Chips' }
+const LEAGUE_VIEW_ICONS = { table: ListOrdered, captain: null, transfers: ArrowRightLeft, chips: Sparkles }
 
 /** Captain "C" badge matching standings header; uses currentColor to match icon/tab color scheme */
 function CaptainBadgeIcon({ className, size = 12 }) {
@@ -96,7 +97,7 @@ export default function MiniLeaguePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const leagueViewMode = (() => {
     const v = searchParams.get('view')
-    return v === 'captain' || v === 'transfers' ? v : 'table'
+    return v === 'captain' || v === 'transfers' || v === 'chips' ? v : 'table'
   })()
   const leagueViewIndex = LEAGUE_VIEW_ORDER.indexOf(leagueViewMode) >= 0 ? LEAGUE_VIEW_ORDER.indexOf(leagueViewMode) : 0
   const setLeagueView = (viewId) => setSearchParams({ view: viewId }, { replace: true })
@@ -108,6 +109,7 @@ export default function MiniLeaguePage() {
   const { liveStatusByManager, loading: liveStatusLoading } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const { activeChipByManager, loading: activeChipLoading } = useLeagueActiveChips(gameweek)
   const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
+  const { chipUsageByManager, loading: chipUsageLoading } = useLeagueChipUsage()
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('')
   const { players: searchPlayers, loading: searchLoading } = useLeaguePlayerSearch(debouncedSearchQuery)
   const [selectedPlayers, setSelectedPlayers] = useState([])
@@ -134,6 +136,7 @@ export default function MiniLeaguePage() {
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const showCView = leagueViewMode === 'captain'
   const showTransfersView = leagueViewMode === 'transfers'
+  const showChipsView = leagueViewMode === 'chips'
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(true)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
@@ -570,7 +573,7 @@ export default function MiniLeaguePage() {
           className="subpage-view-toggle"
           role="tablist"
           aria-label="League view"
-          data-options="3"
+          data-options="4"
           style={{ '--slider-offset': leagueViewIndex }}
         >
           <span className="subpage-view-toggle-slider" aria-hidden />
@@ -708,7 +711,93 @@ export default function MiniLeaguePage() {
           )
         })()}
         <div ref={standingsTableScrollRef} className={`league-standings-bento-table-wrapper${dropdownOpen && searchQuery.trim().length >= 2 ? ' league-standings-bento-table-wrapper--dimmed' : ''}`}>
-          {!showTransfersView ? (
+          {showChipsView ? (
+          <div className="league-standings-chips-view-wrap">
+          <table className="league-standings-bento-table league-standings-chips-table">
+            <colgroup>
+              <col className="league-standings-chips-col-manager" style={{ width: '40%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+              <col style={{ width: '15%' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="league-standings-bento-team league-standings-chips-th-manager">
+                  <button
+                    type="button"
+                    className="league-standings-sort-header"
+                    onClick={() => handleSort('manager')}
+                    aria-sort={sort.column === 'manager' ? (sort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
+                  >
+                    Manager
+                    <span className="league-standings-sort-triangle-slot">{sort.column === 'manager' ? <SortTriangle direction={sort.dir} /> : null}</span>
+                  </button>
+                </th>
+                <th className="league-standings-chips-th-chip" title="Wildcard (second half)">WC2</th>
+                <th className="league-standings-chips-th-chip" title="Triple Captain">TC2</th>
+                <th className="league-standings-chips-th-chip" title="Bench Boost">BB2</th>
+                <th className="league-standings-chips-th-chip" title="Free Hit">FH2</th>
+              </tr>
+            </thead>
+            <tbody key="chips">
+              {chipUsageLoading ? (
+                <tr><td colSpan={5} className="league-standings-chips-loading">Loading chips…</td></tr>
+              ) : (
+                displayRows.map((s, index) => {
+                  const displayName = s._displayName
+                  const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
+                  const usage = chipUsageByManager[s.manager_id] ?? { wc2: null, tc2: null, bb2: null, fh2: null }
+                  return (
+                    <tr
+                      key={s.manager_id}
+                      className={`league-standings-bento-row league-standings-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''}`}
+                      style={{ animationDelay: `${index * 28}ms` }}
+                      onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleManagerRowClick(s.manager_id, displayName, s.manager_name)
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      title={`View GW points for ${displayName}`}
+                    >
+                      <td className="league-standings-bento-team league-standings-chips-td-manager" title={displayName}>
+                        <span className="league-standings-bento-team-name">{isNarrowScreen ? abbreviateName(displayName) : displayName}</span>
+                        {isCurrentUser && (
+                          <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                        )}
+                      </td>
+                      {['wc2', 'tc2', 'bb2', 'fh2'].map((key) => {
+                        const gw = usage[key]
+                        const chipKey = key === 'wc2' ? 'wildcard' : key === 'tc2' ? '3xc' : key === 'bb2' ? 'bboost' : 'freehit'
+                        const color = CHIP_COLORS[chipKey]
+                        return (
+                          <td key={key} className="league-standings-chips-td-chip">
+                            {gw != null ? (
+                              <span
+                                className="league-standings-bento-chip-badge league-standings-chips-badge-played"
+                                style={{ backgroundColor: color, color: '#fff' }}
+                                title={`GW ${gw}`}
+                              >
+                                {gw}
+                              </span>
+                            ) : (
+                              <span className="league-standings-chips-badge-unplayed" aria-hidden>—</span>
+                            )}
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+          </div>
+          ) : !showTransfersView ? (
           <div className={showCView ? 'league-standings-c-view-wrap' : undefined}>
           <table className={`league-standings-bento-table${showCView ? ' league-standings-c-view-table' : ''}`}>
             <colgroup>

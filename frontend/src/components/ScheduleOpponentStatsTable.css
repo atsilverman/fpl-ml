@@ -1,0 +1,120 @@
+/* Schedule opponent stats table: table version of opponent form (last 6 GW) below timeline bento */
+
+.schedule-opponent-stats-table {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  height: auto;
+}
+
+.schedule-opponent-stats-table .schedule-bento-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.schedule-opponent-stats-table-scroll {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-opponent-stats-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.schedule-opponent-stats-table-grid th,
+.schedule-opponent-stats-table-grid td {
+  padding: 6px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.schedule-opponent-stats-table-grid th {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.schedule-opponent-stats-table-grid tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.schedule-opponent-stats-th-gw,
+.schedule-opponent-stats-td-gw {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.schedule-opponent-stats-th-opponent,
+.schedule-opponent-stats-td-opponent {
+  min-width: 0;
+}
+
+.schedule-opponent-stats-table-grid .schedule-opponent-stats-th-stat,
+.schedule-opponent-stats-table-grid .schedule-opponent-stats-td-stat {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); subtle fills */
+.schedule-opponent-stats-td-stat--rank-green {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-card));
+}
+.schedule-opponent-stats-td-stat--rank-red {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-card));
+}
+
+.schedule-opponent-stats-opponent-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.schedule-opponent-stats-table .schedule-bento-pill-badge-slot {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.schedule-opponent-stats-table .schedule-bento-pill-badge,
+.schedule-opponent-stats-table .schedule-bento-pill-badge-placeholder {
+  width: 20px;
+  height: 20px;
+}
+
+.schedule-opponent-stats-table .schedule-bento-abbr-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.schedule-opponent-stats-table .schedule-cell-abbr-display {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.schedule-opponent-stats-table .schedule-bento-home-icon {
+  flex-shrink: 0;
+}

@@ -28,6 +28,7 @@ const LEAGUE_VIEWS = [
   { id: 'table', label: 'Standings', disabled: false },
   { id: 'captain', label: 'Captains', disabled: false },
   { id: 'transfers', label: 'Transfers', disabled: false },
+  { id: 'chips', label: 'Chips', disabled: false },
 ]
 
 /* Soccer ball icon (no Lucide equivalent); matches lucide size/stroke usage */

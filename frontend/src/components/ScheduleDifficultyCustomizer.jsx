@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
+import { Info } from 'lucide-react'
 import './ScheduleDifficultyCustomizer.css'
 
 export const SCHEDULE_STAT_OPTIONS = [
@@ -28,6 +29,7 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
   onResetStat,
   onDraftChange, // when set (wizard mode), called with (statId, overrides) when draft for that stat changes so parent can persist
   onHasChangesChange, // when set (embedded), called with (has: boolean) when draft differs from saved
+  onHasOverridesChange, // when set (embedded), called with (has: boolean) when any stat has overrides (draft or saved) so parent can show Reset
   embedded = false,
   onlyStat = null, // when set ('strength'|'attack'|'defence'), show single stat only (wizard mode), no tabs, no Save in embedded
 }, ref) {
@@ -120,8 +122,32 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
   const savedForCurrent = savedOverridesByStat?.[effectiveStatId] ?? {}
   const hasResetable = Object.keys(draft).length > 0 || Object.keys(savedForCurrent).length > 0
 
+  const hasAnyOverrides = useMemo(() => {
+    const s = savedOverridesByStat || {}
+    const d = draftByStat || {}
+    const has = (obj) => obj && Object.keys(obj).length > 0
+    return has(d.strength) || has(d.attack) || has(d.defence) || has(s.strength) || has(s.attack) || has(s.defence)
+  }, [draftByStat.strength, draftByStat.attack, draftByStat.defence, savedOverridesByStat?.strength, savedOverridesByStat?.attack, savedOverridesByStat?.defence])
+
+  useEffect(() => {
+    onHasOverridesChange?.(hasAnyOverrides)
+  }, [hasAnyOverrides, onHasOverridesChange])
+
+  const handleResetAll = () => {
+    onResetStat?.('strength')
+    onResetStat?.('attack')
+    onResetStat?.('defence')
+    setDraftByStat({
+      strength: {},
+      attack: {},
+      defence: {},
+    })
+    onHasOverridesChange?.(false)
+  }
+
   useImperativeHandle(ref, () => ({
     save: handleSave,
+    resetAll: handleResetAll,
     hasUnsavedChanges: () => hasUnsavedChanges,
   }), [hasUnsavedChanges, draftByStat.strength, draftByStat.attack, draftByStat.defence])
 
@@ -214,7 +240,7 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
                     max={5}
                     value={effective}
                     onChange={(e) => handleChange(team.team_id, e.target.value)}
-                    className="schedule-customizer-slider"
+                    className={`schedule-customizer-slider schedule-customizer-slider--${effective}`}
                     aria-label={`${team.team_name ?? shortName ?? 'Team'} difficulty ${effective}`}
                   />
                 </div>
@@ -228,6 +254,23 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
       </div>
     </>
   )
+
+  const [showLegendPopup, setShowLegendPopup] = useState(false)
+  const legendPopupRef = useRef(null)
+  const legendTriggerRef = useRef(null)
+
+  useEffect(() => {
+    if (!showLegendPopup) return
+    const handleClickOutside = (e) => {
+      if (
+        legendPopupRef.current?.contains(e.target) ||
+        legendTriggerRef.current?.contains(e.target)
+      ) return
+      setShowLegendPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showLegendPopup])
 
   if (embedded) {
     return (
@@ -248,15 +291,33 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
               ))}
             </div>
           )}
-          <button
-            type="button"
-            className={`customize-difficulty-reset${hasResetable ? ' customize-difficulty-reset--active' : ''}`}
-            onClick={handleResetCurrent}
-            title={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
-            aria-label={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
-          >
-            Reset
-          </button>
+          <div className="customize-difficulty-toolbar-actions" ref={legendPopupRef}>
+            <button
+              type="button"
+              ref={legendTriggerRef}
+              className="schedule-legend-info-btn"
+              onClick={() => setShowLegendPopup((v) => !v)}
+              aria-label="Difficulty scale: 1 easiest, 5 hardest"
+              aria-expanded={showLegendPopup}
+              title="Difficulty scale"
+            >
+              <Info size={16} strokeWidth={2} />
+            </button>
+            {showLegendPopup && (
+              <div className="schedule-legend-popover" role="dialog" aria-label="Difficulty scale">
+                <div className="schedule-legend-inline schedule-legend-inline--popup" aria-hidden>
+                  <div className="schedule-legend-inline-pills">
+                    {[1, 2, 3, 4, 5].map((d) => (
+                      <span key={d} className={`schedule-cell-difficulty-pill schedule-cell-difficulty-pill--${d} schedule-legend-inline-pill`}>
+                        <span className="schedule-cell-abbr-display">{d}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <span className="schedule-legend-inline-label">Difficulty: Easy → Hard</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
         <div className="customize-rows">
           {teams.map((team) => {
@@ -290,7 +351,7 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
                     max={5}
                     value={effective}
                     onChange={(e) => handleChange(team.team_id, e.target.value)}
-                    className="customize-difficulty-slider"
+                    className={`customize-difficulty-slider customize-difficulty-slider--${effective}`}
                     aria-label={`${team.team_name ?? shortName ?? 'Team'} difficulty ${effective}`}
                   />
                 </div>

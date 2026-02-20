@@ -7,10 +7,24 @@
 }
 
 /* Configured owner: green player name (matches Matches/Feed) */
+/* Owned: no green on name; green bar on right of cell */
 .research-stats-player-name--owned {
-  color: var(--accent-green, #10b981);
-  font-weight: 600;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
+  /* Name uses default text color; ownership shown by bar on container */
+}
+
+.research-stats-sticky-cell-inner--owned {
+  position: relative;
+}
+.research-stats-sticky-cell-inner--owned::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-green, #10b981);
+  border-radius: 0 2px 2px 0;
+  pointer-events: none;
 }
 
 /* Top 6/12 pill: same blue for all ranks 1–6/12, consistent */
@@ -322,13 +336,19 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
-/* Compare button: allow width for label on all viewports */
+/* Compare button: allow width for label on all viewports; default state visually distinct so it reads as clickable */
 .stats-compare-btn {
   width: auto;
   min-width: 28px;
   padding-left: 14px;
   padding-right: 14px;
   gap: 8px;
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--text-primary, #111) 35%, var(--border-color));
+  transition: border-color 0.15s;
+}
+.stats-compare-btn .stats-toolbar-btn-label {
+  font-weight: 500;
 }
 
 @media (min-width: 769px) {
@@ -361,11 +381,28 @@
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
 }
 
+@media (hover: hover) {
+  .stats-compare-btn:not(.stats-compare-btn--exit-mode):hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  }
+  .stats-compare-btn--active:not(.stats-compare-btn--exit-mode):hover {
+    color: var(--accent-blue);
+    border-color: var(--accent-blue);
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+  }
+}
+
 /* Compare mode: show Exit with X icon and red to indicate exit action */
 .stats-compare-btn--exit-mode {
   color: var(--accent-red, #ef4444);
   border-color: var(--accent-red, #ef4444);
   background: var(--bg-card);
+  gap: 2px;
+  padding-left: 8px;
+  padding-right: 10px;
+  transition: none;
 }
 @media (hover: hover) {
   .stats-compare-btn--exit-mode:hover {
@@ -526,13 +563,10 @@
   cursor: pointer;
 }
 
-/* Compare details modal: transposed vertical comparison */
+/* Compare details modal: transposed vertical comparison; scroll inside body only */
 .research-stats-compare-details-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
@@ -540,17 +574,22 @@
   z-index: 1000;
   padding: 16px;
   backdrop-filter: blur(2px);
+  overflow: hidden;
 }
 .research-stats-compare-details-modal {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: 100%;
-  max-width: min(95vw, 700px);
-  max-height: 85vh;
+  max-width: min(92vw, 720px);
+  height: min(88vh, 680px);
+  max-height: min(88vh, 680px);
+  min-height: 320px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  margin: auto;
+  flex-shrink: 0;
 }
 .research-stats-compare-details-header {
   display: flex;
@@ -566,6 +605,12 @@
   color: var(--text-primary);
   margin: 0;
 }
+.research-stats-compare-details-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.research-stats-compare-details-download,
 .research-stats-compare-details-close {
   display: inline-flex;
   align-items: center;
@@ -578,6 +623,7 @@
   cursor: pointer;
 }
 @media (hover: hover) {
+  .research-stats-compare-details-download:hover,
   .research-stats-compare-details-close:hover {
     color: var(--text-primary);
     background: var(--bg-secondary);
@@ -585,8 +631,23 @@
 }
 .research-stats-compare-details-body {
   padding: 12px 16px 16px;
-  overflow: auto;
+  flex: 1 1 0;
   min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+@media (max-width: 640px) {
+  .research-stats-compare-details-overlay {
+    padding: 8px;
+  }
+  .research-stats-compare-details-modal {
+    width: 100%;
+    max-width: none;
+    height: calc(100vh - 16px);
+    max-height: calc(100vh - 16px);
+    min-height: min(400px, 70vh);
+  }
 }
 .research-stats-compare-details-table-wrap {
   overflow-x: auto;
@@ -656,6 +717,14 @@
   border-top: none;
   padding-top: 8px;
 }
+html[data-theme="dark"] .research-stats-compare-details-td-section-header {
+  border-top-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+html[data-theme="dark"] .research-stats-compare-details-tr--section-header:first-child .research-stats-compare-details-td-section-header {
+  border-top: none;
+}
 .research-stats-compare-details-td-stat {
   padding: 6px 12px;
   color: var(--text-secondary);
@@ -680,6 +749,11 @@
   color: var(--text-primary);
 }
 .research-stats-compare-details-pill--leader {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 14%, var(--bg-card));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-card));
   border-color: var(--accent-yellow, #eab308);
   color: var(--accent-yellow, #eab308);
@@ -912,12 +986,12 @@
 .stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-slider {
   height: 28px;
   top: 6px;
-  background: var(--stats-view-toggle-accent, #14b8a6);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(20, 184, 166, 0.25);
+  background: var(--accent-blue, #3b82f6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(59, 130, 246, 0.25);
 }
 html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-slider {
-  background: var(--stats-view-toggle-accent, #0d9488);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(13, 148, 136, 0.28);
+  background: var(--accent-blue, #2563eb);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(37, 99, 235, 0.28);
 }
 .stats-filter-overlay .stats-filter-view-toggle[data-options="2"] .subpage-view-toggle-slider {
   width: calc((100% - 16px - 8px) / 2);
@@ -1081,6 +1155,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 .research-stats-page .research-stats-table.league-standings-bento-table thead th.league-standings-bento-team {
   font-size: 10px !important;
   padding: 4px 8px;
+  border-right: 1px solid var(--border-color);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table td {
   font-size: 12px !important;
@@ -1105,12 +1180,15 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
   background: var(--bg-secondary);
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
 }
 
-/* Sticky player/team column: header (th) and body (td) stay fixed on horizontal scroll; stat columns must not overlap.
-   Shadow only on body cells to avoid stacked double shadow (header + body) especially in light mode. */
+/* Sticky player/team column: same as fixture subpage (matchup-detail-th-player / matchup-detail-td-player). No horizontal movement – content slides underneath. */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
+  position: -webkit-sticky;
   left: 0;
   z-index: 10;
   background: var(--bg-secondary);
@@ -1123,15 +1201,15 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 11;
+  border-right: 1px solid var(--border-color);
 }
-/* Body player/team cell: sticky on the td so the whole cell (and its content) stays fixed on horizontal scroll */
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
   position: sticky;
+  position: -webkit-sticky;
   left: 0;
   z-index: 10;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1204,17 +1282,17 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 .research-stats-page .league-standings-bento-table-wrapper {
   width: 100%;
   max-width: 100%;
-  min-width: 0; /* Shrink in flex so horizontal scroll happens here, not on parent (sticky column works on mobile) */
+  min-width: 0; /* Shrink so horizontal scroll happens here, not on parent */
   flex: 0 1 auto;
-  overflow-x: auto;
+  overflow-x: scroll;
   overflow-y: visible;
   -webkit-overflow-scrolling: touch;
-  /* Establish scroll container and layer for sticky column on iOS Safari */
   position: relative;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  /* Prevent sticky header/column being pulled off on mobile drag */
+  isolation: isolate; /* Clear scroll container for sticky (same as fixture table) */
   overscroll-behavior: none;
+  touch-action: pan-x pan-y; /* Capture horizontal scroll inside table on mobile */
 }
 
 /* Compare mode: thin blue border around main table */
@@ -1269,7 +1347,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 3px;
   justify-content: center;
 }
 .research-stats-table .league-standings-bento-team .league-standings-bento-team-name {
@@ -1287,12 +1365,16 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .research-stats-player-cell .research-stats-badge {
   width: 24px;
   height: 24px;
   flex-shrink: 0;
+  margin-left: 2px;
 }
 
 /* Team view: single line = badge + full name (no position/price); allow name to wrap so we don't abbreviate */
@@ -1350,35 +1432,29 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   font-size: 8px;
   line-height: 1;
   user-select: none;
+  opacity: 0.6;
+  display: inline-flex;
+  align-items: center;
 }
 .research-stats-table .research-stats-price {
   font-size: 9px;
   color: var(--text-secondary);
   opacity: 0.85;
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+.research-stats-table .research-stats-position.gw-top-points-position {
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 
-/* Mobile: narrower stat columns, and ensure sticky player/team column stays frozen above scrolling stats */
+/* Mobile: narrower stat columns; sticky first column unchanged (same as fixture – no horizontal movement of player/team column) */
 @media (max-width: 640px) {
   .research-stats-page .league-standings-bento-table-wrapper {
     -webkit-overflow-scrolling: touch;
-    overflow-x: auto;
-    overflow-y: visible;
-  }
-
-  /* Sticky column: ensure player/team header and body cells stay on top when PTS etc. scroll underneath */
-  .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
-    z-index: 10;
-    isolation: isolate;
-    background: var(--bg-secondary);
-  }
-  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
-    z-index: 10;
-    isolation: isolate;
-    background: var(--bg-secondary);
-  }
-  .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
-    z-index: 11;
   }
 
   /* Stat columns explicitly below sticky column */

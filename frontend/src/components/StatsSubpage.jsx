@@ -1,10 +1,13 @@
 import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Filter, X, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare } from 'lucide-react'
+import { Search, Filter, X, Download, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare } from 'lucide-react'
+import { CardStatLabel } from './CardStatLabel'
+import html2canvas from 'html2canvas'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
+import PlayerDetailModal from './PlayerDetailModal'
 import './ResearchPage.css'
 import './BentoCard.css'
 import './MiniLeaguePage.css'
@@ -57,8 +60,8 @@ const STAT_COLUMNS = [
   { key: 'defensive_contribution', label: 'DEFCON', field: 'defensive_contribution', category: 'defending' },
   { key: 'expected_goals_conceded', label: 'xGC', field: 'expected_goals_conceded', category: ['defending', 'goalie'] },
   { key: 'goals_conceded', label: 'GC', field: 'goals_conceded', category: ['defending', 'goalie'] },
-  { key: 'yellow_cards', label: 'YC', field: 'yellow_cards', category: 'all' },
-  { key: 'red_cards', label: 'RC', field: 'red_cards', category: 'all' }
+  { key: 'yellow_cards', label: 'YC', field: 'yellow_cards', category: 'discipline' },
+  { key: 'red_cards', label: 'RC', field: 'red_cards', category: 'discipline' }
 ]
 
 /**
@@ -142,8 +145,61 @@ export default function StatsSubpage() {
   const [compareSelectedTeamKeys, setCompareSelectedTeamKeys] = useState([])
   /** True only after user has pressed Compare button; gates row-tap add-to-compare in main table */
   const [compareModeActive, setCompareModeActive] = useState(false)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [selectedPlayerName, setSelectedPlayerName] = useState('')
   /** When true, show modal with transposed compare table (vertical stat-by-stat view) */
   const [showCompareDetailsModal, setShowCompareDetailsModal] = useState(false)
+  const compareDetailsModalRef = useRef(null)
+
+  useEffect(() => {
+    if (!showCompareDetailsModal) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [showCompareDetailsModal])
+
+  const handleCompareDetailsDownload = useCallback(() => {
+    const el = compareDetailsModalRef.current
+    if (!el) return
+    const colorProps = ['color', 'backgroundColor', 'borderColor', 'borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor', 'outlineColor']
+    const isUnsupportedColor = (v) => typeof v === 'string' && v.trim().toLowerCase().startsWith('color(')
+    const toKebab = (s) => s.replace(/([A-Z])/g, '-$1').toLowerCase().replace(/^-/, '')
+    const fallbacks = { color: 'rgb(0, 0, 0)', backgroundColor: 'transparent', borderColor: 'currentColor', borderTopColor: 'currentColor', borderRightColor: 'currentColor', borderBottomColor: 'currentColor', borderLeftColor: 'currentColor', outlineColor: 'currentColor' }
+    const copyResolvedColors = (orig, clone) => {
+      if (!orig || !clone || orig.nodeType !== 1 || clone.nodeType !== 1) return
+      const computed = window.getComputedStyle(orig)
+      for (const prop of colorProps) {
+        const kebab = toKebab(prop)
+        const value = computed.getPropertyValue(kebab)
+        const safe = value && !isUnsupportedColor(value) ? value : fallbacks[prop]
+        if (safe) clone.style.setProperty(kebab, safe)
+      }
+      const origLen = orig.childNodes.length
+      const cloneLen = clone.childNodes.length
+      for (let i = 0; i < Math.min(origLen, cloneLen); i++) copyResolvedColors(orig.childNodes[i], clone.childNodes[i])
+    }
+    html2canvas(el, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: null,
+      onclone(_, clonedEl) {
+        copyResolvedColors(el, clonedEl)
+      }
+    }).then((canvas) => {
+      canvas.toBlob((blob) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `fpl-compare-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').replace(' ', '-')}.png`
+        a.click()
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    }).catch((err) => {
+      console.error('Compare details screenshot failed:', err)
+    })
+  }, [])
 
   const { players, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter)
   const { data: currentGameweekPlayers } = useCurrentGameweekPlayers()
@@ -165,22 +221,17 @@ export default function StatsSubpage() {
     })
   }, [statCategory, teamView])
 
-  /** Compare details modal: group visible columns by category for subtle section breaks */
+  /** Compare details modal: group visible columns by category for subtle section breaks (fixed order so we don't get duplicate section headers) */
   const compareDetailsSections = useMemo(() => {
-    const getSectionKey = (cat) => (cat === 'all' ? 'all' : cat === 'attacking' ? 'attacking' : 'defending')
-    const sections = []
-    let current = { sectionKey: null, columns: [] }
+    const getSectionKey = (cat) => (cat === 'all' ? 'all' : cat === 'attacking' ? 'attacking' : cat === 'defending' ? 'defending' : cat === 'discipline' ? 'discipline' : 'defending')
+    const byKey = new Map()
     visibleColumns.forEach((col) => {
       const key = getSectionKey(Array.isArray(col.category) ? col.category[0] : col.category)
-      if (current.sectionKey !== key) {
-        if (current.columns.length) sections.push(current)
-        current = { sectionKey: key, columns: [col] }
-      } else {
-        current.columns.push(col)
-      }
+      if (!byKey.has(key)) byKey.set(key, [])
+      byKey.get(key).push(col)
     })
-    if (current.columns.length) sections.push(current)
-    return sections
+    const sectionOrder = ['all', 'attacking', 'defending', 'discipline']
+    return sectionOrder.filter((key) => byKey.has(key)).map((sectionKey) => ({ sectionKey, columns: byKey.get(sectionKey) }))
   }, [visibleColumns])
 
   /** Max possible minutes in the selected GW range (for minutes % filter). */
@@ -644,6 +695,7 @@ export default function StatsSubpage() {
               )}
             </div>
             <button
+              key={compareModeActive ? 'exit' : 'compare'}
               type="button"
               className={`stats-filter-btn stats-compare-btn ${compareModeActive ? 'stats-compare-btn--exit-mode' : ''} ${!compareModeActive && (teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedIds.length > 0) ? 'stats-compare-btn--active' : ''}`}
               onClick={handleCompareClick}
@@ -939,11 +991,11 @@ export default function StatsSubpage() {
                                 onClick={() => handleCompareSort(field)}
                                 aria-sort={compareSort.column === field ? (compareSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                               >
-                                {label}
+                                <CardStatLabel statKey={key} label={label} />
                                 <span className="league-standings-sort-triangle-slot">{compareSort.column === field ? <SortTriangle direction={compareSort.dir} /> : null}</span>
                               </button>
                             ) : (
-                              label
+                              <CardStatLabel statKey={key} label={label} />
                             )}
                           </th>
                         ))}
@@ -1067,11 +1119,11 @@ export default function StatsSubpage() {
                             onClick={() => handleMainSort(field)}
                             aria-sort={mainSort.column === field ? (mainSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                           >
-                            {label}
+                            <CardStatLabel statKey={key} label={label} />
                             <span className="league-standings-sort-triangle-slot">{mainSort.column === field ? <SortTriangle direction={mainSort.dir} /> : null}</span>
                           </button>
                         ) : (
-                          label
+                          <CardStatLabel statKey={key} label={label} />
                         )}
                       </th>
                     ))}
@@ -1232,11 +1284,11 @@ export default function StatsSubpage() {
                                 onClick={() => handleCompareSort(field)}
                                 aria-sort={compareSort.column === field ? (compareSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                               >
-                                {label}
+                                <CardStatLabel statKey={key} label={label} />
                                 <span className="league-standings-sort-triangle-slot">{compareSort.column === field ? <SortTriangle direction={compareSort.dir} /> : null}</span>
                               </button>
                             ) : (
-                              label
+                              <CardStatLabel statKey={key} label={label} />
                             )}
                           </th>
                         ))}
@@ -1260,7 +1312,7 @@ export default function StatsSubpage() {
                             aria-label={`${p.web_name || 'Player'}, remove from compare`}
                           >
                             <td className="league-standings-bento-team">
-                              <div className="research-stats-sticky-cell-inner">
+                              <div className={`research-stats-sticky-cell-inner${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-sticky-cell-inner--owned' : ''}`}>
                                 <div className="research-stats-player-cell">
                                   {p.team_short_name && (
                                     <img src={`/badges/${p.team_short_name}.svg`} alt="" className="research-stats-badge" />
@@ -1270,7 +1322,7 @@ export default function StatsSubpage() {
                                       className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
                                       title={p.web_name}
                                     >
-                                      {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
+                                      {p.web_name && p.web_name.length > 10 ? p.web_name.slice(0, 10) + '…' : (p.web_name || '')}
                                     </span>
                                     <div className="research-stats-meta-line">
                                       {p.position != null && (
@@ -1280,7 +1332,7 @@ export default function StatsSubpage() {
                                       )}
                                       {p.cost_tenths != null && (
                                         <>
-                                          <span className="research-stats-meta-dot">·</span>
+                                          <span className="research-stats-meta-dot">|</span>
                                           <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
                                         </>
                                       )}
@@ -1406,11 +1458,11 @@ export default function StatsSubpage() {
                             onClick={() => handleMainSort(field)}
                             aria-sort={mainSort.column === field ? (mainSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                           >
-                            {label}
+                            <CardStatLabel statKey={key} label={label} />
                             <span className="league-standings-sort-triangle-slot">{mainSort.column === field ? <SortTriangle direction={mainSort.dir} /> : null}</span>
                           </button>
                         ) : (
-                          label
+                          <CardStatLabel statKey={key} label={label} />
                         )}
                       </th>
                     ))}
@@ -1443,19 +1495,29 @@ export default function StatsSubpage() {
                       <tr
                         key={p.player_id}
                         className="league-standings-bento-row"
-                        onClick={() => compareModeActive && toggleCompareSelection(p.player_id)}
-                        role={compareModeActive ? 'button' : undefined}
-                        tabIndex={compareModeActive ? 0 : undefined}
-                        onKeyDown={compareModeActive ? (e) => {
+                        onClick={() => {
+                          if (compareModeActive) toggleCompareSelection(p.player_id)
+                          else {
+                            setSelectedPlayerId(p.player_id)
+                            setSelectedPlayerName(p.web_name ?? '')
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
                             e.preventDefault()
-                            toggleCompareSelection(p.player_id)
+                            if (compareModeActive) toggleCompareSelection(p.player_id)
+                            else {
+                              setSelectedPlayerId(p.player_id)
+                              setSelectedPlayerName(p.web_name ?? '')
+                            }
                           }
-                        } : undefined}
-                        aria-label={compareModeActive ? `${p.web_name || 'Player'}, add to compare` : undefined}
+                        }}
+                        aria-label={compareModeActive ? `${p.web_name || 'Player'}, add to compare` : `Open details for ${p.web_name || 'Player'}`}
                       >
                         <td className="league-standings-bento-team">
-                          <div className="research-stats-sticky-cell-inner">
+                          <div className={`research-stats-sticky-cell-inner${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-sticky-cell-inner--owned' : ''}`}>
                             <div className="research-stats-player-cell">
                               {p.team_short_name && (
                                 <img
@@ -1469,7 +1531,7 @@ export default function StatsSubpage() {
                                   className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
                                   title={p.web_name}
                                 >
-                                  {p.web_name && p.web_name.length > 12 ? p.web_name.slice(0, 12) + '..' : (p.web_name || '')}
+                                  {p.web_name && p.web_name.length > 10 ? p.web_name.slice(0, 10) + '…' : (p.web_name || '')}
                                 </span>
                                 <div className="research-stats-meta-line">
                                   {p.position != null && (
@@ -1479,7 +1541,7 @@ export default function StatsSubpage() {
                                   )}
                                   {p.cost_tenths != null && (
                                     <>
-                                      <span className="research-stats-meta-dot">·</span>
+                                      <span className="research-stats-meta-dot">|</span>
                                       <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
                                     </>
                                   )}
@@ -1555,6 +1617,7 @@ export default function StatsSubpage() {
           aria-labelledby="research-stats-compare-details-title"
         >
           <div
+            ref={compareDetailsModalRef}
             className="research-stats-compare-details-modal"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1562,14 +1625,24 @@ export default function StatsSubpage() {
               <h2 id="research-stats-compare-details-title" className="research-stats-compare-details-title">
                 {teamView ? 'Compare teams' : 'Compare players'}
               </h2>
-              <button
-                type="button"
-                className="research-stats-compare-details-close"
-                onClick={() => setShowCompareDetailsModal(false)}
-                aria-label="Close"
-              >
-                <X size={20} strokeWidth={2} />
-              </button>
+              <div className="research-stats-compare-details-header-actions">
+                <button
+                  type="button"
+                  className="research-stats-compare-details-download"
+                  onClick={handleCompareDetailsDownload}
+                  aria-label="Download as image"
+                >
+                  <Download size={20} strokeWidth={2} />
+                </button>
+                <button
+                  type="button"
+                  className="research-stats-compare-details-close"
+                  onClick={() => setShowCompareDetailsModal(false)}
+                  aria-label="Close"
+                >
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
             </div>
             <div className="research-stats-compare-details-body">
               <div className="research-stats-compare-details-table-wrap">
@@ -1609,9 +1682,7 @@ export default function StatsSubpage() {
                         <td className="research-stats-compare-details-td-stat">Position</td>
                         {compareTablePlayers.map((p) => (
                           <td key={p.player_id} className="research-stats-compare-details-td-value">
-                            <span
-                              className={`research-stats-compare-details-pill research-stats-position gw-top-points-position${p.position != null ? ` gw-top-points-position--${p.position}` : ''}`}
-                            >
+                            <span className="research-stats-compare-details-pill">
                               {POSITION_LABELS[p.position] ?? '—'}
                             </span>
                           </td>
@@ -1619,7 +1690,7 @@ export default function StatsSubpage() {
                       </tr>
                     )}
                     {compareDetailsSections.map((section, sectionIndex) => {
-                      const sectionLabels = { all: 'General', attacking: 'Attacking', defending: 'Defending' }
+                      const sectionLabels = { all: 'General', attacking: 'Attacking', defending: 'Defending', discipline: 'Discipline' }
                       const sectionLabel = sectionLabels[section.sectionKey] ?? section.sectionKey
                       return (
                       <Fragment key={`compare-details-section-${sectionIndex}`}>
@@ -1638,7 +1709,7 @@ export default function StatsSubpage() {
                             : compareBestPlayerIdByField[field]
                           return (
                             <tr key={key} className="research-stats-compare-details-tr">
-                              <td className="research-stats-compare-details-td-stat">{label}</td>
+                              <td className="research-stats-compare-details-td-stat"><CardStatLabel statKey={key} label={label} /></td>
                               {entities.map((entity) => {
                                 const entityKey = teamView ? getTeamKey(entity) : entity.player_id
                                 const value = entity[field] ?? 0
@@ -1669,6 +1740,14 @@ export default function StatsSubpage() {
             </div>
           </div>
         </div>
+      )}
+      {selectedPlayerId != null && (
+        <PlayerDetailModal
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          gameweek={gameweek}
+          onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
+        />
       )}
     </div>
   )

@@ -6,16 +6,14 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + summary + list header stay fixed; event list scrolls under */
+/* Sticky: search bar + filter + summary + list header stay fixed; event list scrolls under. Match Defcon: no extra top padding. */
 .feed-subpage-sticky-header {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding-top: 10px;
   padding-bottom: 2px;
   flex-shrink: 0;
-  /* Promote layer so sticky is reliable (e.g. iOS) */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 }

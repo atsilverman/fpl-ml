@@ -44,8 +44,8 @@
 }
 
 .bps-chart__header-label {
-  flex: 0 0 110px;
-  width: 110px;
+  flex: 0 0 80px;
+  width: 80px;
   min-width: 0;
 }
 
@@ -83,14 +83,14 @@
 .bps-chart__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-height: 28px;
 }
 
-/* Fixed-width label: name then badge (right-aligned so badge is right of name) */
+/* Fixed-width label: name then badge, right-aligned by badge – narrow so bar gets more space */
 .bps-chart__label {
-  flex: 0 0 110px;
-  width: 110px;
+  flex: 0 0 80px;
+  width: 80px;
   min-width: 0;
   display: flex;
   align-items: center;
@@ -130,9 +130,16 @@
 .bps-chart__bonus-badge {
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 5px;
+  height: 18px;
+  min-width: 22px;
+  padding: 0 6px;
   border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .bps-chart__bonus-badge--3 {

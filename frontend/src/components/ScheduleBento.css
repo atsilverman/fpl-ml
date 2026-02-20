@@ -56,6 +56,18 @@
   gap: 6px;
 }
 
+.schedule-bento--with-opponent-stats .schedule-bento-gw-column {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.schedule-bento--with-opponent-stats .schedule-bento-opponent-pill {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
 .schedule-bento-gw-heading {
   font-size: 11px;
   font-weight: 600;
@@ -70,6 +82,76 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* Wrapper per opponent: pill + optional stats below (player detail modal) */
+.schedule-bento-gw-fixture {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Subtle background by difficulty (FPL or custom) for entire GW fixture block */
+.schedule-bento-fixture--difficulty-1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-card));
+  border-radius: 6px;
+  padding: 2px;
+  margin: -2px 0;
+}
+.schedule-bento-fixture--difficulty-2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 4%, var(--bg-card));
+  border-radius: 6px;
+  padding: 2px;
+  margin: -2px 0;
+}
+.schedule-bento-fixture--difficulty-3 {
+  /* neutral – no tint */
+}
+.schedule-bento-fixture--difficulty-4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 4%, var(--bg-card));
+  border-radius: 6px;
+  padding: 2px;
+  margin: -2px 0;
+}
+.schedule-bento-fixture--difficulty-5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-card));
+  border-radius: 6px;
+  padding: 2px;
+  margin: -2px 0;
+}
+
+/* Opponent last-6-GW stats stacked below the pill (GC, xGC, G, xG, CS + rank) */
+.schedule-bento-opponent-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 9px;
+  line-height: 1.2;
+}
+.schedule-bento-opponent-stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+.schedule-bento-opponent-stat-label {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.schedule-bento-opponent-stat-value {
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+.schedule-bento-opponent-stat-rank {
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .schedule-bento-blank {
@@ -107,6 +189,28 @@
   flex-direction: column;
   gap: 0;
   box-sizing: border-box;
+  border-width: 2px;
+}
+
+/* Difficulty: 1–2 green (easiest), 3 neutral, 4–5 red (hardest); border + subtle fill for prominence */
+.schedule-bento-opponent-pill--1 {
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 75%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-green, #10b981) 14%, var(--bg-secondary));
+}
+.schedule-bento-opponent-pill--2 {
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 50%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-secondary));
+}
+.schedule-bento-opponent-pill--3 {
+  border-color: var(--border-color);
+}
+.schedule-bento-opponent-pill--4 {
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 50%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-secondary));
+}
+.schedule-bento-opponent-pill--5 {
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 14%, var(--bg-secondary));
 }
 
 .schedule-bento-side {

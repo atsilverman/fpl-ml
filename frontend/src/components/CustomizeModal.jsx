@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
-import { useConfiguration } from '../contexts/ConfigurationContext'
-import { useScheduleData } from '../hooks/useScheduleData'
 import { useToast } from '../contexts/ToastContext'
-import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './ConfigurationModal.css'
 import './CustomizeModal.css'
 
@@ -24,21 +21,15 @@ const BENTO_LABELS = {
 
 export default function CustomizeModal({ isOpen, onClose }) {
   const { cardOrder, setCardOrder, isCardVisible, setCardVisible, statsMinMinutesPercent, setStatsMinMinutesPercent } = useBentoOrder()
-  const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
-  const { scheduleMatrix, teamMap, loading: scheduleLoading } = useScheduleData()
   const { toast } = useToast()
   const [draggedId, setDraggedId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
   const [layoutExpanded, setLayoutExpanded] = useState(false)
-  const [difficultyExpanded, setDifficultyExpanded] = useState(false)
   const [minutesExpanded, setMinutesExpanded] = useState(false)
-  const teamIds = scheduleMatrix?.teamIds ?? []
-  const mapForRow = teamMap ?? {}
 
   useEffect(() => {
     if (isOpen) {
       setLayoutExpanded(false)
-      setDifficultyExpanded(false)
       setMinutesExpanded(false)
     }
   }, [isOpen])
@@ -176,55 +167,6 @@ export default function CustomizeModal({ isOpen, onClose }) {
                   </div>
                 ))}
               </div>
-            </div>
-          </section>
-
-          <section className="customize-section customize-section-difficulty" aria-labelledby="customize-difficulty-heading">
-            <button
-              type="button"
-              className="customize-section-toggle"
-              onClick={() => setDifficultyExpanded((e) => !e)}
-              aria-expanded={difficultyExpanded}
-              aria-controls="customize-difficulty-content"
-              id="customize-difficulty-heading"
-            >
-              <span className="customize-section-toggle-label">Schedule Difficulty</span>
-              {difficultyExpanded ? (
-                <ChevronUp size={18} strokeWidth={2} aria-hidden />
-              ) : (
-                <ChevronDown size={18} strokeWidth={2} aria-hidden />
-              )}
-            </button>
-            <div
-              id="customize-difficulty-content"
-              className="customize-section-content"
-              hidden={!difficultyExpanded}
-            >
-              {scheduleLoading ? (
-                <p className="customize-section-loading">Loading teams…</p>
-              ) : (
-                <ScheduleDifficultyCustomizer
-                  embedded
-                  teamIds={teamIds}
-                  teamMap={mapForRow}
-                  savedOverridesByStat={{
-                    strength: config?.teamStrengthOverrides ?? null,
-                    attack: config?.teamAttackOverrides ?? null,
-                    defence: config?.teamDefenceOverrides ?? null,
-                  }}
-                  onSave={({ strength, attack, defence }) => {
-                    if (strength != null) saveTeamStrengthOverrides(strength)
-                    if (attack != null) saveTeamAttackOverrides(attack)
-                    if (defence != null) saveTeamDefenceOverrides(defence)
-                    toast('Custom difficulty saved')
-                  }}
-                  onResetStat={(statId) => {
-                    if (statId === 'strength') resetTeamStrengthOverrides()
-                    else if (statId === 'attack') resetTeamAttackOverrides()
-                    else if (statId === 'defence') resetTeamDefenceOverrides()
-                  }}
-                />
-              )}
             </div>
           </section>
 

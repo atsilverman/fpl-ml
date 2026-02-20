@@ -188,7 +188,7 @@
   }
 }
 
-/* Schedule recommendations: 4 distinct panels (Buy 4 GW, Buy 10 GW, Sell 4 GW, Sell 10 GW) */
+/* Schedule recommendations: 4 distinct panels (Easy 4 GW, Easy 10 GW, Hard 4 GW, Hard 10 GW) */
 .research-schedule-recommendations {
   flex-shrink: 0;
   padding: 10px 0 0;
@@ -299,7 +299,7 @@
   align-items: stretch;
   background: var(--bg-primary, #fff);
   padding-top: 2px;
-  padding-bottom: 0;
+  padding-bottom: 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -314,7 +314,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 2px;
   margin-bottom: 0;
   flex-shrink: 0;
 }
@@ -329,6 +329,40 @@
 }
 .research-schedule-toolbar .schedule-header-icon-group--right {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Match Statistics toolbar buttons: same color, border-radius, background (override .schedule-filter-btn) */
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn {
+  border-radius: 5px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--text-primary, #111) 35%, var(--border-color));
+}
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn--active {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--text-primary, #111) 50%, var(--border-color));
+  background: var(--bg-card);
+}
+@media (hover: hover) {
+  .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+  .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn:hover {
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  }
+  .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn--active:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+  }
 }
 
 /* Filter summary: match Stats when inside sticky header; center align */
@@ -396,26 +430,32 @@
   flex-shrink: 0;
 }
 
-/* Customize pill only (left group): show label right of icon (proper case) */
-.schedule-header-icon-group:not(.schedule-header-icon-group--right) .stats-filter-btn:first-child .stats-toolbar-btn-label {
+/* Schedule toolbar right group: Customize (Compare-style) + Filter, same as Statistics Compare | Filter */
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn .stats-toolbar-btn-label {
   display: inline;
   text-transform: none;
 }
-.schedule-header-icon-group:not(.schedule-header-icon-group--right) .stats-filter-btn:first-child {
-  width: auto;
-  min-width: 28px;
-  padding-left: 8px;
-  padding-right: 8px;
-  gap: 8px;
-}
-
-/* Right group: filter icon-only button matches Statistics page size (28×28) */
-.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn {
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) {
   width: 28px;
   min-width: 28px;
   height: 28px;
   min-height: 28px;
   padding: 0;
+}
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) .stats-toolbar-btn-label {
+  display: none;
+}
+@media (min-width: 769px) {
+  .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) {
+    width: auto;
+    min-width: 28px;
+    padding-left: 14px;
+    padding-right: 14px;
+    gap: 8px;
+  }
+  .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) .stats-toolbar-btn-label {
+    display: inline;
+  }
 }
 
 .schedule-header-icon-svg {
@@ -590,7 +630,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+.stats-filter-overlay-footer--customize .stats-filter-overlay-done {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
 }
 .stats-filter-overlay-save {
   padding: 10px 16px;
@@ -604,18 +653,26 @@
   color: var(--text-secondary);
   flex: 0 0 auto;
 }
+/* Demoted until a change is made: greyed out when disabled (no unsaved changes) */
+.stats-filter-overlay-save:disabled {
+  cursor: default;
+  opacity: 0.5;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.04));
+  border-color: var(--border-color);
+}
 .stats-filter-overlay-save--active {
   background: var(--accent-blue, #3b82f6);
   border-color: var(--accent-blue, #3b82f6);
   color: #fff;
 }
 @media (hover: hover) {
-  .stats-filter-overlay-save:hover {
+  .stats-filter-overlay-save:hover:not(:disabled) {
     background: var(--bg-card);
     color: var(--text-primary);
     border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
   }
-  .stats-filter-overlay-save--active:hover {
+  .stats-filter-overlay-save--active:hover:not(:disabled) {
     background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
     border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
     color: #fff;
@@ -624,6 +681,58 @@
 .stats-filter-overlay-footer--customize .stats-filter-overlay-done {
   flex: 1 1 auto;
   min-width: 0;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Toolbar right: Reset + legend info (i) button */
+.customize-difficulty-toolbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  margin-left: auto;
+}
+.schedule-legend-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.schedule-legend-info-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+.schedule-legend-info-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+.schedule-legend-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  min-width: 280px;
+  box-sizing: border-box;
+}
+.schedule-legend-popover .schedule-legend-inline--popup {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 /* Reset in customizer: colorize only when current stat has overrides */
@@ -643,26 +752,54 @@
   }
 }
 
-/* Scale down difficulty badges (value pills) in customizer */
-.stats-filter-overlay-body--customize .customize-difficulty-pill {
-  min-width: 22px;
-  padding: 2px 6px;
-  font-size: 11px;
-  font-weight: 600;
-  border-width: 1px;
-  border-radius: 4px;
+/* Customize difficulty row: match fixtures table opponent cell (badge + difficulty pill) */
+.stats-filter-overlay-body--customize .customize-row.customize-difficulty-row {
+  min-height: 44px;
+  padding: 6px 12px;
 }
 .stats-filter-overlay-body--customize .customize-difficulty-badge,
 .stats-filter-overlay-body--customize .customize-difficulty-badge-placeholder {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+}
+/* Difficulty value pill: match .schedule-cell-difficulty-pill in table */
+.stats-filter-overlay-body--customize .customize-difficulty-pill {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  min-height: 26px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  border-width: 1px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.stats-filter-overlay-body--customize .customize-difficulty-pill--1 {
+  color: var(--accent-green, #10b981);
+}
+.stats-filter-overlay-body--customize .customize-difficulty-pill--2 {
+  color: color-mix(in srgb, var(--accent-green, #10b981) 75%, white);
+}
+.stats-filter-overlay-body--customize .customize-difficulty-pill--3 {
+  color: var(--text-secondary);
+}
+.stats-filter-overlay-body--customize .customize-difficulty-pill--4 {
+  color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, white);
+}
+.stats-filter-overlay-body--customize .customize-difficulty-pill--5 {
+  color: var(--accent-red, #ef4444);
 }
 
-/* Legend inside filter overlay: use full width, bigger pills */
+/* Legend inside filter overlay: centered, match fixtures table opponent difficulty styling */
 .schedule-legend-inline--popup {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
   width: 100%;
   margin-bottom: 12px;
   padding-bottom: 10px;
@@ -671,30 +808,34 @@
 .schedule-legend-inline--popup .schedule-legend-inline-pills {
   display: flex;
   align-items: stretch;
+  justify-content: center;
   gap: 6px;
-  width: 100%;
 }
 .schedule-legend-inline--popup .schedule-legend-inline-pill {
-  flex: 1;
-  min-width: 0;
-  min-height: 32px;
-  height: 32px;
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  min-height: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 4px 6px;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  border: 1px solid var(--border-color);
+  font-size: 15px;
+  font-weight: 700;
   box-sizing: border-box;
 }
 .schedule-legend-inline--popup .schedule-legend-inline-pill .schedule-cell-abbr-display {
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 700;
 }
 .schedule-legend-inline--popup .schedule-legend-inline-label {
-  font-size: 11px;
-  margin-top: 6px;
+  font-size: 13px;
+  margin-top: 8px;
   color: var(--text-secondary);
+  text-align: center;
 }
 
 .schedule-filter-popover-label {
@@ -1044,28 +1185,33 @@
   align-items: center;
 }
 
-/* Ghost dot: shows FPL default position (where value was before custom override); size matches slider thumb (12px) */
-/* Match native range thumb range: thumb center runs from 6px to (100% - 6px) for 12px thumb */
+/* Ghost dot: shows FPL default position (where value was before custom override); prominent so it’s easy to see */
+/* Thumb center runs from 7px to (100% - 7px) for 14px dot */
 .schedule-customizer-ghost-dot {
   position: absolute;
-  left: calc(6px + (100% - 12px) * var(--ghost-pct, 0));
+  left: calc(14px + (100% - 14px) * var(--ghost-pct, 0));
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 html[data-theme="dark"] .schedule-customizer-ghost-dot {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.4);
+  border-color: var(--bg-secondary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Defcon-style track: gradient 1 (easy) → 5 (hard) */
+/* Defcon-style track: gradient 1 (easy) → 5 (hard); thumb stacks above ghost */
 .schedule-customizer-slider {
   position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   height: 10px;
@@ -1081,29 +1227,90 @@ html[data-theme="dark"] .schedule-customizer-ghost-dot {
 .schedule-customizer-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
 }
 
 .schedule-customizer-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
 }
 
 html[data-theme="dark"] .schedule-customizer-slider::-webkit-slider-thumb,
 html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
-  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Slider thumb colored by difficulty (1 easy → 5 hard); dark theme uses these as-is */
+.schedule-customizer-slider--1::-webkit-slider-thumb,
+.schedule-customizer-slider--1::-moz-range-thumb {
+  background: var(--accent-green, #10b981);
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 70%, #000);
+}
+.schedule-customizer-slider--2::-webkit-slider-thumb,
+.schedule-customizer-slider--2::-moz-range-thumb {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 60%, var(--border-color));
+}
+.schedule-customizer-slider--3::-webkit-slider-thumb,
+.schedule-customizer-slider--3::-moz-range-thumb {
+  background: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.schedule-customizer-slider--4::-webkit-slider-thumb,
+.schedule-customizer-slider--4::-moz-range-thumb {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 60%, var(--border-color));
+}
+.schedule-customizer-slider--5::-webkit-slider-thumb,
+.schedule-customizer-slider--5::-moz-range-thumb {
+  background: var(--accent-red, #ef4444);
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 70%, #000);
+}
+
+/* Light theme: stronger definition so thumb reads on light track */
+html:not([data-theme="dark"]) .schedule-customizer-slider--1::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--1::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #059669;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--2::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--2::-moz-range-thumb {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 75%, #0f766e);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--3::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--3::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #64748b;
+  background: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--4::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--4::-moz-range-thumb {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, #b91c1c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--5::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--5::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #dc2626;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .schedule-customizer-value-pill {
@@ -1256,8 +1463,8 @@ html[data-theme="dark"] .schedule-scroll-wrap {
 }
 
 .schedule-table thead th {
-  height: 44px;
-  min-height: 44px;
+  height: 38px;
+  min-height: 38px;
   box-sizing: border-box;
 }
 
@@ -1706,6 +1913,23 @@ html[data-theme="dark"] .schedule-cell-difficulty-pill .schedule-cell-home-indic
   text-align: center;
   width: 100%;
   flex-shrink: 0;
+}
+
+/* Subtle full-cell background by difficulty (FPL or custom); entire GW cell tinted so difficulty reads at a glance */
+.schedule-cell--difficulty-bg-1 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-primary));
+}
+.schedule-cell--difficulty-bg-2 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 4%, var(--bg-primary));
+}
+.schedule-cell--difficulty-bg-3 {
+  background: var(--bg-primary);
+}
+.schedule-cell--difficulty-bg-4 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 4%, var(--bg-primary));
+}
+.schedule-cell--difficulty-bg-5 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-primary));
 }
 
 /* Opponent difficulty pill (FPL strength 1–5): same language as stats subpage leader pill – rounded pill, green = easier, red = harder. */

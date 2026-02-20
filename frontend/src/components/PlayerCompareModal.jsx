@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { X } from 'lucide-react'
+import { CardStatLabel } from './CardStatLabel'
 import { useLeaguePlayerSearch } from '../hooks/useLeaguePlayerSearch'
 import { usePlayerGameweekStatsRange, usePlayerCompareStatRanks } from '../hooks/usePlayerGameweekStats'
 import { useToast } from '../contexts/ToastContext'
@@ -366,19 +367,7 @@ export default function PlayerCompareModal({
                               )}
                             </td>
                             <td className="player-compare-td player-compare-td-stat">
-                              {key === 'yellow_cards' ? (
-                                <span className="player-compare-stat-label-with-icon" title="Yellow cards">
-                                  <span className="player-compare-stat-icon player-compare-stat-icon--yc" aria-hidden />
-                                  {label}
-                                </span>
-                              ) : key === 'red_cards' ? (
-                                <span className="player-compare-stat-label-with-icon" title="Red cards">
-                                  <span className="player-compare-stat-icon player-compare-stat-icon--rc" aria-hidden />
-                                  {label}
-                                </span>
-                              ) : (
-                                label
-                              )}
+                              <CardStatLabel statKey={key} label={label} />
                             </td>
                             <td className="player-compare-td player-compare-td-p2">
                               {!selectedPlayer2 ? (
@@ -427,19 +416,7 @@ export default function PlayerCompareModal({
                             )}
                           </td>
                           <td className="player-compare-td player-compare-td-stat">
-                            {key === 'yellow_cards' ? (
-                              <span className="player-compare-stat-label-with-icon" title="Yellow cards">
-                                <span className="player-compare-stat-icon player-compare-stat-icon--yc" aria-hidden />
-                                {label}
-                              </span>
-                            ) : key === 'red_cards' ? (
-                              <span className="player-compare-stat-label-with-icon" title="Red cards">
-                                <span className="player-compare-stat-icon player-compare-stat-icon--rc" aria-hidden />
-                                {label}
-                              </span>
-                            ) : (
-                              label
-                            )}
+                            <CardStatLabel statKey={key} label={label} />
                           </td>
                           <td className="player-compare-td player-compare-td-p2">
                             {!selectedPlayer2 ? (

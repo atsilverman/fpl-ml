@@ -377,7 +377,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 /* Desktop: keep compact matchup + expand button in sync */
 @media (min-width: 769px) {
   .matchup-card-main {
-    padding: 10px 12px;
+    padding: 14px 12px;
     gap: 6px;
   }
   .matchup-card-headline {
@@ -414,14 +414,17 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
   .matchup-detail-tables {
     gap: 10px;
-    margin-top: 8px;
+    margin-top: 6px;
   }
   .matchup-detail-table-wrap {
     gap: 6px;
+    margin-left: -6px;
+    margin-right: -6px;
+    width: calc(100% + 12px);
   }
   .matchup-detail-table-header {
     padding: 8px 10px;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
   }
   .matchup-detail-table-badge {
     width: 24px;
@@ -429,7 +432,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
   .matchup-detail-table-empty {
     padding: 10px 8px;
-    font-size: 0.6875rem;
+    font-size: 0.8125rem;
   }
   .matchup-detail-table-scroll {
     max-height: 45vh;
@@ -481,7 +484,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
   .matchup-detail-stat-badge {
     padding: 1px 4px;
-    font-size: 0.65rem;
+    font-size: 0.675rem;
   }
 }
 
@@ -578,7 +581,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 /* Main card content – headline: HomeTeam score - score AwayTeam (center aligned) */
 .matchup-card-main {
-  padding: 10px 12px;
+  padding: 14px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -805,7 +808,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-top: 12px;
+  margin-top: 8px;
   min-width: 0; /* Allow grid to shrink so table scroll div gets bounded width (sticky column works on mobile) */
 }
 
@@ -820,8 +823,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
 }
 
-/* Per-team table block. No overflow:hidden on wrap so sticky left (player column) works
-   relative to .matchup-detail-table-scroll; clipping is done on the scroll div. */
+/* Per-team table block. Stretch to fill card width (cancel .matchup-card-details horizontal padding). */
 .matchup-detail-table-wrap {
   display: flex;
   flex-direction: column;
@@ -829,7 +831,11 @@ html[data-theme="dark"] .gw-top-points-pill {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-secondary);
-  min-width: 0; /* Allow shrink so inner scroll container can overflow horizontally */
+  min-width: 0;
+  margin-left: -8px;
+  margin-right: -8px;
+  width: calc(100% + 16px);
+  box-sizing: border-box;
 }
 
 .matchup-detail-table-wrap--tap-to-close {
@@ -848,7 +854,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
   border-radius: 8px 8px 0 0;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -865,9 +871,33 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 .matchup-detail-table-empty {
   padding: 16px 12px;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-secondary);
   text-align: center;
+}
+
+/* Clip wrapper: establishes containing block for sticky, and clips scroll content to rounded corners.
+   overflow + border-radius on the scroll div itself can be ignored by some browsers; clip-path + overflow here forces it.
+   Single header: when --no-header, the only “header” is the table thead (Player, PTS, MP…); no duplicate. */
+.matchup-detail-table-scroll-clip {
+  overflow: hidden;
+  border-radius: 0 0 8px 8px;
+  min-width: 0;
+  /* Force clip to rounded bottom corners (scroll layers often ignore parent overflow) */
+  clip-path: inset(0 0 0 0 round 0 0 8px 8px);
+  -webkit-clip-path: inset(0 0 0 0 round 0 0 8px 8px);
+  contain: paint;
+  /* Containing block for sticky so we can keep scroll div free of transform/isolation and avoid clip escaping */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  isolation: isolate;
+}
+
+/* Merged table (no separate team header): scroll-clip is top of card – round all four corners so clip matches wrap */
+.matchup-detail-table-wrap--no-header .matchup-detail-table-scroll-clip {
+  border-radius: 8px;
+  clip-path: inset(0 0 0 0 round 8px);
+  -webkit-clip-path: inset(0 0 0 0 round 8px);
 }
 
 .matchup-detail-table-scroll {
@@ -875,12 +905,8 @@ html[data-theme="dark"] .gw-top-points-pill {
   overflow-x: scroll;
   overflow-y: auto;
   max-height: 60vh;
+  min-height: 0;
   min-width: 0; /* Allow shrink in flex so table can overflow and scroll horizontally */
-  border-radius: 0 0 8px 8px;
-  /* Establish containing block so sticky player column works when parent (e.g. gameweek swipe track) has transform */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  isolation: isolate; /* Clear scroll container for sticky on mobile/iOS */
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: none;
   /* On mobile: allow horizontal scroll inside table so gesture isn't captured by swipe container */
@@ -930,7 +956,11 @@ html[data-theme="dark"] .gw-top-points-pill {
   box-shadow: 0 1px 0 var(--border-color);
 }
 
-/* When there’s no separate table-header (merged table), round thead top corners to match wrap */
+/* When there’s no separate table-header (merged table), round header only */
+.matchup-detail-table-wrap:not(:has(.matchup-detail-table-header)) .matchup-detail-table thead {
+  isolation: isolate;
+  border-radius: 8px 8px 0 0;
+}
 .matchup-detail-table-wrap:not(:has(.matchup-detail-table-header)) .matchup-detail-table thead tr th:first-child {
   border-top-left-radius: 8px;
 }
@@ -985,6 +1015,38 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-detail-th-pts,
 .matchup-detail-th-stat {
   text-align: center;
+}
+
+/* PTS and MP columns: subtle pill (same size as top-10 badge, lighter background) */
+.matchup-detail-th-pts,
+.matchup-detail-th-mins {
+  background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-secondary));
+  border-radius: 4px;
+}
+.matchup-detail-th-pts .matchup-detail-th-sort-btn,
+.matchup-detail-th-mins .matchup-detail-th-sort-btn {
+  border-radius: 4px;
+}
+/* PTS value badge – pill behind number (same as GW points expanded & manager popup) */
+.matchup-detail-pts-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  min-height: 1.35em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: inherit;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--pts-badge-subtle-bg, rgba(0, 0, 0, 0.06));
+}
+html[data-theme="dark"] .matchup-detail-pts-badge:not(.matchup-detail-rank-highlight) {
+  background: var(--pts-badge-subtle-bg, rgba(255, 255, 255, 0.06));
+}
+.matchup-detail-pts-badge.matchup-detail-rank-highlight {
+  background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2));
+  color: var(--gw-top-scorer-color, var(--accent-green, #10b981));
 }
 
 .matchup-detail-th-mins { min-width: 36px; }
@@ -1082,6 +1144,14 @@ html[data-theme="dark"] .gw-top-points-pill {
   backface-visibility: hidden;
   isolation: isolate;
 }
+.matchup-detail-td-player--clickable {
+  cursor: pointer;
+}
+@media (hover: hover) {
+  .matchup-detail-td-player--clickable:hover .matchup-detail-td-player-inner {
+    background: var(--bg-secondary);
+  }
+}
 .matchup-detail-td-player-inner {
   display: flex;
   align-items: center;
@@ -1095,8 +1165,8 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 
 .matchup-detail-player-badge {
-  width: 25px;
-  height: 25px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -1154,7 +1224,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 
 /* Live match in progress – stats not yet in */
 .matchup-detail-live-badge {
-  font-size: 0.7rem;
+  font-size: 0.675rem;
   font-weight: 600;
   color: var(--live-dot, #eab308);
 }
@@ -1178,6 +1248,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   padding: 1px 5px;
   border-radius: 4px;
   font-weight: 600;
+  font-size: 11px;
 }
 
 .matchup-detail-stat-badge.matchup-detail-rank-highlight {

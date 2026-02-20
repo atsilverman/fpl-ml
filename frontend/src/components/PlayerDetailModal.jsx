@@ -1,8 +1,12 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { X, Eye } from 'lucide-react'
+import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
+import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
+import { useConfiguration } from '../contexts/ConfigurationContext'
 import PlayerGameweekPointsChart from './PlayerGameweekPointsChart'
 import ScheduleBento from './ScheduleBento'
+import ScheduleOpponentStatsTable from './ScheduleOpponentStatsTable'
 import './MiniLeaguePage.css'
 
 const ALL_PLAYER_STAT_OPTIONS = [
@@ -15,8 +19,8 @@ const ALL_PLAYER_STAT_OPTIONS = [
   { key: 'bps', label: 'BPS' },
   { key: 'bonus', label: 'Bonus' },
   { key: 'defensive_contribution', label: 'DEFCON' },
-  { key: 'yellow_cards', label: 'Yellow cards' },
-  { key: 'red_cards', label: 'Red cards' },
+  { key: 'yellow_cards', label: 'YC' },
+  { key: 'red_cards', label: 'RC' },
   { key: 'expected_goals', label: 'xG' },
   { key: 'expected_assists', label: 'xA' },
   { key: 'expected_goal_involvements', label: 'xGI' },
@@ -48,6 +52,23 @@ export default function PlayerDetailModal({
     loading: playerDetailLoading,
   } = usePlayerDetail(playerId, gameweek, leagueManagerCount, leagueManagerIds)
 
+  const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
+  const config = useConfiguration()
+  const difficultyOverridesByDimension = useMemo(
+    () => ({
+      overall: config?.teamStrengthOverrides ?? null,
+      attack: config?.teamAttackOverrides ?? null,
+      defence: config?.teamDefenceOverrides ?? null,
+    }),
+    [config?.teamStrengthOverrides, config?.teamAttackOverrides, config?.teamDefenceOverrides]
+  )
+  const useCustomDifficulty = useMemo(
+    () =>
+      (config?.teamStrengthOverrides && Object.keys(config.teamStrengthOverrides).length > 0) ||
+      (config?.teamAttackOverrides && Object.keys(config.teamAttackOverrides).length > 0) ||
+      (config?.teamDefenceOverrides && Object.keys(config.teamDefenceOverrides).length > 0),
+    [config?.teamStrengthOverrides, config?.teamAttackOverrides, config?.teamDefenceOverrides]
+  )
 
   const playerStatOptions = useMemo(() => {
     const position = playerDetailPlayer?.position
@@ -175,7 +196,7 @@ export default function PlayerDetailModal({
               <span className="bento-card-label player-detail-chart-bento-label">
                 Stats by gameweek
                 <span className="bento-card-label-suffix">
-                  | {playerStatOptions.find((o) => o.key === selectedPlayerStat)?.label ?? 'Points'}
+                  | {(() => { const o = playerStatOptions.find((opt) => opt.key === selectedPlayerStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
                 </span>
               </span>
               <div className="player-detail-chart-bento-actions">
@@ -191,29 +212,51 @@ export default function PlayerDetailModal({
                   <Eye size={14} strokeWidth={2} aria-hidden />
                 </button>
                 {showPlayerStatPopup && (
-                  <div className="player-detail-stat-popup gw-legend-popup" role="dialog" aria-label="Chart stat filter">
-                    <div className="gw-legend-popup-title">Show stat</div>
-                    {playerStatOptions.map(({ key, label }) => (
-                      <div
-                        key={key}
-                        className={`gw-legend-popup-row player-detail-stat-popup-row ${selectedPlayerStat === key ? 'player-detail-stat-popup-row--active' : ''}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          setSelectedPlayerStat(key)
-                          setShowPlayerStatPopup(false)
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            setSelectedPlayerStat(key)
-                            setShowPlayerStatPopup(false)
-                          }
-                        }}
-                      >
-                        <span className="gw-legend-popup-text">{label}</span>
+                  <div className="player-detail-stat-popup stats-filter-overlay-panel" role="dialog" aria-label="Chart stat filter">
+                    <div className="stats-filter-overlay-header">
+                      <span className="stats-filter-overlay-title">Show stat</span>
+                      <div className="stats-filter-overlay-header-actions">
+                        <button
+                          type="button"
+                          className="stats-filter-overlay-close"
+                          onClick={() => setShowPlayerStatPopup(false)}
+                          aria-label="Close"
+                        >
+                          <X size={20} strokeWidth={2} />
+                        </button>
                       </div>
-                    ))}
+                    </div>
+                    <div className="stats-filter-overlay-body">
+                      <div className="stats-filter-section">
+                        <div className="stats-filter-section-title">Stat</div>
+                        <div className="stats-filter-buttons">
+                          {playerStatOptions.map(({ key, label }) => (
+                            <button
+                              key={key}
+                              type="button"
+                              className={`stats-filter-option-btn ${selectedPlayerStat === key ? 'stats-filter-option-btn--active' : ''}`}
+                              onClick={() => {
+                                setSelectedPlayerStat(key)
+                                setShowPlayerStatPopup(false)
+                              }}
+                              aria-pressed={selectedPlayerStat === key}
+                            >
+                              <CardStatLabel statKey={key} label={label} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="stats-filter-overlay-footer">
+                      <button
+                        type="button"
+                        className="stats-filter-overlay-done"
+                        onClick={() => setShowPlayerStatPopup(false)}
+                        aria-label="Done"
+                      >
+                        Done
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -231,7 +274,18 @@ export default function PlayerDetailModal({
               />
             </div>
           </div>
-          <ScheduleBento teamId={playerDetailPlayer?.team_id} />
+          <ScheduleBento
+            teamId={playerDetailPlayer?.team_id}
+            opponentStatsByTeamId={teamLast6ByTeamId}
+            opponentStatsLoading={teamLast6Loading}
+            difficultyOverridesByDimension={difficultyOverridesByDimension}
+            useCustomDifficulty={useCustomDifficulty}
+          />
+          <ScheduleOpponentStatsTable
+            teamId={playerDetailPlayer?.team_id}
+            opponentStatsByTeamId={teamLast6ByTeamId}
+            opponentStatsLoading={teamLast6Loading}
+          />
         </div>
       </div>
     </div>

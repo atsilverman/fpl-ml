@@ -4,14 +4,32 @@ import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './ScheduleSubpage.css'
 import './ScheduleBento.css'
 
-function OpponentPill({ opponent }) {
+function ordinal(n) {
+  if (n == null || n < 1) return '—'
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+function getEffectiveStrength(apiStrength, overrides, teamId) {
+  const override = overrides && teamId != null ? overrides[String(teamId)] ?? overrides[teamId] : undefined
+  const raw = override != null ? Number(override) : apiStrength
+  if (raw == null || Number.isNaN(raw)) return null
+  return Math.min(5, Math.max(1, raw))
+}
+
+function OpponentPill({ opponent, difficultyStrength }) {
   if (!opponent) return null
   const short = opponent.short_name ?? '?'
   const display = opponent.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
+  const strengthClass =
+    difficultyStrength != null && difficultyStrength >= 1 && difficultyStrength <= 5
+      ? ` schedule-bento-opponent-pill--${difficultyStrength}`
+      : ''
 
   return (
     <div
-      className="schedule-bento-fixture schedule-bento-opponent-pill"
+      className={`schedule-bento-fixture schedule-bento-opponent-pill${strengthClass}`}
       title={opponent.team_name ?? short}
     >
       <span className={`schedule-bento-side ${opponent.isHome ? 'schedule-bento-side-home' : 'schedule-bento-side-away'}`}>
@@ -40,10 +58,61 @@ function OpponentPill({ opponent }) {
   )
 }
 
-export default function ScheduleBento({ teamId }) {
+function OpponentStatsLast6({ stats, loading }) {
+  if (loading || !stats) return null
+  return (
+    <div className="schedule-bento-opponent-stats" aria-label="Opponent form last 6 gameweeks">
+      <div className="schedule-bento-opponent-stat-row">
+        <span className="schedule-bento-opponent-stat-label">GC</span>
+        <span className="schedule-bento-opponent-stat-value">
+          {stats.goalsConceded != null ? stats.goalsConceded : '—'}
+          {stats.rankGoalsConceded != null && <span className="schedule-bento-opponent-stat-rank"> ({ordinal(stats.rankGoalsConceded)})</span>}
+        </span>
+      </div>
+      <div className="schedule-bento-opponent-stat-row">
+        <span className="schedule-bento-opponent-stat-label">xGC</span>
+        <span className="schedule-bento-opponent-stat-value">
+          {stats.xgc != null ? stats.xgc.toFixed(1) : '—'}
+          {stats.rankXgc != null && <span className="schedule-bento-opponent-stat-rank"> ({ordinal(stats.rankXgc)})</span>}
+        </span>
+      </div>
+      <div className="schedule-bento-opponent-stat-row">
+        <span className="schedule-bento-opponent-stat-label">G</span>
+        <span className="schedule-bento-opponent-stat-value">
+          {stats.goals != null ? stats.goals : '—'}
+          {stats.rankGoals != null && <span className="schedule-bento-opponent-stat-rank"> ({ordinal(stats.rankGoals)})</span>}
+        </span>
+      </div>
+      <div className="schedule-bento-opponent-stat-row">
+        <span className="schedule-bento-opponent-stat-label">xG</span>
+        <span className="schedule-bento-opponent-stat-value">
+          {stats.xg != null ? stats.xg.toFixed(1) : '—'}
+          {stats.rankXg != null && <span className="schedule-bento-opponent-stat-rank"> ({ordinal(stats.rankXg)})</span>}
+        </span>
+      </div>
+      <div className="schedule-bento-opponent-stat-row">
+        <span className="schedule-bento-opponent-stat-label">CS</span>
+        <span className="schedule-bento-opponent-stat-value">
+          {stats.cleanSheets != null ? stats.cleanSheets : '—'}
+          {stats.rankCleanSheets != null && <span className="schedule-bento-opponent-stat-rank"> ({ordinal(stats.rankCleanSheets)})</span>}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+export default function ScheduleBento({
+  teamId,
+  opponentStatsByTeamId = null,
+  opponentStatsLoading = false,
+  difficultyOverridesByDimension = null,
+  useCustomDifficulty = false,
+}) {
   const { scheduleMatrix, gameweeks, loading } = useScheduleData()
   const scrollRef = useRef(null)
   useAxisLockedScroll(scrollRef)
+  const showOpponentStats = opponentStatsByTeamId != null
+  const overallOverrides = difficultyOverridesByDimension?.overall ?? null
 
   if (loading) {
     return (
@@ -75,7 +144,7 @@ export default function ScheduleBento({ teamId }) {
   }
 
   return (
-    <div className="schedule-bento bento-card bento-card-animate">
+    <div className={`schedule-bento bento-card bento-card-animate${showOpponentStats ? ' schedule-bento--with-opponent-stats' : ''}`}>
       <span className="bento-card-label schedule-bento-label">Schedule</span>
       <div ref={scrollRef} className="schedule-bento-scroll">
         <div className="schedule-bento-timeline">
@@ -89,9 +158,20 @@ export default function ScheduleBento({ teamId }) {
                   {isBlank ? (
                     <span className="schedule-bento-blank" aria-label="Blank gameweek">—</span>
                   ) : (
-                    opponents.map((opp, idx) => (
-                      <OpponentPill key={`${opp.team_id}-${idx}`} opponent={opp} />
-                    ))
+                    opponents.map((opp, idx) => {
+                      const baseDifficulty = opp.difficulty ?? opp.strength
+                      const difficultyStrength =
+                        useCustomDifficulty
+                          ? getEffectiveStrength(baseDifficulty, overallOverrides, opp.team_id)
+                          : baseDifficulty != null
+                            ? Math.min(5, Math.max(1, baseDifficulty))
+                            : null
+                      const fixtureDifficultyClass = difficultyStrength != null && difficultyStrength >= 1 && difficultyStrength <= 5 ? ` schedule-bento-fixture--difficulty-${difficultyStrength}` : ''
+                      return (
+                      <div key={`${opp.team_id}-${idx}`} className={`schedule-bento-gw-fixture${fixtureDifficultyClass}`}>
+                        <OpponentPill opponent={opp} difficultyStrength={difficultyStrength} />
+                      </div>
+                    )})
                   )}
                 </div>
               </div>

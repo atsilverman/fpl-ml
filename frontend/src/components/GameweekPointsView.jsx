@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import './GameweekPointsView.css'
 import { formatNumber } from '../utils/formatNumbers'
 import { ArrowDownRight, ArrowUpRight, HelpCircle, ArrowDown, ArrowUp } from 'lucide-react'
+import { CardStatLabel } from './CardStatLabel'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import AnimatedValue from './AnimatedValue'
@@ -586,7 +587,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                       title: `Sort by ${title}`
                     })}
                   >
-                    {label}
+                    <CardStatLabel statKey={key} label={label} />
                     {sortable && sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
                   </th>
                 ))}

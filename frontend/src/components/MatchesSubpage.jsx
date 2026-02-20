@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useFixturesWithTeams } from '../hooks/useFixturesWithTeams'
 import { useFixturePlayerStats } from '../hooks/useFixturePlayerStats'
 import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { useGameweekTopPerformersByStat, TOP_PERFORMERS_STAT_KEYS } from '../hooks/useGameweekTopPerformersByStat'
 import { useGameweekMaxBps } from '../hooks/useGameweekMaxBps'
+import PlayerDetailModal from './PlayerDetailModal'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import BpsLeadersChart from './BpsLeadersChart'
 import { ChevronDown, ChevronUp, MoveDiagonal, Minimize2 } from 'lucide-react'
+import { CardStatLabel } from './CardStatLabel'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -50,8 +53,8 @@ const STAT_KEYS = [
 /** Column config for sortable matchup detail table headers (order matches table) */
 const SORT_COLUMNS = [
   { key: 'player_name', col: 'player_name', label: 'Player', type: 'string' },
-  { key: 'minutes', col: 'minutes', label: 'MP', type: 'number' },
   { key: 'points', col: 'points', label: 'PTS', type: 'number' },
+  { key: 'minutes', col: 'minutes', label: 'MP', type: 'number' },
   ...STAT_KEYS.map(({ key, col }) => ({
     key,
     col,
@@ -68,7 +71,7 @@ function formatExpected(v) {
   return n.toFixed(2)
 }
 
-export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, fixtureStatus, fixtureId, onTableAreaClick }) {
+export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat, ownedPlayerIds, hideHeader = false, useDashForDnp = false, fixtureStatus, fixtureId, onTableAreaClick, onPlayerClick }) {
   const [sortKey, setSortKey] = useState('points')
   const [sortDir, setSortDir] = useState('asc')
   const tableScrollRef = useRef(null)
@@ -178,7 +181,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
 
   return (
     <div
-      className={`matchup-detail-table-wrap${onTableAreaClick ? ' matchup-detail-table-wrap--tap-to-close' : ''}`}
+      className={`matchup-detail-table-wrap${onTableAreaClick ? ' matchup-detail-table-wrap--tap-to-close' : ''}${hideHeader ? ' matchup-detail-table-wrap--no-header' : ''}`}
       onClick={onTableAreaClick ? (e) => { e.stopPropagation(); onTableAreaClick() } : undefined}
       role={onTableAreaClick ? 'button' : undefined}
       tabIndex={onTableAreaClick ? 0 : undefined}
@@ -193,7 +196,8 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
           <span className="matchup-detail-table-title">{teamName || 'Team'}</span>
         </div>
       )}
-      <div ref={tableScrollRef} className="matchup-detail-table-scroll">
+      <div className="matchup-detail-table-scroll-clip">
+        <div ref={tableScrollRef} className="matchup-detail-table-scroll">
         <div className="matchup-detail-table-box">
         <table className="matchup-detail-table">
           <thead>
@@ -223,7 +227,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                       title={title}
                       aria-label={`Sort by ${label}${isActive ? `, ${sortDir === 'desc' ? 'descending' : 'ascending'}` : ''}`}
                     >
-                      <span className="matchup-detail-th-label">{label}</span>
+                      <span className="matchup-detail-th-label"><CardStatLabel statKey={key} label={label} /></span>
                       {isActive && (
                         <span className="matchup-detail-th-sort-icon" aria-hidden>
                           {sortDir === 'desc' ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
@@ -246,23 +250,34 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
               const ptsIncludesProvisional = p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0
               return (
                 <tr key={p.player_id} className={`matchup-detail-tr ${isDnp ? 'matchup-detail-tr-dnp' : ''}`}>
-                  <td className="matchup-detail-td matchup-detail-td-player">
+                  <td
+                    className={`matchup-detail-td matchup-detail-td-player${onPlayerClick ? ' matchup-detail-td-player--clickable' : ''}`}
+                    role={onPlayerClick ? 'button' : undefined}
+                    tabIndex={onPlayerClick ? 0 : undefined}
+                    onClick={onPlayerClick ? (e) => { e.stopPropagation(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick(id, p.player_name ?? '') } : undefined}
+                    onKeyDown={onPlayerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick(id, p.player_name ?? '') } } : undefined}
+                    aria-label={onPlayerClick ? `View details for ${p.player_name || 'Player'}` : undefined}
+                  >
                     <div className="matchup-detail-td-player-inner">
                       {p.player_team_short_name && (
                         <img src={`/badges/${p.player_team_short_name}.svg`} alt="" className="matchup-detail-player-badge" onError={e => { e.target.style.display = 'none' }} />
                       )}
-                      <span className={`matchup-detail-player-name${isOwnedByYou ? ' matchup-detail-player-name--owned-by-you' : ''}`} title={p.player_name}>{p.player_name}</span>
+                      <span className={`matchup-detail-player-name${isOwnedByYou ? ' matchup-detail-player-name--owned-by-you' : ''}`} title={p.player_name}>{((p.player_name || '').length > 10 ? (p.player_name || '').slice(0, 10) + '…' : (p.player_name || ''))}</span>
                     </div>
+                  </td>
+                  <td
+                    className={`matchup-detail-td matchup-detail-td-pts ${!isTop10Pts && p.points === 0 ? 'matchup-detail-cell-muted' : ''}${ptsIncludesProvisional ? ' matchup-detail-cell-provisional' : ''}`}
+                    title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : undefined}
+                  >
+                    <span className={`matchup-detail-pts-badge${isTop10Pts ? ' matchup-detail-rank-highlight' : ''}`} title={isTop10Pts ? 'Top 10 in GW for points' : undefined}>
+                      {formatNumber(p.points)}
+                    </span>
                   </td>
                   <td className={`matchup-detail-td matchup-detail-td-mins ${(isDnp || (isLive && (p.minutes == null || Number(p.minutes) === 0))) ? 'matchup-detail-cell-muted' : ''}`}>
                     {(p.minutes != null && Number(p.minutes) > 0) ? (
                       `${p.minutes}'`
                     ) : isDnp ? (
-                      useDashForDnp ? (
-                        '–'
-                      ) : (
-                        <span className="matchup-detail-dnp-badge" title="Did not play">!</span>
-                      )
+                      useDashForDnp ? '–' : <span className="matchup-detail-dnp-badge" title="Did not play">!</span>
                     ) : isLive ? (
                       <span className="matchup-detail-live-badge" title="Match in progress – stats updating">Live</span>
                     ) : useDashForDnp ? (
@@ -271,24 +286,13 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                       <span className="matchup-detail-dnp-badge" title="Did not play">!</span>
                     )}
                   </td>
-                  <td
-                    className={`matchup-detail-td matchup-detail-td-pts ${!isTop10Pts && p.points === 0 ? 'matchup-detail-cell-muted' : ''}${ptsIncludesProvisional ? ' matchup-detail-cell-provisional' : ''}`}
-                    title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : undefined}
-                  >
-                    {isTop10Pts ? (
-                      <span className="matchup-detail-stat-badge matchup-detail-rank-highlight" title="Top 10 in GW for points">
-                        {formatNumber(p.points)}
-                      </span>
-                    ) : (
-                      formatNumber(p.points)
-                    )}
-                  </td>
                   {STAT_KEYS.map(({ key, col }) => renderStatCell(p, { key, col }))}
                 </tr>
               )
             })}
           </tbody>
         </table>
+        </div>
         </div>
       </div>
     </div>
@@ -327,7 +331,7 @@ function bonusPlayersOnly(merged, isProvisional) {
   return sorted.slice(0, 3)
 }
 
-function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0 }) {
+function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick }) {
   const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
@@ -542,6 +546,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                     fixtureStatus={status}
                     fixtureId={fpl_fixture_id}
                     onTableAreaClick={onToggle}
+                    onPlayerClick={onPlayerClick}
                   />
                 </div>
               )}
@@ -601,6 +606,8 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const [expandedId, setExpandedId] = useState(null)
   const [isTopPerformersExpanded, setIsTopPerformersExpanded] = useState(false)
   const [performerPageIndex, setPerformerPageIndex] = useState(0)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [selectedPlayerName, setSelectedPlayerName] = useState('')
   const firstScheduledRef = useRef(null)
   const prevShowH2HRef = useRef(false)
   const matchupGridRef = useRef(null)
@@ -786,6 +793,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 lastH2HPlayerStatsLoading={lastH2HPlayerStatsLoading}
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
+                onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
               />
             </div>
             )
@@ -793,6 +801,15 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             </div>
           </div>
         </>
+      )}
+      {selectedPlayerId != null && createPortal(
+        <PlayerDetailModal
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          gameweek={gameweek}
+          onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
+        />,
+        document.body
       )}
     </div>
   )

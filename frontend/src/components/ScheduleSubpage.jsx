@@ -7,8 +7,10 @@ import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useFixturePlayerStats } from '../hooks/useFixturePlayerStats'
 import { useToast } from '../contexts/ToastContext'
+import { useGameweekData } from '../hooks/useGameweekData'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import { MatchPlayerTable } from './MatchesSubpage'
+import PlayerDetailModal from './PlayerDetailModal'
 import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './MatchesSubpage.css'
 import './StatsSubpage.css'
@@ -81,11 +83,12 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
   const demoteClass = isDifficultyHidden ? ' schedule-cell-difficulty-demoted' : ''
   const canToggleByValue = strength != null && onToggleDifficultyByValue
+  const difficultyBgClass = strength != null && strength >= 1 && strength <= 5 ? ` schedule-cell--difficulty-bg-${strength}` : ''
 
   return (
     <td
       colSpan={colSpan}
-      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}`}
+      className={`schedule-cell schedule-cell-abbr-only ${opponent.isHome ? 'schedule-cell-home' : 'schedule-cell-away'} ${resultClass} ${canOpenPopup ? 'schedule-cell-clickable' : ''}${compact ? ' schedule-cell--compact' : ''}${difficultyBgClass}`}
       title={opponent.team_name ?? short}
       role={canOpenPopup ? 'button' : undefined}
       tabIndex={canOpenPopup ? 0 : undefined}
@@ -121,6 +124,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
 export default function ScheduleSubpage() {
   const { scheduleMatrix, gameweeks, loading, teamMap, nextGwId } = useScheduleData()
+  const { gameweek } = useGameweekData('current')
   const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
   const { teamIds, getOpponents, getOpponent, slotsPerGw } = scheduleMatrix
   const mapForRow = teamMap || {}
@@ -139,10 +143,17 @@ export default function ScheduleSubpage() {
   const [popupCell, setPopupCell] = useState(null)
   const [hiddenDifficultyValues, setHiddenDifficultyValues] = useState(() => new Set())
   const [hasCustomizerChanges, setHasCustomizerChanges] = useState(false)
+  const [hasCustomizerOverrides, setHasCustomizerOverrides] = useState(false)
   const [recommendationsExpanded, setRecommendationsExpanded] = useState(false)
   const [showBuySellInfo, setShowBuySellInfo] = useState(false)
+  const [selectedPlayerId, setSelectedPlayerId] = useState(null)
+  const [selectedPlayerName, setSelectedPlayerName] = useState('')
   const scheduleCustomizerRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
+
+  useEffect(() => {
+    if (customizePopoverOpen) setHasCustomizerChanges(false)
+  }, [customizePopoverOpen])
 
   const popupLastH2H = popupCell ? lastH2HMap[pairKey(popupCell.rowTeamId, popupCell.opponentTeamId)] ?? null : null
   const reverseFixtureId = popupLastH2H?.fpl_fixture_id ?? null
@@ -327,18 +338,16 @@ export default function ScheduleSubpage() {
       <div className="research-schedule-subpage">
         <div className="research-schedule-sticky-header">
           <div className="research-schedule-toolbar">
-            <div className="schedule-header-icon-group">
+            <div className="schedule-header-icon-group schedule-header-icon-group--right">
               <button
                 type="button"
-                className="stats-filter-btn schedule-filter-btn"
+                className="stats-filter-btn stats-compare-btn schedule-filter-btn"
                 disabled
                 aria-label="Customize difficulty (unavailable while loading)"
               >
                 <SlidersHorizontal size={14} strokeWidth={2} />
                 <span className="stats-toolbar-btn-label">Customize</span>
               </button>
-            </div>
-            <div className="schedule-header-icon-group schedule-header-icon-group--right">
               <button
                 type="button"
                 className="stats-filter-btn schedule-filter-btn"
@@ -346,6 +355,7 @@ export default function ScheduleSubpage() {
                 aria-label="Schedule view options (unavailable while loading)"
               >
                 <Filter size={14} strokeWidth={2} />
+                <span className="stats-toolbar-btn-label">Filter</span>
               </button>
             </div>
           </div>
@@ -362,10 +372,10 @@ export default function ScheduleSubpage() {
       <div className="research-schedule-subpage">
         <div className="research-schedule-sticky-header">
 <div className="research-schedule-toolbar">
-              <div className="schedule-header-icon-group">
+              <div className="schedule-header-icon-group schedule-header-icon-group--right">
                 <button
                   type="button"
-                  className="stats-filter-btn schedule-filter-btn"
+                  className="stats-filter-btn stats-compare-btn schedule-filter-btn"
                   onClick={() => setCustomizePopoverOpen(true)}
                   aria-label="Customize difficulty"
                   aria-expanded={false}
@@ -374,8 +384,6 @@ export default function ScheduleSubpage() {
                   <SlidersHorizontal size={14} strokeWidth={2} />
                   <span className="stats-toolbar-btn-label">Customize</span>
                 </button>
-              </div>
-              <div className="schedule-header-icon-group schedule-header-icon-group--right">
                 <button
                   type="button"
                   className="stats-filter-btn schedule-filter-btn"
@@ -383,6 +391,7 @@ export default function ScheduleSubpage() {
                   aria-expanded={false}
                 >
                   <Filter size={14} strokeWidth={2} />
+                  <span className="stats-toolbar-btn-label">Filter</span>
                 </button>
               </div>
           </div>
@@ -398,10 +407,10 @@ export default function ScheduleSubpage() {
     <div className="research-schedule-subpage">
       <div className="research-schedule-sticky-header">
         <div className="research-schedule-toolbar">
-          <div className="schedule-header-icon-group">
+          <div className="schedule-header-icon-group schedule-header-icon-group--right">
             <button
               type="button"
-              className={`stats-filter-btn schedule-filter-btn ${customizePopoverOpen ? 'stats-filter-btn-close' : ''} ${(config?.teamStrengthOverrides ?? config?.teamAttackOverrides ?? config?.teamDefenceOverrides) ? 'stats-compare-btn--active' : ''}`}
+              className={`stats-filter-btn stats-compare-btn schedule-filter-btn ${customizePopoverOpen ? 'stats-filter-btn-close' : ''} ${(config?.teamStrengthOverrides ?? config?.teamAttackOverrides ?? config?.teamDefenceOverrides) ? 'stats-compare-btn--active' : ''}`}
               onClick={() => setCustomizePopoverOpen((open) => !open)}
               aria-label={customizePopoverOpen ? 'Close customize' : 'Customize difficulty'}
               aria-expanded={customizePopoverOpen}
@@ -410,8 +419,6 @@ export default function ScheduleSubpage() {
               <SlidersHorizontal size={14} strokeWidth={2} />
               <span className="stats-toolbar-btn-label">Customize</span>
             </button>
-          </div>
-          <div className="schedule-header-icon-group schedule-header-icon-group--right">
             <button
               type="button"
               className={`stats-filter-btn schedule-filter-btn ${filterPopoverOpen ? 'stats-filter-btn-close' : ''} ${hasActiveScheduleFilters ? 'stats-compare-btn--active' : ''}`}
@@ -421,6 +428,7 @@ export default function ScheduleSubpage() {
               aria-haspopup="dialog"
             >
               <Filter size={14} strokeWidth={2} />
+              <span className="stats-toolbar-btn-label">Filter</span>
             </button>
           </div>
         </div>
@@ -450,15 +458,15 @@ export default function ScheduleSubpage() {
             onClick={() => setRecommendationsExpanded((v) => !v)}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRecommendationsExpanded((v) => !v); } }}
             aria-expanded={recommendationsExpanded}
-            aria-label={recommendationsExpanded ? 'Collapse Buy / Sell' : 'Expand Buy / Sell'}
+            aria-label={recommendationsExpanded ? 'Collapse Fixture Summary' : 'Expand Fixture Summary'}
           >
-            <span className="schedule-recommendations-bento-title">Buy / Sell</span>
+            <span className="schedule-recommendations-bento-title">Fixture Summary</span>
             <span className="schedule-recommendations-bento-header-icons">
               <button
                 type="button"
                 className="schedule-recommendations-bento-info-btn"
                 onClick={(e) => { e.stopPropagation(); setShowBuySellInfo((v) => !v); }}
-                aria-label={showBuySellInfo ? 'Hide formula description' : 'How Buy / Sell is calculated'}
+                aria-label={showBuySellInfo ? 'Hide formula description' : 'How Easy / Hard is calculated'}
                 aria-expanded={showBuySellInfo}
                 title="How this is calculated"
               >
@@ -475,16 +483,16 @@ export default function ScheduleSubpage() {
           </div>
           {showBuySellInfo && recommendationsExpanded && (
             <p className="schedule-recommendations-bento-formula-desc">
-              Average Opponent Category (1–5) over the next 4 or 10 gameweeks. Buy = lowest avg (easiest run). Sell = highest avg (hardest run).
+              Average Opponent Category (1–5) over the next 4 or 10 gameweeks. Easy = lowest avg (easiest run). Hard = highest avg (hardest run).
             </p>
           )}
           {recommendationsExpanded && (
-            <section className="research-schedule-recommendations" aria-live="polite" aria-label="Buy and sell teams by run">
+            <section className="research-schedule-recommendations" aria-live="polite" aria-label="Easy and hard fixture runs by period">
               <div className="schedule-recommendations-grid">
                 <div className="schedule-recommendations-corner" aria-hidden />
                 <div className="schedule-recommendations-col-header">Short Term (4 GW)</div>
                 <div className="schedule-recommendations-col-header">Long Term (10 GW)</div>
-                <div className="schedule-recommendations-row-header">Buy</div>
+                <div className="schedule-recommendations-row-header">Easy</div>
                 <div className="schedule-recommendations-panel schedule-recommendations-panel--buy">
                   <ul className="research-schedule-recommendations-list">
                     {scheduleRecommendations.buyShort.map((teamId) => {
@@ -513,7 +521,7 @@ export default function ScheduleSubpage() {
                     })}
                   </ul>
                 </div>
-                <div className="schedule-recommendations-row-header">Sell</div>
+                <div className="schedule-recommendations-row-header">Hard</div>
                 <div className="schedule-recommendations-panel schedule-recommendations-panel--sell">
                   <ul className="research-schedule-recommendations-list">
                     {scheduleRecommendations.sellShort.map((teamId) => {
@@ -553,21 +561,23 @@ export default function ScheduleSubpage() {
             <div className="stats-filter-overlay-panel stats-filter-overlay-panel--customize">
               <div className="schedule-filter-popover-header">
                 <span className="schedule-filter-popover-title">Customize difficulty</span>
-                <button type="button" className="schedule-filter-popover-close" onClick={() => setCustomizePopoverOpen(false)} aria-label="Close">
-                  <X size={20} strokeWidth={2} />
-                </button>
+                <div className="schedule-filter-popover-header-actions">
+                  {hasCustomizerOverrides && (
+                    <button
+                      type="button"
+                      className="schedule-filter-popover-reset"
+                      onClick={() => scheduleCustomizerRef.current?.resetAll?.()}
+                      aria-label="Reset all difficulty overrides to default"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button type="button" className="schedule-filter-popover-close" onClick={() => setCustomizePopoverOpen(false)} aria-label="Close">
+                    <X size={20} strokeWidth={2} />
+                  </button>
+                </div>
               </div>
               <div className="stats-filter-overlay-body stats-filter-overlay-body--customize">
-                <div className="schedule-legend-inline schedule-legend-inline--popup" aria-label="Opponent difficulty: 1 easiest, 5 hardest">
-                  <div className="schedule-legend-inline-pills">
-                    {[1, 2, 3, 4, 5].map((d) => (
-                      <span key={d} className={`schedule-cell-difficulty-pill schedule-cell-difficulty-pill--${d} schedule-legend-inline-pill`}>
-                        <span className="schedule-cell-abbr-display">{d}</span>
-                      </span>
-                    ))}
-                  </div>
-                  <span className="schedule-legend-inline-label">Difficulty: Easy → Hard</span>
-                </div>
                 {loading ? (
                   <p className="customize-section-loading">Loading teams…</p>
                 ) : (
@@ -582,6 +592,7 @@ export default function ScheduleSubpage() {
                       defence: config?.teamDefenceOverrides ?? null,
                     }}
                     onHasChangesChange={setHasCustomizerChanges}
+                    onHasOverridesChange={setHasCustomizerOverrides}
                     onSave={({ strength, attack, defence }) => {
                       if (strength != null) saveTeamStrengthOverrides(strength)
                       if (attack != null) saveTeamAttackOverrides(attack)
@@ -601,7 +612,8 @@ export default function ScheduleSubpage() {
                 <button
                   type="button"
                   className={`stats-filter-overlay-save ${hasCustomizerChanges ? 'stats-filter-overlay-save--active' : ''}`}
-                  onClick={() => scheduleCustomizerRef.current?.save()}
+                  onClick={() => hasCustomizerChanges && scheduleCustomizerRef.current?.save()}
+                  disabled={!hasCustomizerChanges}
                   aria-label="Save difficulty changes"
                 >
                   Save
@@ -908,6 +920,7 @@ export default function ScheduleSubpage() {
                         top10ByStat={null}
                         hideHeader
                         useDashForDnp
+                        onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
                       />
                     </div>
                   )}
@@ -918,6 +931,14 @@ export default function ScheduleSubpage() {
           </div>
         </div>,
         document.body
+      )}
+      {selectedPlayerId != null && (
+        <PlayerDetailModal
+          playerId={selectedPlayerId}
+          playerName={selectedPlayerName}
+          gameweek={gameweek}
+          onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
+        />
       )}
     </div>
   )

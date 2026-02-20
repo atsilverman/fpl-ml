@@ -96,9 +96,9 @@
   opacity: 0.25;
 }
 
-/* Bar value label: pill background (bar-width), theme-aware; corner radius matches bars */
+/* Bar value label: pill background (same width as bar), subtle fill to promote the value */
 .player-gw-chart-bar-label-pill {
-  fill: var(--bg-card, #ffffff);
+  fill: color-mix(in srgb, var(--text-secondary, #64748b) 10%, var(--bg-card, #ffffff));
   pointer-events: none;
 }
 

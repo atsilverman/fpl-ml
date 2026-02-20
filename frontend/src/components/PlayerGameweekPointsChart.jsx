@@ -175,10 +175,8 @@ export default function PlayerGameweekPointsChart({
       return Math.max(0, yScale(0) - yScale(displayVal))
     }
     const getBarFillFor = (d) => getBarFill(d, getVal)
-    const getLabelY = (d) => {
-      const v = getVal(d)
-      const displayVal = v < 0 ? -v : v
-      return yScale(displayVal) - 10
+    const getLabelY = (d, pillHeight, barLabelGap) => {
+      return getBarY(d) - barLabelGap - pillHeight / 2
     }
 
     const useThresholdStyling = isThresholdStat(statKey, position, thresholdLine)
@@ -336,9 +334,11 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-    // Bar value labels: pill (bar-width) + text; theme-aware background.
+    // Bar value labels: pill (bar-width) + text; theme-aware background. Gap between pill and bar top.
     const barLabelFontSize = filter === 'last6' ? 11 : filter === 'last12' ? 10 : 9 // GW20+ uses 9
     const pillHeight = barLabelFontSize + 8
+    const barLabelGap = 6
+    const pillRx = 4
     const labelData = filteredData.filter((d) => getVal(d) !== 0)
     const bandWidth = xScale.bandwidth()
     g.selectAll('.player-gw-chart-bar-label-wrap')
@@ -349,7 +349,7 @@ export default function PlayerGameweekPointsChart({
           group.each(function (d) {
             const el = d3.select(this)
             const centerX = xScale(String(d.gameweek)) + bandWidth / 2
-            const labelY = getLabelY(d)
+            const labelY = getLabelY(d, pillHeight, barLabelGap)
             const textStr = formatStatLabel(getVal(d), statKey)
             const negative = getVal(d) < 0
             el.append('rect')
@@ -358,8 +358,8 @@ export default function PlayerGameweekPointsChart({
               .attr('y', -pillHeight / 2)
               .attr('width', bandWidth)
               .attr('height', pillHeight)
-              .attr('rx', 2)
-              .attr('ry', 2)
+              .attr('rx', pillRx)
+              .attr('ry', pillRx)
             el.append('text')
               .attr('class', `player-gw-chart-bar-label ${negative ? 'player-gw-chart-bar-label--negative' : ''}`)
               .attr('x', 0)
@@ -378,7 +378,7 @@ export default function PlayerGameweekPointsChart({
           update.each(function (d) {
             const el = d3.select(this)
             const centerX = xScale(String(d.gameweek)) + bandWidth / 2
-            const labelY = getLabelY(d)
+            const labelY = getLabelY(d, pillHeight, barLabelGap)
             const textStr = formatStatLabel(getVal(d), statKey)
             const negative = getVal(d) < 0
             el.select('.player-gw-chart-bar-label-pill')
@@ -386,8 +386,8 @@ export default function PlayerGameweekPointsChart({
               .attr('y', -pillHeight / 2)
               .attr('width', bandWidth)
               .attr('height', pillHeight)
-              .attr('rx', 2)
-              .attr('ry', 2)
+              .attr('rx', pillRx)
+              .attr('ry', pillRx)
             const text = el.select('.player-gw-chart-bar-label')
             text
               .attr('class', `player-gw-chart-bar-label ${negative ? 'player-gw-chart-bar-label--negative' : ''}`)

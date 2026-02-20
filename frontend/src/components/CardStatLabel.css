@@ -1,0 +1,25 @@
+.card-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-stat-label-icon {
+  flex-shrink: 0;
+}
+
+.card-stat-label--yc {
+  color: #eab308;
+}
+
+.card-stat-label--rc {
+  color: #dc2626;
+}
+
+html[data-theme="dark"] .card-stat-label--yc {
+  color: #facc15;
+}
+
+html[data-theme="dark"] .card-stat-label--rc {
+  color: #ef4444;
+}

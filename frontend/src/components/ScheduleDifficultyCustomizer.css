@@ -220,26 +220,31 @@
   align-items: center;
 }
 
-/* Match native range thumb range: thumb center runs from 6px to (100% - 6px) for 12px thumb */
+/* Ghost dot: FPL default position; behind slider thumb so thumb is on top */
 .schedule-customizer-ghost-dot {
   position: absolute;
-  left: calc(6px + (100% - 12px) * var(--ghost-pct, 0));
+  left: calc(14px + (100% - 14px) * var(--ghost-pct, 0));
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.18);
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid var(--bg-card);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
 }
 
 html[data-theme="dark"] .schedule-customizer-ghost-dot {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.4);
+  border-color: var(--bg-secondary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 .schedule-customizer-slider {
   position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   height: 10px;
@@ -255,29 +260,90 @@ html[data-theme="dark"] .schedule-customizer-ghost-dot {
 .schedule-customizer-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
 }
 
 .schedule-customizer-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fff 0%, #f1f5f9 100%);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(180deg, #fff 0%, #e2e8f0 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 0 0 2px rgba(0, 0, 0, 0.12);
   cursor: pointer;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
 }
 
 html[data-theme="dark"] .schedule-customizer-slider::-webkit-slider-thumb,
 html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
-  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Slider thumb colored by difficulty (1 easy → 5 hard); dark theme uses these as-is */
+.schedule-customizer-slider--1::-webkit-slider-thumb,
+.schedule-customizer-slider--1::-moz-range-thumb {
+  background: var(--accent-green, #10b981);
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 70%, #000);
+}
+.schedule-customizer-slider--2::-webkit-slider-thumb,
+.schedule-customizer-slider--2::-moz-range-thumb {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 60%, var(--border-color));
+}
+.schedule-customizer-slider--3::-webkit-slider-thumb,
+.schedule-customizer-slider--3::-moz-range-thumb {
+  background: var(--text-secondary);
+  border-color: var(--border-color);
+}
+.schedule-customizer-slider--4::-webkit-slider-thumb,
+.schedule-customizer-slider--4::-moz-range-thumb {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 80%, #fff);
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 60%, var(--border-color));
+}
+.schedule-customizer-slider--5::-webkit-slider-thumb,
+.schedule-customizer-slider--5::-moz-range-thumb {
+  background: var(--accent-red, #ef4444);
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 70%, #000);
+}
+
+/* Light theme: stronger definition so thumb reads on light track */
+html:not([data-theme="dark"]) .schedule-customizer-slider--1::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--1::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #059669;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--2::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--2::-moz-range-thumb {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-green, #10b981) 75%, #0f766e);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--3::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--3::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #64748b;
+  background: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--4::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--4::-moz-range-thumb {
+  border-width: 2px;
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, #b91c1c);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+html:not([data-theme="dark"]) .schedule-customizer-slider--5::-webkit-slider-thumb,
+html:not([data-theme="dark"]) .schedule-customizer-slider--5::-moz-range-thumb {
+  border-width: 2px;
+  border-color: #dc2626;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 .schedule-customizer-value-pill {

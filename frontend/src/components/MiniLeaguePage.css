@@ -853,6 +853,47 @@
   flex-shrink: 0;
 }
 
+/* Chips subpage: Manager + WC2, TC2, BB2, FH2 (second-half chip usage); same bento table styling */
+.league-standings-chips-view-wrap {
+  width: 100%;
+  min-width: 0;
+}
+.league-standings-page .league-standings-bento-table.league-standings-chips-table th.league-standings-chips-th-manager,
+.league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-manager {
+  padding-left: 22px;
+}
+.league-standings-page .league-standings-bento-table.league-standings-chips-table th.league-standings-chips-th-chip {
+  text-align: center;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+.league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
+  text-align: center;
+  vertical-align: middle;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 36px;
+}
+.league-standings-chips-badge-unplayed {
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.5));
+  font-size: 11px;
+  font-weight: 400;
+}
+.league-standings-chips-table .league-standings-chips-badge-played {
+  display: inline-block;
+  min-width: 24px;
+}
+.league-standings-chips-loading {
+  text-align: center;
+  padding: 16px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
 /* League transfers table (when transfers view toggle is on) — stacked list like BentoCard; no horizontal scroll, fit container */
 .league-transfers-table-wrap {
   width: 100%;
@@ -970,21 +1011,17 @@
   vertical-align: middle;
 }
 
-/* Visually demote rows for managers who made no transfers (strong demotion in transfers view) */
-.league-transfers-table .league-transfers-row--no-transfers td {
-  opacity: 0.1;
+/* Visually demote only the transfers cell when manager made no transfers; manager name and fill stay normal */
+.league-transfers-table .league-transfers-row--no-transfers .league-transfers-cell-transfers {
+  opacity: 0.5;
   color: var(--text-secondary);
-  background: color-mix(in srgb, var(--text-secondary) 4%, var(--bg-primary)) !important;
+  background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
   font-weight: 400;
 }
-.league-transfers-table .league-transfers-row--no-transfers .league-transfers-cell-manager {
-  background: color-mix(in srgb, var(--text-secondary) 4%, var(--bg-primary)) !important;
-}
 
-/* No-transfers row for current user: keep demotion (opacity/color) but use manager “you” background */
-.league-transfers-table .league-transfers-row--no-transfers.league-standings-bento-row-you td,
-.league-transfers-table .league-transfers-row--no-transfers.league-standings-bento-row-you .league-transfers-cell-manager {
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary)) !important;
+/* No-transfers row for current user: same demotion on transfers cell only */
+.league-transfers-table .league-transfers-row--no-transfers.league-standings-bento-row-you .league-transfers-cell-transfers {
+  background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
 }
 
 .league-transfers-cell-manager {
@@ -2004,24 +2041,136 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
     color: var(--text-primary);
   }
 }
-.player-detail-stat-popup {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 6px;
-  min-width: 180px;
+/* Player detail chart stat popup: compact stat picker centered on screen */
+.player-detail-stat-popup.stats-filter-overlay-panel {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+  width: 280px;
+  max-width: min(280px, calc(100vw - 24px));
+  max-height: min(calc(100vh - 120px), 380px);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.player-detail-stat-popup-row {
+.player-detail-stat-popup .stats-filter-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.player-detail-stat-popup .stats-filter-overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.player-detail-stat-popup .stats-filter-overlay-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.player-detail-stat-popup .stats-filter-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
   cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
 }
 @media (hover: hover) {
-  .player-detail-stat-popup-row:hover {
+  .player-detail-stat-popup .stats-filter-overlay-close:hover {
+    color: var(--text-primary);
     background: var(--bg-secondary);
   }
 }
-.player-detail-stat-popup-row--active .gw-legend-popup-text {
-  font-weight: 700;
-  color: var(--accent-blue);
+.player-detail-stat-popup .stats-filter-overlay-body {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.player-detail-stat-popup .stats-filter-section {
+  min-width: 0;
+}
+.player-detail-stat-popup .stats-filter-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.player-detail-stat-popup .stats-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.player-detail-stat-popup .stats-filter-option-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+@media (hover: hover) {
+  .player-detail-stat-popup .stats-filter-option-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+.player-detail-stat-popup .stats-filter-option-btn--active {
+  color: var(--accent-blue, #3b82f6);
+  border-color: var(--accent-blue, #3b82f6);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-secondary));
+}
+.player-detail-stat-popup .stats-filter-overlay-footer {
+  flex-shrink: 0;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.player-detail-stat-popup .stats-filter-overlay-done {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
+  border: 1px solid var(--accent-blue, #3b82f6);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .player-detail-stat-popup .stats-filter-overlay-done:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+    border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+  }
+}
+.player-detail-stat-popup .stats-filter-overlay-done:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
 /* Chart bento: height fits chart + gameweek filter; size to content so nothing is cropped, modal body scrolls */
@@ -2042,7 +2191,8 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 }
 
 /* Schedule bento inside player modal: beat .bento-card fixed height, size to content */
-.player-detail-modal-body .schedule-bento {
+.player-detail-modal-body .schedule-bento,
+.player-detail-modal-body .schedule-opponent-stats-table {
   height: auto;
   min-height: min-content;
   max-height: none;
