@@ -1,4 +1,5 @@
 import { useSearchParams, useOutletContext } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
 import { Swords, UserStar, ShieldCheck, Radio } from 'lucide-react'
 import DefconSubpage from './DefconSubpage'
 import FeedSubpage from './FeedSubpage'
@@ -19,6 +20,15 @@ export default function GameweekPage() {
   const { toggleBonus = false, showH2H = false, setShowH2H } = outletContext
   const view = searchParams.get('view') || 'matches'
   const simulateStatuses = searchParams.get('simulate') === '1' || searchParams.get('simulate') === 'status'
+
+  const prevViewRef = useRef(view)
+  const [bonusAnimationKey, setBonusAnimationKey] = useState(0)
+  useEffect(() => {
+    if (view === 'bonus' && prevViewRef.current !== 'bonus') {
+      setBonusAnimationKey((k) => k + 1)
+    }
+    prevViewRef.current = view
+  }, [view])
 
   const pageIndex = viewToIndex(view)
   const setView = (v) => setSearchParams({ ...Object.fromEntries(searchParams.entries()), view: v }, { replace: true })
@@ -72,7 +82,7 @@ export default function GameweekPage() {
             <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={false} showH2H={showH2H} setShowH2H={setShowH2H} />
           </div>
           <div className={`gameweek-subpage gameweek-subpage-bonus`}>
-            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={true} showH2H={showH2H} setShowH2H={setShowH2H} />
+            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={true} showH2H={showH2H} setShowH2H={setShowH2H} bonusAnimationKey={view === 'bonus' ? bonusAnimationKey : 0} />
           </div>
           <div className="gameweek-subpage gameweek-subpage-defcon">
             <DefconSubpage isActive={view === 'defcon'} />

@@ -10,6 +10,7 @@
 .research-stats-player-name--owned {
   color: var(--accent-green, #10b981);
   font-weight: 600;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
 }
 
 /* Top 6/12 pill: same blue for all ranks 1–6/12, consistent */
@@ -179,23 +180,9 @@
   justify-content: flex-end;
 }
 
-/* Mobile: single Player/Team button; desktop: slider with full labels */
+/* Desktop: slider with Team/Player labels; mobile: hidden (use filter popup first row) */
 .research-stats-view-toggle {
   display: none;
-}
-
-.stats-view-toggle-btn-mobile {
-  display: inline-flex;
-}
-
-.stats-view-toggle-btn--active {
-  color: var(--accent-blue);
-  border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
-}
-
-.stats-view-toggle-btn--active svg {
-  fill: currentColor;
 }
 
 @media (min-width: 769px) {
@@ -221,11 +208,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(13, 148, 136, 0.28);
   }
 
-  /* Single button only on mobile; hide on desktop */
-  .research-stats-page .research-stats-toolbar-left .stats-view-toggle-btn-mobile {
-    display: none !important;
-  }
-
   .research-stats-toolbar-right {
     max-width: 520px;
   }
@@ -246,11 +228,6 @@
   max-width: 320px;
 }
 
-@media (max-width: 768px) {
-  .research-stats-search-wrap {
-    max-width: none;
-  }
-}
 
 .research-stats-search-icon {
   position: absolute;
@@ -287,9 +264,16 @@
   filter: invert(1);
 }
 
-/* Toolbar button label: hidden on mobile, shown on desktop */
+/* Toolbar button label: hidden on mobile except Compare; shown on desktop for all */
 .stats-toolbar-btn-label {
   display: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+/* Compare button: always show icon + label (like desktop) */
+.stats-compare-btn .stats-toolbar-btn-label {
+  display: inline;
 }
 
 .stats-filter-btn {
@@ -309,11 +293,18 @@
   transition: border-color 0.15s, color 0.15s;
 }
 
+/* Compare button: allow width for label on all viewports */
+.stats-compare-btn {
+  width: auto;
+  min-width: 28px;
+  padding-left: 14px;
+  padding-right: 14px;
+  gap: 8px;
+}
+
 @media (min-width: 769px) {
   .stats-toolbar-btn-label {
     display: inline;
-    font-size: 12px;
-    white-space: nowrap;
   }
   .stats-filter-btn {
     width: auto;
@@ -335,14 +326,24 @@
   color: var(--text-primary);
 }
 
-.stats-compare-btn {
-  /* same as .stats-filter-btn */
-}
-
 .stats-compare-btn--active {
   color: var(--accent-blue);
   border-color: var(--accent-blue);
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-card));
+}
+
+/* Compare mode: show Exit with X icon and red to indicate exit action */
+.stats-compare-btn--exit-mode {
+  color: var(--accent-red, #ef4444);
+  border-color: var(--accent-red, #ef4444);
+  background: var(--bg-card);
+}
+@media (hover: hover) {
+  .stats-compare-btn--exit-mode:hover {
+    color: var(--accent-red, #ef4444);
+    border-color: var(--accent-red, #ef4444);
+    background: color-mix(in srgb, var(--accent-red, #ef4444) 12%, var(--bg-card));
+  }
 }
 
 .research-stats-compare-message {
@@ -369,8 +370,11 @@
 }
 
 .research-stats-compare-section {
+  margin-top: 0;
   margin-bottom: 12px;
+  padding-top: 12px;
   padding-bottom: 12px;
+  border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -445,6 +449,9 @@
 }
 
 .research-stats-compare-details {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   font-weight: 600;
   color: #fff;
@@ -599,6 +606,27 @@
 .research-stats-compare-details-tr:last-child {
   border-bottom: none;
 }
+
+/* Section header row between stat categories (General, Attacking, Defending) */
+.research-stats-compare-details-tr--section-header {
+  border-bottom: none;
+  vertical-align: middle;
+}
+.research-stats-compare-details-td-section-header {
+  padding: 10px 12px 6px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.04));
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.research-stats-compare-details-tr--section-header:first-child .research-stats-compare-details-td-section-header {
+  border-top: none;
+  padding-top: 8px;
+}
 .research-stats-compare-details-td-stat {
   padding: 6px 12px;
   color: var(--text-secondary);
@@ -623,10 +651,38 @@
   color: var(--text-primary);
 }
 .research-stats-compare-details-pill--leader {
-  background: var(--compare-leader-bg, rgba(34, 197, 94, 0.2));
-  border-color: var(--compare-leader-border, rgba(34, 197, 94, 0.5));
-  color: var(--compare-leader-text, #15803d);
+  background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-card));
+  border-color: var(--accent-yellow, #eab308);
+  color: var(--accent-yellow, #eab308);
 }
+
+/* Position row in compare details: same badge colors as main table */
+.research-stats-compare-details-table .research-stats-compare-details-pill.gw-top-points-position--1 {
+  background: rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+  border-color: transparent;
+}
+.research-stats-compare-details-table .research-stats-compare-details-pill.gw-top-points-position--2 {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border-color: transparent;
+}
+.research-stats-compare-details-table .research-stats-compare-details-pill.gw-top-points-position--3 {
+  background: rgba(234, 179, 8, 0.25);
+  color: #eab308;
+  border-color: transparent;
+}
+.research-stats-compare-details-table .research-stats-compare-details-pill.gw-top-points-position--4 {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+  border-color: transparent;
+}
+.research-stats-compare-details-table .research-stats-compare-details-pill.gw-top-points-position:not([class*="gw-top-points-position--"]) {
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
+  color: var(--text-secondary);
+  border-color: transparent;
+}
+
 .research-stats-compare-details-pill-sub {
   display: block;
   font-size: 10px;
@@ -808,6 +864,39 @@
   padding: 12px 14px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Prominent Players/Teams slider at top of filter overlay (dictates filters below) */
+.stats-filter-view-toggle-wrap {
+  width: 100%;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+.stats-filter-overlay .stats-filter-view-toggle {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: 40px;
+  padding: 0 8px;
+}
+.stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-slider {
+  height: 28px;
+  top: 6px;
+  background: var(--stats-view-toggle-accent, #14b8a6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(20, 184, 166, 0.25);
+}
+html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-slider {
+  background: var(--stats-view-toggle-accent, #0d9488);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(13, 148, 136, 0.28);
+}
+.stats-filter-overlay .stats-filter-view-toggle[data-options="2"] .subpage-view-toggle-slider {
+  width: calc((100% - 16px - 8px) / 2);
+  transform: translateX(calc(var(--slider-offset, 0) * (100% + 8px)));
+}
+.stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-button {
+  height: 28px;
+  font-size: 12px;
 }
 
 .stats-filter-overlay-footer {
@@ -1086,6 +1175,13 @@
   -webkit-transform: translateZ(0);
   /* Prevent sticky header/column being pulled off on mobile drag */
   overscroll-behavior: none;
+}
+
+/* Compare mode: thin blue border around main table */
+.research-stats-table-wrapper-sync--compare-mode {
+  border: 1px solid var(--accent-blue, #3b82f6);
+  border-radius: 6px;
+  box-sizing: border-box;
 }
 
 /* Player/team column: 120px, single-line layout so names and info fit without extra rows */

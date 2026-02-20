@@ -12,6 +12,7 @@ const MV_TABLE_BY_GW = {
   last12: 'mv_research_player_stats_last_12'
 }
 
+/* goals_conceded omitted from MV until materialized views include it; fallback path still fetches it */
 const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
 
 /**
@@ -54,7 +55,8 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
         expected_goals: Number(row.expected_goals) || 0,
         expected_assists: Number(row.expected_assists) || 0,
         expected_goal_involvements: Number(row.expected_goal_involvements) || 0,
-        expected_goals_conceded: Number(row.expected_goals_conceded) || 0
+        expected_goals_conceded: Number(row.expected_goals_conceded) || 0,
+        goals_conceded: row.goals_conceded ?? 0
       })
     } else {
       existing.total_points += totalPoints
@@ -74,6 +76,7 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
       existing.expected_assists += Number(row.expected_assists) || 0
       existing.expected_goal_involvements += Number(row.expected_goal_involvements) || 0
       existing.expected_goals_conceded += Number(row.expected_goals_conceded) || 0
+      existing.goals_conceded += row.goals_conceded ?? 0
     }
   }
   return Array.from(byPlayer.values())
@@ -103,7 +106,8 @@ function mapRowToPlayer(row, playerMap) {
     expected_goals: Number(row.expected_goals) ?? 0,
     expected_assists: Number(row.expected_assists) ?? 0,
     expected_goal_involvements: Number(row.expected_goal_involvements) ?? 0,
-    expected_goals_conceded: Number(row.expected_goals_conceded) ?? 0
+    expected_goals_conceded: Number(row.expected_goals_conceded) ?? 0,
+    goals_conceded: row.goals_conceded ?? 0
   }
 }
 
@@ -186,7 +190,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       const baseQuery = supabase
         .from('player_gameweek_stats')
         .select(
-          'gameweek, player_id, was_home, total_points, bonus_status, provisional_bonus, bonus, minutes, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+          'gameweek, player_id, was_home, total_points, bonus_status, provisional_bonus, bonus, minutes, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
         )
         .gte('gameweek', 1)
         .lte('gameweek', gw)
@@ -299,7 +303,8 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           expected_goals: s.expected_goals ?? 0,
           expected_assists: s.expected_assists ?? 0,
           expected_goal_involvements: s.expected_goal_involvements ?? 0,
-          expected_goals_conceded: s.expected_goals_conceded ?? 0
+          expected_goals_conceded: s.expected_goals_conceded ?? 0,
+          goals_conceded: s.goals_conceded ?? 0
         }
       })
       return mapped.filter((p) => (p.minutes ?? 0) >= 1)

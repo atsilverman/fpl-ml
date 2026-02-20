@@ -168,6 +168,15 @@ html[data-theme="light"] .bps-chart__bonus-badge--2 {
   align-items: center;
 }
 
+/* Animate bar fill left-to-right when --animate is applied (on load and when expanding) */
+@keyframes bps-bar-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
 .bps-chart__fill {
   position: absolute;
   left: 0;
@@ -175,7 +184,12 @@ html[data-theme="light"] .bps-chart__bonus-badge--2 {
   bottom: 0;
   min-width: 2px;
   border-radius: 4px;
+  transform-origin: left;
+  transform: scaleX(0);
   transition: width 0.2s ease-out;
+}
+.bps-chart__fill--animate {
+  animation: bps-bar-fill 0.4s ease-out both;
 }
 
 /* Top 3 BPS = bonus colors (solid, theme-aligned); rest = neutral */

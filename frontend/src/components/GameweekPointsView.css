@@ -426,6 +426,7 @@
 }
 .gameweek-points-player-name-text--owned-by-you {
   color: var(--accent-green, #10b981);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
 }
 
 /* Captain badge – orange background, white text */
@@ -438,11 +439,9 @@
   margin-left: 4px;
   min-width: 18px;
   height: 14px;
-  padding: 0 4px;
-  border-radius: 3px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+}
+.gameweek-points-captain-badge-inline--tc {
+  background: #b91c1c; /* red-700 – triple captain */
 }
 /* Assistant badge – grey background, darker text */
 .gameweek-points-assistant-badge-inline {

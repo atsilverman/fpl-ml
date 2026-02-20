@@ -333,7 +333,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     return name.length > PLAYER_NAME_MAX_LENGTH ? name.slice(0, PLAYER_NAME_MAX_LENGTH) + '..' : name
                   })()}
                   {captainLabel && (
-                    <span className="gameweek-points-captain-badge-inline">{captainLabel}</span>
+                    <span className={`gameweek-points-captain-badge-inline${captainLabel === 'TC' ? ' gameweek-points-captain-badge-inline--tc' : ''}`}>{captainLabel}</span>
                   )}
                   {assistantLabel && (
                     <span className="gameweek-points-assistant-badge-inline">{assistantLabel}</span>
@@ -566,7 +566,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   { key: 'saves', label: 'S', title: 'Saves' },
                   { key: 'bps', label: 'BPS', title: 'BPS' },
                   { key: 'bonus', label: 'B', title: 'Bonus' },
-                  { key: 'defensive_contribution', label: 'DEF', title: 'Defensive contribution' },
+                  { key: 'defensive_contribution', label: 'DEFCON', title: 'DEFCON' },
                   { key: 'yellow_cards', label: 'YC', title: 'Yellow cards' },
                   { key: 'red_cards', label: 'RC', title: 'Red cards' },
                   { key: 'expected_goals', label: 'xG', title: 'Expected goals' },

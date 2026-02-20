@@ -642,6 +642,30 @@
   overscroll-behavior: none;
 }
 
+/* Desktop: bento body and table wrapper as scroll container so trackpad/wheel can scroll the table */
+@media (min-width: 769px) {
+  .mini-league-page .league-standings-bento.league-standings-page .league-standings-bento-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mini-league-page .league-standings-bento-table-wrapper {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: auto;
+  }
+
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table-wrap {
+    overflow: visible;
+  }
+}
+
 /* Desktop: header in normal flow above first data row (like a data table); no sticky to avoid misalignment */
 @media (min-width: 769px) {
   .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead,
@@ -1282,6 +1306,10 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   min-width: 0;
   white-space: nowrap;
 }
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank-value {
+  font-size: 6px;
+  font-weight: 300;
+}
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-change-badge {
   flex-shrink: 0;
 }
@@ -1780,6 +1808,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   font-size: 11px;
   font-weight: 600;
   color: var(--accent-green, #10b981);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
 }
 
 /* Player detail modal (same layout as manager modal, stacked above when open) */

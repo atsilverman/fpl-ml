@@ -62,7 +62,7 @@ const CHIP_COLORS = {
   wildcard: '#8b5cf6',
   freehit: '#3b82f6',
   bboost: '#06b6d4',
-  '3xc': '#dc2626' /* red-600: distinct from captain (C) orange */
+  '3xc': '#b91c1c' /* red-700: distinct from captain (C) orange */
 }
 
 /** Display label for active chip badge: WC1/WC2 for wildcard by gameweek, else short label. Normalizes chip to lowercase for lookup. */

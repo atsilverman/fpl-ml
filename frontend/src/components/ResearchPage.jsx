@@ -7,7 +7,7 @@ import './HomePage.css'
 import './ResearchPage.css'
 
 const RESEARCH_VIEW_ORDER = ['stats', 'schedule', 'price-changes']
-const RESEARCH_VIEW_LABELS = { 'price-changes': 'Price Changes', schedule: 'Fixtures', stats: 'Stats' }
+const RESEARCH_VIEW_LABELS = { 'price-changes': 'Price Changes', schedule: 'Fixtures', stats: 'Statistics' }
 const RESEARCH_VIEW_ICONS = { 'price-changes': CirclePoundSterling, schedule: CalendarDays, stats: ListOrdered }
 const VALID_VIEWS = ['stats', 'schedule', 'price-changes']
 

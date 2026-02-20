@@ -30,7 +30,7 @@ const CHIP_DISPLAY = {
   wildcard: { label: (gw) => (gw != null && gw <= 19 ? 'WC1' : 'WC2'), color: '#8b5cf6' },
   freehit: { label: () => 'FH', color: '#3b82f6' },
   bboost: { label: () => 'BB', color: '#06b6d4' },
-  '3xc': { label: () => 'TC', color: '#dc2626' } /* red-600: distinct from captain (C) orange */
+  '3xc': { label: () => 'TC', color: '#b91c1c' } /* red-700: distinct from captain (C) orange */
 }
 
 function getChipBadgeInfo(activeChip, gameweek) {

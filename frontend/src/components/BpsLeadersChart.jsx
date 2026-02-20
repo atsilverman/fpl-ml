@@ -1,4 +1,4 @@
-import { useMemo, useRef, useLayoutEffect, useState } from 'react'
+import { useMemo, useRef, useLayoutEffect, useState, useEffect } from 'react'
 import './BpsLeadersChart.css'
 
 const MAX_NAME_LENGTH = 10
@@ -66,9 +66,10 @@ const VALUE_ON_BAR_MIN_WIDTH_PCT = 32
  * Top 3 by BPS (with FPL tiebreakers) are colored: 3 pts = gold, 2 pts = silver, 1 pt = bronze.
  * Optional gameweekMaxBps scales bars to gameweek-wide max so all fixtures share the same scale.
  */
-export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true }) {
+export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true, animateKey }) {
   const barsRef = useRef(null)
   const [contrastByPlayerId, setContrastByPlayerId] = useState({})
+  const [playFillAnimation, setPlayFillAnimation] = useState(false)
 
   const { sortedPlayers, maxBps } = useMemo(() => {
     if (!players?.length) return { sortedPlayers: [], maxBps: 1 }
@@ -102,6 +103,21 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
     if (contrast === 'light') return 'bps-chart__value--on-bar bps-chart__value--contrast-light'
     return 'bps-chart__value--on-bar bps-chart__value--contrast-dark'
   }
+
+  useLayoutEffect(() => {
+    if (!sortedPlayers.length) return
+    const id = requestAnimationFrame(() => setPlayFillAnimation(true))
+    return () => cancelAnimationFrame(id)
+  }, [sortedPlayers.length])
+
+  useEffect(() => {
+    if (animateKey == null || !sortedPlayers.length) return
+    setPlayFillAnimation(false)
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPlayFillAnimation(true))
+    })
+    return () => cancelAnimationFrame(id)
+  }, [animateKey, sortedPlayers.length])
 
   useLayoutEffect(() => {
     if (!sortedPlayers.length || !barsRef.current) return
@@ -187,7 +203,7 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
               </div>
               <div className="bps-chart__track">
                 <div
-                  className={`bps-chart__fill ${barClassForBonus(bonus)}`}
+                  className={`bps-chart__fill ${barClassForBonus(bonus)}${playFillAnimation ? ' bps-chart__fill--animate' : ''}`}
                   style={{ width: `${widthPct}%` }}
                 />
                 <span

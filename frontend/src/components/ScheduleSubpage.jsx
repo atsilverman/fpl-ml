@@ -206,7 +206,6 @@ export default function ScheduleSubpage() {
                 aria-label="Schedule view options (unavailable while loading)"
               >
                 <Filter size={14} strokeWidth={2} />
-                <span className="stats-toolbar-btn-label">Filter</span>
               </button>
             </div>
           </div>
@@ -242,7 +241,6 @@ export default function ScheduleSubpage() {
                 aria-expanded={false}
               >
                 <Filter size={14} strokeWidth={2} />
-                <span className="stats-toolbar-btn-label">Filter</span>
               </button>
             </div>
           </div>
@@ -279,7 +277,6 @@ export default function ScheduleSubpage() {
               aria-haspopup="dialog"
             >
               <Filter size={14} strokeWidth={2} />
-              <span className="stats-toolbar-btn-label">Filter</span>
             </button>
           </div>
         </div>

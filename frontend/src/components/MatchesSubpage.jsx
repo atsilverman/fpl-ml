@@ -55,7 +55,7 @@ const SORT_COLUMNS = [
   ...STAT_KEYS.map(({ key, col }) => ({
     key,
     col,
-    label: key === 'goals' ? 'G' : key === 'assists' ? 'A' : key === 'clean_sheets' ? 'CS' : key === 'saves' ? 'S' : key === 'bps' ? 'BPS' : key === 'bonus' ? 'B' : key === 'defensive_contribution' ? 'DEF' : key === 'yellow_cards' ? 'YC' : key === 'red_cards' ? 'RC' : key === 'expected_goals' ? 'xG' : key === 'expected_assists' ? 'xA' : key === 'expected_goal_involvements' ? 'xGI' : key === 'expected_goals_conceded' ? 'xGC' : key,
+    label: key === 'goals' ? 'G' : key === 'assists' ? 'A' : key === 'clean_sheets' ? 'CS' : key === 'saves' ? 'S' : key === 'bps' ? 'BPS' : key === 'bonus' ? 'B' : key === 'defensive_contribution' ? 'DEFCON' : key === 'yellow_cards' ? 'YC' : key === 'red_cards' ? 'RC' : key === 'expected_goals' ? 'xG' : key === 'expected_assists' ? 'xA' : key === 'expected_goal_involvements' ? 'xGI' : key === 'expected_goals_conceded' ? 'xGC' : key,
     type: 'number'
   }))
 ]
@@ -327,7 +327,7 @@ function bonusPlayersOnly(merged, isProvisional) {
   return sorted.slice(0, 3)
 }
 
-function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false }) {
+function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0 }) {
   const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
@@ -479,6 +479,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                 loading={statsLoading}
                 gameweekMaxBps={gameweekMaxBps}
                 isProvisional={isProvisionalBps}
+                animateKey={bonusAnimationKey}
               />
             </div>
           )}
@@ -518,6 +519,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                   loading={statsLoading}
                   gameweekMaxBps={gameweekMaxBps}
                   isProvisional={isProvisionalBps}
+                  animateKey={bonusAnimationKey}
                 />
               </div>
             )
@@ -583,7 +585,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   )
 }
 
-export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false } = {}) {
+export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false, bonusAnimationKey = 0 } = {}) {
   const { gameweek, loading: gwLoading, dataChecked } = useGameweekData('current')
   const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
@@ -758,6 +760,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 lastH2HPlayerStatsByFixture={lastH2HPlayerStatsByFixture}
                 lastH2HPlayerStatsLoading={lastH2HPlayerStatsLoading}
                 dataChecked={dataChecked ?? false}
+                bonusAnimationKey={bonusAnimationKey}
               />
             </div>
           ))}

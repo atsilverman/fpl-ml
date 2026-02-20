@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Filter, HelpCircle } from 'lucide-react'
+import { Filter, HelpCircle, X } from 'lucide-react'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -51,9 +51,9 @@ function eventLabel(event) {
     case 'goals_conceded':
       return { label: 'Goals conceded', delta: `${pts}${ptsSuffix}` }
     case 'defcon_achieved':
-      return { label: 'Defensive contribution', delta: `${pts}${ptsSuffix}` }
+      return { label: 'DEFCON', delta: `${pts}${ptsSuffix}` }
     case 'defcon_removed':
-      return { label: 'Defensive contribution removed', delta: `${pts}${ptsSuffix}` }
+      return { label: 'DEFCON removed', delta: `${pts}${ptsSuffix}` }
     case 'sixty_plus_minutes':
       return { label: '60+ minutes', delta: `${pts}${ptsSuffix}` }
     default:
@@ -76,7 +76,7 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
 
   return (
     <article
-      className={`feed-event-card${isReversed ? ' feed-event-card--reversed' : ''}${isOwned ? ' feed-event-card--owned' : ''}`}
+      className={`feed-event-card${isReversed ? ' feed-event-card--reversed' : ''}${isOwned ? ' feed-event-card--owned' : ''}${impactIsPositive ? ' feed-event-card--impact-positive' : ''}${impactIsNegative ? ' feed-event-card--impact-negative' : ''}`}
       title={isOwned ? 'Owned by your squad' : undefined}
     >
       <div className="feed-event-card__player">
@@ -112,7 +112,6 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
         </span>
       </div>
       <div className="feed-event-card__impact" title="League impact: net pts vs league average">
-        <span className="feed-event-card__impact-label">Impact</span>
         <span
           className={`feed-event-card__impact-value ${
             impactIsPositive ? 'feed-event-card__impact-value--positive' : ''
@@ -508,17 +507,9 @@ export default function FeedSubpage({ isActive = true }) {
   }
 
   const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || sortBy !== 'time'
-  const showBackdrop = showFilterPopup
 
   return (
     <div className="feed-subpage">
-      {showBackdrop && (
-        <div
-          className="feed-popup-backdrop"
-          aria-hidden
-          onClick={() => setShowFilterPopup(false)}
-        />
-      )}
       {sortedEvents.length > 0 && (
         <>
           <div className="feed-subpage-sticky-header">
@@ -623,121 +614,154 @@ export default function FeedSubpage({ isActive = true }) {
               </div>
             )}
           </div>
-          {showFilterPopup && (
-            <div className="feed-filter-popup" ref={filterPopupRef} role="dialog" aria-label="Feed filters">
-              <div className="feed-filter-section">
-                <div className="feed-filter-section-title">Ownership</div>
-                <div className="feed-filter-buttons">
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${scopeFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setScopeFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${scopeFilter === 'owned' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setScopeFilter('owned')}
-                  >
-                    Owned
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${scopeFilter === 'not-owned' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setScopeFilter('not-owned')}
-                  >
-                    Not owned
-                  </button>
-                </div>
-              </div>
-              <div className="feed-filter-section">
-                <div className="feed-filter-section-title">Sort</div>
-                <div className="feed-filter-buttons">
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${sortBy === 'time' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setSortBy('time')}
-                  >
-                    Time (newest)
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${sortBy === 'impact_positive' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setSortBy('impact_positive')}
-                  >
-                    Impact (+)
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${sortBy === 'impact_negative' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setSortBy('impact_negative')}
-                  >
-                    Impact (−)
-                  </button>
-                </div>
-              </div>
-              <div className="feed-filter-section">
-                <div className="feed-filter-section-title">Position</div>
-                <div className="feed-filter-buttons">
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${positionFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setPositionFilter('all')}
-                  >
-                    All
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${positionFilter === 2 ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setPositionFilter(positionFilter === 2 ? 'all' : 2)}
-                  >
-                    DEF
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${positionFilter === 3 ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setPositionFilter(positionFilter === 3 ? 'all' : 3)}
-                  >
-                    MID
-                  </button>
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${positionFilter === 4 ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setPositionFilter(positionFilter === 4 ? 'all' : 4)}
-                  >
-                    FWD
-                  </button>
-                </div>
-              </div>
-              <div className="feed-filter-section">
-                <div className="feed-filter-section-title">Matchups</div>
-                <div className="feed-filter-matchups">
-                  <button
-                    type="button"
-                    className={`feed-matchup-btn ${matchupFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
-                    onClick={() => setMatchupFilter('all')}
-                  >
-                    All
-                  </button>
-                  {matchups.map((m) => (
-                    <button
-                      key={m.fixtureId}
-                      type="button"
-                      className={`feed-matchup-btn ${Number(matchupFilter) === Number(m.fixtureId) ? 'feed-matchup-btn--active' : ''}`}
-                      onClick={() => setMatchupFilter(Number(matchupFilter) === Number(m.fixtureId) ? 'all' : m.fixtureId)}
-                      title={`${m.homeShort ?? ''} vs ${m.awayShort ?? ''}`}
-                    >
-                      {m.homeShort && <img src={`/badges/${m.homeShort}.svg`} alt="" className="feed-matchup-badge" />}
-                      <span>{m.homeShort ?? '?'}</span>
-                      <span className="feed-matchup-vs">v</span>
-                      {m.awayShort && <img src={`/badges/${m.awayShort}.svg`} alt="" className="feed-matchup-badge" />}
-                      <span>{m.awayShort ?? '?'}</span>
+          {showFilterPopup && typeof document !== 'undefined' && createPortal(
+            <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Feed filters">
+              <div className="stats-filter-overlay-backdrop" onClick={() => setShowFilterPopup(false)} aria-hidden />
+              <div className="stats-filter-overlay-panel" ref={filterPopupRef}>
+                <div className="stats-filter-overlay-header">
+                  <span className="stats-filter-overlay-title">Filters</span>
+                  <div className="stats-filter-overlay-header-actions">
+                    <button type="button" className="stats-filter-overlay-close" onClick={() => setShowFilterPopup(false)} aria-label="Close filters">
+                      <X size={20} strokeWidth={2} />
                     </button>
-                  ))}
+                  </div>
+                </div>
+                <div className="stats-filter-overlay-body">
+                  <div className="feed-filter-sections">
+                    <div className="feed-filter-section">
+                      <div className="feed-filter-section-title">Ownership</div>
+                      <div className="feed-filter-buttons">
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${scopeFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setScopeFilter('all')}
+                          aria-pressed={scopeFilter === 'all'}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${scopeFilter === 'owned' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setScopeFilter('owned')}
+                          aria-pressed={scopeFilter === 'owned'}
+                        >
+                          Owned
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${scopeFilter === 'not-owned' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setScopeFilter('not-owned')}
+                          aria-pressed={scopeFilter === 'not-owned'}
+                        >
+                          Not owned
+                        </button>
+                      </div>
+                    </div>
+                    <div className="feed-filter-section">
+                      <div className="feed-filter-section-title">Sort</div>
+                      <div className="feed-filter-buttons">
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${sortBy === 'time' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setSortBy('time')}
+                          aria-pressed={sortBy === 'time'}
+                        >
+                          Time (newest)
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${sortBy === 'impact_positive' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setSortBy('impact_positive')}
+                          aria-pressed={sortBy === 'impact_positive'}
+                        >
+                          Impact (+)
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${sortBy === 'impact_negative' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setSortBy('impact_negative')}
+                          aria-pressed={sortBy === 'impact_negative'}
+                        >
+                          Impact (−)
+                        </button>
+                      </div>
+                    </div>
+                    <div className="feed-filter-section">
+                      <div className="feed-filter-section-title">Position</div>
+                      <div className="feed-filter-buttons">
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${positionFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setPositionFilter('all')}
+                          aria-pressed={positionFilter === 'all'}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${positionFilter === 2 ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setPositionFilter(positionFilter === 2 ? 'all' : 2)}
+                          aria-pressed={positionFilter === 2}
+                        >
+                          DEF
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${positionFilter === 3 ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setPositionFilter(positionFilter === 3 ? 'all' : 3)}
+                          aria-pressed={positionFilter === 3}
+                        >
+                          MID
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${positionFilter === 4 ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setPositionFilter(positionFilter === 4 ? 'all' : 4)}
+                          aria-pressed={positionFilter === 4}
+                        >
+                          FWD
+                        </button>
+                      </div>
+                    </div>
+                    <div className="feed-filter-section">
+                      <div className="feed-filter-section-title">Matchups</div>
+                      <div className="feed-filter-matchups">
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${matchupFilter === 'all' ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setMatchupFilter('all')}
+                          aria-pressed={matchupFilter === 'all'}
+                        >
+                          All
+                        </button>
+                        {matchups.map((m) => (
+                          <button
+                            key={m.fixtureId}
+                            type="button"
+                            className={`feed-matchup-btn ${Number(matchupFilter) === Number(m.fixtureId) ? 'feed-matchup-btn--active' : ''}`}
+                            onClick={() => setMatchupFilter(Number(matchupFilter) === Number(m.fixtureId) ? 'all' : m.fixtureId)}
+                            title={`${m.homeShort ?? ''} vs ${m.awayShort ?? ''}`}
+                            aria-pressed={Number(matchupFilter) === Number(m.fixtureId)}
+                          >
+                            {m.homeShort && <img src={`/badges/${m.homeShort}.svg`} alt="" className="feed-matchup-badge" />}
+                            <span>{m.homeShort ?? '?'}</span>
+                            <span className="feed-matchup-vs">v</span>
+                            {m.awayShort && <img src={`/badges/${m.awayShort}.svg`} alt="" className="feed-matchup-badge" />}
+                            <span>{m.awayShort ?? '?'}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="stats-filter-overlay-footer">
+                  <button type="button" className="stats-filter-overlay-done" onClick={() => setShowFilterPopup(false)} aria-label="Done">
+                    Done
+                  </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </>
       )}
