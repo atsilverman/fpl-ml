@@ -975,21 +975,6 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
   font-size: 9px;
 }
 
-/* Staggered row entrance (match league/Stats/Defcon/Feed) */
-@keyframes schedule-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.schedule-table tbody tr.schedule-row-animate {
-  animation: schedule-row-in 0.16s ease-out both;
-}
-
 .schedule-row {
   background: var(--bg-primary);
 }
