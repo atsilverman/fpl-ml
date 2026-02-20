@@ -156,29 +156,31 @@
   color: var(--text-secondary);
 }
 
-/* Research Price Changes: info button – light white background, theme-aware */
+/* Research Price Changes: info button – match Schedule legend (.schedule-legend-icon-btn) */
 .research-price-changes-sub-header .price-changes-source-wrap .bento-card-info-icon {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.1);
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  transition: border-color 0.15s, color 0.15s;
+  opacity: 1;
 }
 
 @media (hover: hover) {
   .research-price-changes-sub-header .price-changes-source-wrap .bento-card-info-icon:hover {
-    background: #fff;
-    border-color: rgba(0, 0, 0, 0.15);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    background: var(--bg-card);
   }
 }
 
-html[data-theme="dark"] .research-price-changes-sub-header .price-changes-source-wrap .bento-card-info-icon {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-@media (hover: hover) {
-  html[data-theme="dark"] .research-price-changes-sub-header .price-changes-source-wrap .bento-card-info-icon:hover {
-    background: rgba(255, 255, 255, 0.18);
-    border-color: rgba(255, 255, 255, 0.25);
-  }
+.research-price-changes-sub-header .price-changes-source-wrap .bento-card-info-icon .bento-card-expand-icon-svg {
+  color: inherit;
 }
 
 /* Predictions source info popup (in case gw-legend-popup from BentoCard.css isn’t loaded) */

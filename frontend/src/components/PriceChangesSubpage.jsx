@@ -234,7 +234,7 @@ export default function PriceChangesSubpage() {
                     aria-expanded={showLivefplInfoPopup}
                     aria-haspopup="dialog"
                   >
-                    <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+                    <Info className="bento-card-expand-icon-svg" size={14} strokeWidth={2} aria-hidden />
                   </button>
                   {showLivefplInfoPopup &&
                     createPortal(

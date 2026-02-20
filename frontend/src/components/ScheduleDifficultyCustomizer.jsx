@@ -198,9 +198,6 @@ export default function ScheduleDifficultyCustomizer({
   if (embedded) {
     return (
       <>
-        <p className="customize-section-subtitle">
-          1 = easiest, 5 = hardest.
-        </p>
         <div className="customize-difficulty-toolbar">
           {!onlyStat && (
             <div className="schedule-customizer-stat-tabs">

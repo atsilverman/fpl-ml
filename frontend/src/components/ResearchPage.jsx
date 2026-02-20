@@ -1,16 +1,15 @@
 import { useSearchParams } from 'react-router-dom'
-import { CirclePoundSterling, CalendarDays, Scale, ListOrdered } from 'lucide-react'
+import { CirclePoundSterling, CalendarDays, ListOrdered } from 'lucide-react'
 import PriceChangesSubpage from './PriceChangesSubpage'
 import ScheduleSubpage from './ScheduleSubpage'
-import CompareSubpage from './CompareSubpage'
 import StatsSubpage from './StatsSubpage'
 import './HomePage.css'
 import './ResearchPage.css'
 
-const RESEARCH_VIEW_ORDER = ['stats', 'schedule', 'compare', 'price-changes']
-const RESEARCH_VIEW_LABELS = { 'price-changes': 'Changes', schedule: 'Schedule', compare: 'Compare', stats: 'Stats' }
-const RESEARCH_VIEW_ICONS = { 'price-changes': CirclePoundSterling, schedule: CalendarDays, compare: Scale, stats: ListOrdered }
-const VALID_VIEWS = ['stats', 'schedule', 'compare', 'price-changes']
+const RESEARCH_VIEW_ORDER = ['stats', 'schedule', 'price-changes']
+const RESEARCH_VIEW_LABELS = { 'price-changes': 'Price Changes', schedule: 'Fixtures', stats: 'Stats' }
+const RESEARCH_VIEW_ICONS = { 'price-changes': CirclePoundSterling, schedule: CalendarDays, stats: ListOrdered }
+const VALID_VIEWS = ['stats', 'schedule', 'price-changes']
 
 export default function ResearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -26,7 +25,7 @@ export default function ResearchPage() {
           className="subpage-view-toggle"
           role="tablist"
           aria-label="Research view"
-          data-options="4"
+          data-options="3"
           style={{ '--slider-offset': viewIndex }}
         >
           <span className="subpage-view-toggle-slider" aria-hidden />
@@ -53,7 +52,6 @@ export default function ResearchPage() {
       <div className="research-page-content">
         {view === 'price-changes' && <PriceChangesSubpage />}
         {view === 'schedule' && <ScheduleSubpage />}
-        {view === 'compare' && <CompareSubpage />}
         {view === 'stats' && <StatsSubpage />}
       </div>
     </div>

@@ -47,11 +47,19 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.player-compare-controls .player-compare-gw-filters,
-.player-compare-controls .player-compare-controls-divider,
-.player-compare-controls .player-compare-gw-filter-btn,
-.player-compare-controls .player-compare-search-toolbar-btn {
+.player-compare-controls .player-compare-search-toolbar-btn,
+.player-compare-controls .stats-filter-btn {
   flex-shrink: 0;
+}
+.player-compare-controls .stats-filter-btn {
+  height: 26px;
+  min-height: 26px;
+  width: 28px;
+}
+@media (min-width: 769px) {
+  .player-compare-controls .stats-filter-btn {
+    width: auto;
+  }
 }
 
 .player-compare-search-toolbar-btn {

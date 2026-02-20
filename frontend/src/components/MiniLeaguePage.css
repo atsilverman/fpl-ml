@@ -624,6 +624,21 @@
   overscroll-behavior: none;
 }
 
+/* Desktop: header in normal flow above first data row (like a data table); no sticky to avoid misalignment */
+@media (min-width: 769px) {
+  .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead,
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead {
+    display: table-header-group;
+    position: static;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+  }
+  .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead th,
+  .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead th {
+    background: var(--bg-secondary);
+  }
+}
+
 /* Mobile: scroll happens inside the table container (under header); header row stays fixed at top of container */
 @media (max-width: 768px) {
   .mini-league-page {
@@ -1099,7 +1114,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   padding: 24px !important;
 }
 
-/* Table: fixed layout with colgroup widths (14% rank, 30% manager, 14% each total/gw/left/live); match transfer view text/header scale */
+/* Table: fixed layout with colgroup widths (12% rank, 24% manager, 16% each total/gw/left/live); match transfer view text/header scale */
 .league-standings-page .league-standings-bento-table {
   table-layout: fixed;
   width: 100%;
@@ -1175,7 +1190,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   line-height: 1.2;
 }
 
-/* Column widths set via colgroup (14% rank, 30% manager, 14% each total/gw/left/live) */
+/* Column widths set via colgroup (12% rank, 24% manager, 16% each total/gw/left/live) */
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank,
 .league-standings-page .league-standings-bento-table .league-standings-bento-team,
 .league-standings-page .league-standings-bento-table .league-standings-bento-total,

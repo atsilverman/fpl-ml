@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, TableProperties, FlaskConical, Construction, Scale, CalendarDays, ListOrdered, ArrowRightLeft, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
+import { Pencil, ChevronDown, House, Users, FlaskConical, Construction, CalendarDays, ListOrdered, ArrowRightLeft, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -20,8 +20,7 @@ const GAMEWEEK_VIEWS = [
 const RESEARCH_VIEWS = [
   { id: 'stats', label: 'Stats', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
-  { id: 'compare', label: 'Compare', disabled: false },
-  { id: 'price-changes', label: 'Changes', disabled: false },
+  { id: 'price-changes', label: 'Price Changes', disabled: false },
   { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
 ]
 
@@ -56,7 +55,7 @@ function SoccerBallIcon({ size = 20, strokeWidth = 2, className, ...props }) {
 
 const NAV_ICONS = {
   home: House,
-  'mini-league': TableProperties,
+  'mini-league': Users,
   gameweek: SoccerBallIcon,
   research: FlaskConical,
 }
@@ -537,7 +536,7 @@ export default function Dashboard() {
                   >
                     {RESEARCH_VIEWS.map((view) => {
                       const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
-                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'compare' ? Scale : view.id === 'stats' ? ListOrdered : view.comingSoon ? Construction : null
+                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'stats' ? ListOrdered : view.comingSoon ? Construction : null
                       return (
                         <button
                           key={view.id}

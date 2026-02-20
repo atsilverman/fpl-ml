@@ -104,7 +104,7 @@
 .research-stats-subpage {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   margin-left: -16px;
   margin-right: -16px;
   width: calc(100% + 32px);
@@ -128,7 +128,7 @@
   top: 0;
   z-index: 15;
   background: var(--bg-primary, #fff);
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -221,10 +221,10 @@
   }
 }
 
-/* Filter summary: match Defcon/Feed filter summary spacing */
+/* Filter summary: match Defcon/Feed filter summary spacing; tight bottom so table sits close */
 .research-stats-sticky-header .research-stats-filter-summary {
   margin: 8px 0 0;
-  padding: 0 0 4px;
+  padding: 0 0 2px;
 }
 
 .research-stats-search-wrap {
@@ -270,6 +270,11 @@
 
 .research-stats-search-input:focus {
   border-color: var(--accent-blue);
+}
+
+/* Native search clear (X) button: white */
+.research-stats-search-input::-webkit-search-cancel-button {
+  filter: invert(1);
 }
 
 /* Toolbar button label: hidden on mobile, shown on desktop */
@@ -675,6 +680,10 @@
   opacity: 0.9;
   text-align: center;
 }
+.research-stats-filter-summary-viewing {
+  font-weight: 700;
+  color: var(--text-primary);
+}
 
 .research-stats-count-footer {
   margin: 0;
@@ -685,17 +694,15 @@
   opacity: 0.8;
 }
 
-/* Filter overlay popup: anchored near filter button (top-right), not over table */
+/* Filter overlay popup: portaled to body so fixed = viewport; centered panel */
 .stats-filter-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-start;
+  align-items: center;
+  justify-content: center;
   padding: 12px;
-  padding-top: 72px;
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -705,7 +712,7 @@
 }
 
 .stats-filter-overlay-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
   cursor: default;
@@ -716,7 +723,7 @@
   flex: 0 1 auto;
   width: 100%;
   max-width: 400px;
-  max-height: calc(100vh - 96px);
+  max-height: calc(100vh - 24px);
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -791,6 +798,36 @@
   padding: 12px 14px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.stats-filter-overlay-footer {
+  flex-shrink: 0;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.stats-filter-overlay-done {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
+  border: 1px solid var(--accent-blue, #3b82f6);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-done:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+    border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+  }
+}
+.stats-filter-overlay-done:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
 /* Filters content inside overlay */
@@ -942,11 +979,11 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky player/team column: header (th) stays fixed; body (td) uses inner div for iOS Safari td sticky bug */
+/* Sticky player/team column: header (th) and body (td) stay fixed on horizontal scroll; stat columns must not overlap */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 10;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   box-sizing: border-box;
@@ -954,15 +991,28 @@
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   isolation: isolate;
+  /* Shadow so scrolled stat columns are clearly behind the player column */
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
-  z-index: 6;
+  z-index: 11;
 }
-/* Inner div inside td: sticky here so iOS Safari keeps body column fixed (sticky on td is unreliable) */
-.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
+/* Body player/team cell: sticky on the td so the whole cell (and its content) stays fixed on horizontal scroll */
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
   position: sticky;
   left: 0;
-  z-index: 5;
+  z-index: 10;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  box-sizing: border-box;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  isolation: isolate;
+}
+/* Inner div: layout only (sticky on td keeps whole cell fixed; inner div avoids iOS td sticky quirks in some builds by not being sticky itself) */
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -970,19 +1020,14 @@
   min-height: 100%;
   padding: 6px 8px;
   box-sizing: border-box;
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  isolation: isolate;
 }
 
-/* Stat columns: explicit lower z so they slide underneath the sticky player/team column (mobile and desktop) */
+/* Stat columns: explicit lower z so they slide underneath the sticky player/team column (points etc. must not overlap name) */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-gw,
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total,
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-gw {
+  position: relative;
   z-index: 0;
 }
 
@@ -1175,13 +1220,13 @@
     overflow-y: visible;
   }
 
-  /* Sticky column: higher z so player/team stays on top when PTS etc. scroll underneath */
+  /* Sticky column: ensure player/team header and body cells stay on top when PTS etc. scroll underneath */
   .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
     z-index: 10;
     isolation: isolate;
     background: var(--bg-secondary);
   }
-  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team .research-stats-sticky-cell-inner {
+  .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
     z-index: 10;
     isolation: isolate;
     background: var(--bg-secondary);

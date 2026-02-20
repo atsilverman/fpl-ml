@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Search, Filter, X, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale } from 'lucide-react'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
@@ -522,11 +523,12 @@ export default function StatsSubpage() {
     ['points', 'selected_by_percent', 'minutes', 'goals_scored', 'assists', 'clean_sheets', 'saves', 'bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded', 'yellow_cards', 'red_cards'].includes(field)
 
   const filterSummaryText = useMemo(() => {
+    const viewLabel = teamView ? 'Teams' : 'Players'
     const gwLabel = gwFilter === 'all' ? (gameweek != null ? `GW1-${gameweek}` : 'All gameweeks') : gwFilter === 'last6' ? 'Last 6' : 'Last 12'
     const locationLabel = locationFilter === 'all' ? 'All locations' : locationFilter === 'home' ? 'Home' : 'Away'
     const positionLabel = teamView ? null : (positionFilter === 'all' ? 'All positions' : (POSITION_LABELS[Number(positionFilter)] ?? 'All positions'))
     const ownershipLabel = !teamView && ownershipFilter !== 'all' ? (ownershipFilter === 'owned' ? 'Owned' : 'Unowned') : null
-    const parts = [gwLabel, locationLabel, ...(positionLabel ? [positionLabel] : []), ...(ownershipLabel ? [ownershipLabel] : [])]
+    const parts = [viewLabel, gwLabel, locationLabel, ...(positionLabel ? [positionLabel] : []), ...(ownershipLabel ? [ownershipLabel] : [])]
     if (!teamView) {
       parts.push(displayMode === 'total' ? 'Total' : 'Per 90')
       if (showPerM) parts.push('Per £M')
@@ -539,6 +541,7 @@ export default function StatsSubpage() {
 
   const filtersHaveChanged = useMemo(() => {
     return (
+      teamView ||
       gwFilter !== 'all' ||
       locationFilter !== 'all' ||
       positionFilter !== 'all' ||
@@ -548,9 +551,10 @@ export default function StatsSubpage() {
       showPerM ||
       topHighlightMode != null
     )
-  }, [gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, displayMode, showPerM, topHighlightMode])
+  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, displayMode, showPerM, topHighlightMode])
 
   const handleResetFilters = useCallback(() => {
+    setTeamView(false)
     setGwFilter('all')
     setLocationFilter('all')
     setPositionFilter('all')
@@ -659,11 +663,11 @@ export default function StatsSubpage() {
           </p>
         )}
         <p className="research-stats-filter-summary" aria-live="polite">
-          {filterSummaryText}
+          <span className="research-stats-filter-summary-viewing">Viewing:</span> {filterSummaryText}
         </p>
       </div>
       <div className="research-stats-card research-card bento-card bento-card-animate bento-card-expanded">
-        {showFilters && (
+        {showFilters && typeof document !== 'undefined' && createPortal(
           <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Stats filters">
             <div className="stats-filter-overlay-backdrop" onClick={() => setShowFilters(false)} aria-hidden />
             <div className="stats-filter-overlay-panel">
@@ -687,6 +691,29 @@ export default function StatsSubpage() {
               </div>
               <div className="stats-filter-overlay-body">
                 <div className="research-stats-filters" role="group" aria-label="Stats filters">
+                  <div className="stats-filter-section">
+                    <div className="stats-filter-section-title">View</div>
+                    <div className="stats-filter-buttons">
+                      <button
+                        type="button"
+                        className={`stats-filter-option-btn ${!teamView ? 'stats-filter-option-btn--active' : ''}`}
+                        onClick={() => setTeamView(false)}
+                        aria-pressed={!teamView}
+                      >
+                        <UserRound size={14} strokeWidth={2} className="stats-filter-option-icon" aria-hidden />
+                        Players
+                      </button>
+                      <button
+                        type="button"
+                        className={`stats-filter-option-btn ${teamView ? 'stats-filter-option-btn--active' : ''}`}
+                        onClick={() => setTeamView(true)}
+                        aria-pressed={teamView}
+                      >
+                        <UsersRound size={14} strokeWidth={2} className="stats-filter-option-icon" aria-hidden />
+                        Teams
+                      </button>
+                    </div>
+                  </div>
                   <div className="stats-filter-section">
                     <div className="stats-filter-section-title">Gameweeks</div>
                     <div className="stats-filter-buttons">
@@ -830,8 +857,14 @@ export default function StatsSubpage() {
                   )}
                 </div>
               </div>
+              <div className="stats-filter-overlay-footer">
+                <button type="button" className="stats-filter-overlay-done" onClick={() => setShowFilters(false)} aria-label="Done">
+                  Done
+                </button>
+              </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
 
         {teamView ? (

@@ -36,6 +36,11 @@
   -webkit-transform: translateZ(0);
 }
 
+/* Subpage view toggle: spacing between buttons matches Stats toolbar (gap: 8px) */
+.research-page .subpage-toolbar-wrap .subpage-view-toggle {
+  gap: 8px;
+}
+
 /* Desktop: hide in-page subpage toolbar; use header dropdown (Research → Changes/Schedule/Compare) only */
 @media (min-width: 769px) {
   .research-page .subpage-toolbar-wrap {
@@ -85,7 +90,7 @@
   }
 
   /* Vertical slider for 4 options: 26px button height + 6px gap = 32px per slot */
-  .research-page.research-page--schedule-view .subpage-view-toggle[data-options="4"] .subpage-view-toggle-slider {
+  .research-page.research-page--schedule-view .subpage-view-toggle[data-options="3"] .subpage-view-toggle-slider {
     width: 26px;
     height: 26px;
     left: 50%;
@@ -228,15 +233,20 @@
   padding: 0;
 }
 
-/* Schedule subpage: same container structure as Stats (subpage > card > content) */
+/* Schedule subpage: same container structure as Stats; tighter gap below subpage nav */
 .research-schedule-subpage {
   position: relative;
 }
 
-/* Schedule card: match .research-stats-card so container encompasses full team list on desktop and mobile */
+.research-page.research-page--schedule-view {
+  gap: 4px;
+}
+
+/* Schedule card: match .research-stats-card; space below sticky header */
 .research-schedule-card {
   display: flex;
   flex-direction: column;
+  margin-top: 8px;
   padding: 12px 14px 20px 14px;
   gap: 6px;
   width: 100%;
@@ -259,51 +269,6 @@
   min-width: 0;
   overflow: visible;
   width: 100%;
-}
-
-/* Compare subpage: same container structure as Stats/Schedule (subpage > card > content) */
-.research-compare-subpage {
-  position: relative;
-}
-
-/* Compare card: match .research-stats-card */
-.research-compare-card {
-  display: flex;
-  flex-direction: column;
-  padding: 12px 14px 20px 14px;
-  gap: 6px;
-  width: 100%;
-  height: auto;
-  min-height: 0;
-  max-height: none;
-  overflow: visible;
-}
-
-.research-compare-card .research-page-card-header {
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.research-compare-content {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  min-width: 0;
-  overflow: visible;
-  width: 100%;
-}
-
-.compare-subpage {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 0;
-}
-
-/* Match schedule: extra space above table (schedule has margin-top: 6px on .schedule-scroll-wrap) */
-.research-compare-content .player-stats-wrap {
-  margin-top: 6px;
 }
 
 /* Card header: title (bento font) + source link, inside the card */

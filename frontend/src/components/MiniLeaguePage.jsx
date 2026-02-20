@@ -140,6 +140,7 @@ export default function MiniLeaguePage() {
   const standingsTableScrollRef = useRef(null)
   const transfersTableScrollRef = useRef(null)
   const managerDetailModalBodyRef = useRef(null)
+  const toolbarWrapRef = useRef(null)
   useAxisLockedScroll(standingsTableScrollRef)
   useAxisLockedScroll(transfersTableScrollRef)
   useAxisLockedScroll(managerDetailModalBodyRef)
@@ -149,6 +150,21 @@ export default function MiniLeaguePage() {
     const handler = () => setIsNarrowScreen(mql.matches)
     mql.addEventListener('change', handler)
     return () => mql.removeEventListener('change', handler)
+  }, [])
+
+  /* Measure toolbar height so desktop sticky table header can use top: var(--league-toolbar-height) */
+  useEffect(() => {
+    const el = toolbarWrapRef.current
+    if (!el) return
+    const parent = el.parentElement
+    if (!parent) return
+    const setHeight = () => {
+      parent.style.setProperty('--league-toolbar-height', `${el.offsetHeight}px`)
+    }
+    setHeight()
+    const ro = new ResizeObserver(setHeight)
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   const { data: selectedManagerPlayers, fixtures: selectedManagerFixtures, isLoading: selectedManagerPlayersLoading } = useCurrentGameweekPlayersForManager(selectedManagerId)
@@ -538,7 +554,7 @@ export default function MiniLeaguePage() {
 
   return (
     <div className={`mini-league-page${showStandingsView ? ' league-page--standings-view' : ''}`}>
-      <div className="subpage-toolbar-wrap">
+      <div ref={toolbarWrapRef} className="subpage-toolbar-wrap">
         <nav
           className="subpage-view-toggle"
           role="tablist"
@@ -693,12 +709,12 @@ export default function MiniLeaguePage() {
                 </>
               ) : (
                 <>
-                  <col style={{ width: '14%' }} />
-                  <col className="league-standings-bento-col-manager" style={{ width: '35%' }} />
                   <col style={{ width: '12%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
-                  <col style={{ width: '13%' }} />
+                  <col className="league-standings-bento-col-manager" style={{ width: '24%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '16%' }} />
+                  <col style={{ width: '16%' }} />
                 </>
               )}
             </colgroup>
