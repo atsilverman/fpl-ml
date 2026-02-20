@@ -585,7 +585,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   )
 }
 
-export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false, bonusAnimationKey = 0 } = {}) {
+export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false, bonusAnimationKey = 0, animationKey = 0 } = {}) {
   const { gameweek, loading: gwLoading, dataChecked } = useGameweekData('current')
   const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
@@ -603,6 +603,10 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const [performerPageIndex, setPerformerPageIndex] = useState(0)
   const firstScheduledRef = useRef(null)
   const prevShowH2HRef = useRef(false)
+  const matchupGridRef = useRef(null)
+  const matchesScrollRef = useRef(null)
+  const [gridColumns, setGridColumns] = useState(1)
+  useAxisLockedScroll(matchesScrollRef)
 
   const currentStatKey = TOP_PERFORMERS_STAT_KEYS[performerPageIndex]?.key ?? 'points'
   const currentPerformersList = topPerformersByStat[currentStatKey] ?? []
@@ -636,6 +640,21 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
     }
     prevShowH2HRef.current = showH2H
   }, [showH2H])
+
+  useEffect(() => {
+    const el = matchupGridRef.current
+    if (!el) return
+    const readColumns = () => {
+      const style = getComputedStyle(el)
+      const cols = style.gridTemplateColumns
+      const count = cols && cols !== 'none' ? cols.split(' ').filter(Boolean).length : 1
+      setGridColumns(Math.max(1, count))
+    }
+    readColumns()
+    const ro = new ResizeObserver(readColumns)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [displayedFixtures.length, animationKey])
 
   if (gwLoading || !gameweek) {
     return (
@@ -739,11 +758,18 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             </div>
           </div>
           )}
-          <div className="matchup-grid">
-          {displayedFixtures.map((f, index) => (
+          <div className="matches-fixtures-card">
+            <div ref={matchesScrollRef} className="matches-scroll-wrap">
+              <div key={animationKey} ref={matchupGridRef} className="matchup-grid">
+          {displayedFixtures.map((f, index) => {
+            const row = Math.floor(index / gridColumns)
+            const col = index % gridColumns
+            const diagonalDelay = (row + col) * 70
+            return (
             <div
               key={f.fpl_fixture_id}
-              className={expandedId === f.fpl_fixture_id ? 'matchup-grid-item matchup-grid-item--expanded' : 'matchup-grid-item'}
+              className={`matchup-grid-item matchup-grid-item-animate${expandedId === f.fpl_fixture_id ? ' matchup-grid-item--expanded' : ''}`}
+              style={{ animationDelay: `${diagonalDelay}ms` }}
               ref={(showH2H ? index === 0 : index === firstScheduledIndex) ? firstScheduledRef : null}
             >
               <MatchBento
@@ -763,7 +789,10 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 bonusAnimationKey={bonusAnimationKey}
               />
             </div>
-          ))}
+            )
+          })}
+              </div>
+            </div>
           </div>
         </>
       )}

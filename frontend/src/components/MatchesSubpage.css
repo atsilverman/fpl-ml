@@ -41,7 +41,7 @@
 @media (hover: hover) {
   .gw-top-points-card:hover {
     border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
   }
 }
 
@@ -305,11 +305,69 @@ html[data-theme="dark"] .gw-top-points-pill {
   outline-offset: 2px;
 }
 
+/* Fixtures card + scroll-wrap: same treatment as Schedule subpage (bordered, rounded, themed background). */
+.matches-fixtures-card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.matches-scroll-wrap {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  /* Match Statistics subpage: subtle tint + card shadow (light theme) */
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 2%, var(--bg-primary));
+  box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
+  padding: 12px 14px;
+  box-sizing: border-box;
+  /* Prevent sticky column being pulled off on mobile drag */
+  overscroll-behavior: none;
+}
+
+/* Dark theme: very subtle tint (same as light) so it stays low-key */
+/* Dark: no tint, use theme surface for consistency */
+html[data-theme="dark"] .matches-scroll-wrap {
+  background: var(--bg-secondary);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.matches-scroll-wrap::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.matches-scroll-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.matches-scroll-wrap::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
 /* matchup-grid: multi-column on mobile; desktop = single column list, same width as top performers / 2-bento content. */
 .matchup-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 12px;
+}
+
+@keyframes matchup-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.matchup-grid .matchup-grid-item-animate {
+  animation: matchup-card-in 0.4s ease-out both;
 }
 
 /* Desktop: single column list; matchups same width as Top Performers container above (align with home content width). */
@@ -439,22 +497,16 @@ html[data-theme="dark"] .gw-top-points-pill {
   }
 }
 
-/* matchup-card: finished / live / scheduled – reference style */
+/* matchup-card: finished / live / scheduled – reference style; subtle shadow always on */
 .matchup-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-hover, rgba(0, 0, 0, 0.12));
   border-radius: 8px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-@media (hover: hover) {
-  .matchup-card:hover {
-    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-  }
 }
 
 /* When expanded, card spans all columns so details table gets full width (avoids ~300px squeeze in 2-col layout) */
@@ -469,7 +521,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 /* Live: green border, pulsing dot + green text */
 .matchup-card.live {
   border: 1px solid #16a34a;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(22, 163, 74, 0.08);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(22, 163, 74, 0.08);
 }
 
 .matchup-card.live .matchup-card-status {
@@ -1026,7 +1078,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   vertical-align: middle;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;

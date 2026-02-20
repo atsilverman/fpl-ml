@@ -54,7 +54,7 @@
 
 /* Match Feed filter summary: sizing and placement; extra space below to match feed spacing before list header */
 .defcon-filter-summary {
-  margin: 4px 0 0;
+  margin: 4px 0 10px;
   padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);
@@ -62,8 +62,13 @@
   opacity: 0.9;
 }
 
+.defcon-filter-summary-viewing {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 .defcon-subpage-sticky-header .gameweek-list-header {
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* Shift Progress label left so it aligns with the centered progress bar below */
@@ -106,7 +111,7 @@
   max-height: 220px;
   overflow-y: auto;
   z-index: 50;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .defcon-search-suggestion {
@@ -167,7 +172,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 60;
   min-width: 220px;
 }
@@ -338,7 +343,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -514,9 +519,10 @@
 .defcon-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
+  margin-top: 10px;
 }
 
 .defcon-row-card {
@@ -525,11 +531,12 @@
   border-radius: 8px;
   padding: 8px 12px;
   min-height: 48px;
+  box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
 }
 
 .defcon-row-card--achieved {
   border: 1px solid var(--accent-green);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 /* Match feed-event-card__player: 6px between badge and player info */
@@ -733,7 +740,7 @@ html[data-theme="dark"] .defcon-position-badge {
   left: var(--progress-pct, 0%);
   background: var(--progress-bg);
   border-radius: 0 3px 3px 0;
-  animation: defcon-bar-fill 0.7s ease-out both;
+  animation: defcon-bar-fill 1.5s ease-out both;
 }
 
 .defcon-notch-dividers {
@@ -770,7 +777,7 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-list {
-    gap: 4px;
+    gap: 8px;
     width: 100%;
   }
 

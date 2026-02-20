@@ -567,7 +567,7 @@ export default function FeedSubpage({ isActive = true }) {
               </div>
             </div>
             <p className="feed-filter-summary" aria-live="polite">
-              {filterSummaryText}
+              <span className="feed-filter-summary-viewing">Viewing:</span> {filterSummaryText}
             </p>
             {sortedFilteredEvents.length > 0 && (
               <div className="gameweek-list-header" aria-hidden="true">

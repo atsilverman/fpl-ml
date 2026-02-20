@@ -366,7 +366,7 @@ export default function DefconSubpage({ isActive = true }) {
           </div>
         </div>
         <p className="defcon-filter-summary" aria-live="polite">
-          {filterSummaryText}
+          <span className="defcon-filter-summary-viewing">Viewing:</span> {filterSummaryText}
         </p>
         {filteredPlayers.length > 0 && (
           <div className="gameweek-list-header" aria-hidden="true">

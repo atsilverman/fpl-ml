@@ -12,6 +12,7 @@
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
+  padding-top: 10px;
   padding-bottom: 2px;
   flex-shrink: 0;
   /* Promote layer so sticky is reliable (e.g. iOS) */
@@ -70,7 +71,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   box-sizing: border-box;
   overflow-wrap: break-word;
@@ -122,7 +123,7 @@
 .feed-event-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -139,6 +140,7 @@
   border-radius: 8px;
   min-height: 48px;
   overflow: hidden;
+  box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
 }
 
 /* Very subtle red/green glow on right edge for +/- impact (color depth only) */
@@ -402,7 +404,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   max-height: 220px;
   overflow-y: auto;
   z-index: 50;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .feed-search-suggestion {
@@ -448,12 +450,21 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 
 .feed-filter-summary {
-  margin: 4px 0 0;
+  margin: 4px 0 10px;
   padding: 0 0 2px;
   font-size: 11px;
   color: var(--text-secondary);
   text-align: center;
   opacity: 0.9;
+}
+
+.feed-filter-summary-viewing {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.feed-subpage-sticky-header .gameweek-list-header {
+  margin-top: 6px;
 }
 
 /* Filter overlay: same structure as Research (StatsSubpage) */
@@ -486,7 +497,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
   overflow: hidden;
   display: flex;
   flex-direction: column;

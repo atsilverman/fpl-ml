@@ -192,11 +192,11 @@
   min-width: 200px;
   max-width: 320px;
   width: max-content;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 html[data-theme="light"] .price-changes-source-info-popup.gw-legend-popup-fixed {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 @media (max-width: 344px) {

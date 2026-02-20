@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import './ScheduleDifficultyCustomizer.css'
 
 export const SCHEDULE_STAT_OPTIONS = [
@@ -7,7 +7,19 @@ export const SCHEDULE_STAT_OPTIONS = [
   { id: 'defence', label: 'Defence', defaultKey: 'defenceDefault' },
 ]
 
-export default function ScheduleDifficultyCustomizer({
+function shallowEqualKeys(a, b) {
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
+  const ka = Object.keys(a).sort().join(',')
+  const kb = Object.keys(b).sort().join(',')
+  if (ka !== kb) return false
+  for (const k of Object.keys(a)) {
+    if (a[k] !== b[k]) return false
+  }
+  return true
+}
+
+const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCustomizer({
   teamIds,
   teamMap,
   savedOverridesByStat,
@@ -15,9 +27,10 @@ export default function ScheduleDifficultyCustomizer({
   onCancel,
   onResetStat,
   onDraftChange, // when set (wizard mode), called with (statId, overrides) when draft for that stat changes so parent can persist
+  onHasChangesChange, // when set (embedded), called with (has: boolean) when draft differs from saved
   embedded = false,
   onlyStat = null, // when set ('strength'|'attack'|'defence'), show single stat only (wizard mode), no tabs, no Save in embedded
-}) {
+}, ref) {
   const [selectedStatId, setSelectedStatId] = useState(onlyStat || 'strength')
   const [baseline, setBaseline] = useState('fpl') // 'fpl' | 'calculated' (for Attack/Defence only)
   const [draftByStat, setDraftByStat] = useState(() => ({
@@ -94,6 +107,27 @@ export default function ScheduleDifficultyCustomizer({
       defence: draftByStat.defence,
     })
   }
+
+  const hasUnsavedChanges = useMemo(() => {
+    const saved = savedOverridesByStat || {}
+    return (
+      !shallowEqualKeys(draftByStat.strength, saved.strength ?? null) ||
+      !shallowEqualKeys(draftByStat.attack, saved.attack ?? null) ||
+      !shallowEqualKeys(draftByStat.defence, saved.defence ?? null)
+    )
+  }, [draftByStat.strength, draftByStat.attack, draftByStat.defence, savedOverridesByStat])
+
+  const savedForCurrent = savedOverridesByStat?.[effectiveStatId] ?? {}
+  const hasResetable = Object.keys(draft).length > 0 || Object.keys(savedForCurrent).length > 0
+
+  useImperativeHandle(ref, () => ({
+    save: handleSave,
+    hasUnsavedChanges: () => hasUnsavedChanges,
+  }), [hasUnsavedChanges, draftByStat.strength, draftByStat.attack, draftByStat.defence])
+
+  useEffect(() => {
+    onHasChangesChange?.(hasUnsavedChanges)
+  }, [hasUnsavedChanges, onHasChangesChange])
 
   const tabsAndList = (
     <>
@@ -216,7 +250,7 @@ export default function ScheduleDifficultyCustomizer({
           )}
           <button
             type="button"
-            className="customize-difficulty-reset"
+            className={`customize-difficulty-reset${hasResetable ? ' customize-difficulty-reset--active' : ''}`}
             onClick={handleResetCurrent}
             title={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
             aria-label={`Reset ${effectiveStatId === 'strength' ? 'overall' : effectiveStatId} to ${baselineLabel} defaults`}
@@ -267,15 +301,7 @@ export default function ScheduleDifficultyCustomizer({
             )
           })}
         </div>
-        {!onlyStat && (
-          <button
-            type="button"
-            className="modal-button modal-button-save"
-            onClick={handleSave}
-          >
-            Save
-          </button>
-        )}
+        {/* Save is rendered in overlay footer when embedded (ScheduleSubpage) */}
       </>
     )
   }
@@ -299,4 +325,6 @@ export default function ScheduleDifficultyCustomizer({
       </div>
     </div>
   )
-}
+})
+
+export default ScheduleDifficultyCustomizer

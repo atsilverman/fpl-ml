@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
-import { ClockFading, Filter, X, SlidersHorizontal } from 'lucide-react'
+import { ClockFading, Filter, X, SlidersHorizontal, Minimize2, MoveDiagonal, Info } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -34,7 +34,7 @@ function getOverridesByDimension(overridesMap, dimension) {
   return overridesMap?.overall ?? null
 }
 
-function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension, compact, colSpan }) {
+function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatchupClick, difficultyOverridesByDimension, useCustomDifficulty, difficultyDimension, compact, colSpan, hiddenDifficultyValues, onToggleDifficultyByValue }) {
   if (!opponent) return <td colSpan={colSpan} className={`schedule-cell schedule-cell-empty${compact ? ' schedule-cell--compact' : ''}`}>—</td>
   const short = opponent.short_name ?? '?'
   const display = opponent.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
@@ -47,6 +47,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
     strength != null && strength >= 1 && strength <= 5
       ? `schedule-cell-difficulty-pill schedule-cell-difficulty-pill--${strength}`
       : ''
+  const isDifficultyHidden = strength != null && hiddenDifficultyValues?.has(strength)
   const canShowReverse = lastH2H && lastH2H.home_score != null && lastH2H.away_score != null
   const scoreline = lastH2H ? `${lastH2H.home_score ?? '–'}–${lastH2H.away_score ?? '–'}` : ''
   const rowWasHome = lastH2H && lastH2H.home_team_id === rowTeamId
@@ -63,12 +64,23 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 
   /* Popup only opens when "Show last H2H" toggle is on. */
   const canOpenPopup = !!onMatchupClick && showReverseScores
-  const handleClick = (e) => {
+  const handleCellClick = (e) => {
     if (!canOpenPopup) return
     e.preventDefault()
     e.stopPropagation()
     onMatchupClick(rowTeamId, opponent.team_id)
   }
+
+  const handlePillClick = (e) => {
+    if (onToggleDifficultyByValue && strength != null) {
+      e.preventDefault()
+      e.stopPropagation()
+      onToggleDifficultyByValue(strength)
+    }
+  }
+
+  const demoteClass = isDifficultyHidden ? ' schedule-cell-difficulty-demoted' : ''
+  const canToggleByValue = strength != null && onToggleDifficultyByValue
 
   return (
     <td
@@ -77,12 +89,19 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
       title={opponent.team_name ?? short}
       role={canOpenPopup ? 'button' : undefined}
       tabIndex={canOpenPopup ? 0 : undefined}
-      onClick={canOpenPopup ? handleClick : undefined}
-      onKeyDown={canOpenPopup ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(e) } } : undefined}
+      onClick={canOpenPopup ? handleCellClick : undefined}
+      onKeyDown={canOpenPopup ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCellClick(e) } } : undefined}
       aria-label={canOpenPopup ? (canShowReverse ? `View last meeting: ${short}` : `View matchup: ${short}`) : undefined}
     >
       <span className="schedule-cell-opponent-content">
-        <span className={`schedule-cell-opponent-inner${difficultyPillClass ? ` ${difficultyPillClass}` : ''}`}>
+        <span
+          className={`schedule-cell-opponent-inner${difficultyPillClass ? ` ${difficultyPillClass}` : ''}${demoteClass}`}
+          role={canToggleByValue ? 'button' : undefined}
+          tabIndex={canToggleByValue ? 0 : undefined}
+          onClick={canToggleByValue ? handlePillClick : undefined}
+          onKeyDown={canToggleByValue ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handlePillClick(e) } } : undefined}
+          aria-label={canToggleByValue ? (isDifficultyHidden ? `Show all difficulty ${strength} fixtures` : `Hide all difficulty ${strength} fixtures`) : undefined}
+        >
           <span className="schedule-cell-abbr-display">{display}</span>
           {opponent.isHome && (
             <svg className="schedule-cell-home-indicator" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
@@ -103,7 +122,7 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 export default function ScheduleSubpage() {
   const { scheduleMatrix, gameweeks, loading, teamMap, nextGwId } = useScheduleData()
   const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
-  const { teamIds, getOpponents, slotsPerGw } = scheduleMatrix
+  const { teamIds, getOpponents, getOpponent, slotsPerGw } = scheduleMatrix
   const mapForRow = teamMap || {}
   const difficultyOverridesByDimension = useMemo(() => ({
     overall: config?.teamStrengthOverrides ?? null,
@@ -118,6 +137,11 @@ export default function ScheduleSubpage() {
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
   const [customizePopoverOpen, setCustomizePopoverOpen] = useState(false)
   const [popupCell, setPopupCell] = useState(null)
+  const [hiddenDifficultyValues, setHiddenDifficultyValues] = useState(() => new Set())
+  const [hasCustomizerChanges, setHasCustomizerChanges] = useState(false)
+  const [recommendationsExpanded, setRecommendationsExpanded] = useState(false)
+  const [showBuySellInfo, setShowBuySellInfo] = useState(false)
+  const scheduleCustomizerRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
 
   const popupLastH2H = popupCell ? lastH2HMap[pairKey(popupCell.rowTeamId, popupCell.opponentTeamId)] ?? null : null
@@ -184,6 +208,120 @@ export default function ScheduleSubpage() {
     setShowReverseScores(false)
   }, [])
 
+  const toggleDifficultyByValue = useCallback((value) => {
+    setHiddenDifficultyValues((prev) => {
+      const next = new Set(prev)
+      if (next.has(value)) next.delete(value)
+      else next.add(value)
+      return next
+    })
+  }, [])
+  const resetDifficultyVisibility = useCallback(() => {
+    setHiddenDifficultyValues(new Set())
+  }, [])
+
+  const SHORT_TERM_GWS = 4
+  const LONG_TERM_GWS = 10
+  const TOP_N_PER_CELL = 4
+
+  const scheduleRecommendations = useMemo(() => {
+    if (!gameweeks?.length || !teamIds?.length || typeof getOpponent !== 'function') {
+      return {
+        summaryText: 'Buy: easiest run. Sell: hardest run (by avg opponent strength 1-5).',
+        buyShort: [],
+        buyLong: [],
+        sellShort: [],
+        sellLong: [],
+      }
+    }
+    const shortGwIds = gameweeks.slice(0, SHORT_TERM_GWS).map((gw) => gw.id)
+    const longGwIds = gameweeks.slice(0, LONG_TERM_GWS).map((gw) => gw.id)
+    const overrides = getOverridesByDimension(difficultyOverridesByDimension, difficultyDimension)
+
+    function oppDifficulty(opponent) {
+      if (!opponent) return null
+      const base = getBaseDifficultyByDimension(opponent, difficultyDimension)
+      return useCustomDifficulty
+        ? getEffectiveStrength(base, overrides, opponent.team_id)
+        : base != null
+          ? Math.min(5, Math.max(1, base))
+          : null
+    }
+
+    function avgOpponentDifficulty(teamId, gwIdsToUse) {
+      let sum = 0
+      let count = 0
+      for (const gwId of gwIdsToUse) {
+        const opp = getOpponent(teamId, gwId)
+        const d = oppDifficulty(opp)
+        if (d != null) {
+          sum += d
+          count += 1
+        }
+      }
+      return count > 0 ? sum / count : null
+    }
+
+    const teamScores = teamIds.map((teamId) => {
+      const avgShort = avgOpponentDifficulty(teamId, shortGwIds)
+      const avgLong = avgOpponentDifficulty(teamId, longGwIds)
+      return {
+        teamId,
+        avgShort: avgShort ?? 5,
+        avgLong: avgLong ?? 5,
+      }
+    })
+
+    // Target = easiest run (lowest aggregate opponent strength 1-5)
+    const byTargetShort = [...teamScores].sort(
+      (a, b) => a.avgShort - b.avgShort || a.teamId - b.teamId
+    )
+    const byTargetLong = [...teamScores].sort(
+      (a, b) => a.avgLong - b.avgLong || a.teamId - b.teamId
+    )
+    // Avoid = hardest run (highest aggregate opponent strength 1-5)
+    const byAvoidShort = [...teamScores].sort(
+      (a, b) => b.avgShort - a.avgShort || a.teamId - b.teamId
+    )
+    const byAvoidLong = [...teamScores].sort(
+      (a, b) => b.avgLong - a.avgLong || a.teamId - b.teamId
+    )
+
+    const buyShort = byTargetShort.slice(0, TOP_N_PER_CELL).map((t) => t.teamId)
+    const buyLong = byTargetLong.slice(0, TOP_N_PER_CELL).map((t) => t.teamId)
+    const sellShort = byAvoidShort.slice(0, TOP_N_PER_CELL).map((t) => t.teamId)
+    const sellLong = byAvoidLong.slice(0, TOP_N_PER_CELL).map((t) => t.teamId)
+
+    const topBuy = byTargetShort[0]
+    const topSell = byAvoidShort[0]
+    const topBuyName = topBuy && mapForRow[topBuy.teamId]?.short_name
+    const topSellName = topSell && mapForRow[topSell.teamId]?.short_name
+    let summaryText = 'Buy: easiest run. Sell: hardest run (by avg opponent strength 1-5).'
+    if (topBuyName && topSellName) {
+      summaryText = `Buy: ${topBuyName} (easiest next ${SHORT_TERM_GWS} GWs). Sell: ${topSellName} (hardest run).`
+    } else if (topBuyName) {
+      summaryText = `Buy: ${topBuyName} — easiest run. ${summaryText}`
+    } else if (topSellName) {
+      summaryText = `Sell: ${topSellName} — hardest run. ${summaryText}`
+    }
+
+    return {
+      summaryText,
+      buyShort,
+      buyLong,
+      sellShort,
+      sellLong,
+    }
+  }, [
+    gameweeks,
+    teamIds,
+    getOpponent,
+    mapForRow,
+    difficultyOverridesByDimension,
+    useCustomDifficulty,
+    difficultyDimension,
+  ])
+
   if (loading) {
     return (
       <div className="research-schedule-subpage">
@@ -199,6 +337,8 @@ export default function ScheduleSubpage() {
                 <SlidersHorizontal size={14} strokeWidth={2} />
                 <span className="stats-toolbar-btn-label">Customize</span>
               </button>
+            </div>
+            <div className="schedule-header-icon-group schedule-header-icon-group--right">
               <button
                 type="button"
                 className="stats-filter-btn schedule-filter-btn"
@@ -228,21 +368,23 @@ export default function ScheduleSubpage() {
                   className="stats-filter-btn schedule-filter-btn"
                   onClick={() => setCustomizePopoverOpen(true)}
                   aria-label="Customize difficulty"
-                aria-expanded={false}
-                aria-haspopup="dialog"
-              >
-                <SlidersHorizontal size={14} strokeWidth={2} />
-                <span className="stats-toolbar-btn-label">Customize</span>
-              </button>
-              <button
-                type="button"
-                className="stats-filter-btn schedule-filter-btn"
-                aria-label="Show filters"
-                aria-expanded={false}
-              >
-                <Filter size={14} strokeWidth={2} />
-              </button>
-            </div>
+                  aria-expanded={false}
+                  aria-haspopup="dialog"
+                >
+                  <SlidersHorizontal size={14} strokeWidth={2} />
+                  <span className="stats-toolbar-btn-label">Customize</span>
+                </button>
+              </div>
+              <div className="schedule-header-icon-group schedule-header-icon-group--right">
+                <button
+                  type="button"
+                  className="stats-filter-btn schedule-filter-btn"
+                  aria-label="Show filters"
+                  aria-expanded={false}
+                >
+                  <Filter size={14} strokeWidth={2} />
+                </button>
+              </div>
           </div>
         </div>
         <div className="research-schedule-card research-card bento-card bento-card-animate bento-card-expanded">
@@ -268,6 +410,8 @@ export default function ScheduleSubpage() {
               <SlidersHorizontal size={14} strokeWidth={2} />
               <span className="stats-toolbar-btn-label">Customize</span>
             </button>
+          </div>
+          <div className="schedule-header-icon-group schedule-header-icon-group--right">
             <button
               type="button"
               className={`stats-filter-btn schedule-filter-btn ${filterPopoverOpen ? 'stats-filter-btn-close' : ''} ${hasActiveScheduleFilters ? 'stats-compare-btn--active' : ''}`}
@@ -282,7 +426,126 @@ export default function ScheduleSubpage() {
         </div>
         <p className="research-stats-filter-summary" aria-live="polite">
           <span className="research-stats-filter-summary-viewing">Viewing:</span> {scheduleFilterSummaryText}
+          {hiddenDifficultyValues.size > 0 && (
+            <>
+              {' · '}
+              <button
+                type="button"
+                className="schedule-reset-difficulty-visibility-btn"
+                onClick={resetDifficultyVisibility}
+                aria-label="Show difficulty on all opponent cells again"
+              >
+                Reset difficulty
+              </button>
+            </>
+          )}
         </p>
+      </div>
+      <div className={`schedule-recommendations-bento ${recommendationsExpanded ? 'schedule-recommendations-bento--expanded' : 'schedule-recommendations-bento--collapsed'}`}>
+        <div className="schedule-recommendations-bento-content">
+          <div
+            className="schedule-recommendations-bento-header"
+            role="button"
+            tabIndex={0}
+            onClick={() => setRecommendationsExpanded((v) => !v)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRecommendationsExpanded((v) => !v); } }}
+            aria-expanded={recommendationsExpanded}
+            aria-label={recommendationsExpanded ? 'Collapse Buy / Sell' : 'Expand Buy / Sell'}
+          >
+            <span className="schedule-recommendations-bento-title">Buy / Sell</span>
+            <span className="schedule-recommendations-bento-header-icons">
+              <button
+                type="button"
+                className="schedule-recommendations-bento-info-btn"
+                onClick={(e) => { e.stopPropagation(); setShowBuySellInfo((v) => !v); }}
+                aria-label={showBuySellInfo ? 'Hide formula description' : 'How Buy / Sell is calculated'}
+                aria-expanded={showBuySellInfo}
+                title="How this is calculated"
+              >
+                <Info className="schedule-recommendations-bento-info-icon" size={14} strokeWidth={2} />
+              </button>
+              <span className="schedule-recommendations-bento-expand-icon" title={recommendationsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                {recommendationsExpanded ? (
+                  <Minimize2 className="schedule-recommendations-bento-expand-icon-svg" size={11} strokeWidth={1.5} />
+                ) : (
+                  <MoveDiagonal className="schedule-recommendations-bento-expand-icon-svg" size={11} strokeWidth={1.5} />
+                )}
+              </span>
+            </span>
+          </div>
+          {showBuySellInfo && recommendationsExpanded && (
+            <p className="schedule-recommendations-bento-formula-desc">
+              Average opponent strength (1–5) over the next 4 or 10 gameweeks. Buy = lowest avg (easiest run). Sell = highest avg (hardest run).
+            </p>
+          )}
+          {recommendationsExpanded && (
+            <section className="research-schedule-recommendations" aria-live="polite" aria-label="Buy and sell teams by run">
+              <div className="schedule-recommendations-grid">
+                <div className="schedule-recommendations-corner" aria-hidden />
+                <div className="schedule-recommendations-col-header">Short (4 GW)</div>
+                <div className="schedule-recommendations-col-header">Long (10 GW)</div>
+                <div className="schedule-recommendations-row-header">Buy</div>
+                <div className="schedule-recommendations-panel schedule-recommendations-panel--buy">
+                  <ul className="research-schedule-recommendations-list">
+                    {scheduleRecommendations.buyShort.map((teamId) => {
+                      const team = mapForRow[teamId]
+                      const short = team?.short_name ?? '?'
+                      return (
+                        <li key={teamId} className="research-schedule-recommendations-item">
+                          <img src={`/badges/${short}.svg`} alt="" className="research-schedule-recommendations-badge" />
+                          <span className="research-schedule-recommendations-abbr">{short}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+                <div className="schedule-recommendations-panel schedule-recommendations-panel--buy">
+                  <ul className="research-schedule-recommendations-list">
+                    {scheduleRecommendations.buyLong.map((teamId) => {
+                      const team = mapForRow[teamId]
+                      const short = team?.short_name ?? '?'
+                      return (
+                        <li key={teamId} className="research-schedule-recommendations-item">
+                          <img src={`/badges/${short}.svg`} alt="" className="research-schedule-recommendations-badge" />
+                          <span className="research-schedule-recommendations-abbr">{short}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+                <div className="schedule-recommendations-row-header">Sell</div>
+                <div className="schedule-recommendations-panel schedule-recommendations-panel--sell">
+                  <ul className="research-schedule-recommendations-list">
+                    {scheduleRecommendations.sellShort.map((teamId) => {
+                      const team = mapForRow[teamId]
+                      const short = team?.short_name ?? '?'
+                      return (
+                        <li key={teamId} className="research-schedule-recommendations-item">
+                          <img src={`/badges/${short}.svg`} alt="" className="research-schedule-recommendations-badge" />
+                          <span className="research-schedule-recommendations-abbr">{short}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+                <div className="schedule-recommendations-panel schedule-recommendations-panel--sell">
+                  <ul className="research-schedule-recommendations-list">
+                    {scheduleRecommendations.sellLong.map((teamId) => {
+                      const team = mapForRow[teamId]
+                      const short = team?.short_name ?? '?'
+                      return (
+                        <li key={teamId} className="research-schedule-recommendations-item">
+                          <img src={`/badges/${short}.svg`} alt="" className="research-schedule-recommendations-badge" />
+                          <span className="research-schedule-recommendations-abbr">{short}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
         {customizePopoverOpen && typeof document !== 'undefined' && createPortal(
           <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Customize difficulty">
@@ -309,6 +572,7 @@ export default function ScheduleSubpage() {
                   <p className="customize-section-loading">Loading teams…</p>
                 ) : (
                   <ScheduleDifficultyCustomizer
+                    ref={scheduleCustomizerRef}
                     embedded
                     teamIds={scheduleMatrix?.teamIds ?? []}
                     teamMap={mapForRow}
@@ -317,11 +581,13 @@ export default function ScheduleSubpage() {
                       attack: config?.teamAttackOverrides ?? null,
                       defence: config?.teamDefenceOverrides ?? null,
                     }}
+                    onHasChangesChange={setHasCustomizerChanges}
                     onSave={({ strength, attack, defence }) => {
                       if (strength != null) saveTeamStrengthOverrides(strength)
                       if (attack != null) saveTeamAttackOverrides(attack)
                       if (defence != null) saveTeamDefenceOverrides(defence)
                       toast('Custom difficulty saved')
+                      setHasCustomizerChanges(false)
                     }}
                     onResetStat={(statId) => {
                       if (statId === 'strength') resetTeamStrengthOverrides()
@@ -331,7 +597,15 @@ export default function ScheduleSubpage() {
                   />
                 )}
               </div>
-              <div className="stats-filter-overlay-footer">
+              <div className="stats-filter-overlay-footer stats-filter-overlay-footer--customize">
+                <button
+                  type="button"
+                  className={`stats-filter-overlay-save ${hasCustomizerChanges ? 'stats-filter-overlay-save--active' : ''}`}
+                  onClick={() => scheduleCustomizerRef.current?.save()}
+                  aria-label="Save difficulty changes"
+                >
+                  Save
+                </button>
                 <button type="button" className="stats-filter-overlay-done" onClick={() => setCustomizePopoverOpen(false)} aria-label="Done">
                   Done
                 </button>
@@ -517,6 +791,8 @@ export default function ScheduleSubpage() {
                           difficultyDimension={difficultyDimension}
                           compact={false}
                           colSpan={slots}
+                          hiddenDifficultyValues={hiddenDifficultyValues}
+                          onToggleDifficultyByValue={toggleDifficultyByValue}
                         />
                       )
                     }
@@ -535,6 +811,8 @@ export default function ScheduleSubpage() {
                           useCustomDifficulty={useCustomDifficulty}
                           difficultyDimension={difficultyDimension}
                           compact={slots > 1}
+                          hiddenDifficultyValues={hiddenDifficultyValues}
+                          onToggleDifficultyByValue={toggleDifficultyByValue}
                         />
                       )
                     })

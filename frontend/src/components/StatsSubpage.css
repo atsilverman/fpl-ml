@@ -793,7 +793,7 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1072,7 +1072,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   top: 0;
   z-index: 5;
   background: var(--bg-secondary);
-  box-shadow: 0 1px 0 var(--border-color), 0 4px 8px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 0 var(--border-color), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
   background: var(--bg-secondary);
@@ -1091,7 +1091,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   backface-visibility: hidden;
   isolation: isolate;
   /* Shadow so scrolled stat columns are clearly behind the player column */
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 11;
@@ -1103,7 +1103,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   z-index: 10;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1139,6 +1139,18 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   padding: 4px 4px;
   box-sizing: border-box;
   font-size: 10px !important;
+}
+
+/* Total column: very subtle tint to reduce contrast and complement theme */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 2%, var(--bg-primary));
+}
+
+/* Dark: no tint, use theme surface for consistency */
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total {
+  background: var(--bg-secondary);
 }
 
 /* Allow table wrapper to scroll; card must not clip so scrollbar is visible */

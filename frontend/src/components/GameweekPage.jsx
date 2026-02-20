@@ -23,9 +23,13 @@ export default function GameweekPage() {
 
   const prevViewRef = useRef(view)
   const [bonusAnimationKey, setBonusAnimationKey] = useState(0)
+  const [matchesAnimationKey, setMatchesAnimationKey] = useState(0)
   useEffect(() => {
     if (view === 'bonus' && prevViewRef.current !== 'bonus') {
       setBonusAnimationKey((k) => k + 1)
+    }
+    if ((view === 'matches' || view === 'bonus') && prevViewRef.current !== view) {
+      setMatchesAnimationKey((k) => k + 1)
     }
     prevViewRef.current = view
   }, [view])
@@ -79,10 +83,10 @@ export default function GameweekPage() {
           style={{ transform: `translateX(${translatePercent}%)` }}
         >
           <div className={`gameweek-subpage gameweek-subpage-matches`}>
-            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={false} showH2H={showH2H} setShowH2H={setShowH2H} />
+            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={false} showH2H={showH2H} setShowH2H={setShowH2H} animationKey={matchesAnimationKey} />
           </div>
           <div className={`gameweek-subpage gameweek-subpage-bonus`}>
-            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={true} showH2H={showH2H} setShowH2H={setShowH2H} bonusAnimationKey={view === 'bonus' ? bonusAnimationKey : 0} />
+            <MatchesSubpage simulateStatuses={simulateStatuses} toggleBonus={true} showH2H={showH2H} setShowH2H={setShowH2H} bonusAnimationKey={view === 'bonus' ? bonusAnimationKey : 0} animationKey={matchesAnimationKey} />
           </div>
           <div className="gameweek-subpage gameweek-subpage-defcon">
             <DefconSubpage isActive={view === 'defcon'} />
