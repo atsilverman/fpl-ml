@@ -414,7 +414,7 @@ export default function HomePage() {
               <PriceChangesBentoHome
                 key="price-changes"
                 className={getCardClassName(cardId)}
-                style={{ '--animation-delay': `${index * 0.04}s` }}
+                style={{ '--animation-delay': '0s' }}
               />
             )
           }
@@ -542,7 +542,7 @@ export default function HomePage() {
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
-              style={{ '--animation-delay': `${index * 0.04}s` }}
+              style={{ '--animation-delay': '0s' }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}
               onExpandClick={

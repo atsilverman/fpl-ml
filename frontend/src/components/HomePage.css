@@ -62,8 +62,14 @@
 }
 
 .bento-card.bento-card-animate {
-  animation: bentoCardFadeIn var(--motion-duration) var(--motion-ease) forwards;
+  animation: bentoCardFadeIn 0.2s var(--motion-ease) forwards;
   animation-delay: var(--animation-delay, 0s);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bento-card.bento-card-animate {
+    animation-duration: 0.05s;
+    animation-delay: 0s;
+  }
 }
 
 /* Overall rank bento: same green/red as .bento-card-change (rank and value delta) */
