@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from './useGameweekData'
 import { useRefreshState } from './useRefreshState'
+import { getApiBase } from '../lib/apiBase'
 import { supabase } from '../lib/supabase'
 
 const PAGE_SIZE = 5000
@@ -123,10 +124,6 @@ const PAGE_SIZE_TEAM_VIEW = 5000
  * @param {'all'|'home'|'away'} locationFilter - filter by was_home
  * @param {{ page?: number, sortBy?: string, sortDir?: string, positionFilter?: string, searchQuery?: string, teamView?: boolean }} opts - pagination and filters (API only)
  */
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
-  : ''
-
 export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'all', opts = {}) {
   const {
     page = 1,
@@ -141,6 +138,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   const pageSize = teamView ? PAGE_SIZE_TEAM_VIEW : PAGE_SIZE_PLAYER_VIEW
   const apiPage = teamView ? 1 : page
+  const API_BASE = getApiBase()
 
   const { data: cache, isLoading } = useQuery({
     queryKey: [

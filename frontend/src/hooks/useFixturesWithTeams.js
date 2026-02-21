@@ -1,10 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { getApiBase } from '../lib/apiBase'
 import { useRefreshState } from './useRefreshState'
-
-const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
-  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
-  : ''
 
 /**
  * Apply simulated statuses to fixtures for UI testing (Scheduled / Live / Provisional / Final).
@@ -40,6 +37,7 @@ export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}
   const { data: result, isLoading, error } = useQuery({
     queryKey: ['fixtures-with-teams', gameweek, simulateStatuses],
     queryFn: async () => {
+      const API_BASE = getApiBase()
       if (!gameweek) return API_BASE ? { fixtures: [], playerStatsByFixture: {} } : []
 
       if (API_BASE && !simulateStatuses) {

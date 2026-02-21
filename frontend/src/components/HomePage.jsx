@@ -91,12 +91,14 @@ export default function HomePage() {
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
 
-  // Only show "Leagues and Managers Updating" before first kickoff (post-deadline baseline run, not live gameplay)
+  // Only show "Leagues and Managers Updating" before first kickoff (post-deadline baseline run, not during live/bonus)
   const beforeFirstKickoff = useMemo(() => {
     const first = fixturesFromMatches?.[0]?.kickoff_time
-    if (!first) return true // no fixtures yet => treat as before first kickoff
+    if (!first || !fixturesFromMatches?.length) return false // need fixture data; no data => don't assume before kickoff
     return Date.now() < new Date(first).getTime()
   }, [fixturesFromMatches])
+  const isLiveOrBonusPending = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+  const showLeaguesManagersUpdatingBanner = deadlineBatchInProgress && beforeFirstKickoff && !isLiveOrBonusPending
 
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
@@ -414,7 +416,7 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      {deadlineBatchInProgress && beforeFirstKickoff && (
+      {showLeaguesManagersUpdatingBanner && (
         <div className="home-page-deadline-banner" aria-live="polite">
           <RefreshCcw className="home-page-deadline-banner-icon" size={18} />
           <span>Leagues and Managers Updating</span>
