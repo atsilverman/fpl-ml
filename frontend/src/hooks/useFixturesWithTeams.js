@@ -125,7 +125,8 @@ async function fetchFixturesFromSupabase(gameweek, simulateStatuses) {
 
 /**
  * Fetches fixtures for a gameweek with home/away team names and short_name for badges.
- * When API base is set, races API vs Supabase and uses whichever responds first for fastest load.
+ * When API base is set, uses API first so playerStatsByFixture is complete for all fixtures
+ * (including finished), then falls back to Supabase only if the API fails.
  * Optional simulateStatuses: when true, overrides first 4 fixtures to Scheduled / Live / Provisional / Final for UI testing.
  */
 export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}) {
@@ -139,16 +140,12 @@ export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}
       if (!gameweek) return API_BASE ? { fixtures: [], playerStatsByFixture: {} } : []
 
       if (API_BASE && !simulateStatuses) {
-        const apiPromise = (async () => {
+        try {
           const res = await fetch(`${API_BASE}/api/v1/fixtures?gameweek=${gameweek}`)
           const data = await res.json()
           if (!res.ok || !Array.isArray(data.fixtures)) throw new Error('API fixtures invalid')
           return { fixtures: data.fixtures ?? [], playerStatsByFixture: data.playerStatsByFixture ?? {} }
-        })()
-        const supabasePromise = fetchFixturesFromSupabase(gameweek, false)
-        try {
-          return await Promise.any([apiPromise, supabasePromise])
-        } catch (e) {
+        } catch (_) {
           return await fetchFixturesFromSupabase(gameweek, false)
         }
       }
