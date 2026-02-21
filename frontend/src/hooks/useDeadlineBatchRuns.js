@@ -35,20 +35,50 @@ export function useDeadlineBatchRuns() {
   const latest = runs[0] ?? null
   const phaseRows = latest?.phase_breakdown && typeof latest.phase_breakdown === 'object'
     ? Object.entries(latest.phase_breakdown)
-        .filter(([, sec]) => sec != null && typeof sec === 'number')
+        .filter(([key, sec]) => key !== 'failure_reason' && key !== 'success_rate' && sec != null && typeof sec === 'number')
         .map(([key, sec]) => ({
           label: PHASE_LABELS[key] ?? key,
           durationSec: sec,
         }))
     : []
 
+  const failureReason = latest?.phase_breakdown?.failure_reason ?? null
+  const successRate = latest?.phase_breakdown?.success_rate ?? null
+
   return {
     runs,
     latest,
     phaseRows,
+    failureReason,
+    successRate,
     isLoading,
     error,
   }
+}
+
+/**
+ * Returns whether a deadline batch is currently running for the given gameweek.
+ * Used to show "Leagues and Managers Updating" banner on home when batch has started but not finished.
+ */
+export function useDeadlineBatchInProgress(gameweek) {
+  const { data: inProgress = false, isLoading } = useQuery({
+    queryKey: ['deadline-batch-in-progress', gameweek],
+    queryFn: async () => {
+      if (gameweek == null) return false
+      const { data, error } = await supabase
+        .from('deadline_batch_runs')
+        .select('id')
+        .eq('gameweek', gameweek)
+        .is('finished_at', null)
+        .limit(1)
+      if (error) throw error
+      return (data?.length ?? 0) > 0
+    },
+    enabled: gameweek != null,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  })
+  return { inProgress, isLoading }
 }
 
 /**

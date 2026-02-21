@@ -51,7 +51,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const { state, stateLabel } = useRefreshState()
   useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
-  const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
+  const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, failureReason: deadlineFailureReason, successRate: deadlineSuccessRate, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
   const [showStateCriteria, setShowStateCriteria] = useState(false)
   const stateCriteriaRef = useRef(null)
 
@@ -288,6 +288,17 @@ export default function DebugModal({ isOpen, onClose }) {
                     <div className="deadline-batch-meta-row">
                       <span className="deadline-batch-label">Success</span>
                       <span><GwDebugBadge value={deadlineBatchLatest.success} /></span>
+                    </div>
+                  )}
+                  {deadlineBatchLatest.success === false && deadlineFailureReason && (
+                    <div className="deadline-batch-meta-row">
+                      <span className="deadline-batch-label">Failure reason</span>
+                      <span className="gw-debug-table-mono">
+                        {deadlineFailureReason === 'bootstrap_failed' && 'Bootstrap (FPL API) failed'}
+                        {deadlineFailureReason === 'success_rate_below_80' && `Picks/transfers &lt; 80% (${deadlineSuccessRate ?? '?'}%)`}
+                        {deadlineFailureReason === 'no_managers' && 'No tracked managers'}
+                        {!['bootstrap_failed', 'success_rate_below_80', 'no_managers'].includes(deadlineFailureReason) && deadlineFailureReason}
+                      </span>
                     </div>
                   )}
                 </div>

@@ -5,8 +5,8 @@ Loads configuration from environment variables with sensible defaults.
 """
 
 import os
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 
 @dataclass
@@ -82,6 +82,12 @@ class Config:
     fixtures_cache_ttl_live: int = int(os.getenv("FIXTURES_CACHE_TTL_LIVE", "30"))  # 30 seconds
     fixtures_cache_ttl_idle: int = int(os.getenv("FIXTURES_CACHE_TTL_IDLE", "600"))  # 10 minutes
     
+    # Optional: manager IDs to always include in deadline batch (e.g. home page or app-configured managers).
+    # Set REQUIRED_MANAGER_IDS (comma-separated) and/or VITE_MANAGER_ID so the deadline batch
+    # refreshes picks/transfers for these managers even if not in mini_league_managers.
+    # The batch already runs for all managers in all tracked leagues (mini_league_managers).
+    required_manager_ids: List[int] = field(default_factory=list)
+
     # Logging
     log_level: str = os.getenv("LOG_LEVEL", "INFO")
     log_format: str = os.getenv("LOG_FORMAT", "json")  # json or text
@@ -102,4 +108,23 @@ class Config:
     
     def __post_init__(self):
         """Validate after initialization."""
+        ids: List[int] = []
+        raw_list = os.getenv("REQUIRED_MANAGER_IDS")
+        if raw_list:
+            for s in raw_list.split(","):
+                s = s.strip()
+                if s:
+                    try:
+                        ids.append(int(s))
+                    except ValueError:
+                        pass
+        single = os.getenv("REQUIRED_MANAGER_ID") or os.getenv("VITE_MANAGER_ID")
+        if single:
+            try:
+                mid = int(single)
+                if mid not in ids:
+                    ids.append(mid)
+            except ValueError:
+                pass
+        self.required_manager_ids = ids if ids else []
         self.validate()

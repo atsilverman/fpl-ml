@@ -24,7 +24,9 @@ import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useRefreshState } from '../hooks/useRefreshState'
+import { useDeadlineBatchInProgress } from '../hooks/useDeadlineBatchRuns'
 import { useConfiguration } from '../contexts/ConfigurationContext'
+import { RefreshCcw } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
@@ -57,6 +59,7 @@ export default function HomePage() {
   
   // Hooks that depend on state
   const { gameweek, fplRanksUpdated, loading: gwLoading } = useGameweekData()
+  const { inProgress: deadlineBatchInProgress } = useDeadlineBatchInProgress(gameweek ?? null)
   const { managerData, loading: managerLoading } = useManagerData()
   const { totalManagers } = useTotalManagers()
   const { historyData, loading: historyLoading } = useManagerHistory()
@@ -86,6 +89,13 @@ export default function HomePage() {
   const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
+
+  // Only show "Leagues and Managers Updating" before first kickoff (post-deadline baseline run, not live gameplay)
+  const beforeFirstKickoff = useMemo(() => {
+    const first = fixturesFromMatches?.[0]?.kickoff_time
+    if (!first) return true // no fixtures yet => treat as before first kickoff
+    return Date.now() < new Date(first).getTime()
+  }, [fixturesFromMatches])
 
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
@@ -399,6 +409,12 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
+      {deadlineBatchInProgress && beforeFirstKickoff && (
+        <div className="home-page-deadline-banner" aria-live="polite">
+          <RefreshCcw className="home-page-deadline-banner-icon" size={18} />
+          <span>Leagues and Managers Updating</span>
+        </div>
+      )}
       {nextDeadlineLocal && (
         <p className="home-page-next-deadline">
           Next deadline: {nextGameweek?.name ? `${nextGameweek.name} ` : ''}{nextDeadlineLocal}

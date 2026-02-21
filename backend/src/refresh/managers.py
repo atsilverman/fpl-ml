@@ -319,7 +319,8 @@ class ManagerDataRefresher:
     async def refresh_manager_transfers(
         self,
         manager_id: int,
-        gameweek: int
+        gameweek: int,
+        bootstrap: Optional[Dict] = None
     ):
         """
         Refresh manager transfers for a gameweek.
@@ -327,6 +328,7 @@ class ManagerDataRefresher:
         Args:
             manager_id: Manager ID
             gameweek: Gameweek number
+            bootstrap: Optional pre-fetched bootstrap (elements used for prices). If None, fetches once per call.
         """
         try:
             transfers = await self.fpl_client.get_entry_transfers(manager_id)
@@ -337,9 +339,12 @@ class ManagerDataRefresher:
                 if t.get("event") == gameweek
             ]
             
-            # Get bootstrap for prices
-            bootstrap = await self.fpl_client.get_bootstrap_static()
-            players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
+            # Use shared bootstrap when provided (deadline batch); else fetch once per manager
+            if bootstrap is not None:
+                players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
+            else:
+                bootstrap = await self.fpl_client.get_bootstrap_static()
+                players_map = {p["id"]: p for p in bootstrap.get("elements", [])}
             
             for transfer in gw_transfers:
                 player_in_id = transfer.get("element_in")

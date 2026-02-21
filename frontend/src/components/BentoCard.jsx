@@ -515,9 +515,7 @@ export default function BentoCard({
       </div>
       
       {loading ? (
-        <div className="bento-card-value loading">
-          <div className="skeleton-text"></div>
-        </div>
+        <div className="bento-card-value loading" aria-busy="true" />
       ) : id === 'updates-debug' && isUpdatesDebug && updateTimestampsData ? (
         <div className="updates-debug-bento-content">
           <div className="updates-debug-now">Local time: {updateTimestampsData.localTimeNow}</div>
@@ -549,9 +547,7 @@ export default function BentoCard({
       ) : id === 'gw-debug' && isGwDebug ? (
         <div className="gw-debug-bento-content">
           {gameweekDebugLoading ? (
-            <div className="bento-card-value loading">
-              <div className="skeleton-text"></div>
-            </div>
+            <div className="bento-card-value loading" aria-busy="true" />
           ) : !gameweekDebugData?.gameweekRow ? (
             <div className="gw-debug-empty">No current gameweek</div>
           ) : (

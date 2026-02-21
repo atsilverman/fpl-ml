@@ -1,24 +1,19 @@
+/* Loading value area: no placeholder block or animation; collapse so nothing is shown */
+.bento-card-value.loading {
+  min-height: 0;
+  height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+/* Legacy skeleton (e.g. other components): static if ever used */
 .skeleton-text {
   width: 100%;
   height: 28px;
   border-radius: 4px;
-  background: linear-gradient(
-    90deg,
-    var(--bg-secondary) 0%,
-    var(--bg-primary) 50%,
-    var(--bg-secondary) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeleton-loading 1.5s ease-in-out infinite;
-}
-
-@keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+  background: var(--bg-secondary);
 }
 
 .chips-grid {

@@ -428,7 +428,7 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-  }, [filteredData, dimensions, loading, statKey, position])
+  }, [filteredData, dimensions, loading, statKey, position, filter])
 
   if (loading) {
     return (

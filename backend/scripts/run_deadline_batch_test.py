@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """
-Force-run the deadline batch to test optimization timing.
+Force-run the deadline batch (post-deadline refresh) for a gameweek.
 
 Bypasses state and DB "already completed" checks. Runs the full batch:
 picks+transfers, seed history from previous GW, league ranks, baselines,
-whitelist, transfer aggregation, materialized views.
+whitelist, transfer aggregation, materialized views. Use this to populate
+player lists and league tables when the service didn't run after the deadline.
+
+Managers: all from mini_league_managers (tracked leagues) plus REQUIRED_MANAGER_IDS
+or VITE_MANAGER_ID from env so a specific manager (e.g. 344182) is included.
 
 Usage:
     cd backend && python scripts/run_deadline_batch_test.py
-    cd backend && python scripts/run_deadline_batch_test.py --gameweek 26
+    cd backend && python scripts/run_deadline_batch_test.py --gameweek 27
+    cd backend && python scripts/run_deadline_batch_test.py --gameweek 27 --record-success
 """
 
 import argparse
@@ -49,8 +54,9 @@ def format_sec(s: float) -> str:
 
 
 async def main():
-    parser = argparse.ArgumentParser(description="Force-run deadline batch to test timing")
+    parser = argparse.ArgumentParser(description="Force-run deadline batch (post-deadline refresh)")
     parser.add_argument("--gameweek", type=int, default=None, help="Gameweek to run for (default: current)")
+    parser.add_argument("--record-success", action="store_true", help="Record run in deadline_batch_runs so the service won't re-run")
     args = parser.parse_args()
 
     setup_logging()
@@ -62,7 +68,9 @@ async def main():
 
     try:
         await orchestrator.initialize()
-        result = await orchestrator.run_deadline_batch_test(gameweek=args.gameweek)
+        result = await orchestrator.run_deadline_batch_test(
+            gameweek=args.gameweek, record_success=args.record_success
+        )
         await orchestrator.shutdown()
     except Exception as e:
         print(f"\nError: {e}")

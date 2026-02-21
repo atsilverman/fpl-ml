@@ -220,6 +220,7 @@ export default function PlayerDetailModal({
             )}
             <div className="player-detail-chart-wrap">
               <PlayerGameweekPointsChart
+                key={`player-chart-${selectedPlayerStat}-${chartRangeFilter}`}
                 data={gameweekPoints}
                 loading={playerDetailLoading}
                 statKey={selectedPlayerStat}

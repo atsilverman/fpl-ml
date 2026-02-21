@@ -240,15 +240,23 @@ class RefreshOrchestrator:
                 if next_deadline_raw:
                     next_deadline = datetime.fromisoformat(next_deadline_raw.replace("Z", "+00:00"))
                     time_since = (now - next_deadline).total_seconds()
-                    if time_since >= 1800:  # 30 min after next GW's deadline
+                    if time_since >= 2400:  # 40 min after next GW's deadline (avoid FPL API freeze)
                         self._deadline_target_gameweek_id = next_gw["id"]
+                        logger.info(
+                            "Entering TRANSFER_DEADLINE: watching for GW to become is_current",
+                            extra={"target_gameweek": next_gw["id"], "gameweek_name": next_gw.get("name")},
+                        )
                         return RefreshState.TRANSFER_DEADLINE
-            # Also enter when current GW's deadline was 30+ min ago (FPL may have already flipped)
+            # Also enter when current GW's deadline was 40+ min ago (FPL may have already flipped)
             current_deadline_raw = current_gw.get("deadline_time")
             if current_deadline_raw:
                 current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
-                if (now - current_deadline).total_seconds() >= 1800:
+                if (now - current_deadline).total_seconds() >= 2400:
                     self._deadline_target_gameweek_id = current_gw["id"]
+                    logger.info(
+                        "Entering TRANSFER_DEADLINE: watching for GW to become is_current",
+                        extra={"target_gameweek": current_gw["id"], "gameweek_name": current_gw.get("name")},
+                    )
                     return RefreshState.TRANSFER_DEADLINE
         
         # Mismatch recovery: if current GW has no successful deadline batch, enter TRANSFER_DEADLINE
@@ -259,11 +267,11 @@ class RefreshOrchestrator:
             current_deadline_raw = current_gw.get("deadline_time")
             if current_deadline_raw:
                 current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
-                if (now - current_deadline).total_seconds() >= 1800 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
+                if (now - current_deadline).total_seconds() >= 2400 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
                     self._deadline_target_gameweek_id = current_gw_id
                     logger.info(
                         "Deadline batch mismatch: current GW has no successful batch, entering TRANSFER_DEADLINE to refresh",
-                        extra={"gameweek": current_gw_id},
+                        extra={"target_gameweek": current_gw_id, "gameweek_name": current_gw.get("name")},
                     )
                     return RefreshState.TRANSFER_DEADLINE
         
@@ -1512,6 +1520,10 @@ class RefreshOrchestrator:
                         logger.warning("Rank monitor check failed", extra={"error": str(e)}, exc_info=True)
             
             if self.current_state == RefreshState.TRANSFER_DEADLINE:
+                # Post-deadline refresh: runs only after 30+ min past deadline and when target GW is is_current
+                # (API freeze released). Bootstrap check confirms API is responsive before we run.
+                # Refreshes picks, transfers, baselines, whitelist for all managers in all tracked leagues
+                # (mini_league_managers) plus REQUIRED_MANAGER_IDS. Sets up the gameweek that just passed (e.g. GW27).
                 # Run batch only when target gameweek is now is_current (trigger on flip).
                 now_utc = datetime.now(timezone.utc)
                 gameweeks = self.db_client.get_gameweeks(is_current=True, limit=1)
@@ -1530,9 +1542,18 @@ class RefreshOrchestrator:
                         and not self.deadline_refresh_completed
                     )
                     if should_run:
+                        logger.info(
+                            "Target gameweek is now is_current; running deadline batch (critical: this is the GW value we were watching for)",
+                            extra={"target_gameweek": target_gw_id, "current_gw_id": current_gw["id"], "gameweek_name": current_gw.get("name")},
+                        )
                         self._deadline_batch_ran_this_cycle = False
                         self.current_gameweek = target_gw_id  # Use new GW for all batch steps
                         manager_ids = self._get_tracked_manager_ids()
+                        # Include all required (e.g. app-configured) managers so every configured manager/league gets picks
+                        if self.config.required_manager_ids:
+                            extra = [mid for mid in self.config.required_manager_ids if mid not in manager_ids]
+                            if extra:
+                                manager_ids = list(manager_ids) + extra
                         league_count = 0
                         leagues_result = type("_Res", (), {"data": []})()  # default empty
                         try:
@@ -1541,6 +1562,14 @@ class RefreshOrchestrator:
                         except Exception:
                             pass
                         run_id = self.db_client.insert_deadline_batch_start(target_gw_id)
+                        logger.info(
+                            "Post-deadline refresh: running for GW that just passed (all configured managers and leagues) after API release check",
+                            extra={
+                                "gameweek": target_gw_id,
+                                "manager_count": len(manager_ids),
+                                "league_count": league_count,
+                            },
+                        )
                         first_kickoff = self.db_client.get_first_kickoff_for_gameweek(target_gw_id)
                         if first_kickoff:
                             try:
@@ -1586,6 +1615,8 @@ class RefreshOrchestrator:
                                 deadline_time = datetime.fromisoformat(
                                     current_gw["deadline_time"].replace("Z", "+00:00")
                                 )
+                            # Fetch bootstrap once for all managers (avoids 60 duplicate fetches in transfers)
+                            shared_bootstrap = await self.fpl_client.get_bootstrap_static()
                             failed_managers = set()
                             picks_metadata = {}  # manager_id -> {active_chip, gameweek_rank} from picks phase
                             for batch_num in range(0, len(manager_ids), batch_size):
@@ -1597,7 +1628,7 @@ class RefreshOrchestrator:
                                             mid, target_gw_id, deadline_time=deadline_time, use_cache=False
                                         )
                                     )
-                                    tasks.append(self.manager_refresher.refresh_manager_transfers(mid, target_gw_id))
+                                    tasks.append(self.manager_refresher.refresh_manager_transfers(mid, target_gw_id, bootstrap=shared_bootstrap))
                                 results = await asyncio.gather(*tasks, return_exceptions=True)
                                 for i, res in enumerate(results):
                                     if i % 2 == 0:
@@ -1874,11 +1905,14 @@ class RefreshOrchestrator:
                 logger.warning("Predictions loop error", extra={"error": str(e)}, exc_info=True)
                 await asyncio.sleep(interval)
 
-    async def run_deadline_batch_test(self, gameweek: Optional[int] = None) -> Dict[str, Any]:
+    async def run_deadline_batch_test(
+        self, gameweek: Optional[int] = None, record_success: bool = False
+    ) -> Dict[str, Any]:
         """
         Force-run the deadline batch for a gameweek (bypasses state and DB skip check).
-        Used for testing optimization timing. Does NOT insert into deadline_batch_runs.
-        Returns phase breakdown dict with timing for each phase.
+        Used for testing timing or for post-deadline catch-up when the service didn't run.
+        When record_success=True, writes a successful run to deadline_batch_runs so the
+        orchestrator won't re-run. Returns phase breakdown dict with timing for each phase.
         """
         if not self.db_client or not self.manager_refresher:
             await self.initialize()
@@ -1894,6 +1928,10 @@ class RefreshOrchestrator:
             current_gw = gw_rows[0] if gw_rows else {}
         self.current_gameweek = target_gw_id
         manager_ids = self._get_tracked_manager_ids()
+        if self.config.required_manager_ids:
+            extra = [mid for mid in self.config.required_manager_ids if mid not in manager_ids]
+            if extra:
+                manager_ids = list(manager_ids) + extra
         leagues_result = type("_Res", (), {"data": []})()
         try:
             leagues_result = self.db_client.client.table("mini_leagues").select("league_id").execute()
@@ -1981,6 +2019,19 @@ class RefreshOrchestrator:
             logger.error("Materialized views refresh failed", extra={"error": str(e)})
         phase["materialized_views_sec"] = round((datetime.now(timezone.utc) - t6).total_seconds(), 1)
         total_sec = round((datetime.now(timezone.utc) - t0).total_seconds(), 1)
+        if record_success:
+            run_id = self.db_client.insert_deadline_batch_start(target_gw_id)
+            if run_id is not None:
+                self.db_client.update_deadline_batch_finish(
+                    run_id,
+                    finished_at=datetime.now(timezone.utc).isoformat(),
+                    duration_seconds=total_sec,
+                    manager_count=len(manager_ids),
+                    league_count=league_count,
+                    success=True,
+                    phase_breakdown=phase,
+                )
+                logger.info("Deadline batch (test/catch-up) recorded as successful", extra={"gameweek": target_gw_id})
         return {"gameweek": target_gw_id, "manager_count": len(manager_ids), "league_count": league_count, "total_sec": total_sec, "phase": phase}
 
     async def run(self):

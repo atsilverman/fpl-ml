@@ -6,6 +6,33 @@
   width: 100%;
 }
 
+.home-page-deadline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  padding: 8px 12px;
+  background: rgb(255 220 100 / 0.35);
+  border: 1px solid rgb(220 180 60 / 0.6);
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.home-page-deadline-banner-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  animation: home-page-deadline-banner-spin 1.5s linear infinite;
+}
+
+@keyframes home-page-deadline-banner-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .home-page-next-deadline {
   font-size: 12px;
   font-weight: 400;

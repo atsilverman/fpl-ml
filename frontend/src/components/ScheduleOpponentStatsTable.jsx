@@ -10,11 +10,11 @@ function formatStatCell(value, rank, isTied) {
   return '—'
 }
 
-/** Green fill for top 6 (rank 1–6), red fill for bottom 6 (rank 15–20); 7–14 no fill */
+/** Red = difficult (top 6, rank 1–6), green = easy (bottom 6, rank 15–20); 7–14 no fill */
 function rankToFill(rank) {
   if (rank == null || rank < 1) return null
-  if (rank <= 6) return 'green'
-  if (rank >= 15) return 'red'
+  if (rank <= 6) return 'red'
+  if (rank >= 15) return 'green'
   return null
 }
 

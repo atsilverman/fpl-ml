@@ -181,6 +181,9 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           <div style={{ color: 'var(--text-secondary)', fontSize: '10px' }}>
             No player data available
           </div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '9px', marginTop: '4px' }}>
+            Picks load after the deadline batch runs. If your manager isn’t in a tracked league, set <code style={{ fontSize: '9px' }}>REQUIRED_MANAGER_ID</code> in the backend.
+          </div>
         </div>
       </div>
     )
