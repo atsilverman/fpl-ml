@@ -59,26 +59,44 @@ def _current_gameweek(db: SupabaseClient) -> int | None:
     return int(r.data[0]["id"])
 
 
+# Allowed sort columns for stats (must match merged response keys)
+STATS_SORT_COLUMNS = {
+    "points", "minutes", "goals_scored", "assists", "clean_sheets", "saves",
+    "bps", "defensive_contribution", "yellow_cards", "red_cards",
+    "expected_goals", "expected_assists", "expected_goal_involvements",
+    "expected_goals_conceded", "goals_conceded", "selected_by_percent",
+    "web_name", "team_short_name", "position", "cost_tenths",
+}
+
+
 @app.get("/api/v1/stats")
 def get_stats(
     gw_filter: str = Query("all", description="all | last6 | last12"),
     location: str = Query("all", description="all | home | away"),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    page_size: int = Query(100, ge=1, le=5000, description="Players per page"),
+    sort_by: str = Query("points", description="Sort column (e.g. points, goals_scored)"),
+    sort_dir: str = Query("desc", description="asc | desc"),
+    position: int | None = Query(None, description="Filter by position 1=GK,2=DEF,3=MID,4=FWD"),
+    search: str | None = Query(None, description="Filter by player or team name"),
 ):
-    """One response: player stats from research MV + player dimension. UI filters client-side."""
+    """Player stats from research MV + player dimension. Paginated; optional position/search filter."""
     if gw_filter not in MV_TABLE_BY_GW or location not in ("all", "home", "away"):
-        return {"players": [], "error": "Invalid gw_filter or location"}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": "Invalid gw_filter or location"}
+    if sort_by not in STATS_SORT_COLUMNS or sort_dir not in ("asc", "desc"):
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": "Invalid sort_by or sort_dir"}
     db = get_db()
     table = MV_TABLE_BY_GW[gw_filter]
     try:
         r = db.client.table(table).select(MV_SELECT).eq("location", location).execute()
     except Exception as e:
-        return {"players": [], "error": str(e)}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": str(e)}
     mv_rows = r.data or []
     if not mv_rows:
-        return {"players": []}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}}
     player_ids = list({row["player_id"] for row in mv_rows if row.get("player_id") is not None})
     if not player_ids:
-        return {"players": []}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}}
     try:
         players_r = (
             db.client.table("players")
@@ -87,7 +105,7 @@ def get_stats(
             .execute()
         )
     except Exception as e:
-        return {"players": [], "error": str(e)}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": str(e)}
     players_list = players_r.data or []
     player_map = {}
     for p in players_list:
@@ -141,6 +159,37 @@ def get_stats(
             "expected_goals_conceded": float(row.get("expected_goals_conceded") or 0),
             "goals_conceded": row.get("goals_conceded") or 0,
         })
+    # Filter by position
+    if position is not None and 1 <= position <= 4:
+        players = [p for p in players if p.get("position") == position]
+    # Filter by search (player or team name)
+    if search and search.strip():
+        q = search.strip().lower()
+        players = [
+            p for p in players
+            if (p.get("web_name") and q in (p["web_name"] or "").lower())
+            or (p.get("team_short_name") and q in (p["team_short_name"] or "").lower())
+            or (p.get("team_name") and q in (p["team_name"] or "").lower())
+        ]
+    # Sort
+    reverse = sort_dir == "desc"
+    numeric_keys = {
+        "points", "minutes", "goals_scored", "assists", "clean_sheets", "saves",
+        "bps", "defensive_contribution", "yellow_cards", "red_cards",
+        "expected_goals", "expected_assists", "expected_goal_involvements",
+        "expected_goals_conceded", "goals_conceded", "selected_by_percent",
+        "position", "cost_tenths",
+    }
+    def sort_key(p):
+        val = p.get(sort_by)
+        if sort_by in numeric_keys:
+            return (0, float(val) if val is not None else 0.0)
+        return (1, (val or "").lower() if isinstance(val, str) else str(val or ""))
+    players.sort(key=sort_key, reverse=reverse)
+    total_count = len(players)
+    # Paginate
+    start = (page - 1) * page_size
+    players = players[start : start + page_size]
     # Deduped team goals conceded (MAX per fixture then SUM) so team view does not inflate
     team_goals_conceded = {}
     try:
@@ -152,7 +201,13 @@ def get_stats(
                     team_goals_conceded[int(tid)] = int(item.get("goals_conceded") or 0)
     except Exception:
         pass
-    return {"players": players, "team_goals_conceded": team_goals_conceded}
+    return {
+        "players": players,
+        "total_count": total_count,
+        "page": page,
+        "page_size": page_size,
+        "team_goals_conceded": team_goals_conceded,
+    }
 
 
 @app.get("/api/v1/teams/{team_id:int}/stats")

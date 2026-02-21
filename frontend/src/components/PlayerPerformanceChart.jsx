@@ -1,9 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
+import { PLAYER_OWNED_STAT_KEYS } from '../hooks/usePlayerOwnedPerformance'
 import './PlayerPerformanceChart.css'
 
 const MOBILE_BREAKPOINT = 768
+
+const STAT_LABELS = {
+  total_points: 'Points',
+  bps: 'BPS',
+  goals_scored: 'Goals',
+  assists: 'Assists',
+}
 /** Bar width % above which we place the value inside the bar (right-aligned); below this, place after the bar. */
 const VALUE_ON_BAR_THRESHOLD_DESKTOP = 82
 const VALUE_ON_BAR_THRESHOLD_MOBILE = 72
@@ -35,6 +43,8 @@ export default function PlayerPerformanceChart({
   loading = false,
   filter = 'all',
   onFilterChange = null,
+  statKey = 'total_points',
+  onStatChange = null,
 }) {
   const [excludeHaaland, setExcludeHaaland] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
@@ -156,6 +166,25 @@ export default function PlayerPerformanceChart({
       </div>
 
       <div className="total-points-chart__controls">
+        {onStatChange && (
+          <>
+            {PLAYER_OWNED_STAT_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`total-points-chart__btn ${statKey === key ? 'active' : ''}`}
+                onClick={() => {
+                  onStatChange(key)
+                  toast(`Showing ${STAT_LABELS[key] ?? key}`)
+                }}
+                aria-pressed={statKey === key}
+              >
+                {STAT_LABELS[key] ?? key}
+              </button>
+            ))}
+            <span className="total-points-chart__separator" aria-hidden />
+          </>
+        )}
         {onFilterChange && (
           <>
             <button

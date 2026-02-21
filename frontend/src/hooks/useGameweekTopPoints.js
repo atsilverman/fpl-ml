@@ -59,10 +59,10 @@ export function useGameweekTopPoints() {
         const info = playerMap[s.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, position_label: '—' }
         const bonusStatus = s.bonus_status ?? 'provisional'
         const provisionalBonus = Number(s.provisional_bonus) || 0
-        const displayPoints =
-          bonusStatus === 'confirmed' || (s.bonus ?? 0) > 0
-            ? (s.total_points ?? 0)
-            : (s.total_points ?? 0) + provisionalBonus
+        const officialBonus = Number(s.bonus) ?? 0
+        const isBonusConfirmed = bonusStatus === 'confirmed'
+        const bonusToAdd = provisionalBonus || officialBonus
+        const displayPoints = isBonusConfirmed ? (s.total_points ?? 0) : (s.total_points ?? 0) + bonusToAdd
 
         return {
           player_id: s.player_id,

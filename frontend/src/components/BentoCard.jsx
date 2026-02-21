@@ -110,7 +110,9 @@ export default function BentoCard({
   onCollapseClick = null,
   playerChartData = null,
   playerChartFilter = 'all',
+  playerChartStatKey = 'total_points',
   onPlayerChartFilterChange = null,
+  onPlayerChartStatChange = null,
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   gameweekFixturesFromPlayers = null,
@@ -749,6 +751,8 @@ export default function BentoCard({
             loading={loading}
             filter={playerChartFilter}
             onFilterChange={onPlayerChartFilterChange}
+            statKey={playerChartStatKey}
+            onStatChange={onPlayerChartStatChange}
           />
         </div>
       )}

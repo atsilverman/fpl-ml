@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Filter, HelpCircle, X } from 'lucide-react'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
+import { useRefreshState } from '../hooks/useRefreshState'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useLeagueGameweekPicks } from '../hooks/useLeagueGameweekPicks'
 import { supabase } from '../lib/supabase'
@@ -157,6 +158,8 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
 export default function FeedSubpage({ isActive = true }) {
   const { config } = useConfiguration()
   const { gameweek, isCurrent, loading: gwLoading } = useGameweekData()
+  const { state: refreshState } = useRefreshState()
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   const managerId = config?.managerId ?? null
   const leagueId = config?.leagueId ?? null
 
@@ -192,7 +195,9 @@ export default function FeedSubpage({ isActive = true }) {
       return data ?? []
     },
     enabled: !!gameweek && isCurrent,
-    staleTime: 30 * 1000,
+    staleTime: isLive ? 20 * 1000 : 30 * 1000,
+    refetchInterval: isCurrent ? (isLive ? 25 * 1000 : 30 * 1000) : false,
+    refetchIntervalInBackground: isCurrent
   })
 
   const { fixtures = [] } = useFixtures(gameweek)

@@ -31,9 +31,10 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
     const totalPoints = Number(row.total_points) || 0
     const bonusStatus = row.bonus_status ?? 'provisional'
     const officialBonus = Number(row.bonus) ?? 0
-    const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+    const isBonusConfirmed = bonusStatus === 'confirmed'
     const provisionalBonus = Number(row.provisional_bonus) || 0
-    const effective = isBonusConfirmed ? totalPoints : totalPoints + provisionalBonus
+    const bonusToAdd = provisionalBonus || officialBonus
+    const effective = isBonusConfirmed ? totalPoints : totalPoints + bonusToAdd
     const minutes = Number(row.minutes) || 0
     if (!existing) {
       byPlayer.set(key, {
@@ -110,39 +111,71 @@ function mapRowToPlayer(row, playerMap) {
   }
 }
 
+const PAGE_SIZE_PLAYER_VIEW = 100
+const PAGE_SIZE_TEAM_VIEW = 5000
+
 /**
  * Fetches player stats for the Stats subpage. Uses materialized views when available
  * (one small request per GW range + location) for fast load; falls back to raw
  * player_gameweek_stats + in-memory aggregation if MVs are not yet deployed.
+ * When using API: paginated (100 per page in player view); full list in team view.
  * @param {'all'|'last6'|'last12'} gwFilter - GW range
  * @param {'all'|'home'|'away'} locationFilter - filter by was_home
+ * @param {{ page?: number, sortBy?: string, sortDir?: string, positionFilter?: string, searchQuery?: string, teamView?: boolean }} opts - pagination and filters (API only)
  */
 const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
   : ''
 
-export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'all') {
+export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'all', opts = {}) {
+  const {
+    page = 1,
+    sortBy = 'points',
+    sortDir = 'desc',
+    positionFilter = 'all',
+    searchQuery = '',
+    teamView = false
+  } = opts
   const { gameweek, loading: gwLoading } = useGameweekData()
   const { state: refreshState } = useRefreshState()
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+  const pageSize = teamView ? PAGE_SIZE_TEAM_VIEW : PAGE_SIZE_PLAYER_VIEW
+  const apiPage = teamView ? 1 : page
 
   const { data: cache, isLoading } = useQuery({
-    queryKey: ['all-players-gameweek-stats', gameweek, gwFilter, locationFilter],
+    queryKey: [
+      'all-players-gameweek-stats',
+      gameweek,
+      gwFilter,
+      locationFilter,
+      ...(API_BASE ? [apiPage, pageSize, sortBy, sortDir, positionFilter, searchQuery.trim(), teamView] : [])
+    ],
     queryFn: async () => {
       if (!gameweek) return null
       const gw = Number(gameweek)
 
       if (API_BASE) {
         try {
-          const res = await fetch(
-            `${API_BASE}/api/v1/stats?gw_filter=${encodeURIComponent(gwFilter)}&location=${encodeURIComponent(locationFilter)}`
-          )
+          const params = new URLSearchParams({
+            gw_filter: gwFilter,
+            location: locationFilter,
+            page: String(apiPage),
+            page_size: String(pageSize),
+            sort_by: sortBy,
+            sort_dir: sortDir
+          })
+          if (positionFilter !== 'all' && positionFilter !== '') params.set('position', positionFilter)
+          if (searchQuery.trim()) params.set('search', searchQuery.trim())
+          const res = await fetch(`${API_BASE}/api/v1/stats?${params.toString()}`)
           const data = await res.json()
           if (!res.ok) return null
           return {
             source: 'api',
             players: data.players ?? [],
-            team_goals_conceded: data.team_goals_conceded ?? {}
+            team_goals_conceded: data.team_goals_conceded ?? {},
+            total_count: data.total_count ?? (data.players ?? []).length,
+            page: data.page ?? apiPage,
+            page_size: data.page_size ?? pageSize
           }
         } catch {
           return null
@@ -290,6 +323,21 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     return cache.team_goals_conceded ?? {}
   }, [cache])
 
+  const totalCount = useMemo(() => {
+    if (!cache) return 0
+    if (cache.source === 'api') return cache.total_count ?? (cache.players?.length ?? 0)
+    return 0
+  }, [cache])
+
+  const pagination = useMemo(() => {
+    if (!cache || cache.source !== 'api') return { page: 1, page_size: 0, total_count: 0 }
+    return {
+      page: cache.page ?? 1,
+      page_size: cache.page_size ?? PAGE_SIZE_PLAYER_VIEW,
+      total_count: cache.total_count ?? (cache.players?.length ?? 0)
+    }
+  }, [cache])
+
   const players = useMemo(() => {
     if (!cache) return []
 
@@ -345,6 +393,8 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   return {
     players,
     teamGoalsConceded,
+    totalCount,
+    pagination,
     loading: isLoading || gwLoading
   }
 }

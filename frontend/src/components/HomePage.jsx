@@ -47,6 +47,7 @@ export default function HomePage() {
   const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(false)
   const [isPlayerPerformanceExpanded, setIsPlayerPerformanceExpanded] = useState(false)
   const [playerPerformanceChartFilter, setPlayerPerformanceChartFilter] = useState('last12') // 'all', 'last12', 'last6'
+  const [playerPerformanceChartStatKey, setPlayerPerformanceChartStatKey] = useState('total_points') // 'total_points', 'bps', 'goals_scored', 'assists'
   const [teamValueChartFilter, setTeamValueChartFilter] = useState('last12') // 'all', 'last12', 'last6'
   const [showTeamValueComparison, setShowTeamValueComparison] = useState(false)
   const [isTeamValueExpanded, setIsTeamValueExpanded] = useState(false)
@@ -69,7 +70,7 @@ export default function HomePage() {
   const { hasLiveGames } = useLiveGameweekStatus(gameweek)
   const { inPlay: managerInPlay } = useManagerLiveStatus(config?.managerId ?? null, gameweek)
   const hasManagerPlayerInPlay = hasLiveGames && (managerInPlay ?? 0) > 0
-  const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter, 'total_points')
+  const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter, playerPerformanceChartStatKey)
   const { data: currentGameweekPlayers, fixtures: currentGameweekFixtures, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
   const { fixtures: fplFixturesForMatchState } = useFPLFixturesForMatchState(gameweek ?? null, isGwPointsExpanded)
   const { fixtures: fixturesFromMatches } = useFixturesWithTeams(gameweek ?? null)
@@ -370,6 +371,10 @@ export default function HomePage() {
     setPlayerPerformanceChartFilter(newFilter)
   }
 
+  const handlePlayerPerformanceChartStatChange = (newStatKey) => {
+    setPlayerPerformanceChartStatKey(newStatKey)
+  }
+
   const handleTeamValueExpandClick = () => {
     setTeamValueChartFilter('all') // Default to "All" when expanding
     setIsTeamValueExpanded(true)
@@ -464,7 +469,9 @@ export default function HomePage() {
           let onChartFilterChangeToUse = null
           let playerChartDataToUse = null
           let playerChartFilterToUse = 'all'
+          let playerChartStatKeyToUse = 'total_points'
           let onPlayerChartFilterChangeToUse = null
+          let onPlayerChartStatChangeToUse = null
           let currentGameweekPlayersDataToUse = null
           let gameweekFixturesFromPlayersToUse = null
           let gameweekFixturesFromFPLToUse = null
@@ -498,7 +505,9 @@ export default function HomePage() {
             showChange = showValueInTotalPoints ? card.change : undefined
             playerChartDataToUse = isTotalPointsExpanded ? (playerData || []) : null
             playerChartFilterToUse = isTotalPointsExpanded ? playerPerformanceChartFilter : 'all'
+            playerChartStatKeyToUse = isTotalPointsExpanded ? playerPerformanceChartStatKey : 'total_points'
             onPlayerChartFilterChangeToUse = isTotalPointsExpanded ? handlePlayerPerformanceChartFilterChange : null
+            onPlayerChartStatChangeToUse = isTotalPointsExpanded ? handlePlayerPerformanceChartStatChange : null
           } else if (cardId === 'gw-points') {
             showValue = card.value
             showChange = showValueInGwPoints ? card.change : undefined
@@ -602,7 +611,9 @@ export default function HomePage() {
               transfersGameweek={cardId === 'transfers' ? gameweek : undefined}
               playerChartData={playerChartDataToUse}
               playerChartFilter={playerChartFilterToUse}
+              playerChartStatKey={playerChartStatKeyToUse}
               onPlayerChartFilterChange={onPlayerChartFilterChangeToUse}
+              onPlayerChartStatChange={onPlayerChartStatChangeToUse}
               playerPointsByGameweek={cardId === 'total-points' ? playerPointsByGameweek : undefined}
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
               gameweekFixturesFromPlayers={cardId === 'gw-points' ? gameweekFixturesFromPlayersToUse : undefined}

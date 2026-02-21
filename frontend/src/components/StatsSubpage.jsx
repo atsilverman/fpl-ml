@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Filter, X, Download, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare, ArrowUpFromDot } from 'lucide-react'
+import { Search, Filter, X, Download, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare, ArrowUpFromDot, ChevronLeft, ChevronRight } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import html2canvas from 'html2canvas'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
@@ -164,6 +164,8 @@ export default function StatsSubpage() {
   /** When true, show modal with transposed compare table (vertical stat-by-stat view) */
   const [showCompareDetailsModal, setShowCompareDetailsModal] = useState(false)
   const compareDetailsModalRef = useRef(null)
+  /** Current page (1-based) for player stats; only used when API pagination is active (player view). */
+  const [statsPage, setStatsPage] = useState(1)
 
   useEffect(() => {
     if (!showCompareDetailsModal) return
@@ -171,6 +173,11 @@ export default function StatsSubpage() {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
   }, [showCompareDetailsModal])
+
+  /** Reset to page 1 when filters or sort change (player view pagination). */
+  useEffect(() => {
+    setStatsPage(1)
+  }, [gwFilter, locationFilter, mainSort.column, mainSort.dir, positionFilter, searchQuery, teamView])
 
   const handleCompareDetailsDownload = useCallback(() => {
     const el = compareDetailsModalRef.current
@@ -215,8 +222,17 @@ export default function StatsSubpage() {
     })
   }, [])
 
-  const { players, teamGoalsConceded, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter)
+  const { players, teamGoalsConceded, totalCount, pagination, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
+    page: statsPage,
+    sortBy: mainSort.column,
+    sortDir: mainSort.dir,
+    positionFilter,
+    searchQuery,
+    teamView
+  })
   const { data: currentGameweekPlayers } = useCurrentGameweekPlayers()
+  const hasMultiplePages = !teamView && pagination.page_size > 0 && totalCount > pagination.page_size
+  const totalPages = hasMultiplePages ? Math.ceil(totalCount / pagination.page_size) : 1
   const ownedPlayerIds = useMemo(() => {
     if (!currentGameweekPlayers?.length) return null
     return new Set(currentGameweekPlayers.map((p) => Number(p.player_id)).filter(Boolean))
@@ -1719,9 +1735,38 @@ export default function StatsSubpage() {
           </>
         )}
         {!loading && (teamView ? teamStats.length : playersAboveMinMinutes.length) > 0 && (
-          <p className="research-stats-count-footer" role="status" aria-live="polite">
-            Showing {teamView ? filteredTeams.length : filteredPlayers.length} of {teamView ? teamStats.length : playersAboveMinMinutes.length} {teamView ? 'teams' : 'players'}
-          </p>
+          <div className="research-stats-footer-wrap">
+            <p className="research-stats-count-footer" role="status" aria-live="polite">
+              Showing {teamView ? filteredTeams.length : filteredPlayers.length} of {teamView ? teamStats.length : (hasMultiplePages ? totalCount : playersAboveMinMinutes.length)} {teamView ? 'teams' : 'players'}
+            </p>
+            {hasMultiplePages && (
+              <nav className="research-stats-pagination" aria-label="Stats table pages">
+                <button
+                  type="button"
+                  className="research-stats-pagination-btn"
+                  onClick={() => setStatsPage((p) => Math.max(1, p - 1))}
+                  disabled={statsPage <= 1}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={18} strokeWidth={2} aria-hidden />
+                  <span>Previous</span>
+                </button>
+                <span className="research-stats-pagination-info" aria-live="polite">
+                  Page {statsPage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="research-stats-pagination-btn"
+                  onClick={() => setStatsPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={statsPage >= totalPages}
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={18} strokeWidth={2} aria-hidden />
+                </button>
+              </nav>
+            )}
+          </div>
         )}
       </div>
 

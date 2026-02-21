@@ -908,7 +908,6 @@ html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-poin
   color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
 }
 .gameweek-points-player-points-badge.gameweek-points-stat-provisional {
-  font-style: italic;
   color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
 }
 

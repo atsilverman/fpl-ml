@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useRefreshState } from './useRefreshState'
 
 /**
  * Map API preloaded stats (from backend /api/v1/fixtures) to homePlayers/awayPlayers shape.
@@ -32,8 +33,10 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
     expected_goal_involvements: Number(r.expected_goal_involvements) || 0,
     expected_goals_conceded: Number(r.expected_goals_conceded) || 0
   }))
-  const homePlayers = rows.filter((r) => r.team_id === homeTeamId).sort(byPointsDesc)
-  const awayPlayers = rows.filter((r) => r.team_id === awayTeamId).sort(byPointsDesc)
+  const homeId = Number(homeTeamId)
+  const awayId = Number(awayTeamId)
+  const homePlayers = rows.filter((r) => Number(r.team_id) === homeId).sort(byPointsDesc)
+  const awayPlayers = rows.filter((r) => Number(r.team_id) === awayId).sort(byPointsDesc)
   return { homePlayers, awayPlayers }
 }
 
@@ -43,7 +46,11 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
  * When preloadedFixtureStats is provided (from useFixturesWithTeams API response), no Supabase call is made.
  */
 export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null) {
-  const hasPreloaded = Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
+  const { state: refreshState } = useRefreshState()
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+  // When live, always use Supabase so Matches/Bonus get fresh data; ignore API preloaded (MV is stale during live).
+  const hasPreloaded = !isLive && Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['fixture-player-stats', fixtureId, gameweek],
     queryFn: async () => {
@@ -108,9 +115,10 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
         const bonusStatus = s.bonus_status ?? 'provisional'
         const provisionalBonus = Number(s.provisional_bonus) || 0
         const officialBonus = Number(s.bonus) || 0
-        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
-        const displayPoints = isBonusConfirmed ? (s.total_points ?? 0) : (s.total_points ?? 0) + provisionalBonus
-        const displayBonus = isBonusConfirmed ? officialBonus : provisionalBonus
+        const isBonusConfirmed = bonusStatus === 'confirmed'
+        const bonusToAdd = provisionalBonus || officialBonus
+        const displayPoints = isBonusConfirmed ? (s.total_points ?? 0) : (s.total_points ?? 0) + bonusToAdd
+        const displayBonus = isBonusConfirmed ? officialBonus : bonusToAdd
         return {
           player_id: s.player_id,
           fixture_id: s.fixture_id ?? fixtureId,
@@ -145,7 +153,9 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
       return { homePlayers, awayPlayers }
     },
     enabled: !!enabled && !!fixtureId && !!gameweek && !!homeTeamId && !!awayTeamId && !hasPreloaded,
-    staleTime: 30000
+    staleTime: isLive ? 20 * 1000 : 30000,
+    refetchInterval: isLive ? 25 * 1000 : false,
+    refetchIntervalInBackground: isLive
   })
 
   if (hasPreloaded && enabled) {

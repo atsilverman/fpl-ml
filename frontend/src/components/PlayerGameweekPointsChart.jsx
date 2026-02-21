@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import './PlayerGameweekPointsChart.css'
 
@@ -129,7 +129,8 @@ export default function PlayerGameweekPointsChart({
     }
   }, [])
 
-  useEffect(() => {
+  // useLayoutEffect so chart redraws synchronously when statKey/filter change (e.g. from filter popup)
+  useLayoutEffect(() => {
     if (!filteredData.length || !svgRef.current || loading) return
 
     const svg = d3.select(svgRef.current)

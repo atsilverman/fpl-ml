@@ -1549,6 +1549,66 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   justify-content: center;
 }
 
+/* Full-cell tap area for sort: whole header cell tappable, not just the label (rank th already has position: sticky) */
+.league-standings-page .league-standings-bento-table th.league-standings-bento-team,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-in-play,
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-captain,
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-vice {
+  position: relative;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-rank .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-team .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-in-play .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-captain .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-vice .league-standings-sort-header {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-rank .league-standings-sort-header {
+  justify-content: flex-start;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-team .league-standings-sort-header {
+  justify-content: flex-start;
+}
+.league-standings-page .league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-gw .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-left-to-play .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.league-standings-bento-in-play .league-standings-sort-header {
+  justify-content: center;
+}
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-captain .league-standings-sort-header,
+.league-standings-page .league-standings-bento-table th.captain-standings-bento-vice .league-standings-sort-header {
+  justify-content: center;
+}
+
+/* Transfers table: full-cell tap for Manager sort header */
+.league-standings-page .league-transfers-table th.league-transfers-th-manager {
+  position: relative;
+}
+.league-standings-page .league-transfers-table th.league-transfers-th-manager .league-standings-sort-header {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
 .league-standings-bento-left-to-play,
 .league-standings-bento-in-play {
   text-align: center;

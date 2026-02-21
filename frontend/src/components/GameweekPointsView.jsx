@@ -263,14 +263,12 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isMatchLive = hasFixtureLiveState && fixtureSaysLive
     const isMatchProvisional = matchFinishedProvisional && !matchFinished
     const isBonusPending = isMatchProvisional && player.bonus_status === 'provisional'
-    // Only show status dot when match is not finished; never show live/provisional dot for finished matches
-    const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && !matchFinished && (isMatchLive || isMatchProvisional)
-    // Don't show provisional dot when this player's bonus is already confirmed (e.g. from catch-up refresh)
-    const minsDotProvisional = isMatchProvisional && !isMatchLive && player.bonus_status !== 'confirmed'
+    // Only show live-updating indicator when match is live (minutes can change). Do not show it for provisional/finished; use minutes risk dots only for those.
+    const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && isMatchLive
     const mins = player.minutes != null ? Number(player.minutes) : 0
-    /* Risk dots only when game is fully finished, not live or provisional */
-    const showMinsRiskRed = matchFinished && mins > 0 && mins < 45
-    const showMinsRiskOrange = matchFinished && mins >= 45 && mins < 80
+    /* Risk dots when game is finished or provisionally finished (not live) */
+    const showMinsRiskRed = matchFinishedOrProvisional && mins > 0 && mins < 45
+    const showMinsRiskOrange = matchFinishedOrProvisional && mins >= 45 && mins < 80
     const ptsDisplay = player.contributedPoints ?? player.points
 
     const isGk = player.position === 1
@@ -432,8 +430,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   {formatMinutes(Math.min(90, player.minutes ?? 0))}
                   {showMinsLiveDot && (
                     <span
-                      className={`live-updating-indicator ${minsDotProvisional ? 'gameweek-points-mins-provisional' : 'gameweek-points-mins-live'}`}
-                      title={minsDotProvisional ? 'Match finished (provisional); stats may update' : 'Minutes can change during live games'}
+                      className="live-updating-indicator gameweek-points-mins-live"
+                      title="Minutes can change during live games"
                       aria-hidden
                     />
                   )}

@@ -279,9 +279,14 @@ html[data-theme="dark"] .feed-event-card__position-badge {
 .feed-event-card__impact-value {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 6px;
+  padding: 0 6px;
+  height: 25.85px;
+  width: 3.25em;
+  min-width: 3.25em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 4px;
-  min-width: 2em;
   text-align: center;
   line-height: 1.2;
   box-sizing: border-box;

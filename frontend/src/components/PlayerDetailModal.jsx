@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { createPortal } from 'react-dom'
 import { X, Filter } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
@@ -41,6 +40,7 @@ export default function PlayerDetailModal({
   const [showPlayerStatPopup, setShowPlayerStatPopup] = useState(false)
   const [chartAverage, setChartAverage] = useState(null)
   const playerStatPopupRef = useRef(null)
+  const filterPopupPanelRef = useRef(null)
 
   const {
     player: playerDetailPlayer,
@@ -94,9 +94,9 @@ export default function PlayerDetailModal({
   useEffect(() => {
     if (!showPlayerStatPopup) return
     const handleClickOutside = (e) => {
-      if (playerStatPopupRef.current && !playerStatPopupRef.current.contains(e.target)) {
-        setShowPlayerStatPopup(false)
-      }
+      const insideHeader = playerStatPopupRef.current?.contains(e.target)
+      const insidePopup = filterPopupPanelRef.current?.contains(e.target)
+      if (!insideHeader && !insidePopup) setShowPlayerStatPopup(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -244,8 +244,8 @@ export default function PlayerDetailModal({
             opponentStatsLoading={teamLast6Loading}
           />
         </div>
-        {showPlayerStatPopup && typeof document !== 'undefined' && createPortal(
-          <div className="player-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'auto' }}>
+        {showPlayerStatPopup && (
+          <div ref={filterPopupPanelRef} className="player-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'auto' }}>
             <div
               className="player-detail-filter-backdrop"
               style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}
@@ -326,8 +326,7 @@ export default function PlayerDetailModal({
                 </div>
               </div>
             </div>
-          </div>,
-          document.body
+          </div>
         )}
       </div>
     </div>

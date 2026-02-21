@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useRefreshState } from './useRefreshState'
 
 const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
   ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
@@ -33,6 +34,9 @@ function applySimulatedStatuses(fixtures) {
  * Optional simulateStatuses: when true, overrides first 4 fixtures to Scheduled / Live / Provisional / Final for UI testing.
  */
 export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}) {
+  const { state: refreshState } = useRefreshState()
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+
   const { data: result, isLoading, error } = useQuery({
     queryKey: ['fixtures-with-teams', gameweek, simulateStatuses],
     queryFn: async () => {
@@ -87,8 +91,9 @@ export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}
       return list
     },
     enabled: !!gameweek,
-    staleTime: 30000,
-    refetchInterval: simulateStatuses ? false : 30000
+    staleTime: isLive ? 15 * 1000 : 30000,
+    refetchInterval: simulateStatuses ? false : (isLive ? 18 * 1000 : 30000),
+    refetchIntervalInBackground: isLive
   })
 
   const isApiResult = result && typeof result === 'object' && !Array.isArray(result) && 'playerStatsByFixture' in result

@@ -410,12 +410,9 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           const bonusStatus = stats.bonus_status ?? 'provisional'
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
-          const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
-          const fid = stats.fixture_id != null ? stats.fixture_id : null
-          const fixture = fid != null ? (fixturesById[fid] ?? fixturesById[Number(fid)] ?? fixturesById[String(fid)]) : null
-          const fixtureFinished = fixture != null && (fixture.finished === true || fixture.finished === 'true')
-          const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
-          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
+          const isBonusConfirmed = bonusStatus === 'confirmed'
+          const bonusToAdd = provisionalBonus || officialBonus
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + bonusToAdd
           return sum + effectivePoints
         }, 0)
 
@@ -554,11 +551,12 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           const bonusStatus = stats.bonus_status ?? 'provisional'
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
-          const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+          const isBonusConfirmed = bonusStatus === 'confirmed'
+          const bonusToAdd = provisionalBonus || officialBonus
           const fixtureFinished = effectiveFixture != null && (effectiveFixture.finished === true || effectiveFixture.finished === 'true')
           const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
-          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provisionalBonus
-          const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : provisionalBonus
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + bonusToAdd
+          const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : bonusToAdd
           const effectiveFid = effectiveFixture?.fpl_fixture_id ?? (fid && fid !== 0 ? fid : null)
           rows.push({
             position: pick.position,

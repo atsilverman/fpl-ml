@@ -104,11 +104,12 @@ export function useGameweekTop10ByStat() {
         const totalPoints = Number(r.total_points) || 0
         const bonusStatus = r.bonus_status ?? 'provisional'
         const officialBonus = Number(r.bonus) ?? 0
-        const isBonusConfirmed = bonusStatus === 'confirmed' || officialBonus > 0
+        const isBonusConfirmed = bonusStatus === 'confirmed'
         const provisionalBonus = Number(r.provisional_bonus) ?? 0
+        const bonusToAdd = provisionalBonus || officialBonus
         return {
           ...r,
-          effective_total_points: isBonusConfirmed ? totalPoints : totalPoints + provisionalBonus
+          effective_total_points: isBonusConfirmed ? totalPoints : totalPoints + bonusToAdd
         }
       })
       return computeTop10ByStat(rows)

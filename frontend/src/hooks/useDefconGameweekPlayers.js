@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from './useGameweekData'
+import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 
 /** DEFCON threshold by FPL position: 1=GK, 2=DEF, 3=MID, 4=FWD */
@@ -16,6 +17,8 @@ const DEFCON_THRESHOLD_BY_POSITION = {
  */
 export function useDefconGameweekPlayers() {
   const { gameweek, dataChecked, loading: gwLoading } = useGameweekData()
+  const { state: refreshState } = useRefreshState()
+  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
 
   const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ['defcon-gameweek-players', gameweek, dataChecked],
@@ -97,8 +100,9 @@ export function useDefconGameweekPlayers() {
       return list
     },
     enabled: !!gameweek && !gwLoading,
-    staleTime: 30 * 1000,
-    refetchInterval: 60 * 1000,
+    staleTime: isLive ? 25 * 1000 : 30 * 1000,
+    refetchInterval: isLive ? 25 * 1000 : 60 * 1000,
+    refetchIntervalInBackground: isLive
   })
 
   return { players: rows, loading: isLoading, error }

@@ -893,13 +893,60 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   color: var(--text-primary);
 }
 
+.research-stats-footer-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0 12px;
+}
+
 .research-stats-count-footer {
   margin: 0;
-  padding: 8px 0 4px;
+  padding: 0;
   font-size: 11px;
   color: var(--text-tertiary, var(--text-secondary));
   text-align: center;
   opacity: 0.8;
+}
+
+.research-stats-pagination {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.research-stats-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.research-stats-pagination-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  border-color: var(--text-tertiary, var(--text-secondary));
+}
+
+.research-stats-pagination-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.research-stats-pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Filter overlay popup: portaled to body so fixed = viewport; panel anchored top, not centered */
@@ -1290,6 +1337,26 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-gw {
   position: relative;
   z-index: 0;
+}
+
+/* Sortable stat header: make the whole th (background container) tappable, not just the label */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  box-sizing: border-box;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Stat column widths; name column gets fixed width below */
