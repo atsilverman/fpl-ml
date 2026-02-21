@@ -55,6 +55,16 @@ function hitThreshold(d, getVal, thresholdLine) {
   return (getVal(d) ?? 0) >= thresholdLine
 }
 
+/** True when player did not play in that gameweek (fixture played and 0 minutes). Don't show DNP if game hasn't started. */
+function isDnp(d) {
+  const minutes = d.minutes !== undefined ? Number(d.minutes) : undefined
+  const matchPlayed = d.match_played === true || d.match_played === 'true'
+  return minutes === 0 && matchPlayed
+}
+
+const DNP_ICON_R = 6
+const DNP_LABEL_OFFSET_Y = 10
+
 /**
  * D3 bar chart: player stat per gameweek (points, goals, assists, or goal involvements).
  * X-axis = gameweek (oldest left, newest right). Filter: GW20+ / Last 6 (default) / Last 12.
@@ -169,13 +179,16 @@ export default function PlayerGameweekPointsChart({
       .domain([0, yMax])
       .range([height - padding.bottom, padding.top])
 
-    // For negative values: bar height is |v| drawn upward from baseline, so we use same scale
+    const baselineY = height - padding.bottom
+    // For negative values: bar height is |v| drawn upward from baseline. DNP: no bar (height 0).
     const getBarY = (d) => {
+      if (isDnp(d)) return baselineY
       const v = getVal(d)
       const displayVal = v < 0 ? -v : v
       return yScale(displayVal)
     }
     const getBarHeight = (d) => {
+      if (isDnp(d)) return 0
       const v = getVal(d)
       const displayVal = v < 0 ? -v : v
       return Math.max(0, yScale(0) - yScale(displayVal))
@@ -187,6 +200,7 @@ export default function PlayerGameweekPointsChart({
 
     const useThresholdStyling = isThresholdStat(statKey, position, thresholdLine)
     const getBarFillOrThreshold = (d) => {
+      if (isDnp(d)) return 'transparent'
       if (!useThresholdStyling) return getBarFillFor(d)
       const v = getVal(d)
       if (v < 0) return 'var(--accent-red, #dc2626)'
@@ -306,9 +320,10 @@ export default function PlayerGameweekPointsChart({
 
     const barTransition = d3.transition().duration(350).ease(d3.easeCubicOut)
 
-    // Bars: start from zero height then grow to value. DEFCON/Saves: hashed if below threshold, solid if achieved.
+    // Bars: start from zero height then grow to value. DEFCON/Saves: hashed if below threshold, solid if achieved. DNP: no visible bar.
     const barClass = (d) => {
       const neg = getVal(d) < 0 ? 'player-gw-chart-bar--negative' : ''
+      if (isDnp(d)) return 'player-gw-chart-bar player-gw-chart-bar--dnp'
       if (!useThresholdStyling || getVal(d) <= 0) return `player-gw-chart-bar ${neg}`.trim()
       const achieved = hitThreshold(d, getVal, thresholdLine) ? 'player-gw-chart-bar--achieved' : 'player-gw-chart-bar--hashed'
       return `player-gw-chart-bar ${achieved} ${neg}`.trim()
@@ -425,6 +440,57 @@ export default function PlayerGameweekPointsChart({
               .attr('fill', negative ? 'var(--accent-red, #dc2626)' : 'var(--text-primary)')
               .text(textStr)
             el.transition(barTransition).attr('transform', `translate(${centerX}, ${labelY})`)
+          }),
+        (exit) => exit.remove()
+      )
+
+    // DNP indicator: red circle with "!" (match GW points bento) + "DNP" text, no pill background
+    const dnpData = filteredData.filter(isDnp)
+    const dnpLabelY = baselineY - DNP_LABEL_OFFSET_Y
+    g.selectAll('.player-gw-chart-dnp-wrap')
+      .data(dnpData, (d) => d.gameweek)
+      .join(
+        (enter) => {
+          const wrap = enter.append('g').attr('class', 'player-gw-chart-dnp-wrap').attr('opacity', 0)
+          wrap.each(function (d) {
+            const el = d3.select(this)
+            const centerX = xScale(String(d.gameweek)) + bandWidth / 2
+            el.attr('transform', `translate(${centerX}, ${dnpLabelY})`)
+            el.append('circle')
+              .attr('class', 'player-gw-chart-dnp-icon')
+              .attr('r', DNP_ICON_R)
+              .attr('cx', -DNP_ICON_R - 4)
+              .attr('cy', 0)
+              .attr('fill', 'var(--impact-negative, var(--accent-red, #dc2626))')
+            el.append('text')
+              .attr('class', 'player-gw-chart-dnp-icon-text')
+              .attr('x', -DNP_ICON_R - 4)
+              .attr('y', 0)
+              .attr('text-anchor', 'middle')
+              .attr('dominant-baseline', 'middle')
+              .attr('font-size', 7)
+              .attr('font-weight', 700)
+              .attr('fill', '#fff')
+              .text('!')
+            el.append('text')
+              .attr('class', 'player-gw-chart-dnp-label')
+              .attr('x', 4)
+              .attr('y', 0)
+              .attr('text-anchor', 'start')
+              .attr('dominant-baseline', 'middle')
+              .attr('font-size', barLabelFontSize)
+              .attr('font-weight', 600)
+              .attr('fill', 'var(--text-secondary, #64748b)')
+              .text('DNP')
+          })
+          wrap.transition(barTransition).attr('opacity', 1)
+        },
+        (update) =>
+          update.each(function (d) {
+            const el = d3.select(this)
+            const centerX = xScale(String(d.gameweek)) + bandWidth / 2
+            el.attr('transform', `translate(${centerX}, ${dnpLabelY})`)
+            el.select('.player-gw-chart-dnp-label').attr('font-size', barLabelFontSize)
           }),
         (exit) => exit.remove()
       )

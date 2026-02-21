@@ -112,14 +112,14 @@ function mapRowToPlayer(row, playerMap) {
   }
 }
 
-const PAGE_SIZE_PLAYER_VIEW = 100
+const PAGE_SIZE_PLAYER_VIEW = 50
 const PAGE_SIZE_TEAM_VIEW = 5000
 
 /**
  * Fetches player stats for the Stats subpage. Uses materialized views when available
  * (one small request per GW range + location) for fast load; falls back to raw
  * player_gameweek_stats + in-memory aggregation if MVs are not yet deployed.
- * When using API: paginated (100 per page in player view); full list in team view.
+ * When using API: paginated (50 per page in player view); full list in team view.
  * @param {'all'|'last6'|'last12'} gwFilter - GW range
  * @param {'all'|'home'|'away'} locationFilter - filter by was_home
  * @param {{ page?: number, sortBy?: string, sortDir?: string, positionFilter?: string, searchQuery?: string, teamView?: boolean }} opts - pagination and filters (API only)
@@ -173,7 +173,8 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
             team_goals_conceded: data.team_goals_conceded ?? {},
             total_count: data.total_count ?? (data.players ?? []).length,
             page: data.page ?? apiPage,
-            page_size: data.page_size ?? pageSize
+            page_size: data.page_size ?? pageSize,
+            top_10_player_ids_by_field: data.top_10_player_ids_by_field ?? null
           }
         } catch {
           return null
@@ -336,6 +337,18 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     }
   }, [cache])
 
+  /** Global top 10 player IDs per stat (from API only); same for every page so fill does not recalc per page */
+  const top10PlayerIdsByField = useMemo(() => {
+    if (!cache || cache.source !== 'api' || !cache.top_10_player_ids_by_field) return null
+    const raw = cache.top_10_player_ids_by_field
+    if (typeof raw !== 'object' || Object.keys(raw).length === 0) return null
+    const sets = {}
+    for (const [field, ids] of Object.entries(raw)) {
+      if (Array.isArray(ids)) sets[field] = new Set(ids.map((id) => Number(id)).filter((n) => n > 0))
+    }
+    return Object.keys(sets).length > 0 ? sets : null
+  }, [cache])
+
   const players = useMemo(() => {
     if (!cache) return []
 
@@ -393,6 +406,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     teamGoalsConceded,
     totalCount,
     pagination,
+    top10PlayerIdsByField,
     loading: isLoading || gwLoading
   }
 }

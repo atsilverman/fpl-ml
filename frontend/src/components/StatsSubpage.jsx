@@ -142,6 +142,8 @@ export default function StatsSubpage() {
   const [denominatorMode, setDenominatorMode] = useState('total')
   /** 6 | 12 | null - which top-N highlight is on (Display section; only one at a time) */
   const [topHighlightMode, setTopHighlightMode] = useState(null)
+  /** When true (default), show green top-10 fill per stat for player view. Toggle in filter popup. */
+  const [showTop10Fill, setShowTop10Fill] = useState(true)
   /** null | 'topBottom6' - team view Display: None or Top/Bottom 6 green/red highlight. Default on for team mode. */
   const [teamDisplayMode, setTeamDisplayMode] = useState('topBottom6')
   const displayMode = denominatorMode === 'per90' ? 'per90' : 'total'
@@ -222,7 +224,7 @@ export default function StatsSubpage() {
     })
   }, [])
 
-  const { players, teamGoalsConceded, totalCount, pagination, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
+  const { players, teamGoalsConceded, totalCount, pagination, top10PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
     page: statsPage,
     sortBy: mainSort.column,
     sortDir: mainSort.dir,
@@ -670,6 +672,7 @@ export default function StatsSubpage() {
     if (!teamView) {
       const denomLabel = { total: 'Total', per90: 'Per 90', perM: 'Per £M' }[denominatorMode]
       parts.push(denomLabel)
+      if (showTop10Fill) parts.push('Top 10')
       if (topHighlightMode === 6) parts.push('Top 6')
       if (topHighlightMode === 12) parts.push('Top 12')
     } else {
@@ -677,7 +680,7 @@ export default function StatsSubpage() {
     }
     if (statCategory !== 'all') parts.push(statCategory === 'attacking' ? 'Attacking' : statCategory === 'goalie' ? 'Goalie' : 'Defending')
     return parts.join(' · ')
-  }, [gwFilter, gameweek, locationFilter, positionFilter, ownershipFilter, denominatorMode, statCategory, topHighlightMode, teamDisplayMode, teamView])
+  }, [gwFilter, gameweek, locationFilter, positionFilter, ownershipFilter, denominatorMode, statCategory, showTop10Fill, topHighlightMode, teamDisplayMode, teamView])
 
   const filtersHaveChanged = useMemo(() => {
     return (
@@ -688,10 +691,11 @@ export default function StatsSubpage() {
       ownershipFilter !== 'all' ||
       statCategory !== 'all' ||
       denominatorMode !== 'total' ||
+      !showTop10Fill ||
       topHighlightMode != null ||
       (teamView && teamDisplayMode != null)
     )
-  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, topHighlightMode, teamDisplayMode])
+  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, showTop10Fill, topHighlightMode, teamDisplayMode])
 
   const handleResetFilters = useCallback(() => {
     setTeamView(false)
@@ -701,6 +705,7 @@ export default function StatsSubpage() {
     setOwnershipFilter('all')
     setStatCategory('all')
     setDenominatorMode('total')
+    setShowTop10Fill(true)
     setTopHighlightMode(null)
     setTeamDisplayMode(null)
   }, [])
@@ -984,6 +989,29 @@ export default function StatsSubpage() {
                   )}
                   {!teamView && (
                     <>
+                      <div className="stats-filter-section">
+                        <div className="stats-filter-section-title">Display</div>
+                        <div className="stats-filter-buttons">
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${showTop10Fill ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setShowTop10Fill(true)}
+                            aria-pressed={showTop10Fill}
+                            title="Green fill for top 10 per stat (by current filters)"
+                          >
+                            Top 10 on
+                          </button>
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${!showTop10Fill ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setShowTop10Fill(false)}
+                            aria-pressed={!showTop10Fill}
+                            title="Hide green top 10 fill"
+                          >
+                            Top 10 off
+                          </button>
+                        </div>
+                      </div>
                       <div className="stats-filter-section">
                         <div className="stats-filter-section-title">Denominator</div>
                         <div className="stats-filter-buttons">
@@ -1483,8 +1511,13 @@ export default function StatsSubpage() {
                               const showLeaderFilled = !topOn && isCompareBest
                               const showLeaderBorderOnBlue = topOn && showPill && isCompareBest
                               const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
-                              const isTop10Fill = fieldRank != null && fieldRank <= 10 && compareSelectedPlayers.length < 2
-                              const top10Strength = isTop10Fill ? ((11 - fieldRank) / 10) ** 1.5 : undefined
+                              // Top 10 fill: use API global top-10 sets when available (any page); else use client rank only when single page (full filtered set in memory)
+                              const pid = p.player_id != null ? Number(p.player_id) : null
+                              const isInTop10FromApi = pid != null && top10PlayerIdsByField?.[field]?.has(pid)
+                              const rankFromClient = rankByField[field]?.[p.player_id] ?? rankByField[field]?.[pid]
+                              const rankForTop10Fill = !top10PlayerIdsByField && showTop10Fill && !hasMultiplePages ? (rankFromClient ?? null) : null
+                              const isTop10Fill = compareSelectedPlayers.length < 2 && showTop10Fill && (isInTop10FromApi === true || (rankForTop10Fill != null && rankForTop10Fill <= 10))
+                              const top10Strength = isTop10Fill ? (rankForTop10Fill != null ? ((11 - rankForTop10Fill) / 10) ** 1.5 : 0.7) : undefined
                               return (
                                 <td
                                   key={key}
@@ -1690,8 +1723,13 @@ export default function StatsSubpage() {
                             : null
                           const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
                           const pillStrength = showPill && rank != null && N != null ? Math.max(0.35, 1 - (rank - 1) / N * 0.65) : undefined
-                          const isTop10Fill = rank != null && rank <= 10 && compareSelectedPlayers.length < 2
-                          const top10Strength = isTop10Fill ? ((11 - rank) / 10) ** 1.5 : undefined
+                          // Top 10 fill: use API global top-10 sets when available (any page); else use client rank only when single page (full filtered set in memory)
+                          const pid = p.player_id != null ? Number(p.player_id) : null
+                          const isInTop10FromApi = pid != null && top10PlayerIdsByField?.[field]?.has(pid)
+                          const rankFromClient = rankByField[field]?.[p.player_id] ?? rankByField[field]?.[pid]
+                          const rankForTop10Fill = !top10PlayerIdsByField && showTop10Fill && !hasMultiplePages ? (rankFromClient ?? null) : null
+                          const isTop10Fill = compareSelectedPlayers.length < 2 && showTop10Fill && (isInTop10FromApi === true || (rankForTop10Fill != null && rankForTop10Fill <= 10))
+                          const top10Strength = isTop10Fill ? (rankForTop10Fill != null ? ((11 - rankForTop10Fill) / 10) ** 1.5 : 0.7) : undefined
                           return (
                             <td
                               key={key}
@@ -1744,7 +1782,16 @@ export default function StatsSubpage() {
                 <button
                   type="button"
                   className="research-stats-pagination-btn"
-                  onClick={() => setStatsPage((p) => Math.max(1, p - 1))}
+                  onClick={() => {
+                    setStatsPage((p) => Math.max(1, p - 1))
+                    requestAnimationFrame(() => {
+                      const main = document.querySelector('.dashboard-content')
+                      const content = document.querySelector('.research-page-content')
+                      if (main) main.scrollTo({ top: 0, behavior: 'smooth' })
+                      if (content) content.scrollTo({ top: 0, behavior: 'smooth' })
+                      if (!main && !content) window.scrollTo({ top: 0, behavior: 'smooth' })
+                    })
+                  }}
                   disabled={statsPage <= 1}
                   aria-label="Previous page"
                 >
@@ -1757,7 +1804,16 @@ export default function StatsSubpage() {
                 <button
                   type="button"
                   className="research-stats-pagination-btn"
-                  onClick={() => setStatsPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={() => {
+                    setStatsPage((p) => Math.min(totalPages, p + 1))
+                    requestAnimationFrame(() => {
+                      const main = document.querySelector('.dashboard-content')
+                      const content = document.querySelector('.research-page-content')
+                      if (main) main.scrollTo({ top: 0, behavior: 'smooth' })
+                      if (content) content.scrollTo({ top: 0, behavior: 'smooth' })
+                      if (!main && !content) window.scrollTo({ top: 0, behavior: 'smooth' })
+                    })
+                  }}
                   disabled={statsPage >= totalPages}
                   aria-label="Next page"
                 >

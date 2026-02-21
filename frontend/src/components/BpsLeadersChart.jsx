@@ -66,7 +66,7 @@ const VALUE_ON_BAR_MIN_WIDTH_PCT = 32
  * Top 3 by BPS (with FPL tiebreakers) are colored: 3 pts = gold, 2 pts = silver, 1 pt = bronze.
  * Optional gameweekMaxBps scales bars to gameweek-wide max so all fixtures share the same scale.
  */
-export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true, animateKey }) {
+export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true, animateKey, fixtureStatus }) {
   const barsRef = useRef(null)
   const [contrastByPlayerId, setContrastByPlayerId] = useState({})
   const [playFillAnimation, setPlayFillAnimation] = useState(false)
@@ -149,9 +149,12 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   }
 
   if (!sortedPlayers.length) {
+    const emptyMessage = fixtureStatus === 'scheduled'
+      ? 'Stats will appear when the match has started.'
+      : 'No player data for this match'
     return (
       <div className="bps-chart">
-        <div className="bps-chart__empty">No player data for this match</div>
+        <div className="bps-chart__empty">{emptyMessage}</div>
       </div>
     )
   }

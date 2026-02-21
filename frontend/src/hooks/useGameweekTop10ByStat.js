@@ -14,6 +14,7 @@ function rowKey(row) {
 /**
  * For each stat column, returns the set of "playerId-fixtureId" in the top 10 for that stat.
  * Per-fixture: no aggregation; each (player, fixture) row is ranked separately for DGW.
+ * Uses competition ranking: ties get the same rank (all get green pill), next rank skips.
  */
 function computeTop10ByStat(rows) {
   const out = {
@@ -56,26 +57,29 @@ function computeTop10ByStat(rows) {
   for (const statKey of Object.keys(keyToCol)) {
     const col = keyToCol[statKey]
     const desc = !lowerIsBetter.has(statKey)
+    const getVal = (row) =>
+      statKey === 'pts'
+        ? (Number(row.effective_total_points) || Number(row.total_points) || 0)
+        : (Number(row[col]) || 0)
     const sorted = [...rows].sort((a, b) => {
-      const av = statKey === 'pts'
-        ? (Number(a.effective_total_points) || Number(a.total_points) || 0)
-        : (Number(a[col]) || 0)
-      const bv = statKey === 'pts'
-        ? (Number(b.effective_total_points) || Number(b.total_points) || 0)
-        : (Number(b[col]) || 0)
-      return desc ? bv - av : av - bv
+      const av = getVal(a)
+      const bv = getVal(b)
+      const cmp = desc ? bv - av : av - bv
+      if (cmp !== 0) return cmp
+      return (a.player_id ?? 0) - (b.player_id ?? 0) || (a.fixture_id ?? 0) - (b.fixture_id ?? 0)
     })
-    const top10 = sorted.slice(0, 10)
-    top10.forEach((row) => {
-      out[statKey].add(rowKey(row))
-    })
+    let rank = 1
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && getVal(sorted[i]) !== getVal(sorted[i - 1])) rank = i + 1
+      if (rank <= 10) out[statKey].add(rowKey(sorted[i]))
+    }
   }
 
   return out
 }
 
 /**
- * Returns { top10ByStat } where each value is a Set of "playerId-fixtureId" in the top 10 for that stat (per-fixture, no DGW aggregation).
+ * Returns { top10ByStat } where each value is a Set of "playerId-fixtureId" in the top 10 for that stat (per-fixture, no DGW aggregation). Ties get same rank (competition ranking).
  */
 export function useGameweekTop10ByStat() {
   const { gameweek, loading: gwLoading } = useGameweekData()

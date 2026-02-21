@@ -189,7 +189,7 @@
   flex-direction: column;
   gap: 0;
   box-sizing: border-box;
-  border-width: 2px;
+  border-width: 1px;
 }
 
 /* Difficulty: 1–2 green (easiest), 3 neutral, 4–5 red (hardest); border + subtle fill for prominence */

@@ -54,6 +54,15 @@
   letter-spacing: 0.04em;
   color: var(--text-secondary);
   white-space: nowrap;
+  background: color-mix(in srgb, var(--border-color, #e2e8f0) 28%, var(--bg-card, #fff));
+}
+
+.schedule-opponent-stats-table-grid thead tr th:first-child {
+  border-top-left-radius: 6px;
+}
+
+.schedule-opponent-stats-table-grid thead tr th:last-child {
+  border-top-right-radius: 6px;
 }
 
 .schedule-opponent-stats-table-grid tbody tr:last-child td {
@@ -75,6 +84,12 @@
 .schedule-opponent-stats-table-grid .schedule-opponent-stats-td-stat {
   text-align: center;
   white-space: nowrap;
+}
+
+/* Vertical divider between attacking (G, xG) and defending (GC, xGC, CS) */
+.schedule-opponent-stats-th-stat--defense-start,
+.schedule-opponent-stats-td-stat--defense-start {
+  border-left: 1px solid var(--border-color);
 }
 
 /* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); text color + subtle fill */

@@ -11,7 +11,7 @@ import AnimatedValue from './AnimatedValue'
 const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
 
 /** Stat columns that get a subtle green fill when player is top 10 for that stat in the gameweek. Excludes: pts impact, G, A, CS, S, opp, MP, YC, RC. */
-const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
+const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
 const PLAYER_NAME_MAX_LENGTH = 15
 
@@ -412,15 +412,19 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           </td>
         )}
         <td
-          className={`gameweek-points-td gameweek-points-td-pts ${ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}${isTop10PtsAnyFixture ? ' gameweek-points-td-pts--top10' : ''}`}
-          title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
+          className={`gameweek-points-td gameweek-points-td-pts${!matchStarted ? ' gameweek-points-td-pts--upcoming' : ''}${matchStarted && ptsDisplay === 0 ? ' gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}${matchStarted && isTop10PtsAnyFixture ? ' gameweek-points-td-pts--top10' : ''}`}
+          title={!matchStarted ? 'Fixture not started' : (player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
           data-col="1"
         >
-            <AnimatedValue value={ptsDisplay}>
-              <span className="gameweek-points-player-points-badge">
-                {formatNumber(ptsDisplay)}
-              </span>
-            </AnimatedValue>
+            {!matchStarted ? (
+              <span className="gameweek-points-pts-upcoming">—</span>
+            ) : (
+              <AnimatedValue value={ptsDisplay}>
+                <span className={`gameweek-points-player-points-badge${ptsDisplay === 0 ? ' gameweek-points-player-points-badge--zero' : ''}`}>
+                  {formatNumber(ptsDisplay)}
+                </span>
+              </AnimatedValue>
+            )}
         </td>
         <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`} data-col="2">
           <span className="gameweek-points-mins-value-wrap">

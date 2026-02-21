@@ -359,7 +359,7 @@ export default function MiniLeaguePage() {
 
   const displayRows = sortedRows
 
-  /** Top third by GW points (league page only): manager_id -> 1..N for tapering fill on GW column; class capped at 5. No highlight when all GW points are 0. */
+  /** Top third by GW points (league page only): manager_id -> 1..N for tapering fill on GW column; class capped at 5. Ties get same rank (competition ranking), next rank skips. No highlight when all GW points are 0. */
   const gwTopRankByManagerId = useMemo(() => {
     if (!standings.length) return new Map()
     const withGw = standings.map((s) => {
@@ -373,13 +373,15 @@ export default function MiniLeaguePage() {
     const sorted = [...withGw].sort((a, b) => b.gw - a.gw || a.manager_id - b.manager_id)
     const topN = Math.max(1, Math.ceil(sorted.length / 3))
     const map = new Map()
-    for (let i = 0; i < Math.min(topN, sorted.length); i++) {
-      map.set(sorted[i].manager_id, i + 1)
+    let rank = 1
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i].gw !== sorted[i - 1].gw) rank = i + 1
+      if (rank <= topN) map.set(sorted[i].manager_id, Math.min(rank, 5))
     }
     return map
   }, [standings, currentManagerId, currentManagerGwPointsDisplay])
 
-  /** Top third by total points (league page only): manager_id -> 1..N for tapering fill on total column; class capped at 5 */
+  /** Top third by total points (league page only): manager_id -> 1..N for tapering fill on total column; class capped at 5. Ties get same rank (competition ranking), next rank skips. */
   const totalTopRankByManagerId = useMemo(() => {
     if (!standings.length) return new Map()
     const withTotal = standings.map((s) => {
@@ -393,8 +395,10 @@ export default function MiniLeaguePage() {
     const sorted = [...withTotal].sort((a, b) => b.total - a.total || a.manager_id - b.manager_id)
     const topN = Math.max(1, Math.ceil(sorted.length / 3))
     const map = new Map()
-    for (let i = 0; i < Math.min(topN, sorted.length); i++) {
-      map.set(sorted[i].manager_id, i + 1)
+    let rank = 1
+    for (let i = 0; i < sorted.length; i++) {
+      if (i > 0 && sorted[i].total !== sorted[i - 1].total) rank = i + 1
+      if (rank <= topN) map.set(sorted[i].manager_id, Math.min(rank, 5))
     }
     return map
   }, [standings, currentManagerId, currentManagerTotalPointsDisplay, selectedManagerId, selectedManagerTotalDisplay])

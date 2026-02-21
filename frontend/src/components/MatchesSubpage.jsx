@@ -9,10 +9,9 @@ import { useGameweekMaxBps } from '../hooks/useGameweekMaxBps'
 import PlayerDetailModal from './PlayerDetailModal'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
-import { abbreviateTeamName } from '../utils/formatDisplay'
 import BpsLeadersChart from './BpsLeadersChart'
-import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
+import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -51,7 +50,7 @@ function getFixtureStatus(fixture, _dataChecked = false) {
 }
 
 /** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). */
-const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
+const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
 const STAT_KEYS = [
   { key: 'goals', col: 'goals_scored' },
@@ -461,7 +460,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
             {headlineLeftTeam?.short_name && (
               <img src={`/badges/${headlineLeftTeam.short_name}.svg`} alt="" className="matchup-card-badge" onError={e => { e.target.style.display = 'none' }} />
             )}
-            <span className="matchup-card-team-name" title={headlineLeftTeam?.team_name ?? ''}>{abbreviateTeamName(headlineLeftTeam?.team_name) ?? 'Home'}</span>
+            <span className="matchup-card-team-name" title={headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? ''}>{headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? 'Home'}</span>
             <span className="matchup-card-home-icon" aria-label={showH2HScore ? 'Home in last meeting' : 'Home'}>
               <svg className="matchup-card-home-icon-svg" viewBox="0 0 48 48" width={14} height={14} fill="currentColor" aria-hidden>
                 <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
@@ -483,7 +482,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
             {headlineRightTeam?.short_name && (
               <img src={`/badges/${headlineRightTeam.short_name}.svg`} alt="" className="matchup-card-badge" onError={e => { e.target.style.display = 'none' }} />
             )}
-            <span className="matchup-card-team-name" title={headlineRightTeam?.team_name ?? ''}>{abbreviateTeamName(headlineRightTeam?.team_name) ?? 'Away'}</span>
+            <span className="matchup-card-team-name" title={headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? ''}>{headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? 'Away'}</span>
           </span>
         </div>
         <div className="matchup-card-status-row">
@@ -511,6 +510,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                 gameweekMaxBps={gameweekMaxBps}
                 isProvisional={isProvisionalBps}
                 animateKey={bonusAnimationKey}
+                fixtureStatus={status}
               />
             </div>
           )}
@@ -551,6 +551,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                   gameweekMaxBps={gameweekMaxBps}
                   isProvisional={isProvisionalBps}
                   animateKey={bonusAnimationKey}
+                  fixtureStatus={status}
                 />
               </div>
             )
@@ -795,14 +796,12 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
           <div ref={matchesScrollRef} className="matches-scroll-wrap">
             <div key={animationKey} ref={matchupGridRef} className="matchup-grid">
           {displayedFixtures.map((f, index) => {
-            const row = Math.floor(index / gridColumns)
-            const col = index % gridColumns
-            const diagonalDelay = (row + col) * 70
+            const rowDelayMs = index * 75
             return (
             <div
               key={f.fpl_fixture_id}
               className={`matchup-grid-item matchup-grid-item-animate${expandedId === f.fpl_fixture_id ? ' matchup-grid-item--expanded' : ''}`}
-              style={{ animationDelay: `${diagonalDelay}ms` }}
+              style={{ '--matchup-row-delay': `${rowDelayMs}ms` }}
               ref={(showH2H ? index === 0 : index === firstScheduledIndex) ? firstScheduledRef : null}
             >
               <MatchBento
@@ -821,7 +820,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
                 onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
-                preloadedFixtureStats={playerStatsByFixture?.[f.fpl_fixture_id]}
+                preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
             )

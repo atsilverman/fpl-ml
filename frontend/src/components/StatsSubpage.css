@@ -276,11 +276,20 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   position: relative;
   display: flex;
   align-items: center;
-  flex: 1;
-  min-width: 0;
-  max-width: 320px;
+  flex: 0 0 auto;
+  width: 320px;
+  min-width: 320px;
 }
 
+/* Mobile: search fills available toolbar width so it fits on screen regardless of compare state */
+@media (max-width: 768px) {
+  .research-stats-search-wrap {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+  }
+}
 
 .research-stats-search-icon {
   position: absolute;
@@ -376,6 +385,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 }
 
 /* Compare button: allow width for label on all viewports; default state visually distinct so it reads as clickable */
+/* Min-width so Compare vs Exit doesn't resize button and cause gap on mobile */
 .stats-compare-btn {
   width: auto;
   min-width: 28px;
@@ -388,6 +398,9 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 }
 .stats-compare-btn .stats-toolbar-btn-label {
   font-weight: 500;
+}
+.research-stats-toolbar-right .stats-compare-btn {
+  min-width: 96px; /* Reserve space for "Compare" so "Exit" doesn't shrink and create gap on mobile */
 }
 
 @media (min-width: 769px) {
@@ -461,6 +474,20 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   border-radius: 6px;
   text-align: center;
   animation: research-stats-compare-message-in var(--motion-duration) var(--motion-ease);
+}
+
+@media (max-width: 768px) {
+  .research-stats-sticky-header {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .research-stats-compare-message {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 @keyframes research-stats-compare-message-in {

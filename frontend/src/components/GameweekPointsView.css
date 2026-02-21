@@ -891,15 +891,44 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   opacity: 0.82;
 }
 
-/* 0 points badge: keep number clearly visible in light and dark mode */
-.gameweek-points-cell-muted .gameweek-points-player-points-badge {
+/* PTS cell when fixture not started: no pill, show dash only */
+.gameweek-points-td-pts--upcoming {
+  background: transparent;
+}
+.gameweek-points-pts-upcoming {
+  display: inline-block;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+html[data-theme="light"] .gameweek-points-pts-upcoming {
+  color: #808080;
+}
+html[data-theme="dark"] .gameweek-points-pts-upcoming {
+  color: #888888;
+}
+
+/* 0 points badge: demoted but slightly visible; pill colors (top10, impact) unchanged */
+.gameweek-points-player-points-badge--zero {
+  color: color-mix(in srgb, var(--text-secondary) 42%, var(--bg-primary));
+  opacity: 1;
+}
+html[data-theme="light"] .gameweek-points-player-points-badge--zero {
+  color: color-mix(in srgb, #505050 38%, var(--bg-primary));
+}
+html[data-theme="dark"] .gameweek-points-player-points-badge--zero {
+  color: color-mix(in srgb, #a0a0a0 40%, var(--bg-primary));
+}
+
+/* Legacy: cell-muted badge (kept for mins etc.); PTS 0 uses --zero on badge above */
+.gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
   color: var(--text-secondary);
   opacity: 1;
 }
-html[data-theme="light"] .gameweek-points-cell-muted .gameweek-points-player-points-badge {
+html[data-theme="light"] .gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
   color: #505050;
 }
-html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-points-badge {
+html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
   color: #a0a0a0;
 }
 

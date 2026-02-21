@@ -71,7 +71,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
         supabase
           .from('player_gameweek_stats')
           .select(
-            'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+            'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, minutes, match_finished, match_finished_provisional'
           )
           .eq('player_id', playerId)
           .order('gameweek', { ascending: true }),
@@ -124,7 +124,12 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           expected_assists: 0,
           expected_goal_involvements: 0,
           expected_goals_conceded: 0,
+          minutes: 0,
+          match_played: false,
         }
+        const finished = r.match_finished === true || r.match_finished === 'true'
+        const finishedProv = r.match_finished_provisional === true || r.match_finished_provisional === 'true'
+        if (finished || finishedProv) cur.match_played = true
         cur.points += r.total_points ?? 0
         cur.goals += r.goals_scored ?? 0
         cur.assists += r.assists ?? 0
@@ -139,6 +144,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
         cur.expected_assists += Number(r.expected_assists) || 0
         cur.expected_goal_involvements += Number(r.expected_goal_involvements) || 0
         cur.expected_goals_conceded += Number(r.expected_goals_conceded) || 0
+        cur.minutes += r.minutes ?? 0
         byGw.set(gw, cur)
       })
       const gameweekPoints = Array.from(byGw.entries())
@@ -159,6 +165,8 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           expected_assists: cur.expected_assists,
           expected_goal_involvements: cur.expected_goal_involvements,
           expected_goals_conceded: cur.expected_goals_conceded,
+          minutes: cur.minutes,
+          match_played: cur.match_played,
         }))
         .sort((a, b) => a.gameweek - b.gameweek)
 

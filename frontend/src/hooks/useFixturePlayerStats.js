@@ -48,7 +48,7 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
 export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null) {
   const { state: refreshState } = useRefreshState()
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
-  // When live, always use Supabase so Matches/Bonus get fresh data; ignore API preloaded (MV is stale during live).
+  // When live, don't use preloaded so the per-fixture query runs and refetches (numeric MP). When not live, use preloaded to avoid N extra requests.
   const hasPreloaded = !isLive && Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
 
   const { data, isLoading, error } = useQuery({

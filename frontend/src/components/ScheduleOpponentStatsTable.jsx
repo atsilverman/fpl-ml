@@ -79,7 +79,7 @@ export default function ScheduleOpponentStatsTable({
               <th className="schedule-opponent-stats-th-opponent">Opp</th>
               <th className="schedule-opponent-stats-th-stat">G</th>
               <th className="schedule-opponent-stats-th-stat">xG</th>
-              <th className="schedule-opponent-stats-th-stat">GC</th>
+              <th className="schedule-opponent-stats-th-stat schedule-opponent-stats-th-stat--defense-start">GC</th>
               <th className="schedule-opponent-stats-th-stat">xGC</th>
               <th className="schedule-opponent-stats-th-stat">CS</th>
             </tr>
@@ -122,7 +122,7 @@ export default function ScheduleOpponentStatsTable({
                   <td className={`schedule-opponent-stats-td-stat${fillClass(rankToFill(stats?.rankXg))}`}>
                     {opponentStatsLoading ? '…' : (stats ? formatStatCell(stats.xg, stats.rankXg, stats.rankXgTied) : '—')}
                   </td>
-                  <td className={`schedule-opponent-stats-td-stat${fillClass(rankToFill(stats?.rankGoalsConceded))}`}>
+                  <td className={`schedule-opponent-stats-td-stat schedule-opponent-stats-td-stat--defense-start${fillClass(rankToFill(stats?.rankGoalsConceded))}`}>
                     {opponentStatsLoading ? '…' : (stats ? formatStatCell(stats.goalsConceded, stats.rankGoalsConceded, stats.rankGoalsConcededTied) : '—')}
                   </td>
                   <td className={`schedule-opponent-stats-td-stat${fillClass(rankToFill(stats?.rankXgc))}`}>

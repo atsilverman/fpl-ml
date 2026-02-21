@@ -455,6 +455,7 @@
   }
   .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) .stats-toolbar-btn-label {
     display: inline;
+    text-transform: none; /* proper case "Filter" in desktop mode */
   }
 }
 
@@ -1522,6 +1523,29 @@ html[data-theme="dark"] .schedule-scroll-wrap {
 .schedule-th-gw--compact {
   min-width: 40px;
   font-size: 9px;
+}
+
+/* Staggered row entrance: table rows animate in when schedule card is shown */
+@keyframes schedule-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Slower animation on fixtures/schedule (smaller page): longer duration + stagger */
+.research-schedule-subpage .schedule-table tbody tr.schedule-row-animate {
+  animation: schedule-row-in 0.42s var(--motion-ease) both;
+  animation-delay: var(--schedule-row-delay, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .research-schedule-subpage .schedule-table tbody tr.schedule-row-animate {
+    animation-duration: 0.05s;
+    animation-delay: 0ms;
+  }
 }
 
 .schedule-row {

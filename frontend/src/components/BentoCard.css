@@ -280,17 +280,17 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 }
 
 .bento-card-info-icon {
-  width: 36px;
-  height: 28px;
-  min-width: 36px;
-  min-height: 28px;
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   opacity: 0.85;
   cursor: pointer;
   transition: opacity var(--motion-duration) var(--motion-ease), background-color var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease);
@@ -681,13 +681,13 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   animation: gw-legend-provisional-pulse 2s ease-in-out infinite;
 }
 
-/* Top 10 in GW: green fill on stat/PTS cell */
+/* Top 10 in GW: green fill on stat/PTS cell (same size as FPL impact pill below) */
 .gw-legend-popup-top10-swatch {
   display: inline-block;
-  width: 14px;
-  height: 10px;
-  min-width: 14px;
-  min-height: 10px;
+  width: 18px;
+  height: 12px;
+  min-width: 18px;
+  min-height: 12px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent-green, #10b981) 38%, transparent);
 }

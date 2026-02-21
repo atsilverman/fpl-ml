@@ -773,7 +773,7 @@ export default function ScheduleSubpage() {
             </tr>
           </thead>
           <tbody>
-            {teamIds.map((teamId) => {
+            {teamIds.map((teamId, rowIndex) => {
               const team = mapForRow[teamId]
               const short = team?.short_name ?? '?'
               const teamName = team?.team_name ?? short
@@ -781,7 +781,8 @@ export default function ScheduleSubpage() {
               return (
                 <tr
                   key={`schedule-row-${teamId}`}
-                  className="schedule-row"
+                  className="schedule-row schedule-row-animate"
+                  style={{ '--schedule-row-delay': `${rowIndex * 48}ms` }}
                 >
                   <td className="schedule-cell schedule-cell-team schedule-cell-sticky">
                     <span className="schedule-cell-opponent">

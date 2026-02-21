@@ -201,6 +201,14 @@ export default function HomePage() {
     [displayCardOrder, cardVisibility]
   )
 
+  /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom */
+  const bentoAnimationDelays = useMemo(() => {
+    const staggerMs = 70
+    return Object.fromEntries(
+      visibleCardOrder.map((id, index) => [id, index * staggerMs])
+    )
+  }, [visibleCardOrder])
+
   const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueTop10HistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
 
   const cards = [
@@ -437,7 +445,7 @@ export default function HomePage() {
               <PriceChangesBentoHome
                 key="price-changes"
                 className={getCardClassName(cardId)}
-                style={{ '--animation-delay': '0s' }}
+                style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
             )
           }
@@ -569,7 +577,7 @@ export default function HomePage() {
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
-              style={{ '--animation-delay': '0s' }}
+              style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}
               onExpandClick={

@@ -66,7 +66,11 @@ export function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) 
           {list.map((row, i) => {
             const badgeTeam = row.teamShortName || getTeamForPlayer(row.playerName)
             return (
-              <div key={i} className="price-changes-column-item">
+              <div
+                key={i}
+                className="price-changes-column-item price-changes-column-item-animate"
+                style={{ '--price-changes-row-delay': `${i * 48}ms` }}
+              >
                 <span className="price-changes-badge-slot">
                   {badgeTeam ? (
                     <img

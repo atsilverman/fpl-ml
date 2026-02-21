@@ -187,6 +187,22 @@ def get_stats(
         return (1, (val or "").lower() if isinstance(val, str) else str(val or ""))
     players.sort(key=sort_key, reverse=reverse)
     total_count = len(players)
+    # Top 10 player_ids per stat (from full filtered list) so frontend can show green fill on any page
+    STAT_FIELDS_TOP10 = [
+        "points", "minutes", "goals_scored", "assists", "expected_goals", "expected_assists",
+        "expected_goal_involvements", "clean_sheets", "saves", "bps", "defensive_contribution",
+        "expected_goals_conceded", "goals_conceded", "yellow_cards", "red_cards", "selected_by_percent",
+    ]
+    LOWER_IS_BETTER = {"expected_goals_conceded", "goals_conceded", "yellow_cards", "red_cards"}
+    top_10_player_ids_by_field = {}
+    for field in STAT_FIELDS_TOP10:
+        def _key(p, f=field):
+            val = p.get(f)
+            if val is None:
+                return (0, 0.0)
+            return (0, float(val))
+        sorted_by_field = sorted(players, key=_key, reverse=(field not in LOWER_IS_BETTER))
+        top_10_player_ids_by_field[field] = [p["player_id"] for p in sorted_by_field[:10] if p.get("player_id") is not None]
     # Paginate
     start = (page - 1) * page_size
     players = players[start : start + page_size]
@@ -207,6 +223,7 @@ def get_stats(
         "page": page,
         "page_size": page_size,
         "team_goals_conceded": team_goals_conceded,
+        "top_10_player_ids_by_field": top_10_player_ids_by_field,
     }
 
 
@@ -342,6 +359,7 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
     except Exception as e:
         return {"fixtures": [], "playerStatsByFixture": {}, "error": str(e)}
     rows = r.data or []
+    by_fixture = {}
     # Build distinct fixtures (one row per fixture has same fixture metadata)
     seen = set()
     fixtures = []
@@ -368,6 +386,25 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
             "homeTeam": {"short_name": row.get("home_team_short_name"), "team_name": None},
             "awayTeam": {"short_name": row.get("away_team_short_name"), "team_name": None},
         })
+    # When we have fixtures from MV, look up team_name from teams (MV only has short_name)
+    if fixtures:
+        team_ids = set()
+        for fi in fixtures:
+            if fi.get("home_team_id") is not None:
+                team_ids.add(fi["home_team_id"])
+            if fi.get("away_team_id") is not None:
+                team_ids.add(fi["away_team_id"])
+        if team_ids:
+            try:
+                t_r = db.client.table("teams").select("team_id, short_name, team_name").in_("team_id", list(team_ids)).execute()
+                team_map = {t["team_id"]: {"short_name": t.get("short_name"), "team_name": t.get("team_name")} for t in (t_r.data or [])}
+                for fi in fixtures:
+                    if fi.get("home_team_id") is not None and fi["home_team_id"] in team_map:
+                        fi["homeTeam"] = team_map[fi["home_team_id"]].copy()
+                    if fi.get("away_team_id") is not None and fi["away_team_id"] in team_map:
+                        fi["awayTeam"] = team_map[fi["away_team_id"]].copy()
+            except Exception:
+                pass
     # If no rows from MV (e.g. MV not populated), fall back to fixtures + teams tables
     if not fixtures and not rows:
         try:
@@ -386,10 +423,58 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
                     f["homeTeam"] = team_map.get(f.get("home_team_id")) or {"short_name": None, "team_name": None}
                     f["awayTeam"] = team_map.get(f.get("away_team_id")) or {"short_name": None, "team_name": None}
                 fixtures = fix_list
+                # When using fallback, MV had no rows so by_fixture would be empty. Populate from player_gameweek_stats.
+                try:
+                    pgs_r = db.client.table("player_gameweek_stats").select("player_id, fixture_id, team_id, minutes, total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, bonus_status, bonus, provisional_bonus").eq("gameweek", gameweek).execute()
+                    pgs_rows = pgs_r.data or []
+                    if pgs_rows:
+                        player_ids = list({r["player_id"] for r in pgs_rows})
+                        pl_r = db.client.table("players").select("fpl_player_id, web_name, position").in_("fpl_player_id", player_ids).execute()
+                        pl_map = {p["fpl_player_id"]: p for p in (pl_r.data or [])}
+                        team_ids_p = set(r["team_id"] for r in pgs_rows if r.get("team_id") is not None)
+                        t_r2 = db.client.table("teams").select("team_id, short_name").in_("team_id", list(team_ids_p)).execute()
+                        team_short = {t["team_id"]: t.get("short_name") for t in (t_r2.data or [])}
+                        for r in pgs_rows:
+                            fid = r.get("fixture_id")
+                            if fid is None or fid == 0:
+                                continue
+                            info = pl_map.get(r["player_id"]) or {}
+                            bonus_status = r.get("bonus_status") or "provisional"
+                            prov_b = int(r.get("provisional_bonus") or 0)
+                            off_b = int(r.get("bonus") or 0)
+                            total_pts = int(r.get("total_points") or 0)
+                            eff_pts = total_pts if (bonus_status == "confirmed" or off_b > 0) else total_pts + prov_b
+                            if fid not in by_fixture:
+                                by_fixture[fid] = []
+                            by_fixture[fid].append({
+                                "player_id": r.get("player_id"),
+                                "web_name": info.get("web_name", "Unknown"),
+                                "position": info.get("position"),
+                                "fixture_id": fid,
+                                "team_id": r.get("team_id"),
+                                "team_short_name": team_short.get(r["team_id"]),
+                                "minutes": r.get("minutes"),
+                                "total_points": eff_pts,
+                                "effective_total_points": eff_pts,
+                                "goals_scored": r.get("goals_scored"),
+                                "assists": r.get("assists"),
+                                "clean_sheets": r.get("clean_sheets"),
+                                "saves": r.get("saves"),
+                                "bps": r.get("bps"),
+                                "defensive_contribution": r.get("defensive_contribution"),
+                                "yellow_cards": r.get("yellow_cards"),
+                                "red_cards": r.get("red_cards"),
+                                "expected_goals": r.get("expected_goals"),
+                                "expected_assists": r.get("expected_assists"),
+                                "expected_goal_involvements": r.get("expected_goal_involvements"),
+                                "expected_goals_conceded": r.get("expected_goals_conceded"),
+                                "goals_conceded": r.get("goals_conceded"),
+                            })
+                except Exception:
+                    pass
         except Exception:
             pass
-    # Group player stats by fixture_id
-    by_fixture = {}
+    # Group player stats by fixture_id (from MV rows when available)
     for row in rows:
         fid = row.get("fixture_id")
         if fid is None:

@@ -38,7 +38,6 @@ export default function PlayerDetailModal({
   const [selectedPlayerStat, setSelectedPlayerStat] = useState('points')
   const [chartRangeFilter, setChartRangeFilter] = useState('last6')
   const [showPlayerStatPopup, setShowPlayerStatPopup] = useState(false)
-  const [chartAverage, setChartAverage] = useState(null)
   const playerStatPopupRef = useRef(null)
   const filterPopupPanelRef = useRef(null)
 
@@ -86,10 +85,6 @@ export default function PlayerDetailModal({
       setSelectedPlayerStat(playerStatOptions[0].key)
     }
   }, [playerStatOptions, selectedPlayerStat])
-
-  useEffect(() => {
-    if (playerDetailLoading) setChartAverage(null)
-  }, [playerDetailLoading])
 
   useEffect(() => {
     if (!showPlayerStatPopup) return
@@ -215,9 +210,6 @@ export default function PlayerDetailModal({
                 </button>
               </div>
             </div>
-            {chartAverage != null && (
-              <div className="player-detail-chart-bento-average">Average: {chartAverage} per GW</div>
-            )}
             <div className="player-detail-chart-wrap">
               <PlayerGameweekPointsChart
                 key={`player-chart-${selectedPlayerStat}-${chartRangeFilter}`}
@@ -225,7 +217,6 @@ export default function PlayerDetailModal({
                 loading={playerDetailLoading}
                 statKey={selectedPlayerStat}
                 position={playerDetailPlayer?.position}
-                onAverageChange={setChartAverage}
                 filter={chartRangeFilter}
                 onFilterChange={setChartRangeFilter}
               />

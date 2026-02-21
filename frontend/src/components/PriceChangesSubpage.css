@@ -382,6 +382,28 @@ html[data-theme="light"] .price-changes-source-info-popup .price-changes-source-
   gap: 8px;
 }
 
+/* Staggered row entrance: same as fixtures/schedule (slower on smaller page) */
+@keyframes price-changes-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.research-price-changes-subpage .price-changes-column-item.price-changes-column-item-animate {
+  animation: price-changes-row-in 0.42s var(--motion-ease) both;
+  animation-delay: var(--price-changes-row-delay, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .research-price-changes-subpage .price-changes-column-item.price-changes-column-item-animate {
+    animation-duration: 0.05s;
+    animation-delay: 0ms;
+  }
+}
+
 /* Match transfers-summary-column-item: same padding, radius, no border */
 .price-changes-column-item {
   display: flex;
