@@ -203,7 +203,7 @@ export default function HomePage() {
 
   /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom */
   const bentoAnimationDelays = useMemo(() => {
-    const staggerMs = 70
+    const staggerMs = 90
     return Object.fromEntries(
       visibleCardOrder.map((id, index) => [id, index * staggerMs])
     )
@@ -583,6 +583,7 @@ export default function HomePage() {
               }
               isProvisionalOnly={refreshState === 'bonus_pending'}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
+              animateEntrance={!loading}
               style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}

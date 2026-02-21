@@ -67,9 +67,11 @@ const VALUE_ON_BAR_MIN_WIDTH_PCT = 32
  * Optional gameweekMaxBps scales bars to gameweek-wide max so all fixtures share the same scale.
  */
 export default function BpsLeadersChart({ players = [], loading = false, gameweekMaxBps = null, isProvisional = false, showHeader = true, animateKey, fixtureStatus }) {
+  const BPS_FILL_ANIMATION_MS = 400
   const barsRef = useRef(null)
   const [contrastByPlayerId, setContrastByPlayerId] = useState({})
   const [playFillAnimation, setPlayFillAnimation] = useState(false)
+  const [labelsVisible, setLabelsVisible] = useState(false)
 
   const { sortedPlayers, maxBps } = useMemo(() => {
     if (!players?.length) return { sortedPlayers: [], maxBps: 1 }
@@ -113,11 +115,18 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   useEffect(() => {
     if (animateKey == null || !sortedPlayers.length) return
     setPlayFillAnimation(false)
+    setLabelsVisible(false)
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => setPlayFillAnimation(true))
     })
     return () => cancelAnimationFrame(id)
   }, [animateKey, sortedPlayers.length])
+
+  useEffect(() => {
+    if (!playFillAnimation || !sortedPlayers.length) return
+    const t = setTimeout(() => setLabelsVisible(true), BPS_FILL_ANIMATION_MS)
+    return () => clearTimeout(t)
+  }, [playFillAnimation, sortedPlayers.length])
 
   useLayoutEffect(() => {
     if (!sortedPlayers.length || !barsRef.current) return
@@ -160,7 +169,7 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   }
 
   return (
-    <div className={`bps-chart${isProvisional ? ' bps-chart--provisional' : ''}${!showHeader ? ' bps-chart--no-header' : ''}`} role="list" aria-label="BPS leaders">
+    <div className={`bps-chart${isProvisional ? ' bps-chart--provisional' : ''}${!showHeader ? ' bps-chart--no-header' : ''}${labelsVisible ? ' bps-chart--labels-visible' : ''}`} role="list" aria-label="BPS leaders">
       {showHeader && (
         <div className="bps-chart__header" aria-hidden>
           <div className="bps-chart__header-label" />
@@ -210,7 +219,7 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
                   style={{ width: `${widthPct}%` }}
                 />
                 <span
-                  className={`bps-chart__value ${valueColorClass(valueOnBar, bonus, player.player_id)}${valueOnBar && bonus === 0 ? ' bps-chart__value--no-bonus-bar' : ''}`}
+                  className={`bps-chart__value bps-chart__value--delayed ${valueColorClass(valueOnBar, bonus, player.player_id)}${valueOnBar && bonus === 0 ? ' bps-chart__value--no-bonus-bar' : ''}`}
                   style={
                     valueOnBar
                       ? { left: `calc(${widthPct}% - 8px)`, right: 'auto', transform: 'translateY(-50%) translateX(-100%)' }
@@ -220,7 +229,7 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
                   {bps}
                 </span>
               </div>
-              <div className="bps-chart__bonus-col">
+              <div className="bps-chart__bonus-col bps-chart__bonus-col--delayed">
                 {inBonus ? (
                   <span className={`bps-chart__bonus-badge bps-chart__bonus-badge--${bonus}`} title={`${bonus} bonus pt${bonus !== 1 ? 's' : ''}`}>
                     {bonus}+

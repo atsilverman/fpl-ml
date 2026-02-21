@@ -220,6 +220,17 @@ html[data-theme="dark"] .bps-chart__fill--no-bonus {
   background: var(--bps-bar-neutral, rgba(255, 255, 255, 0.12));
 }
 
+/* Value and bonus labels appear after bar fill animation */
+.bps-chart__value--delayed,
+.bps-chart__bonus-col--delayed {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+.bps-chart--labels-visible .bps-chart__value--delayed,
+.bps-chart--labels-visible .bps-chart__bonus-col--delayed {
+  opacity: 1;
+}
+
 .bps-chart__value {
   position: absolute;
   z-index: 1;

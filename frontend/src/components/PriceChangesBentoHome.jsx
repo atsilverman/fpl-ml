@@ -142,7 +142,7 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
 
   return (
     <div
-      className={`price-changes-bento price-changes-bento-home bento-card bento-card-animate ${className}`.trim()}
+      className={`price-changes-bento price-changes-bento-home bento-card ${!loading ? 'bento-card-animate' : ''} ${className}`.trim()}
       style={style}
       aria-labelledby="price-changes-home-heading"
     >

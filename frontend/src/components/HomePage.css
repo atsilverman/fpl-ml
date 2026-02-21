@@ -89,7 +89,7 @@
 }
 
 .bento-card.bento-card-animate {
-  animation: bentoCardTrickleIn 0.52s var(--motion-ease) forwards;
+  animation: bentoCardTrickleIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: var(--animation-delay, 0s);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -128,7 +128,7 @@
 @keyframes bentoCardTrickleIn {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.97) translateZ(0);
+    transform: translateY(12px) scale(0.98) translateZ(0);
   }
   to {
     opacity: 1;

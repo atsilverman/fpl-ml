@@ -319,6 +319,7 @@ export default function PlayerGameweekPointsChart({
     })
 
     const barTransition = d3.transition().duration(350).ease(d3.easeCubicOut)
+    const barLabelDelay = 350
 
     // Bars: start from zero height then grow to value. DEFCON/Saves: hashed if below threshold, solid if achieved. DNP: no visible bar.
     const barClass = (d) => {
@@ -417,7 +418,7 @@ export default function PlayerGameweekPointsChart({
               .text(textStr)
             el.attr('transform', `translate(${centerX}, ${labelY})`)
           })
-          group.transition(barTransition).attr('opacity', 1)
+          group.transition(barTransition).delay(barLabelDelay).attr('opacity', 1)
         },
         (update) =>
           update.each(function (d) {
@@ -439,7 +440,7 @@ export default function PlayerGameweekPointsChart({
               .attr('font-size', barLabelFontSize)
               .attr('fill', negative ? 'var(--accent-red, #dc2626)' : 'var(--text-primary)')
               .text(textStr)
-            el.transition(barTransition).attr('transform', `translate(${centerX}, ${labelY})`)
+            el.transition(barTransition).delay(barLabelDelay).attr('transform', `translate(${centerX}, ${labelY})`)
           }),
         (exit) => exit.remove()
       )
@@ -483,7 +484,7 @@ export default function PlayerGameweekPointsChart({
               .attr('fill', 'var(--text-secondary, #64748b)')
               .text('DNP')
           })
-          wrap.transition(barTransition).attr('opacity', 1)
+          wrap.transition(barTransition).delay(barLabelDelay).attr('opacity', 1)
         },
         (update) =>
           update.each(function (d) {

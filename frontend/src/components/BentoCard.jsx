@@ -79,6 +79,7 @@ export default function BentoCard({
   subtext,
   change,
   loading = false,
+  animateEntrance = true,
   className = '',
   isChart = false,
   isChips = false,
@@ -243,7 +244,7 @@ export default function BentoCard({
     id === 'gw-rank' && isStale ? 'bento-card-rank-border-stale' : null
   const cardClasses = [
     'bento-card',
-    'bento-card-animate',
+    animateEntrance && 'bento-card-animate',
     className,
     overallRankBorderClass,
     leagueRankBorderClass,
