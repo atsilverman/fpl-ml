@@ -18,7 +18,7 @@
   }
 }
 .research-stats-page .research-stats-table tbody tr.research-stats-row-animate {
-  animation: research-stats-row-in 0.16s ease-out both;
+  animation: research-stats-row-in var(--motion-duration) var(--motion-ease) both;
 }
 
 /* Trickle-in: when loading finishes, headers and cells reveal with staggered random-ish delays over ~2s */
@@ -34,7 +34,7 @@
 }
 .research-stats-page .research-stats-table td.research-stats-trickle-cell,
 .research-stats-page .research-stats-table th.research-stats-trickle-cell {
-  animation: research-stats-trickle-in 0.32s ease-out forwards;
+  animation: research-stats-trickle-in var(--motion-duration) var(--motion-ease) forwards;
 }
 
 /* Configured owner: green player name only (matches Matches/Feed) */
@@ -460,7 +460,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 40%, var(--border-color));
   border-radius: 6px;
   text-align: center;
-  animation: research-stats-compare-message-in 0.2s ease-out;
+  animation: research-stats-compare-message-in var(--motion-duration) var(--motion-ease);
 }
 
 @keyframes research-stats-compare-message-in {
@@ -1213,13 +1213,19 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   height: 46px !important;
 }
 
-/* Sticky table header: stays fixed at top of viewport when page scrolls; body rows slide underneath (z-level masking) */
+/* Sticky table header: fixed at top of table scroll container when scrolling (like matchup details). */
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  background: var(--bg-secondary);
+  box-shadow: 0 1px 0 var(--border-color), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+}
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead tr {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 1;
   background: var(--bg-secondary);
-  box-shadow: 0 1px 0 var(--border-color), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
   background: var(--bg-secondary);
@@ -1228,12 +1234,13 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   box-sizing: border-box;
 }
 
-/* Sticky player/team column: same as fixture subpage (matchup-detail-th-player / matchup-detail-td-player). No horizontal movement – content slides underneath. */
+/* Sticky player/team column: same as fixture subpage (matchup-detail-th-player / matchup-detail-td-player). Fixed on horizontal scroll; header cell also sticks on vertical scroll. */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
   position: -webkit-sticky;
+  top: 0;
   left: 0;
-  z-index: 10;
+  z-index: 20;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
   box-sizing: border-box;
@@ -1243,8 +1250,13 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   isolation: isolate;
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
-  z-index: 11;
+  z-index: 20;
   border-right: 1px solid var(--border-color);
+}
+.research-stats-page .research-stats-table.league-standings-bento-table thead th:not(.league-standings-bento-team) {
+  position: sticky;
+  top: 0;
+  z-index: 0;
 }
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-team {
   position: sticky;
@@ -1253,6 +1265,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   z-index: 10;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
+  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1321,7 +1334,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
     box-shadow: none;
   }
 }
-/* Full-height table: container grows with content; page scrolls to view all rows */
+/* Table wrapper: horizontal scroll; main table only gets vertical scroll + max-height so sticky header/column work (like matchup details). */
 .research-stats-page .league-standings-bento-table-wrapper {
   width: 100%;
   max-width: 100%;
@@ -1334,8 +1347,16 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   isolation: isolate; /* Clear scroll container for sticky (same as fixture table) */
-  overscroll-behavior: none;
-  touch-action: pan-x pan-y; /* Capture horizontal scroll inside table on mobile */
+  overscroll-behavior-x: contain; /* keep horizontal scroll inside table */
+  overscroll-behavior-y: auto;   /* when at top/bottom, chain to page so rest of page can scroll */
+  touch-action: pan-x pan-y;     /* allow both axes; vertical chain lets page scroll after table end */
+}
+
+/* Main table only: vertical scroll inside this container so header row and player column stay fixed. */
+.research-stats-page .league-standings-bento-table-wrapper:not(.research-stats-compare-table-wrapper) {
+  overflow-y: auto;
+  max-height: 60vh;
+  min-height: 0;
 }
 
 @media (min-width: 769px) {

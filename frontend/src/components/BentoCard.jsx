@@ -8,7 +8,7 @@ import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -111,8 +111,6 @@ export default function BentoCard({
   playerChartData = null,
   playerChartFilter = 'all',
   onPlayerChartFilterChange = null,
-  playerChartStatKey = 'total_points',
-  onPlayerChartStatChange = null,
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   gameweekFixturesFromPlayers = null,
@@ -297,7 +295,7 @@ export default function BentoCard({
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
-  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points' || id === 'chips'
+  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points'
   const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
 
   const handleStateDebugClick = (e) => {
@@ -440,7 +438,7 @@ export default function BentoCard({
               <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             </div>
           </div>
-        ) : id === 'overall-rank' && isExpanded && onChartFilterChange ? (
+        ) : (id === 'overall-rank' || id === 'team-value') && isExpanded && onChartFilterChange ? (
           <div className="bento-card-expand-icons bento-card-expand-icons--chart-range">
             <div className="bento-card-chart-range-btns" role="group" aria-label="Chart range">
               <button
@@ -468,6 +466,18 @@ export default function BentoCard({
                 Last 6
               </button>
             </div>
+            {onShowTop10Change != null && (
+              <button
+                type="button"
+                className={`bento-card-compare-btn ${showTop10Lines ? 'bento-card-compare-btn--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onShowTop10Change() }}
+                aria-pressed={showTop10Lines}
+                title={showTop10Lines ? 'Hide mini league leader line' : 'Show mini league leader line'}
+              >
+                <Users className="bento-card-compare-icon" size={14} strokeWidth={2} />
+                <span className="bento-card-compare-label">Compare</span>
+              </button>
+            )}
             <div
               className="bento-card-expand-icon bento-card-expand-icon--collapse"
               title="Collapse"
@@ -697,6 +707,7 @@ export default function BentoCard({
               showComparison={showChartComparison}
               loading={loading}
               onFilterChange={onChartFilterChange}
+              hideFilterUI
             />
           ) : (
             <PerformanceChart
@@ -724,8 +735,6 @@ export default function BentoCard({
             loading={loading}
             filter={playerChartFilter}
             onFilterChange={onPlayerChartFilterChange}
-            statKey={playerChartStatKey}
-            onStatChange={onPlayerChartStatChange}
           />
         </div>
       )}

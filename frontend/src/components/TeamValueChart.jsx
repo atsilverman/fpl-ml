@@ -14,7 +14,8 @@ export default function TeamValueChart({
   showComparison = false,
   lineColor = 'var(--accent-green)',
   loading = false,
-  onFilterChange = null
+  onFilterChange = null,
+  hideFilterUI = false // when true, filter is rendered in card header (e.g. Team Value expanded)
 }) {
   const svgRef = useRef(null)
   const containerRef = useRef(null)
@@ -830,7 +831,7 @@ export default function TeamValueChart({
           className="performance-chart"
         />
       </div>
-      {onFilterChange && (
+      {onFilterChange && !hideFilterUI && (
         <div className="chart-filter-controls">
           <button
             className={`chart-filter-btn ${filter === 'all' ? 'active' : ''}`}

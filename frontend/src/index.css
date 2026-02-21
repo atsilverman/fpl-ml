@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+/* Shared motion timing: page load, subpage switch, refresh, UI transitions – one speed everywhere */
+html {
+  --motion-duration: 0.25s;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Dark mode (default) */
 html:not([data-theme]),
 html[data-theme="dark"] {
@@ -180,7 +186,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   z-index: 10000; /* above nav (100) and modals (1000) */
-  animation: toast-in 0.2s ease-out;
+  animation: toast-in var(--motion-duration) var(--motion-ease);
   pointer-events: none;
   white-space: nowrap;
 }

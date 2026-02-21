@@ -66,7 +66,7 @@
   background: var(--bg-card);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), background var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {
@@ -90,7 +90,7 @@
   background: var(--bg-card);
   color: var(--text-primary);
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: border-color var(--motion-duration) var(--motion-ease), background var(--motion-duration) var(--motion-ease);
   max-width: 200px;
 }
 
@@ -144,7 +144,7 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {
@@ -177,7 +177,7 @@
   margin: 0;
   color: var(--text-primary);
   letter-spacing: -0.5px;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--motion-duration) var(--motion-ease);
 }
 
 .header-subtitle {
@@ -218,7 +218,7 @@
   background: transparent;
   color: var(--accent-blue);
   cursor: pointer;
-  transition: color 0.2s ease, opacity 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), opacity var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {
@@ -279,7 +279,7 @@
   background: var(--accent-blue);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
   transform: translateX(calc(var(--slider-offset, 0) * (100% + 12px)));
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--motion-duration) var(--motion-ease);
   z-index: 0;
   pointer-events: none;
 }
@@ -362,7 +362,7 @@
   letter-spacing: 0.02em;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), background var(--motion-duration) var(--motion-ease);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -432,7 +432,7 @@
   height: 12px;
   color: inherit;
   opacity: 0.85;
-  transition: transform 0.2s ease;
+  transition: transform var(--motion-duration) var(--motion-ease);
 }
 
 .nav-item-gameweek-chevron--open {
@@ -457,7 +457,7 @@
   max-height: 0;
   overflow: hidden;
   opacity: 0;
-  transition: max-height 0.2s ease, opacity 0.2s ease;
+  transition: max-height var(--motion-duration) var(--motion-ease), opacity var(--motion-duration) var(--motion-ease);
 }
 
 .nav-item-gameweek-panel--open {
@@ -477,7 +477,7 @@
   font-weight: 500;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background var(--motion-duration) var(--motion-ease), color var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {
@@ -532,7 +532,7 @@
   color: var(--text-secondary);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all var(--motion-duration) var(--motion-ease);
   min-height: 40px;
   min-width: 40px;
   display: flex;
@@ -644,7 +644,7 @@
   border-radius: 4px;
   background: var(--accent-blue, #3b82f6);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform var(--motion-duration) var(--motion-ease);
   z-index: 0;
   pointer-events: none;
 }
@@ -681,7 +681,7 @@
   letter-spacing: 0.02em;
   border-radius: 4px;
   cursor: pointer;
-  transition: color 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -785,7 +785,7 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease), background-color var(--motion-duration) var(--motion-ease);
 }
 
 .dashboard-bonus-info-btn[aria-expanded="true"] {
@@ -806,7 +806,7 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease), background-color var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {
@@ -835,7 +835,7 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: color var(--motion-duration) var(--motion-ease), border-color var(--motion-duration) var(--motion-ease), background-color var(--motion-duration) var(--motion-ease);
 }
 
 @media (hover: hover) {

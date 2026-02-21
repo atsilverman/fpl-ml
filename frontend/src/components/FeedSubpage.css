@@ -115,7 +115,7 @@
   }
 }
 .feed-event-list .feed-event-card-animate {
-  animation: feed-event-card-in 0.16s ease-out both;
+  animation: feed-event-card-in var(--motion-duration) var(--motion-ease) both;
 }
 
 .feed-event-list {

@@ -357,7 +357,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 }
 
 .matchup-grid .matchup-grid-item-animate {
-  animation: matchup-card-in 0.4s ease-out both;
+  animation: matchup-card-in var(--motion-duration) var(--motion-ease) both;
 }
 
 /* Desktop: single column; matchups align with content width. */

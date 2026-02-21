@@ -1071,80 +1071,8 @@ export default function PerformanceChart({
         tooltip.transition().duration(200).style('opacity', 0)
       })
 
-    // Chip legend inside SVG so dot size matches graph (r=6/7); add League leader when toggled
-    const legendChips = [
-      ...Object.entries(chipInfo).map(([key, { name, color }]) => ({ key, name, color, isLine: false })),
-      ...(showTop10Lines ? [{ key: 'league-leader', name: 'League leader', color: TOP10_LEADER_COLOR, isLine: true }] : [])
-    ]
-    const legendGroupSel = g.selectAll('.chip-legend-group').data([null])
-    legendGroupSel.enter()
-      .append('g')
-      .attr('class', 'chip-legend-group')
-
-    const legendGroup = g.select('.chip-legend-group')
-    legendGroup.attr('transform', `translate(${width / 2}, ${height - padding.bottom * 0.35})`)
-
-    const legendItemSpacing = isMobile ? 40 : 48
-    const legendTotalWidth = (legendChips.length - 1) * legendItemSpacing
-    let legendX = -legendTotalWidth / 2
-
-    const legendItems = legendGroup.selectAll('.chip-legend-item').data(legendChips, d => d.key)
-    const legendItemsEnter = legendItems.enter()
-      .append('g')
-      .attr('class', 'chip-legend-item')
-
-    const legendDotR = isMobile ? 4 : 5
-    // Circle for chips; line segment for "League leader"
-    legendItemsEnter.each(function(d) {
-      const el = d3.select(this)
-      if (d.isLine) {
-        el.append('path')
-          .attr('class', 'chip-legend-line')
-          .attr('d', `M${-legendDotR},0 L${legendDotR},0`)
-          .attr('stroke', d.color)
-          .attr('stroke-width', 2)
-          .attr('stroke-linecap', 'round')
-          .attr('fill', 'none')
-      } else {
-        el.append('circle')
-          .attr('r', legendDotR)
-          .attr('fill', d.color)
-          .attr('stroke', 'rgba(0,0,0,0.3)')
-          .attr('stroke-width', 1.5)
-          .attr('cx', 0)
-          .attr('cy', 0)
-      }
-    })
-
-    legendItemsEnter.append('text')
-      .attr('class', 'chip-legend-svg-label')
-      .attr('x', legendDotR + 3)
-      .attr('y', 3.5)
-      .attr('fill', 'var(--text-secondary)')
-      .attr('font-size', isMobile ? 8 : 9)
-      .attr('font-weight', '500')
-      .attr('text-anchor', 'start')
-      .text(d => d.name)
-
-    legendItems.merge(legendItemsEnter)
-      .attr('transform', (d, i) => {
-        const x = legendX + i * legendItemSpacing
-        return `translate(${x}, 0)`
-      })
-
-    legendItems.selectAll('circle')
-      .attr('r', legendDotR)
-      .attr('fill', d => d.color)
-
-    legendItems.selectAll('.chip-legend-line')
-      .attr('stroke', d => d.color)
-
-    legendItems.select('text')
-      .attr('x', legendDotR + 3)
-      .attr('font-size', isMobile ? 8 : 9)
-      .text(d => d.name)
-
-    legendItems.exit().remove()
+    // Remove any previous chip legend from SVG (legend now rendered in own HTML container below)
+    g.selectAll('.chip-legend-group').remove()
 
     // No cleanup needed - tooltip persists across renders
   }, [filteredData, filteredComparisonData, filteredTop10LinesData, dimensions, isMobile, lineColor, loading, showComparison, showTop10Lines, filter, isStale])
@@ -1170,6 +1098,20 @@ export default function PerformanceChart({
           preserveAspectRatio="xMidYMid meet"
           className="performance-chart"
         />
+      </div>
+      <div className="performance-chart-chip-legend" role="group" aria-label="Chip legend">
+        {Object.entries(chipInfo).map(([key, { name, color }]) => (
+          <div key={key} className="performance-chart-chip-legend-item">
+            <span className="performance-chart-chip-legend-dot" style={{ backgroundColor: color }} aria-hidden />
+            <span className="performance-chart-chip-legend-label">{name}</span>
+          </div>
+        ))}
+        {showTop10Lines && (
+          <div className="performance-chart-chip-legend-item performance-chart-chip-legend-item--line">
+            <span className="performance-chart-chip-legend-line" style={{ backgroundColor: TOP10_LEADER_COLOR }} aria-hidden />
+            <span className="performance-chart-chip-legend-label">League leader</span>
+          </div>
+        )}
       </div>
       {/* Filter: button opens popup (same pattern as DefconSubpage / FeedSubpage). Hidden when used in overall-rank bento (range buttons in card header). */}
       {!hideFilterUI && (onFilterChange || onShowTop10Change) && (
