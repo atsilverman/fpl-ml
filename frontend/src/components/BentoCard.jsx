@@ -582,7 +582,6 @@ export default function BentoCard({
                   <tr><td className="gw-debug-table-label">is_next</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.is_next} /></td></tr>
                   <tr><td className="gw-debug-table-label">finished</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.finished} /></td></tr>
                   <tr><td className="gw-debug-table-label">data_checked</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.data_checked} /></td></tr>
-                  <tr><td className="gw-debug-table-label">fpl_ranks_updated</td><td><GwDebugBadge value={gameweekDebugData.gameweekRow.fpl_ranks_updated} /></td></tr>
                 </tbody>
               </table>
               <div className="gw-debug-fixtures-wrap">
@@ -678,7 +677,18 @@ export default function BentoCard({
           {!(id === 'league-rank' && isExpanded) && !(id === 'gw-points' && isExpanded) && (
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
               <AnimatedValue value={value}>{value}</AnimatedValue>
-              {isStale && <span className="stale-indicator" title="Data may be out of date during live games">!</span>}
+              {isStale && (
+                <span
+                  className="stale-indicator"
+                  title={
+                    id === 'overall-rank' && change === 0
+                      ? 'Rank may not be updated yet'
+                      : 'Data may be out of date during live games'
+                  }
+                >
+                  !
+                </span>
+              )}
               {isLiveUpdating && (
                 <span
                   className={`live-updating-indicator${isProvisionalOnly ? ' live-updating-indicator--provisional' : ''}`}

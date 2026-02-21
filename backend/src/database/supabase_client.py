@@ -299,6 +299,84 @@ class SupabaseClient:
             return result.data[0]["kickoff_time"]
         return None
 
+    def get_next_matchday_info(
+        self, gameweek: int, now_utc: Optional[datetime] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Next matchday (earliest future date with at least one fixture) for this gameweek.
+        Returns { matchday_sequence, matchday_date, first_kickoff_at } or None.
+        Used by per-matchday baseline capture (window check done by caller).
+        """
+        now = now_utc or datetime.now(timezone.utc)
+        now_iso = now.isoformat()
+        result = (
+            self.client.table("fixtures")
+            .select("kickoff_time, started")
+            .eq("gameweek", gameweek)
+            .gt("kickoff_time", now_iso)
+            .order("kickoff_time", desc=False)
+            .execute()
+        )
+        if not result.data:
+            return None
+        # Build (date, first_kickoff) per matchday for full GW to get sequence
+        all_fixtures = (
+            self.client.table("fixtures")
+            .select("kickoff_time")
+            .eq("gameweek", gameweek)
+            .order("kickoff_time", desc=False)
+            .execute()
+        )
+        if not all_fixtures.data:
+            return None
+        date_to_first_kickoff: Dict[str, str] = {}
+        for row in all_fixtures.data:
+            k = row.get("kickoff_time")
+            if not k:
+                continue
+            try:
+                dt = datetime.fromisoformat(k.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                d = dt.date().isoformat()
+                if d not in date_to_first_kickoff or k < date_to_first_kickoff[d]:
+                    date_to_first_kickoff[d] = k
+            except (ValueError, TypeError):
+                continue
+        ordered_dates = sorted(date_to_first_kickoff.keys())
+        for idx, d in enumerate(ordered_dates):
+            first_kickoff = date_to_first_kickoff[d]
+            if first_kickoff > now_iso:
+                return {
+                    "matchday_sequence": idx + 1,
+                    "matchday_date": d,
+                    "first_kickoff_at": first_kickoff,
+                }
+        return None
+
+    def matchday_baseline_already_captured(
+        self, gameweek: int, matchday_sequence: int
+    ) -> bool:
+        """True if any row exists for this (gameweek, matchday_sequence)."""
+        result = (
+            self.client.table("manager_gameweek_matchday_baselines")
+            .select("id")
+            .eq("gameweek", gameweek)
+            .eq("matchday_sequence", matchday_sequence)
+            .limit(1)
+            .execute()
+        )
+        return bool(result.data)
+
+    def upsert_matchday_baselines(self, rows: List[Dict[str, Any]]) -> None:
+        """Upsert rows into manager_gameweek_matchday_baselines (ON CONFLICT DO UPDATE)."""
+        if not rows:
+            return
+        self.client.table("manager_gameweek_matchday_baselines").upsert(
+            rows,
+            on_conflict="manager_id,gameweek,matchday_sequence",
+        ).execute()
+
     def insert_feed_events(self, events: List[Dict[str, Any]]):
         """
         Bulk-insert gameweek feed events (point-impacting timeline events).

@@ -119,7 +119,7 @@ async def run(
             db_client.client.table("fixtures")
             .select("fpl_fixture_id, home_team_id, away_team_id")
             .eq("gameweek", gw)
-            .eq("finished", True)
+            .or_("finished.eq.true,finished_provisional.eq.true")
             .execute()
         )
         if not fixtures.data:

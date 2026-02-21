@@ -13,25 +13,31 @@ when new gameweek starts (establish new baselines).
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
 
 logger = logging.getLogger(__name__)
 
+# Defaults for per-matchday baseline capture window (minutes before first kickoff)
+MATCHDAY_BASELINE_MINUTES_BEFORE_DEFAULT = 90
+MATCHDAY_BASELINE_MINUTES_STOP_BEFORE_DEFAULT = 5
+
 
 class BaselineCapture:
     """Handles baseline data capture and preservation."""
-    
+
     def __init__(
         self,
         fpl_client: FPLAPIClient,
-        db_client: SupabaseClient
+        db_client: SupabaseClient,
+        config: Optional[Any] = None,
     ):
         self.fpl_client = fpl_client
         self.db_client = db_client
+        self.config = config
     
     async def capture_manager_baselines(
         self,
@@ -259,16 +265,165 @@ class BaselineCapture:
                 "gameweek": gameweek,
                 **result
             })
-            
+
+            # Also write matchday 1 baseline (start of GW = first matchday)
+            await self._write_matchday_one_baselines(gameweek, manager_ids)
+
             return result
-            
+
         except Exception as e:
             logger.error("Error capturing all baselines", extra={
                 "gameweek": gameweek,
                 "error": str(e)
             }, exc_info=True)
             return {"managers_captured": 0, "transfers_captured": 0, "total_managers": 0}
-    
+
+    async def _write_matchday_one_baselines(
+        self, gameweek: int, manager_ids: List[int]
+    ) -> None:
+        """Write matchday_sequence=1 baselines (rank at start of GW) after GW baselines captured."""
+        try:
+            first_kickoff = self.db_client.get_first_kickoff_for_gameweek(gameweek)
+            if not first_kickoff:
+                return
+            try:
+                dt = datetime.fromisoformat(first_kickoff.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+                matchday_date = dt.date().isoformat()
+            except (ValueError, TypeError):
+                return
+            history = (
+                self.db_client.client.table("manager_gameweek_history")
+                .select("manager_id, previous_overall_rank, gameweek_rank")
+                .eq("gameweek", gameweek)
+                .in_("manager_id", manager_ids)
+                .execute()
+            )
+            if not history.data:
+                return
+            rows = []
+            for row in history.data:
+                prev_overall = row.get("previous_overall_rank")
+                if prev_overall is None:
+                    continue
+                rows.append({
+                    "manager_id": row["manager_id"],
+                    "gameweek": gameweek,
+                    "matchday_sequence": 1,
+                    "matchday_date": matchday_date,
+                    "first_kickoff_at": first_kickoff,
+                    "overall_rank_baseline": prev_overall,
+                    "gameweek_rank_baseline": row.get("gameweek_rank"),
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                })
+            if rows:
+                self.db_client.upsert_matchday_baselines(rows)
+                logger.info("Wrote matchday 1 baselines", extra={
+                    "gameweek": gameweek,
+                    "managers": len(rows),
+                })
+        except Exception as e:
+            logger.warning("Matchday 1 baselines write failed", extra={
+                "gameweek": gameweek,
+                "error": str(e),
+            })
+
+    def get_next_matchday_for_capture(
+        self, gameweek: int, current_time: Optional[datetime] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        If we are in the capture window for the next matchday, return its info.
+        Window: [first_kickoff - N min, first_kickoff - M min] (e.g. 90 min before to 5 min before).
+        """
+        now = current_time or datetime.now(timezone.utc)
+        info = self.db_client.get_next_matchday_info(gameweek, now)
+        if not info:
+            return None
+        first_kickoff_str = info["first_kickoff_at"]
+        try:
+            kickoff_dt = datetime.fromisoformat(first_kickoff_str.replace("Z", "+00:00"))
+            if kickoff_dt.tzinfo is None:
+                kickoff_dt = kickoff_dt.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            return None
+        mins_before = getattr(
+            self.config, "matchday_baseline_minutes_before", None
+        ) or MATCHDAY_BASELINE_MINUTES_BEFORE_DEFAULT
+        mins_stop = getattr(
+            self.config, "matchday_baseline_minutes_stop_before", None
+        ) or MATCHDAY_BASELINE_MINUTES_STOP_BEFORE_DEFAULT
+        window_start = kickoff_dt - timedelta(minutes=mins_before)
+        window_end = kickoff_dt - timedelta(minutes=mins_stop)
+        if not (window_start <= now <= window_end):
+            return None
+        if self.db_client.matchday_baseline_already_captured(
+            gameweek, info["matchday_sequence"]
+        ):
+            return None
+        return info
+
+    def capture_matchday_baselines(
+        self,
+        gameweek: int,
+        matchday_sequence: int,
+        matchday_date: str,
+        first_kickoff_at: str,
+        manager_ids: Optional[List[int]] = None,
+    ) -> int:
+        """
+        Capture overall_rank and gameweek_rank from manager_gameweek_history for all
+        tracked managers and upsert into manager_gameweek_matchday_baselines.
+        Returns number of rows written.
+        """
+        try:
+            if manager_ids is None:
+                managers = self.db_client.client.table("mini_league_managers").select(
+                    "manager_id"
+                ).execute().data
+                manager_ids = list(set([m["manager_id"] for m in managers]))
+            if not manager_ids:
+                return 0
+            history = (
+                self.db_client.client.table("manager_gameweek_history")
+                .select("manager_id, overall_rank, gameweek_rank")
+                .eq("gameweek", gameweek)
+                .in_("manager_id", manager_ids)
+                .execute()
+            )
+            if not history.data:
+                return 0
+            rows = []
+            for row in history.data:
+                overall = row.get("overall_rank")
+                if overall is None:
+                    continue
+                rows.append({
+                    "manager_id": row["manager_id"],
+                    "gameweek": gameweek,
+                    "matchday_sequence": matchday_sequence,
+                    "matchday_date": matchday_date,
+                    "first_kickoff_at": first_kickoff_at,
+                    "overall_rank_baseline": overall,
+                    "gameweek_rank_baseline": row.get("gameweek_rank"),
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                })
+            if rows:
+                self.db_client.upsert_matchday_baselines(rows)
+                logger.info("Captured matchday baselines", extra={
+                    "gameweek": gameweek,
+                    "matchday_sequence": matchday_sequence,
+                    "managers": len(rows),
+                })
+            return len(rows)
+        except Exception as e:
+            logger.error("Capture matchday baselines failed", extra={
+                "gameweek": gameweek,
+                "matchday_sequence": matchday_sequence,
+                "error": str(e),
+            }, exc_info=True)
+            return 0
+
     def should_capture_baselines(
         self,
         gameweek: int,

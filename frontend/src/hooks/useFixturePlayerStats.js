@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { getApiBase } from '../lib/apiBase'
 import { useRefreshState } from './useRefreshState'
 
 /**
@@ -50,6 +51,37 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   // When live, don't use preloaded so the per-fixture query runs and refetches (numeric MP). When not live, use preloaded to avoid N extra requests.
   const hasPreloaded = !isLive && Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
+
+  const apiBase = getApiBase()
+  const needApiFallback =
+    !hasPreloaded &&
+    !!apiBase &&
+    !!gameweek &&
+    !!enabled &&
+    !!fixtureId &&
+    !!homeTeamId &&
+    !!awayTeamId
+
+  const { data: apiStatsData, isLoading: apiStatsLoading, isError: apiStatsError } = useQuery({
+    queryKey: ['api-fixture-stats', gameweek],
+    queryFn: async () => {
+      const res = await fetch(`${apiBase}/api/v1/fixtures?gameweek=${gameweek}`)
+      const data = await res.json()
+      if (!res.ok || !Array.isArray(data?.fixtures)) throw new Error('API fixtures invalid')
+      return { fixtures: data.fixtures ?? [], playerStatsByFixture: data.playerStatsByFixture ?? {} }
+    },
+    enabled: needApiFallback,
+    staleTime: 60 * 1000
+  })
+
+  const statsForThisFixture =
+    apiStatsData?.playerStatsByFixture?.[fixtureId] ??
+    apiStatsData?.playerStatsByFixture?.[Number(fixtureId)] ??
+    apiStatsData?.playerStatsByFixture?.[String(fixtureId)]
+  const useApiStats =
+    needApiFallback &&
+    Array.isArray(statsForThisFixture) &&
+    statsForThisFixture.length > 0
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fixture-player-stats', fixtureId, gameweek],
@@ -152,7 +184,15 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
 
       return { homePlayers, awayPlayers }
     },
-    enabled: !!enabled && !!fixtureId && !!gameweek && !!homeTeamId && !!awayTeamId && !hasPreloaded,
+    enabled:
+      !!enabled &&
+      !!fixtureId &&
+      !!gameweek &&
+      !!homeTeamId &&
+      !!awayTeamId &&
+      !hasPreloaded &&
+      (!needApiFallback || apiStatsData !== undefined || apiStatsError) &&
+      !useApiStats,
     staleTime: isLive ? 20 * 1000 : 30000,
     refetchInterval: isLive ? 25 * 1000 : false,
     refetchIntervalInBackground: isLive
@@ -161,6 +201,15 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
   if (hasPreloaded && enabled) {
     const { homePlayers, awayPlayers } = mapPreloadedToHomeAway(preloadedFixtureStats, homeTeamId, awayTeamId)
     return { homePlayers, awayPlayers, loading: false, error: null }
+  }
+
+  if (useApiStats) {
+    const { homePlayers, awayPlayers } = mapPreloadedToHomeAway(statsForThisFixture, homeTeamId, awayTeamId)
+    return { homePlayers, awayPlayers, loading: false, error: null }
+  }
+
+  if (needApiFallback && apiStatsLoading) {
+    return { homePlayers: [], awayPlayers: [], loading: true, error: null }
   }
 
   return {

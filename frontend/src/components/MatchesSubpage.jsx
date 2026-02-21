@@ -356,7 +356,13 @@ function bonusPlayersOnly(merged, isProvisional) {
   return sorted.slice(0, 3)
 }
 
-function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick, preloadedFixtureStats = null }) {
+function truncateTeamNameMobile(name, isMobile) {
+  if (!name) return name
+  if (!isMobile) return name
+  return name.length > 10 ? name.slice(0, 10) + '..' : name
+}
+
+function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick, preloadedFixtureStats = null, isMobile = false }) {
   const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
@@ -460,7 +466,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
             {headlineLeftTeam?.short_name && (
               <img src={`/badges/${headlineLeftTeam.short_name}.svg`} alt="" className="matchup-card-badge" onError={e => { e.target.style.display = 'none' }} />
             )}
-            <span className="matchup-card-team-name" title={headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? ''}>{headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? 'Home'}</span>
+            <span className="matchup-card-team-name" title={headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? ''}>{truncateTeamNameMobile(headlineLeftTeam?.team_name ?? headlineLeftTeam?.short_name ?? 'Home', isMobile)}</span>
             <span className="matchup-card-home-icon" aria-label={showH2HScore ? 'Home in last meeting' : 'Home'}>
               <svg className="matchup-card-home-icon-svg" viewBox="0 0 48 48" width={14} height={14} fill="currentColor" aria-hidden>
                 <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
@@ -482,7 +488,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
             {headlineRightTeam?.short_name && (
               <img src={`/badges/${headlineRightTeam.short_name}.svg`} alt="" className="matchup-card-badge" onError={e => { e.target.style.display = 'none' }} />
             )}
-            <span className="matchup-card-team-name" title={headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? ''}>{headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? 'Away'}</span>
+            <span className="matchup-card-team-name" title={headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? ''}>{truncateTeamNameMobile(headlineRightTeam?.team_name ?? headlineRightTeam?.short_name ?? 'Away', isMobile)}</span>
           </span>
         </div>
         <div className="matchup-card-status-row">
@@ -641,6 +647,13 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const matchupGridRef = useRef(null)
   const matchesScrollRef = useRef(null)
   const [gridColumns, setGridColumns] = useState(1)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 768px)')
+    const handler = () => setIsMobile(mql.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
   useAxisLockedScroll(matchesScrollRef)
 
   const currentStatKey = TOP_PERFORMERS_STAT_KEYS[performerPageIndex]?.key ?? 'points'
@@ -806,6 +819,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             >
               <MatchBento
                 fixture={f}
+                isMobile={isMobile}
                 expanded={expandedId === f.fpl_fixture_id}
                 onToggle={() => setExpandedId(prev => (prev === f.fpl_fixture_id ? null : f.fpl_fixture_id))}
                 top10ByStat={top10ByStat}

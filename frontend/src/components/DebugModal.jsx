@@ -119,7 +119,7 @@ export default function DebugModal({ isOpen, onClose }) {
             <p className="debug-modal-section-source">
               {useFplFallback
                 ? 'Source: Supabase (FPL API unavailable — run dev server for proxy or add serverless proxy in prod).'
-                : 'Source: FPL API directly (bootstrap-static → events). fpl_ranks_updated from Supabase.'}
+                : 'Source: FPL API directly (bootstrap-static → events).'}
             </p>
             <div className="gw-debug-bento-content">
               {fplDebugError && useFplFallback && (
@@ -142,7 +142,6 @@ export default function DebugModal({ isOpen, onClose }) {
                     <tr><td className="gw-debug-table-label">is_next</td><td><GwDebugBadge value={gwRow.is_next} /></td></tr>
                     <tr><td className="gw-debug-table-label">finished</td><td><GwDebugBadge value={gwRow.finished} /></td></tr>
                     <tr><td className="gw-debug-table-label">data_checked</td><td><GwDebugBadge value={gwRow.data_checked} /></td></tr>
-                    <tr><td className="gw-debug-table-label">fpl_ranks_updated</td><td>{(gameweekFromDb?.fpl_ranks_updated ?? gwRow?.fpl_ranks_updated) != null ? <GwDebugBadge value={gameweekFromDb?.fpl_ranks_updated ?? gwRow?.fpl_ranks_updated} /> : '—'}</td></tr>
                   </tbody>
                 </table>
               )}

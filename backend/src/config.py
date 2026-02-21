@@ -76,6 +76,10 @@ class Config:
     # Rank monitoring: after last game of the match day, poll FPL for rank updates for this many hours (FPL can update at undocumented times)
     rank_monitor_hours_after_last_matchday: int = int(os.getenv("RANK_MONITOR_HOURS_AFTER_LAST_MATCHDAY", "5"))
     rank_monitor_interval_seconds: int = int(os.getenv("RANK_MONITOR_INTERVAL_SECONDS", "900"))  # 15 minutes
+
+    # Per-matchday rank baseline: capture window before first kickoff of each matchday (minutes before; stop N min before kickoff)
+    matchday_baseline_minutes_before: int = int(os.getenv("MATCHDAY_BASELINE_MINUTES_BEFORE", "90"))
+    matchday_baseline_minutes_stop_before: int = int(os.getenv("MATCHDAY_BASELINE_MINUTES_STOP_BEFORE", "5"))
     
     # Cache Configuration
     bootstrap_cache_ttl: int = int(os.getenv("BOOTSTRAP_CACHE_TTL", "300"))  # 5 minutes

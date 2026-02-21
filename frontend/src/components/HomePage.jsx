@@ -59,7 +59,7 @@ export default function HomePage() {
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
   
   // Hooks that depend on state
-  const { gameweek, fplRanksUpdated, loading: gwLoading } = useGameweekData()
+  const { gameweek, gwFinished, loading: gwLoading } = useGameweekData()
   const { inProgress: deadlineBatchInProgress } = useDeadlineBatchInProgress(gameweek ?? null)
   const { managerData, loading: managerLoading } = useManagerData()
   const { totalManagers } = useTotalManagers()
@@ -570,7 +570,13 @@ export default function HomePage() {
               isChart={showChart}
               isChips={card.isChips}
               isSettings={card.isSettings}
-              isStale={(cardId === 'overall-rank' || cardId === 'gw-rank') && hasLiveGames}
+              isStale={
+                (cardId === 'overall-rank' || cardId === 'gw-rank') &&
+                (hasLiveGames ||
+                  (cardId === 'overall-rank' &&
+                    (managerData?.overallRankChange ?? 0) === 0 &&
+                    !gwFinished))
+              }
               isLiveUpdating={
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))

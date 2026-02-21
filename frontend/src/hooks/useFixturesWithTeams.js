@@ -140,13 +140,20 @@ export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}
       if (!gameweek) return API_BASE ? { fixtures: [], playerStatsByFixture: {} } : []
 
       if (API_BASE && !simulateStatuses) {
-        try {
+        const tryApi = async () => {
           const res = await fetch(`${API_BASE}/api/v1/fixtures?gameweek=${gameweek}`)
           const data = await res.json()
           if (!res.ok || !Array.isArray(data.fixtures)) throw new Error('API fixtures invalid')
           return { fixtures: data.fixtures ?? [], playerStatsByFixture: data.playerStatsByFixture ?? {} }
+        }
+        try {
+          return await tryApi()
         } catch (_) {
-          return await fetchFixturesFromSupabase(gameweek, false)
+          try {
+            return await tryApi()
+          } catch (__) {
+            return await fetchFixturesFromSupabase(gameweek, false)
+          }
         }
       }
 

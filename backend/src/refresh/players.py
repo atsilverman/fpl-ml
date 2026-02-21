@@ -790,6 +790,9 @@ class PlayerDataRefresher:
                     
                     is_first_row = idx == 0
                     this_fixture_finished = match_finished or match_finished_provisional
+                    # Don't create a row for a finished fixture from live data; let element-summary/catch-up backfill it
+                    if this_fixture_finished and not existing_stat:
+                        continue
                     # Row DEFCON: finished = from existing; live = remainder when DGW split, else full live on first row
                     use_remainder = len(player_fixtures) > 1 and (sum_finished_minutes > 0 or sum_finished_points > 0)
                     row_defcon = (

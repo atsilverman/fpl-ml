@@ -85,7 +85,9 @@ class RefreshOrchestrator:
         self.db_client = SupabaseClient(self.config)
         self.player_refresher = PlayerDataRefresher(self.fpl_client, self.db_client)
         self.manager_refresher = ManagerDataRefresher(self.fpl_client, self.db_client)
-        self.baseline_capture = BaselineCapture(self.fpl_client, self.db_client)
+        self.baseline_capture = BaselineCapture(
+            self.fpl_client, self.db_client, self.config
+        )
         
         logger.info("Orchestrator ready")
     
@@ -709,8 +711,10 @@ class RefreshOrchestrator:
             return
         if not fixtures_by_gameweek:
             return
-        # Only run when at least one fixture is finished (matches have ended, FPL may have confirmed bonus)
-        any_finished = any(f.get("finished") for f in fixtures_by_gameweek.values())
+        # Run when at least one fixture is finished or finished_provisional (match done; pull BPS/bonus from element-summary)
+        any_finished = any(
+            f.get("finished") or f.get("finished_provisional") for f in fixtures_by_gameweek.values()
+        )
         if not any_finished:
             return
         try:
@@ -1828,6 +1832,18 @@ class RefreshOrchestrator:
                             self._last_hourly_rank_refresh_time = now_utc
                         except Exception as e:
                             logger.warning("Hourly rank refresh failed", extra={"gameweek": self.current_gameweek, "error": str(e)}, exc_info=True)
+                # Per-matchday rank baseline: capture before first kickoff of each matchday (when in capture window).
+                if self.current_gameweek and self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                    matchday_info = self.baseline_capture.get_next_matchday_for_capture(self.current_gameweek)
+                    if matchday_info:
+                        manager_ids = self._get_tracked_manager_ids()
+                        self.baseline_capture.capture_matchday_baselines(
+                            self.current_gameweek,
+                            matchday_info["matchday_sequence"],
+                            matchday_info["matchday_date"],
+                            matchday_info["first_kickoff_at"],
+                            manager_ids=manager_ids,
+                        )
                 # End of gameday (fixtures table: all finished_provisional): capture rank update. Skip when live.
                 if self.current_gameweek and self.current_state not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
                     await self._check_ranks_final_and_refresh()
