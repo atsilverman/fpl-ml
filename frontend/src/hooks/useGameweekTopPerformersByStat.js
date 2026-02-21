@@ -40,7 +40,7 @@ export function useGameweekTopPerformersByStat() {
       const { data: stats, error: statsError } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'player_id, fixture_id, total_points, bonus_status, provisional_bonus, goals_scored, assists, expected_goals, expected_assists, bps, defensive_contribution'
+          'player_id, fixture_id, total_points, bonus, bonus_status, provisional_bonus, goals_scored, assists, expected_goals, expected_assists, bps, defensive_contribution'
         )
         .eq('gameweek', gameweek)
 
@@ -76,10 +76,11 @@ export function useGameweekTopPerformersByStat() {
         const info = playerMap[s.player_id] || { web_name: 'Unknown', team_short_name: null, position: null, position_label: '—' }
         const bonusStatus = s.bonus_status ?? 'provisional'
         const provisionalBonus = Number(s.provisional_bonus) || 0
-        const officialBonus = Number(s.bonus) ?? 0
+        const officialBonus = Number(s.bonus) || 0
         const isBonusConfirmed = bonusStatus === 'confirmed'
         const bonusToAdd = provisionalBonus || officialBonus
-        const displayPoints = isBonusConfirmed ? (s.total_points ?? 0) : (s.total_points ?? 0) + bonusToAdd
+        const basePoints = Number(s.total_points) || 0
+        const displayPoints = isBonusConfirmed ? basePoints : basePoints + bonusToAdd
         return {
           player_id: s.player_id,
           fixture_id: s.fixture_id ?? null,
@@ -113,7 +114,7 @@ export function useGameweekTopPerformersByStat() {
           team_short_name: r.team_short_name,
           position: r.position,
           position_label: r.position_label,
-          value: key === 'xg' || key === 'xa' ? formatExpected(r[col]) : (r[col] ?? 0)
+          value: key === 'xg' || key === 'xa' ? formatExpected(r[col]) : (Number(r[col]) || 0)
         }))
         result[key] = top5
       }

@@ -11,7 +11,7 @@ import AnimatedValue from './AnimatedValue'
 const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
 
 /** Stat columns that get a subtle green fill when player is top 10 for that stat in the gameweek. Excludes: pts impact, G, A, CS, S, opp, MP, YC, RC. */
-const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
+const STAT_KEYS_TOP10_FILL = ['bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
 const PLAYER_NAME_MAX_LENGTH = 15
 

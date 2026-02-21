@@ -49,8 +49,8 @@ function getFixtureStatus(fixture, _dataChecked = false) {
   return 'scheduled'
 }
 
-/** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). */
-const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
+/** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). Bonus excluded (derived from BPS). */
+const STAT_KEYS_TOP10_FILL = ['bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
 const STAT_KEYS = [
   { key: 'goals', col: 'goals_scored' },

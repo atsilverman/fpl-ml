@@ -287,6 +287,8 @@ html[data-theme="dark"] .gw-top-points-pill {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   transition: border-color 0.15s, background 0.15s, color 0.15s;
 }
 
