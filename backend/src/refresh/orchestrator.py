@@ -230,9 +230,9 @@ class RefreshOrchestrator:
         
         # Check transfer deadline: enter when we're 30+ min past the relevant deadline.
         # (1) Next GW's deadline passed → wait for that GW to become is_current, then run batch.
-        # (2) Current GW's deadline passed → FPL may have already flipped; enter and run batch for current.
+        # (2) Current GW's deadline was 30+ min ago → FPL may have already flipped; enter and run batch for current.
+        now = datetime.now(timezone.utc)
         if not self.deadline_refresh_completed:
-            now = datetime.now(timezone.utc)
             next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
             if next_gws:
                 next_gw = next_gws[0]
@@ -249,6 +249,22 @@ class RefreshOrchestrator:
                 current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
                 if (now - current_deadline).total_seconds() >= 1800:
                     self._deadline_target_gameweek_id = current_gw["id"]
+                    return RefreshState.TRANSFER_DEADLINE
+        
+        # Mismatch recovery: if current GW has no successful deadline batch, enter TRANSFER_DEADLINE
+        # so we run (or retry) the batch. Ensures we refresh when is_current has no batch (e.g. backend
+        # was down at flip, or previous run failed).
+        current_gw_id = current_gw.get("id")
+        if current_gw_id is not None:
+            current_deadline_raw = current_gw.get("deadline_time")
+            if current_deadline_raw:
+                current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
+                if (now - current_deadline).total_seconds() >= 1800 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
+                    self._deadline_target_gameweek_id = current_gw_id
+                    logger.info(
+                        "Deadline batch mismatch: current GW has no successful batch, entering TRANSFER_DEADLINE to refresh",
+                        extra={"gameweek": current_gw_id},
+                    )
                     return RefreshState.TRANSFER_DEADLINE
         
         return RefreshState.IDLE
@@ -1544,6 +1560,7 @@ class RefreshOrchestrator:
                         bootstrap_ok = await self._short_bootstrap_check()
                         phase["bootstrap_check_sec"] = round((datetime.now(timezone.utc) - t0).total_seconds(), 1)
                         if not bootstrap_ok and run_id is not None:
+                            phase["failure_reason"] = "bootstrap_failed"
                             self.db_client.update_deadline_batch_finish(
                                 run_id,
                                 finished_at=datetime.now(timezone.utc).isoformat(),
@@ -1657,6 +1674,8 @@ class RefreshOrchestrator:
                                 })
                             else:
                                 finished_at = datetime.now(timezone.utc)
+                                phase["failure_reason"] = "success_rate_below_80"
+                                phase["success_rate"] = round(success_rate, 1)
                                 if run_id is not None:
                                     self.db_client.update_deadline_batch_finish(
                                         run_id,
@@ -1674,6 +1693,17 @@ class RefreshOrchestrator:
                                 })
                         else:
                             logger.warning("No managers for deadline refresh", extra={"gameweek": target_gw_id})
+                            if run_id is not None:
+                                phase["failure_reason"] = "no_managers"
+                                self.db_client.update_deadline_batch_finish(
+                                    run_id,
+                                    finished_at=datetime.now(timezone.utc).isoformat(),
+                                    duration_seconds=(datetime.now(timezone.utc) - t0).total_seconds(),
+                                    manager_count=0,
+                                    league_count=league_count,
+                                    success=False,
+                                    phase_breakdown=phase,
+                                )
                     elif self.deadline_refresh_completed:
                         logger.debug("Deadline refresh already completed", extra={"gameweek": self.current_gameweek})
                     else:
