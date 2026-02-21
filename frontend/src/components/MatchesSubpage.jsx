@@ -372,7 +372,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
     home_team_id,
     away_team_id,
     expanded || showBonusChart,
-    preloadedFixtureStats
+    preloadedFixtureStats,
+    showBonusChart
   )
   const fixtureStatus = getFixtureStatus(fixture, dataChecked)
   const useH2HStats = isSecondHalf && fixtureStatus === 'scheduled' && expanded
@@ -834,7 +835,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
                 onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
-                preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
+                preloadedFixtureStats={toggleBonus ? null : (playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id])}
               />
             </div>
             )

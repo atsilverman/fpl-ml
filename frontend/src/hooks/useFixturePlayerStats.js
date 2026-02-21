@@ -23,8 +23,8 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
     clean_sheets: r.clean_sheets ?? 0,
     saves: r.saves ?? 0,
     bps: r.bps ?? 0,
-    bonus: 0,
-    bonus_status: 'provisional',
+    bonus: r.bonus ?? r.effective_bonus ?? 0,
+    bonus_status: r.bonus_status ?? 'provisional',
     defensive_contribution: r.defensive_contribution ?? 0,
     yellow_cards: r.yellow_cards ?? 0,
     red_cards: r.red_cards ?? 0,
@@ -46,7 +46,7 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
  * Used for the expanded "Show details" player tables on the Matches page.
  * When preloadedFixtureStats is provided (from useFixturesWithTeams API response), no Supabase call is made.
  */
-export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null) {
+export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null, preferSupabaseStats = false) {
   const { state: refreshState } = useRefreshState()
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
   // When live, don't use preloaded so the per-fixture query runs and refetches (numeric MP). When not live, use preloaded to avoid N extra requests.
@@ -55,6 +55,7 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
   const apiBase = getApiBase()
   const needApiFallback =
     !hasPreloaded &&
+    !preferSupabaseStats &&
     !!apiBase &&
     !!gameweek &&
     !!enabled &&
@@ -79,6 +80,7 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
     apiStatsData?.playerStatsByFixture?.[Number(fixtureId)] ??
     apiStatsData?.playerStatsByFixture?.[String(fixtureId)]
   const useApiStats =
+    !preferSupabaseStats &&
     needApiFallback &&
     Array.isArray(statsForThisFixture) &&
     statsForThisFixture.length > 0
