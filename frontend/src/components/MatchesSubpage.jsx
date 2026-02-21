@@ -11,12 +11,28 @@ import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import BpsLeadersChart from './BpsLeadersChart'
-import { ChevronDown, ChevronUp, MoveDiagonal, Minimize2 } from 'lucide-react'
+import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MatchesSubpage.css'
+
+/** Same sort indicator as league standings / stats tables: filled triangle up (asc) or down (desc) */
+function SortTriangle({ direction }) {
+  const isAsc = direction === 'asc'
+  return (
+    <span className="matchup-detail-sort-triangle" aria-hidden>
+      <svg width="8" height="6" viewBox="0 0 8 6" fill="currentColor">
+        {isAsc ? (
+          <path d="M4 0L8 6H0L4 0Z" />
+        ) : (
+          <path d="M4 6L0 0h8L4 6Z" />
+        )}
+      </svg>
+    </span>
+  )
+}
 
 /**
  * Fixture status: Final = match-level finished === true (FPL confirmed; reddish/orange).
@@ -33,6 +49,9 @@ function getFixtureStatus(fixture, _dataChecked = false) {
   if (started && finishedProvisional && !finished) return 'provisional'
   return 'scheduled'
 }
+
+/** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). */
+const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
 
 const STAT_KEYS = [
   { key: 'goals', col: 'goals_scored' },
@@ -130,14 +149,23 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
   }
 
   const effectiveFixtureId = fixtureId != null ? Number(fixtureId) : (players?.[0]?.fixture_id != null && players[0].fixture_id !== 0 ? Number(players[0].fixture_id) : 0)
+  const rowKeyForTop10 = (player) => {
+    const pid = player.player_id != null ? Number(player.player_id) : 0
+    const fid = (player.fixture_id != null && player.fixture_id !== 0) ? Number(player.fixture_id) : effectiveFixtureId
+    return `${pid}-${fid ?? 0}`
+  }
+  const isTop10ForStat = (player, statKey) => {
+    if (!top10ByStat || !top10ByStat[statKey]?.has) return false
+    return top10ByStat[statKey].has(rowKeyForTop10(player))
+  }
+  const isTop10Pts = (player) => {
+    if (!top10ByStat?.pts?.has) return false
+    return top10ByStat.pts.has(rowKeyForTop10(player))
+  }
   const renderStatCell = (player, { key, col }) => {
     const value = player[col] ?? 0
     const numVal = Number(value) || 0
     const isZero = numVal === 0
-    const playerId = player.player_id != null ? Number(player.player_id) : null
-    const rowFixtureId = player.fixture_id != null && player.fixture_id !== 0 ? Number(player.fixture_id) : effectiveFixtureId
-    const top10Key = playerId != null ? `${playerId}-${rowFixtureId}` : null
-    const isTop10ForColumn = top10Key != null && top10ByStat?.[key]?.has(top10Key)
     const isDefColumn = key === 'defensive_contribution'
     const isSavesColumn = key === 'saves'
     const isBonusColumn = key === 'bonus'
@@ -146,32 +174,32 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     const isGk = player.position === 1
     const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
     const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
-    const statShowsTop10 = key === 'bps' || key === 'defensive_contribution' || EXPECTED_STAT_KEYS.includes(key)
-    const showTop10Badge = statShowsTop10 && !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
-    const showBadge = showDefconBadge || showSavesBadge || showTop10Badge
+    const showBadge = showDefconBadge || showSavesBadge || isProvisionalBonus
+    const isTop10 = STAT_KEYS_TOP10_FILL.includes(key) && isTop10ForStat(player, key)
     const displayVal = EXPECTED_STAT_KEYS.includes(key) ? formatExpected(value) : value
     if (isZero) {
       return (
-        <td key={key} className="matchup-detail-td matchup-detail-td-stat matchup-detail-cell-muted">
-          {displayVal}
+        <td key={key} className={`matchup-detail-td matchup-detail-td-stat matchup-detail-cell-muted${isTop10 ? ' matchup-detail-td-stat--top10' : ''}`}>
+          {isTop10 ? <span className="matchup-detail-stat-top10-pill">{displayVal}</span> : displayVal}
         </td>
       )
     }
     const badgeClass = [
       'matchup-detail-stat-badge',
-      showTop10Badge && 'matchup-detail-rank-highlight',
-      showDefconBadge && 'matchup-detail-defcon-achieved',
-      showSavesBadge && 'matchup-detail-saves-achieved',
       isProvisionalBonus && 'matchup-detail-stat-provisional'
     ].filter(Boolean).join(' ')
-    let title = `Top 10 in GW for ${key}`
+    let title
     if (isProvisionalBonus) title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
-    else if (showDefconBadge) title = isTop10ForColumn ? 'Top 10 in GW & Defcon achieved' : 'Defcon achieved (DEF ≥ position threshold)'
-    else if (showSavesBadge) title = isTop10ForColumn ? 'Top 10 in GW & Saves achieved (3+)' : 'Saves achieved (3+ saves = 1 pt per 3)'
+    else if (showDefconBadge) title = 'Defcon achieved (DEF ≥ position threshold)'
+    else if (showSavesBadge) title = 'Saves achieved (3+ saves = 1 pt per 3)'
+    else if (isTop10) title = 'Top 10 in GW for this stat'
+    else title = undefined
     return (
-      <td key={key} className={`matchup-detail-td matchup-detail-td-stat${isProvisionalBonus ? ' matchup-detail-cell-provisional' : ''}`}>
+      <td key={key} className={`matchup-detail-td matchup-detail-td-stat${isProvisionalBonus ? ' matchup-detail-cell-provisional' : ''}${isTop10 ? ' matchup-detail-td-stat--top10' : ''}`}>
         {showBadge || isProvisionalBonus ? (
           <span className={badgeClass} title={title}>{displayVal}</span>
+        ) : isTop10 ? (
+          <span className="matchup-detail-stat-top10-pill" title={title}>{displayVal}</span>
         ) : (
           displayVal
         )}
@@ -230,7 +258,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                       <span className="matchup-detail-th-label"><CardStatLabel statKey={key} label={label} /></span>
                       {isActive && (
                         <span className="matchup-detail-th-sort-icon" aria-hidden>
-                          {sortDir === 'desc' ? <ChevronDown size={10} /> : <ChevronUp size={10} />}
+                          <SortTriangle direction={sortDir} />
                         </span>
                       )}
                     </button>
@@ -243,8 +271,6 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
             {displayedPlayers.map(p => {
               const playerId = p.player_id != null ? Number(p.player_id) : null
               const rowFid = p.fixture_id != null && p.fixture_id !== 0 ? Number(p.fixture_id) : effectiveFixtureId
-              const top10Key = playerId != null ? `${playerId}-${rowFid}` : null
-              const isTop10Pts = top10Key != null && top10ByStat?.pts?.has(top10Key)
               const isDnp = false
               const isOwnedByYou = ownedPlayerIds != null && playerId != null && ownedPlayerIds.has(playerId)
               const ptsIncludesProvisional = p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0
@@ -266,10 +292,10 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                     </div>
                   </td>
                   <td
-                    className={`matchup-detail-td matchup-detail-td-pts ${!isTop10Pts && p.points === 0 ? 'matchup-detail-cell-muted' : ''}${ptsIncludesProvisional ? ' matchup-detail-cell-provisional' : ''}`}
-                    title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : undefined}
+                    className={`matchup-detail-td matchup-detail-td-pts ${p.points === 0 ? 'matchup-detail-cell-muted' : ''}${ptsIncludesProvisional ? ' matchup-detail-cell-provisional' : ''}${isTop10Pts(p) ? ' matchup-detail-td-pts--top10' : ''}`}
+                    title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : isTop10Pts(p) ? 'Top 10 points in GW' : undefined}
                   >
-                    <span className={`matchup-detail-pts-badge${isTop10Pts ? ' matchup-detail-rank-highlight' : ''}`} title={isTop10Pts ? 'Top 10 in GW for points' : undefined}>
+                    <span className="matchup-detail-pts-badge">
                       {formatNumber(p.points)}
                     </span>
                   </td>
@@ -331,7 +357,7 @@ function bonusPlayersOnly(merged, isProvisional) {
   return sorted.slice(0, 3)
 }
 
-function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick }) {
+function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick, preloadedFixtureStats = null }) {
   const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
@@ -340,7 +366,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
     gameweek,
     home_team_id,
     away_team_id,
-    expanded || showBonusChart
+    expanded || showBonusChart,
+    preloadedFixtureStats
   )
   const fixtureStatus = getFixtureStatus(fixture, dataChecked)
   const useH2HStats = isSecondHalf && fixtureStatus === 'scheduled' && expanded
@@ -592,7 +619,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 
 export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false, bonusAnimationKey = 0, animationKey = 0 } = {}) {
   const { gameweek, loading: gwLoading, dataChecked } = useGameweekData('current')
-  const { fixtures, loading: fixturesLoading } = useFixturesWithTeams(gameweek, { simulateStatuses })
+  const { fixtures, loading: fixturesLoading, playerStatsByFixture } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
   const { lastH2HPlayerStatsByFixture, loading: lastH2HPlayerStatsLoading } = useLastH2HPlayerStats(gameweek, showH2H && isSecondHalf)
   const { top10ByStat } = useGameweekTop10ByStat()
@@ -794,6 +821,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
                 onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
+                preloadedFixtureStats={playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
             )

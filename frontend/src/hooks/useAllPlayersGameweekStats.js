@@ -12,8 +12,7 @@ const MV_TABLE_BY_GW = {
   last12: 'mv_research_player_stats_last_12'
 }
 
-/* goals_conceded omitted from MV until materialized views include it; fallback path still fetches it */
-const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
 
 /**
  * Aggregate per-fixture rows into one row per player (sum stats across DGW fixtures).
@@ -118,6 +117,10 @@ function mapRowToPlayer(row, playerMap) {
  * @param {'all'|'last6'|'last12'} gwFilter - GW range
  * @param {'all'|'home'|'away'} locationFilter - filter by was_home
  */
+const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
+  : ''
+
 export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'all') {
   const { gameweek, loading: gwLoading } = useGameweekData()
   const { state: refreshState } = useRefreshState()
@@ -128,6 +131,23 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     queryFn: async () => {
       if (!gameweek) return null
       const gw = Number(gameweek)
+
+      if (API_BASE) {
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/v1/stats?gw_filter=${encodeURIComponent(gwFilter)}&location=${encodeURIComponent(locationFilter)}`
+          )
+          const data = await res.json()
+          if (!res.ok) return null
+          return {
+            source: 'api',
+            players: data.players ?? [],
+            team_goals_conceded: data.team_goals_conceded ?? {}
+          }
+        } catch {
+          return null
+        }
+      }
 
       const mvTable = MV_TABLE_BY_GW[gwFilter]
       const { data: mvRows, error: mvError } = await supabase
@@ -265,8 +285,17 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     refetchIntervalInBackground: true
   })
 
+  const teamGoalsConceded = useMemo(() => {
+    if (!cache || cache.source !== 'api') return {}
+    return cache.team_goals_conceded ?? {}
+  }, [cache])
+
   const players = useMemo(() => {
     if (!cache) return []
+
+    if (cache.source === 'api' && Array.isArray(cache.players)) {
+      return cache.players
+    }
 
     if (cache.source === 'mv' && cache.rows?.length) {
       return cache.rows.map((row) => mapRowToPlayer(row, cache.playerMap))
@@ -315,6 +344,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
   return {
     players,
+    teamGoalsConceded,
     loading: isLoading || gwLoading
   }
 }

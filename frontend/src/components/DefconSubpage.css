@@ -370,10 +370,13 @@
 }
 .stats-filter-overlay-panel {
   position: relative;
-  flex: 0 1 auto;
-  width: 100%;
-  max-width: 400px;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+  height: max-content;
   max-height: calc(100vh - 24px);
+  min-height: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -419,7 +422,8 @@
   }
 }
 .stats-filter-overlay-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 12px 14px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

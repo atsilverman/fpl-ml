@@ -27,18 +27,22 @@ function formatOwnershipPeriods(streaks) {
     .join(', ')
 }
 
+/** Stat keys supported for the bar chart (must match player_gameweek_stats columns for last6/last12) */
+export const PLAYER_OWNED_STAT_KEYS = ['total_points', 'bps', 'goals_scored', 'assists']
+
 /**
  * Hook to fetch player owned performance data (starting position points only)
  * Used for player performance chart visualization
  * @param {string} filter - 'all', 'last12', or 'last6' to filter by gameweeks
+ * @param {string} statKey - 'total_points', 'bps', 'goals_scored', or 'assists' (only affects last6/last12; 'all' always uses total_points)
  */
-export function usePlayerOwnedPerformance(filter = 'all') {
+export function usePlayerOwnedPerformance(filter = 'all', statKey = 'total_points') {
   const { config } = useConfiguration()
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
   const { gameweek } = useGameweekData()
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['player-owned-performance', MANAGER_ID, filter, gameweek],
+    queryKey: ['player-owned-performance', MANAGER_ID, filter, gameweek, statKey],
     queryFn: async () => {
       if (!MANAGER_ID) {
         console.log('No manager ID provided')
@@ -87,10 +91,10 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           }
         })
 
-        // Batch fetch all player_gameweek_stats for the relevant gameweeks and players
+        // Batch fetch all player_gameweek_stats for the relevant gameweeks and players (multiple stats for chart stat selector)
         const statsResult = await supabase
           .from('player_gameweek_stats')
-          .select('player_id, gameweek, total_points')
+          .select('player_id, gameweek, total_points, bps, goals_scored, assists')
           .in('player_id', Array.from(allPlayerIds))
           .in('gameweek', Array.from(allGameweeks))
 
@@ -99,39 +103,52 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           throw statsResult.error
         }
 
-        // Create a map for quick lookup: player_id + gameweek -> points
+        // Map: player_id_gameweek -> { total_points, bps, goals_scored, assists }
         const statsMap = {}
         ;(statsResult.data || []).forEach(stat => {
           const key = `${stat.player_id}_${stat.gameweek}`
-          statsMap[key] = stat.total_points || 0
+          statsMap[key] = {
+            total_points: stat.total_points ?? 0,
+            bps: stat.bps ?? 0,
+            goals_scored: stat.goals_scored ?? 0,
+            assists: stat.assists ?? 0,
+          }
         })
 
-        // Process picks with auto-subs and calculate points
+        const getStat = (row, key) => (row && row[key] != null ? row[key] : 0)
+
+        // Process picks with auto-subs: points for pointsByGameweek, and chosen stat for chart (captain multiplier only for total_points)
         const picksWithAutoSubs = picks.map((pick) => {
           let points = 0
+          let statValue = 0
           let effectivePlayerId = pick.player_id
+          const mult = pick.multiplier || 1
 
           if (pick.was_auto_subbed_in && pick.auto_sub_replaced_player_id) {
-            // Get substitute player's points
             const subKey = `${pick.auto_sub_replaced_player_id}_${pick.gameweek}`
-            points = statsMap[subKey] || 0
+            const row = statsMap[subKey]
+            points = getStat(row, 'total_points')
+            statValue = getStat(row, statKey)
             effectivePlayerId = pick.auto_sub_replaced_player_id
           } else {
-            // Use original player's points
             const playerKey = `${pick.player_id}_${pick.gameweek}`
-            points = statsMap[playerKey] || 0
+            const row = statsMap[playerKey]
+            points = getStat(row, 'total_points')
+            statValue = getStat(row, statKey)
           }
 
           return {
             effective_player_id: effectivePlayerId,
             gameweek: pick.gameweek,
-            points: points * (pick.multiplier || 1),
+            points: points * mult,
+            statValue: statKey === 'total_points' ? statValue * mult : statValue,
             is_captain: pick.is_captain
           }
         })
 
-        // Aggregate points by player and build pointsByGameweek (player_id -> gameweek -> points) for Gantt gradient
+        // Aggregate points by player (for pointsByGameweek) and chosen stat by player (for chart)
         const playerPointsMap = {}
+        const playerStatMap = {}
         const pointsByGameweek = {}
         for (const pick of picksWithAutoSubs) {
           const playerId = pick.effective_player_id
@@ -142,7 +159,9 @@ export function usePlayerOwnedPerformance(filter = 'all') {
               captain_weeks: 0
             }
           }
+          if (!playerStatMap[playerId]) playerStatMap[playerId] = 0
           playerPointsMap[playerId].total_points += pick.points
+          playerStatMap[playerId] += pick.statValue
           playerPointsMap[playerId].gameweeks.add(pick.gameweek)
           if (pick.is_captain) {
             playerPointsMap[playerId].captain_weeks += 1
@@ -167,16 +186,14 @@ export function usePlayerOwnedPerformance(filter = 'all') {
           throw playersResult.error
         }
 
-        // Calculate total points for percentage calculation
-        const totalFilteredPoints = Object.values(playerPointsMap).reduce(
-          (sum, player) => sum + player.total_points,
-          0
-        )
+        // Total of selected stat for percentage calculation
+        const totalStatSum = Object.values(playerStatMap).reduce((sum, v) => sum + v, 0)
 
-        // Build chart data
+        // Build chart data: use playerStatMap for bar value (exposed as total_points for chart component)
         const chartData = (playersResult.data || [])
           .map(player => {
             const playerStats = playerPointsMap[player.fpl_player_id]
+            const statSum = playerStatMap[player.fpl_player_id] ?? 0
             if (!playerStats) return null
 
             const gameweeksArray = Array.from(playerStats.gameweeks).sort((a, b) => a - b)
@@ -184,15 +201,15 @@ export function usePlayerOwnedPerformance(filter = 'all') {
             return {
               player_id: player.fpl_player_id,
               player_name: player.web_name,
-              total_points: playerStats.total_points,
+              total_points: statSum,
               gameweeks_owned: playerStats.gameweeks.size,
               gameweeks_array: gameweeksArray,
               ownership_periods: formatOwnershipPeriods(streaks),
               player_position: player.position,
               team_id: player.team_id,
               team_short_name: player.teams?.short_name,
-              percentage_of_total_points: totalFilteredPoints > 0
-                ? Math.round((playerStats.total_points / totalFilteredPoints) * 100 * 100) / 100
+              percentage_of_total_points: totalStatSum > 0
+                ? Math.round((statSum / totalStatSum) * 100 * 100) / 100
                 : 0
             }
           })

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import './PlayerGameweekPointsChart.css'
 
-const FILTERS = [
+export const CHART_RANGE_FILTERS = [
   { key: 'gw20plus', label: 'GW20+' },
   { key: 'last6', label: 'Last 6' },
   { key: 'last12', label: 'Last 12' },
@@ -71,11 +71,16 @@ export default function PlayerGameweekPointsChart({
   statKey = 'points',
   position = null,
   onAverageChange = null,
+  filter: filterProp = null,
+  onFilterChange = null,
 }) {
   const svgRef = useRef(null)
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState({ width: 400, height: 220 })
-  const [filter, setFilter] = useState('last6')
+  const [internalFilter, setInternalFilter] = useState('last6')
+  const isControlled = filterProp != null && typeof onFilterChange === 'function'
+  const filter = isControlled ? filterProp : internalFilter
+  const setFilter = isControlled ? onFilterChange : setInternalFilter
 
   const filteredData = useMemo(() => {
     if (!data || data.length === 0) return []
@@ -334,7 +339,31 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-    // Bar value labels: pill (bar-width) + text; theme-aware background. Gap between pill and bar top.
+    // Expected stat line (e.g. xG when viewing Goals): draw before bar labels so labels stay on top
+    if (expectedKey && getExpectedVal) {
+      g.selectAll('.player-gw-chart-expected-dot').remove()
+      const expectedData = filteredData.filter((d) => {
+        const v = getExpectedVal(d)
+        return v != null && !Number.isNaN(v) && Number.isFinite(v)
+      })
+      if (expectedData.length >= 2) {
+        const lineGen = d3
+          .line()
+          .x((d) => xScale(String(d.gameweek)) + xScale.bandwidth() / 2)
+          .y((d) => yScale(getExpectedVal(d)))
+          .curve(d3.curveMonotoneX)
+        g.selectAll('.player-gw-chart-expected-line')
+          .data([expectedData])
+          .join('path')
+          .attr('class', 'player-gw-chart-expected-line')
+          .attr('d', lineGen)
+          .attr('fill', 'none')
+      } else {
+        g.selectAll('.player-gw-chart-expected-line').remove()
+      }
+    }
+
+    // Bar value labels: pill (bar-width) + text; theme-aware background. Gap between pill and bar top. Drawn last so always on top.
     const barLabelFontSize = filter === 'last6' ? 11 : filter === 'last12' ? 10 : 9 // GW20+ uses 9
     const pillHeight = barLabelFontSize + 8
     const barLabelGap = 6
@@ -399,21 +428,6 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-    // Expected stat line (e.g. xG when viewing Goals): drawn on top of bars so it’s visible
-    if (expectedKey && getExpectedVal) {
-      const dotR = 4
-      const expectedData = filteredData.filter((d) => getExpectedVal(d) != null && !Number.isNaN(getExpectedVal(d)))
-      g.selectAll('.player-gw-chart-expected-dot')
-        .data(expectedData, (d) => d.gameweek)
-        .join('circle')
-        .attr('class', 'player-gw-chart-expected-dot')
-        .attr('cx', (d) => xScale(String(d.gameweek)) + xScale.bandwidth() / 2)
-        .attr('cy', (d) => yScale(getExpectedVal(d)))
-        .attr('r', dotR)
-        .attr('fill', 'var(--accent-red, #c62828)')
-        .attr('stroke', 'var(--bg-card, #fff)')
-        .attr('stroke-width', 1)
-    }
   }, [filteredData, dimensions, loading, statKey, position])
 
   if (loading) {
@@ -442,21 +456,23 @@ export default function PlayerGameweekPointsChart({
           viewBox={`0 0 ${dimensions.width} ${dimensions.height}`}
           preserveAspectRatio="xMidYMid meet"
           className="player-gw-chart-svg"
-          aria-label="Points by gameweek"
+          aria-label={`${(statKey || 'points').replace(/_/g, ' ')} by gameweek`}
         />
       </div>
-      <div className="player-gw-chart-filter-controls">
-        {FILTERS.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            className={`player-gw-chart-filter-btn ${filter === key ? 'active' : ''}`}
-            onClick={() => setFilter(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {!isControlled && (
+        <div className="player-gw-chart-filter-controls">
+          {CHART_RANGE_FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`player-gw-chart-filter-btn ${filter === key ? 'active' : ''}`}
+              onClick={() => setFilter(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
+import { PLAYER_OWNED_STAT_KEYS } from '../hooks/usePlayerOwnedPerformance'
 import './PlayerPerformanceChart.css'
+
+const STAT_LABELS = {
+  total_points: 'Pts',
+  bps: 'BPS',
+  goals_scored: 'Goals',
+  assists: 'Assists',
+}
 
 const MOBILE_BREAKPOINT = 768
 /** Bar width % above which we place the value inside the bar (right-aligned); below this, place after the bar. */
@@ -26,7 +34,7 @@ function abbreviateName(name) {
 }
 
 /**
- * Total points bar chart – points per gameweek range (All / Last 12 / Last 6).
+ * Player-owned stat bar chart – by gameweek range (All / Last 12 / Last 6) and stat (Pts / BPS / Goals / Assists).
  * Renders a simple horizontal bar chart across the bento; no D3, CSS-based bars.
  */
 export default function PlayerPerformanceChart({
@@ -34,6 +42,8 @@ export default function PlayerPerformanceChart({
   loading = false,
   filter = 'all',
   onFilterChange = null,
+  statKey = 'total_points',
+  onStatChange = null,
 }) {
   const [excludeHaaland, setExcludeHaaland] = useState(false)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
@@ -45,9 +55,9 @@ export default function PlayerPerformanceChart({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  const { sortedData, maxPoints, maxPercentage } = useMemo(() => {
+  const { sortedData, maxPoints } = useMemo(() => {
     if (!data || data.length === 0) {
-      return { sortedData: [], maxPoints: 1, maxPercentage: 1 }
+      return { sortedData: [], maxPoints: 1 }
     }
 
     let list = data
@@ -75,23 +85,11 @@ export default function PlayerPerformanceChart({
       ...sorted.map((d) => d.total_points || 0),
       1
     )
-    const maxPct = Math.max(
-      ...sorted.map((d) => d.percentage_of_total_points || 0),
-      1
-    )
-    return { sortedData: sorted, maxPoints: maxP, maxPercentage: maxPct }
+    return { sortedData: sorted, maxPoints: maxP }
   }, [data, excludeHaaland])
 
   const barWidthPercent = (points) =>
     maxPoints > 0 ? Math.min(100, (points / maxPoints) * 100) : 0
-
-  const barColor = (pct) => {
-    if (!pct || maxPercentage <= 0) return 'var(--total-points-bar-low, #5B8DEF)'
-    const t = Math.min(1, pct / maxPercentage)
-    return t >= 1
-      ? 'var(--total-points-bar-high, #2D6BEC)'
-      : 'var(--total-points-bar-mid, #3d7aed)'
-  }
 
   if (loading) {
     return (
@@ -151,10 +149,7 @@ export default function PlayerPerformanceChart({
                 <div className="total-points-chart__track">
                   <div
                     className="total-points-chart__fill"
-                    style={{
-                      width: `${widthPct}%`,
-                      backgroundColor: barColor(pct),
-                    }}
+                    style={{ width: `${widthPct}%` }}
                     title={`${player.player_name}: ${formatNumber(points)} pts`}
                   />
                   <span
@@ -170,6 +165,24 @@ export default function PlayerPerformanceChart({
       </div>
 
       <div className="total-points-chart__controls">
+        {onStatChange && (
+          <>
+            {PLAYER_OWNED_STAT_KEYS.map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={`total-points-chart__btn ${statKey === key ? 'active' : ''}`}
+                onClick={() => {
+                  onStatChange(key)
+                  toast(`Showing ${STAT_LABELS[key] || key}`)
+                }}
+              >
+                {STAT_LABELS[key] || key}
+              </button>
+            ))}
+            <span className="total-points-chart__separator" aria-hidden />
+          </>
+        )}
         {onFilterChange && (
           <>
             <button

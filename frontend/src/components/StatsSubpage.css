@@ -6,25 +6,41 @@
   font-size: 13px;
 }
 
-/* Configured owner: green player name (matches Matches/Feed) */
-/* Owned: no green on name; green bar on right of cell */
-.research-stats-player-name--owned {
-  /* Name uses default text color; ownership shown by bar on container */
+/* Staggered row entrance (same as Mini League / Feed): on load and when sort completes */
+@keyframes research-stats-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.research-stats-page .research-stats-table tbody tr.research-stats-row-animate {
+  animation: research-stats-row-in 0.16s ease-out both;
 }
 
-.research-stats-sticky-cell-inner--owned {
-  position: relative;
+/* Trickle-in: when loading finishes, headers and cells reveal with staggered random-ish delays over ~2s */
+@keyframes research-stats-trickle-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-.research-stats-sticky-cell-inner--owned::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--accent-green, #10b981);
-  border-radius: 0 2px 2px 0;
-  pointer-events: none;
+.research-stats-page .research-stats-table td.research-stats-trickle-cell,
+.research-stats-page .research-stats-table th.research-stats-trickle-cell {
+  animation: research-stats-trickle-in 0.32s ease-out forwards;
+}
+
+/* Configured owner: green player name only (matches Matches/Feed) */
+.research-stats-player-name--owned {
+  color: var(--accent-green, #10b981);
+  font-weight: 600;
 }
 
 /* Top 6/12 pill: same blue for all ranks 1–6/12, consistent */
@@ -86,6 +102,29 @@
 }
 .research-stats-cell-per-m--demoted {
   opacity: 0.4;
+}
+
+/* Team view Display: Top/Bottom 6 – full-cell fill like player top 10; no pill, no text color change */
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top6-fill {
+  background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--team-top-strength, 0.5) * 38%), transparent);
+}
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top6-fill {
+  background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--team-top-strength, 0.5) * 30%), var(--bg-secondary));
+}
+
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--bottom6-fill {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) calc(var(--team-bottom-strength, 0.5) * 38%), transparent);
+}
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--bottom6-fill {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) calc(var(--team-bottom-strength, 0.5) * 30%), var(--bg-secondary));
+}
+
+/* Player view: full-cell tapering fill for top 10 in each stat (rank 1 = strongest, 10 = lightest); updates with filters (GW range, etc.). No rounded corners. */
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top10-fill {
+  background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--stats-top10-strength, 0.5) * 38%), transparent);
+}
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top10-fill {
+  background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--stats-top10-strength, 0.5) * 30%), var(--bg-secondary));
 }
 
 /* Loading skeleton: static placeholder (no shimmer/wavy animation) */
@@ -211,15 +250,15 @@
     white-space: nowrap;
   }
 
-  /* Teal slider so it’s distinct from subpage selector blue; works in light/dark */
+  /* Use system blue for Player/Team toggle (matches other subpage toggles) */
   .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
-    background: var(--stats-view-toggle-accent, #14b8a6);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(20, 184, 166, 0.25);
+    background: var(--accent-blue, #3b82f6);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(59, 130, 246, 0.25);
   }
 
   html[data-theme="light"] .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
-    background: var(--stats-view-toggle-accent, #0d9488);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(13, 148, 136, 0.28);
+    background: var(--accent-blue, #2563eb);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(37, 99, 235, 0.28);
   }
 
   .research-stats-toolbar-right {
@@ -863,15 +902,15 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   opacity: 0.8;
 }
 
-/* Filter overlay popup: portaled to body so fixed = viewport; centered panel */
+/* Filter overlay popup: portaled to body so fixed = viewport; panel anchored top, not centered */
 .stats-filter-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 12px;
+  padding: 12px 12px 24px;
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -889,10 +928,13 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
 
 .stats-filter-overlay-panel {
   position: relative;
-  flex: 0 1 auto;
-  width: 100%;
-  max-width: 400px;
-  max-height: calc(100vh - 24px);
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+  height: max-content;
+  max-height: calc(100vh - 36px);
+  min-height: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -963,7 +1005,8 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
 }
 
 .stats-filter-overlay-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 12px 14px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -1295,11 +1338,33 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   touch-action: pan-x pan-y; /* Capture horizontal scroll inside table on mobile */
 }
 
+@media (min-width: 769px) {
+  .research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync--team-view {
+    flex: 0 0 auto;
+    width: fit-content;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 /* Compare mode: thin blue border around main table */
 .research-stats-table-wrapper-sync--compare-mode {
   border: 1px solid var(--accent-blue, #3b82f6);
   border-radius: 6px;
   box-sizing: border-box;
+}
+
+/* Team view: fewer columns – shrink-wrap table width and center (mobile uses same centering) */
+.research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync--team-view {
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 /* Player/team column: 120px, single-line layout so names and info fit without extra rows */

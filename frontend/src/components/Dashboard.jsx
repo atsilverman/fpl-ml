@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, Users, FlaskConical, Construction, CalendarDays, ListOrdered, ArrowRightLeft, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
+import { Pencil, ChevronDown, House, Users, FlaskConical, Construction, CalendarDays, ListOrdered, ArrowRightLeft, Sparkles, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -20,8 +20,7 @@ const GAMEWEEK_VIEWS = [
 const RESEARCH_VIEWS = [
   { id: 'stats', label: 'Stats', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
-  { id: 'price-changes', label: 'Price Changes', disabled: false },
-  { id: 'planner', label: 'Planner', disabled: true, comingSoon: true },
+  { id: 'price-changes', label: 'Prices', disabled: false },
 ]
 
 const LEAGUE_VIEWS = [
@@ -343,7 +342,7 @@ export default function Dashboard() {
                     aria-label="League view"
                   >
                     {LEAGUE_VIEWS.map((view) => {
-                      const LeagueOptionIcon = { table: ListOrdered, captain: null, transfers: ArrowRightLeft }[view.id]
+                      const LeagueOptionIcon = { table: ListOrdered, captain: null, transfers: ArrowRightLeft, chips: Sparkles }[view.id]
                       return (
                         <button
                           key={view.id}

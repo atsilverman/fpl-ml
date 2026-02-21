@@ -162,10 +162,10 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 @media (hover: hover) {
   .settings-bento-button:hover .settings-icon {
-    opacity: 0.85;
+    opacity: 0.9;
   }
   .settings-bento-button:hover {
-    background: var(--bg-card);
+    background: var(--bg-hover);
     border-color: var(--accent-blue);
   }
 }
@@ -243,6 +243,39 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   z-index: 10;
 }
 
+/* Overall rank expanded: All / Last 12 / Last 6 + collapse in upper right */
+.bento-card-expand-icons--chart-range {
+  gap: 8px;
+}
+.bento-card-chart-range-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.bento-card-chart-range-btn {
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+@media (hover: hover) {
+  .bento-card-chart-range-btn:hover {
+    background: var(--bg-hover);
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+  }
+}
+.bento-card-chart-range-btn--active {
+  background: var(--accent-blue-bg, rgba(59, 130, 246, 0.15));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+
 .bento-card-info-icon {
   width: 36px;
   height: 28px;
@@ -264,7 +297,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 @media (hover: hover) {
   .bento-card-info-icon:hover {
     opacity: 1;
-    background-color: var(--bg-card);
+    background-color: var(--bg-hover);
     border-color: var(--text-secondary);
   }
 }
@@ -307,7 +340,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 @media (hover: hover) {
   .bento-card-compare-btn:hover {
     opacity: 1;
-    background-color: var(--bg-card);
+    background-color: var(--bg-hover);
     border-color: var(--text-secondary);
     color: var(--text-primary);
   }
@@ -535,6 +568,21 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   flex-shrink: 0;
 }
 
+.gw-legend-popup-mins-warning-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.gw-legend-popup-mins-triangle {
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+.gw-legend-popup-mins-triangle--yellow {
+  color: #ca8a04;
+}
+.gw-legend-popup-mins-triangle--red {
+  color: var(--impact-negative, #dc2626);
+}
 .gw-legend-popup-dnp-badge {
   flex-shrink: 0;
   flex-grow: 0;
@@ -553,6 +601,21 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   border-radius: 50%;
   line-height: 0;
   box-sizing: border-box;
+}
+
+.gw-legend-popup-mp-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  border-radius: 50%;
+}
+.gw-legend-popup-mp-dot--red {
+  background: var(--accent-red, #ef4444);
+}
+.gw-legend-popup-mp-dot--orange {
+  background: #f97316;
 }
 
 .gw-legend-popup-autosub-icon {

@@ -141,6 +141,13 @@
   contain: layout style;
 }
 
+/* Overall rank expanded: 3 columns wide on desktop */
+@media (min-width: 769px) {
+  .bento-card-chart-large.bento-card-overall-rank-expanded {
+    grid-column: span 3;
+  }
+}
+
 /* Transfers expanded: compact (top 3 only) – fill 2 rows so no gap to next bento */
 .bento-card-chart-large.bento-card-transfers-compact {
   grid-row: span 2;
@@ -157,23 +164,21 @@
   max-height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
 }
 
-/* GW points expanded: 3 columns × 5 rows on desktop; mobile 2×5 */
+/* GW points expanded: 4 columns × 5 rows on desktop (home: 5 cols); mobile 2×5 */
 .bento-card-chart-2x4 {
-  grid-column: span 3;
+  grid-column: span 4;
   grid-row: span 5;
   height: calc(var(--bento-unit-height) * 5 + var(--bento-gap) * 4);
   min-height: calc(var(--bento-unit-height) * 5 + var(--bento-gap) * 4);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-column 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
-              grid-row 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
-              height 0.28s cubic-bezier(0.4, 0, 0.2, 1), 
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              grid-column 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              grid-row 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+              height 0.28s cubic-bezier(0.4, 0, 0.2, 1),
               min-height 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: grid-column, grid-row, height, min-height;
-  contain: layout style;
 }
 
 .bento-card-chips {
@@ -220,6 +225,32 @@
   margin-left: 6px;
   display: inline;
   color: var(--text-secondary);
+}
+
+/* GW points expanded: value left of label, same row height; override .bento-card-label-row space-between */
+.bento-card-label-row.bento-card-label-row--gw-expanded {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 6px;
+  flex-wrap: nowrap;
+  min-height: 14px;
+  line-height: 1.15;
+}
+.bento-card-label-row--gw-expanded .bento-card-label-gw-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+  flex-shrink: 0;
+}
+.bento-card-label-row--gw-expanded .bento-card-label-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 0;
 }
 
 .bento-card-label-row {
@@ -397,5 +428,12 @@
 
   .bento-card-change-inline {
     font-size: 14px;
+  }
+}
+
+/* Home page desktop only: GW points expanded bento 5 wide */
+@media (min-width: 769px) {
+  .home-page .bento-card-chart-2x4 {
+    grid-column: span 5;
   }
 }

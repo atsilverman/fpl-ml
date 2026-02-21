@@ -25,12 +25,12 @@ html[data-theme="dark"] {
   --shadow-accent-blue: rgba(59, 130, 246, 0.15);
   --shadow-accent-blue-subtle: rgba(59, 130, 246, 0.1);
   --gw-bench-fill: rgba(255, 255, 255, 0.04);
-  --gw-autosub-out-bg: rgba(239, 68, 68, 0.14);
-  --gw-autosub-in-bg: rgba(16, 185, 129, 0.14);
-  /* Opaque equivalents for sticky player column – same green/red as stat cells */
+  --gw-autosub-out-bg: rgba(239, 68, 68, 0.07);
+  --gw-autosub-in-bg: rgba(16, 185, 129, 0.07);
+  /* Opaque equivalents for sticky player column – subtle red/green */
   --gw-bench-fill-solid: #0f1329;
-  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 14%, var(--bg-primary) 86%);
-  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 14%, var(--bg-primary) 86%);
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 7%, var(--bg-primary) 93%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 7%, var(--bg-primary) 93%);
   --collapse-icon-color: #a0aec0;
   --collapse-badge-bg: rgba(255, 255, 255, 0.06);
   --collapse-badge-border: rgba(255, 255, 255, 0.12);
@@ -44,10 +44,14 @@ html[data-theme="dark"] {
   /* BPS chart value on bar: dark text on light bars, light text on dark bars */
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
-  /* Stats page Player/Team slider – teal to distinguish from subpage selector blue */
-  --stats-view-toggle-accent: #14b8a6;
+  /* Chart expected line (xG/xA etc.): soft cyan so it reads as forecast, distinct from actual green */
+  --chart-expected-line: #22d3ee;
   /* Card shadow: on dark bg use stronger black + subtle light ring so edges read */
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  /* Hover feedback: default (mobile has no hover via @media (hover: hover)) */
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(255, 255, 255, 0.08);
 }
 
 /* Light mode */
@@ -70,12 +74,12 @@ html[data-theme="light"] {
   --shadow-accent-blue: rgba(37, 99, 235, 0.15);
   --shadow-accent-blue-subtle: rgba(37, 99, 235, 0.1);
   --gw-bench-fill: rgba(0, 0, 0, 0.04);
-  --gw-autosub-out-bg: rgba(239, 68, 68, 0.12);
-  --gw-autosub-in-bg: rgba(16, 185, 129, 0.12);
-  /* Opaque equivalents for sticky player column so scrolling stats stay hidden */
+  --gw-autosub-out-bg: rgba(239, 68, 68, 0.06);
+  --gw-autosub-in-bg: rgba(16, 185, 129, 0.06);
+  /* Opaque equivalents for sticky player column – subtle red/green */
   --gw-bench-fill-solid: #eef1f5;
-  --gw-autosub-out-bg-solid: #fde8e8;
-  --gw-autosub-in-bg-solid: #e6f7f2;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 6%, var(--bg-primary) 94%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 6%, var(--bg-primary) 94%);
   --collapse-icon-color: #64748b;
   --collapse-badge-bg: rgba(0, 0, 0, 0.06);
   --collapse-badge-border: rgba(0, 0, 0, 0.08);
@@ -89,10 +93,28 @@ html[data-theme="light"] {
   /* BPS chart value on bar: dark text on light bars, light text on dark bars */
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
-  /* Stats page Player/Team slider – teal to distinguish from subpage selector blue */
-  --stats-view-toggle-accent: #0d9488;
+  /* Chart expected line (xG/xA etc.): soft cyan so it reads as forecast */
+  --chart-expected-line: #0891b2;
   /* Card shadow: soft dark shadow for lift */
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(0, 0, 0, 0.08);
+}
+
+/* Desktop only: slightly stronger hover feedback (mobile keeps no hover via @media (hover: hover)) */
+@media (hover: hover) and (min-width: 769px) {
+  html:not([data-theme]),
+  html[data-theme="dark"] {
+    --bg-hover: color-mix(in srgb, var(--border-color) 20%, var(--bg-secondary));
+    --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --hover-card-border: rgba(255, 255, 255, 0.12);
+  }
+  html[data-theme="light"] {
+    --bg-hover: color-mix(in srgb, var(--border-color) 14%, var(--bg-secondary));
+    --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    --hover-card-border: rgba(0, 0, 0, 0.12);
+  }
 }
 
 /* Prevent rubber-band / scroll past the end on all devices */

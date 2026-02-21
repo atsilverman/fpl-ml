@@ -17,7 +17,7 @@ import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
 import { useConfiguration } from '../contexts/ConfigurationContext'
-import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, ListOrdered, ArrowRightLeft, Sparkles } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, ListOrdered, ArrowRightLeft, Sparkles, TriangleAlert } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -1220,10 +1220,6 @@ export default function MiniLeaguePage() {
                   <div className="gw-legend-popup manager-detail-modal-legend-popup" role="dialog" aria-label="GW points legend">
                     <div className="gw-legend-popup-title">Legend</div>
                     <div className="gw-legend-popup-row">
-                      <span className="gameweek-points-legend-badge rank-highlight">x</span>
-                      <span className="gw-legend-popup-text">Top 10 in GW</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
                       <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
                       <span className="gw-legend-popup-text">Captain</span>
                     </div>
@@ -1236,6 +1232,18 @@ export default function MiniLeaguePage() {
                         <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
                       </span>
                       <span className="gw-legend-popup-text">Did not play</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-mp-dot gw-legend-popup-mp-dot--red" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Under 45' MP</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-mp-dot gw-legend-popup-mp-dot--orange" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Under 80' MP</span>
                     </div>
                     <div className="gw-legend-popup-row">
                       <span className="gw-legend-popup-row-icon">
@@ -1252,10 +1260,6 @@ export default function MiniLeaguePage() {
                         </span>
                       </span>
                       <span className="gw-legend-popup-text">Auto-subbed in</span>
-                    </div>
-                    <div className="gw-legend-popup-row">
-                      <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
-                      <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
                     </div>
                     <div className="gw-legend-popup-row">
                       <span className="gw-legend-popup-live-dot-wrap">

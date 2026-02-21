@@ -141,8 +141,8 @@
 
 @media (hover: hover) {
   .research-card:hover {
-    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border-color: var(--hover-card-border);
+    box-shadow: var(--hover-card-shadow);
   }
   .research-card.price-changes-card:hover {
     border-color: var(--border-color);

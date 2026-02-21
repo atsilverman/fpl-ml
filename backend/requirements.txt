@@ -15,6 +15,10 @@ pydantic>=2.5.0
 # Database (for SQL verification scripts)
 psycopg2-binary>=2.9.9
 
+# API server (stats + fixtures from MVs)
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
 # Development dependencies (optional)
 # pytest>=7.4.0
 # pytest-asyncio>=0.21.0

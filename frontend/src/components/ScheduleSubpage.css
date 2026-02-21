@@ -57,8 +57,8 @@
 
 @media (hover: hover) {
   .schedule-recommendations-bento:hover {
-    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    border-color: var(--hover-card-border);
+    box-shadow: var(--hover-card-shadow);
   }
 }
 
@@ -593,6 +593,11 @@
 
 .schedule-filter-popover-section:last-child {
   margin-bottom: 0;
+}
+
+/* Schedule filters overlay: less space below Done button */
+.stats-filter-overlay-panel--schedule .stats-filter-overlay-footer {
+  padding-bottom: 12px;
 }
 
 /* Customize difficulty overlay: scrollable body so team list fits; theme matches filter overlay */

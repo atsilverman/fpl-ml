@@ -634,7 +634,7 @@
 
 @media (hover: hover) {
   .standings-table tbody tr:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
 }
 
@@ -672,23 +672,29 @@
   transition: opacity 0.2s ease;
   /* Prevent sticky header/column being pulled off on mobile drag */
   overscroll-behavior: none;
+  /* Space after last row so bottom border is visible when scrolled (standings, captain, chips, transfers) */
+  padding-bottom: 10px;
 }
 
-/* Desktop: bento body and table wrapper as scroll container so trackpad/wheel can scroll the table */
+/* Desktop: bento body and table wrapper size to content for all views so bottom aligns with last row (Standings, Captains, Transfers, Chips) */
 @media (min-width: 769px) {
+  .mini-league-page .league-standings-bento.league-standings-page {
+    flex: 0 1 auto;
+  }
+
   .mini-league-page .league-standings-bento.league-standings-page .league-standings-bento-body {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .mini-league-page .league-standings-bento-table-wrapper {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: auto;
   }
@@ -713,7 +719,7 @@
   }
 }
 
-/* Mobile: scroll happens inside the table container (under header); header row stays fixed at top of container */
+/* Mobile: content-sized when table is short (no gap below table); scroll inside bento when table is long */
 @media (max-width: 768px) {
   .mini-league-page {
     padding-bottom: 0;
@@ -723,21 +729,30 @@
     display: none;
   }
 
-  /* Bento body: take remaining height, column layout, so table wrapper can be the scroll area */
+  /* Bento: size to content when short, cap and scroll when long — avoids big gap below table */
+  .mini-league-page .league-standings-bento.league-standings-page {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Bento body: content-sized so bento height follows table height when short */
   .mini-league-page .league-standings-bento.league-standings-page .league-standings-bento-body {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
   }
 
-  /* Table wrapper is the scroll container: fills remaining space, scrolls vertically (and horizontally) */
+  /* Table wrapper: content-sized; when content is long, bento scrolls (bento has max-height: 100%) */
   .mini-league-page .league-standings-bento-table-wrapper {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
     min-height: 0;
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: auto;
   }
@@ -746,7 +761,7 @@
     overflow: visible;
   }
 
-  /* Sticky thead sticks to top of the table wrapper (scroll container) */
+  /* Sticky thead sticks to top of the table wrapper when bento scrolls */
   .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead,
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead {
     position: sticky;
@@ -817,10 +832,10 @@
 
 /* Captains subpage: slight indent for manager header and names (specificity overrides .league-standings-page .league-standings-bento-table th/td padding) */
 .league-standings-page .league-standings-bento-table.league-standings-c-view-table th.league-standings-bento-team {
-  padding-left: 14px;
+  padding-left: 12px;
 }
 .league-standings-page .league-standings-bento-table.league-standings-c-view-table td.league-standings-c-view-manager-cell {
-  padding-left: 14px;
+  padding-left: 12px;
 }
 /* Captain and Vice columns: indent header and value cells off left edge */
 .league-standings-page .league-standings-bento-table.league-standings-c-view-table th.league-standings-c-view-th-captain,
@@ -858,9 +873,15 @@
   width: 100%;
   min-width: 0;
 }
+/* Keep chips table as a proper table so columns don't collapse into one (no display:flex on td) */
+.league-standings-page .league-standings-bento-table.league-standings-chips-table {
+  display: table;
+  table-layout: fixed;
+  min-width: 320px;
+}
 .league-standings-page .league-standings-bento-table.league-standings-chips-table th.league-standings-chips-th-manager,
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-manager {
-  padding-left: 22px;
+  padding-left: 12px;
 }
 .league-standings-page .league-standings-bento-table.league-standings-chips-table th.league-standings-chips-th-chip {
   text-align: center;
@@ -873,9 +894,6 @@
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
   text-align: center;
   vertical-align: middle;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   min-height: 36px;
 }
 .league-standings-chips-badge-unplayed {
@@ -960,13 +978,10 @@
   min-width: 0;
 }
 
+/* Each row has bottom border including last, so the table has a clear wrapped bottom. */
 .league-transfers-table tbody tr {
   border-bottom: 1px solid var(--border-color);
   min-height: 36px;
-}
-
-.league-transfers-table tbody tr:last-child {
-  border-bottom: none;
 }
 
 /* Fixed 36px base row to match non-transfer view; transfers cell can grow for multi-line content */
@@ -982,7 +997,7 @@
   line-height: 1.2;
 }
 .league-transfers-table .league-transfers-row td.league-transfers-cell-manager {
-  padding: 6px 8px 6px 14px;
+  padding: 6px 8px 6px 12px;
   vertical-align: top;
   min-height: 36px;
   height: 36px;
@@ -1227,6 +1242,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 
 /* Table: fixed layout with colgroup widths (12% rank, 24% manager, 16% each total/gw/left/live); match transfer view text/header scale */
 .league-standings-page .league-standings-bento-table {
+  display: table;
   table-layout: fixed;
   width: 100%;
   min-width: 420px;
@@ -1284,13 +1300,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
 }
-/* Single border per row so the line is flush across all columns (avoids manager flex cell misalignment) */
+/* Single border per row so the line is flush across all columns (avoids manager flex cell misalignment).
+   Last row keeps border to wrap the bottom of the table (same as transfers view). */
 .league-standings-page .league-standings-bento-table tbody tr {
   border-bottom: 1px solid var(--border-color);
   min-height: 36px; /* match height when rank change badge is present so all rows are consistent */
-}
-.league-standings-page .league-standings-bento-table tbody tr:last-child {
-  border-bottom: none;
 }
 
 .league-standings-page .league-standings-bento-table tbody td {
@@ -1882,14 +1896,45 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 
 /* Player detail modal (same layout as manager modal, stacked above when open) */
 .player-detail-modal-overlay {
-  z-index: 1001;
+  /* Top-level stacking so it appears above dashboard header (z 100) and bottom nav (z 99) */
+  z-index: 1100;
 }
+
+/* Mobile: keep overlay and content between top header and bottom nav */
+@media (max-width: 768px) {
+  .player-detail-modal-overlay {
+    top: var(--dashboard-header-height, 0);
+    bottom: var(--dashboard-nav-height, 0);
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 12px;
+  }
+  .player-detail-modal-overlay .player-detail-modal-content {
+    max-height: 100%;
+  }
+}
+
 .player-detail-modal-content {
+  position: relative;
   max-width: min(90vw, 480px);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* Backdrop when filter popup is open: dim everything in the modal below the popup */
+.player-detail-filter-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+  border-radius: 12px;
+}
+.player-detail-filter-popup-portal {
+  position: relative;
+  z-index: 2;
 }
 .player-detail-modal-body {
   display: flex;
@@ -2041,16 +2086,19 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
     color: var(--text-primary);
   }
 }
-/* Player detail chart stat popup: compact stat picker centered on screen */
+/* Player detail chart stat popup: filters (stat + range) sized to content */
 .player-detail-stat-popup.stats-filter-overlay-panel {
   position: fixed;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 100;
-  width: 280px;
-  max-width: min(280px, calc(100vw - 24px));
-  max-height: min(calc(100vh - 120px), 380px);
+  width: max-content;
+  min-width: 260px;
+  max-width: min(360px, calc(100vw - 24px));
+  height: max-content;
+  max-height: min(calc(100vh - 120px), 420px);
+  min-height: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -2059,6 +2107,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   display: flex;
   flex-direction: column;
 }
+
 .player-detail-stat-popup .stats-filter-overlay-header {
   display: flex;
   align-items: center;
@@ -2096,13 +2145,18 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   }
 }
 .player-detail-stat-popup .stats-filter-overlay-body {
-  flex: 0 0 auto;
-  padding: 12px 14px;
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 14px 16px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 .player-detail-stat-popup .stats-filter-section {
   min-width: 0;
+  margin-bottom: 16px;
+}
+.player-detail-stat-popup .stats-filter-section:last-child {
+  margin-bottom: 0;
 }
 .player-detail-stat-popup .stats-filter-section-title {
   font-size: 10px;
@@ -2110,13 +2164,13 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 .player-detail-stat-popup .stats-filter-buttons {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 .player-detail-stat-popup .stats-filter-option-btn {
   display: inline-flex;
@@ -2145,20 +2199,20 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 }
 .player-detail-stat-popup .stats-filter-overlay-footer {
   flex-shrink: 0;
-  padding: 12px 14px 14px;
+  padding: 8px 16px 6px;
   border-top: 1px solid var(--border-color);
   background: var(--bg-card);
 }
 .player-detail-stat-popup .stats-filter-overlay-done {
   display: block;
   width: 100%;
-  padding: 10px 16px;
-  font-size: 14px;
+  padding: 6px 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #fff;
   background: var(--accent-blue, #3b82f6);
   border: 1px solid var(--accent-blue, #3b82f6);
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -2198,4 +2252,47 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   max-height: none;
   overflow: visible;
   flex-shrink: 0;
+}
+
+/* Team detail modal (same layout and styling as player detail modal) */
+.team-detail-modal-overlay {
+  z-index: 1100;
+}
+@media (max-width: 768px) {
+  .team-detail-modal-overlay {
+    top: var(--dashboard-header-height, 0);
+    bottom: var(--dashboard-nav-height, 0);
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 12px;
+  }
+  .team-detail-modal-overlay .team-detail-modal-content {
+    max-height: 100%;
+  }
+}
+.team-detail-modal-overlay .manager-detail-modal-header-title-wrap.player-detail-modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.team-detail-modal-overlay .player-detail-modal-badge {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.team-detail-modal-overlay .player-detail-modal-header-row .manager-detail-modal-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+.team-detail-modal-content {
+  position: relative;
+  max-width: min(90vw, 480px);
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }

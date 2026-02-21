@@ -77,11 +77,13 @@
   white-space: nowrap;
 }
 
-/* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); subtle fills */
+/* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); text color + subtle fill */
 .schedule-opponent-stats-td-stat--rank-green {
+  color: var(--accent-green, #10b981);
   background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-card));
 }
 .schedule-opponent-stats-td-stat--rank-red {
+  color: var(--accent-red, #ef4444);
   background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-card));
 }
 

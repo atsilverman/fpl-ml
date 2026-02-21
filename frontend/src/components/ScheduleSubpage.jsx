@@ -629,7 +629,7 @@ export default function ScheduleSubpage() {
         {filterPopoverOpen && typeof document !== 'undefined' && createPortal(
           <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Schedule filters">
             <div className="stats-filter-overlay-backdrop" onClick={() => setFilterPopoverOpen(false)} aria-hidden />
-            <div className="stats-filter-overlay-panel">
+            <div className="stats-filter-overlay-panel stats-filter-overlay-panel--schedule">
               <div className="schedule-filter-popover-header">
                 <span className="schedule-filter-popover-title">Filters</span>
                 <div className="schedule-filter-popover-header-actions">

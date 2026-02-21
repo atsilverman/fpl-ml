@@ -141,39 +141,14 @@
   box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
 }
 
-/* Very subtle red/green glow on right edge for +/- impact (color depth only) */
-.feed-event-card--impact-positive::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 35%;
-  pointer-events: none;
-  border-radius: 0 8px 8px 0;
-  background: linear-gradient(to right, transparent, rgba(16, 185, 129, 0.06));
-}
-.feed-event-card--impact-negative::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 35%;
-  pointer-events: none;
-  border-radius: 0 8px 8px 0;
-  background: linear-gradient(to right, transparent, rgba(239, 68, 68, 0.06));
-}
-
-/* Owned by configured manager: same border as others, green player name with subtle glow */
+/* Owned by configured manager: thin green border, green player name */
 .feed-event-card.feed-event-card--owned {
-  border: 1px solid var(--border-color);
+  border: 0.5px solid var(--accent-green, #10b981);
 }
 
 .feed-event-card--owned .feed-event-card__player-name:not(.feed-event-card__player-name--loading) {
   color: var(--accent-green, #10b981);
-  font-weight: 700;
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
+  font-weight: 600;
 }
 
 /* Stat later ruled out (e.g. goal/assist disallowed): cross out and grey the existing row */
@@ -277,6 +252,14 @@ html[data-theme="dark"] .feed-event-card__position-badge {
   font-weight: 600;
 }
 
+.feed-event-card__event-delta-before {
+  color: var(--text-primary);
+}
+
+.feed-event-card--reversed .feed-event-card__event-delta-before {
+  color: var(--text-secondary);
+}
+
 .feed-event-card__event-delta--positive {
   color: var(--accent-green);
 }
@@ -294,37 +277,52 @@ html[data-theme="dark"] .feed-event-card__position-badge {
 }
 
 .feed-event-card__impact-value {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 5px;
-  min-width: 2.5em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 2em;
   text-align: center;
   line-height: 1.2;
   box-sizing: border-box;
   letter-spacing: 0.03em;
+  background: color-mix(in srgb, var(--border-color) 35%, var(--bg-card));
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, transparent);
 }
 
 .feed-event-card__impact-value--positive {
-  background: color-mix(in srgb, var(--accent-green) 22%, transparent);
+  background: color-mix(in srgb, var(--accent-green) 18%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent-green) 45%, transparent);
   color: var(--accent-green);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
 }
 
 .feed-event-card__impact-value--negative {
-  background: color-mix(in srgb, var(--accent-red, #ef4444) 22%, transparent);
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 18%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--accent-red, #ef4444) 45%, transparent);
   color: var(--accent-red, #ef4444);
+  font-weight: 600;
+  letter-spacing: 0.02em;
   -webkit-font-smoothing: antialiased;
 }
 
-.feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative) {
-  background: var(--bg-tertiary, rgba(0, 0, 0, 0.06));
+.feed-event-card__impact-value--zero {
+  background: color-mix(in srgb, var(--text-secondary) 14%, var(--bg-card));
+  border-color: color-mix(in srgb, var(--text-secondary) 28%, transparent);
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative):not(.feed-event-card__impact-value--zero) {
+  background: color-mix(in srgb, var(--border-color) 35%, var(--bg-card));
   color: var(--text-primary);
   font-weight: 600;
 }
 
-html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative) {
-  background: var(--bg-tertiary, rgba(255, 255, 255, 0.12));
+html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative):not(.feed-event-card__impact-value--zero) {
+  background: color-mix(in srgb, var(--border-color) 35%, var(--bg-card));
 }
 
 /* Search row and filter (same as Defcon) */
@@ -522,10 +520,13 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 }
 .stats-filter-overlay-panel {
   position: relative;
-  flex: 0 1 auto;
-  width: 100%;
-  max-width: 400px;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+  height: max-content;
   max-height: calc(100vh - 24px);
+  min-height: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -571,7 +572,8 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   }
 }
 .stats-filter-overlay-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 12px 14px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;

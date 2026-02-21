@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Filter } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
-import { usePlayerDetail } from '../hooks/usePlayerDetail'
+import { useTeamDetail } from '../hooks/useTeamDetail'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import PlayerGameweekPointsChart, { CHART_RANGE_FILTERS } from './PlayerGameweekPointsChart'
@@ -10,7 +10,7 @@ import ScheduleBento from './ScheduleBento'
 import ScheduleOpponentStatsTable from './ScheduleOpponentStatsTable'
 import './MiniLeaguePage.css'
 
-const ALL_PLAYER_STAT_OPTIONS = [
+const ALL_TEAM_STAT_OPTIONS = [
   { key: 'points', label: 'Points' },
   { key: 'goals', label: 'Goals' },
   { key: 'assists', label: 'Assists' },
@@ -28,31 +28,26 @@ const ALL_PLAYER_STAT_OPTIONS = [
   { key: 'expected_goals_conceded', label: 'xGC' },
 ]
 
-export default function PlayerDetailModal({
-  playerId,
-  playerName,
+export default function TeamDetailModal({
+  teamId,
+  teamName,
   gameweek,
-  leagueManagerCount = null,
-  leagueManagerIds = null,
+  pointsRank = null,
   onClose,
 }) {
-  const [selectedPlayerStat, setSelectedPlayerStat] = useState('points')
+  const [selectedStat, setSelectedStat] = useState('points')
   const [chartRangeFilter, setChartRangeFilter] = useState('last6')
-  const [showPlayerStatPopup, setShowPlayerStatPopup] = useState(false)
+  const [showStatPopup, setShowStatPopup] = useState(false)
   const [chartAverage, setChartAverage] = useState(null)
-  const playerStatPopupRef = useRef(null)
+  const statPopupRef = useRef(null)
+  const filterPopupLayerRef = useRef(null)
 
   const {
-    player: playerDetailPlayer,
-    currentPrice,
+    team,
     seasonPoints,
-    overallRank,
-    positionRank,
     gameweekPoints = [],
-    leagueOwnershipPct,
-    overallOwnershipPct,
-    loading: playerDetailLoading,
-  } = usePlayerDetail(playerId, gameweek, leagueManagerCount, leagueManagerIds)
+    loading: teamDetailLoading,
+  } = useTeamDetail(teamId, gameweek)
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
   const config = useConfiguration()
@@ -72,77 +67,68 @@ export default function PlayerDetailModal({
     [config?.teamStrengthOverrides, config?.teamAttackOverrides, config?.teamDefenceOverrides]
   )
 
-  const playerStatOptions = useMemo(() => {
-    const position = playerDetailPlayer?.position
-    return ALL_PLAYER_STAT_OPTIONS.filter((opt) => {
-      if (opt.key === 'saves' && position != null && position !== 1) return false
-      if (opt.key === 'clean_sheets' && position === 4) return false
-      return true
-    })
-  }, [playerDetailPlayer?.position])
+  const resolvedTeamId = team?.team_id ?? teamId
 
   useEffect(() => {
-    if (!playerStatOptions.some((o) => o.key === selectedPlayerStat) && playerStatOptions.length > 0) {
-      setSelectedPlayerStat(playerStatOptions[0].key)
+    if (!ALL_TEAM_STAT_OPTIONS.some((o) => o.key === selectedStat)) {
+      setSelectedStat('points')
     }
-  }, [playerStatOptions, selectedPlayerStat])
+  }, [selectedStat])
 
   useEffect(() => {
-    if (playerDetailLoading) setChartAverage(null)
-  }, [playerDetailLoading])
+    if (teamDetailLoading) setChartAverage(null)
+  }, [teamDetailLoading])
 
   useEffect(() => {
-    if (!showPlayerStatPopup) return
+    if (!showStatPopup) return
     const handleClickOutside = (e) => {
-      if (playerStatPopupRef.current && !playerStatPopupRef.current.contains(e.target)) {
-        setShowPlayerStatPopup(false)
-      }
+      const inTrigger = statPopupRef.current && statPopupRef.current.contains(e.target)
+      const inPopup = filterPopupLayerRef.current && filterPopupLayerRef.current.contains(e.target)
+      if (!inTrigger && !inPopup) setShowStatPopup(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showPlayerStatPopup])
+  }, [showStatPopup])
 
   useEffect(() => {
-    if (playerId == null) return
+    if (teamId == null) return
     const handleEscape = (e) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
-  }, [playerId, onClose])
+  }, [teamId, onClose])
 
-  if (playerId == null) return null
+  if (teamId == null) return null
+
+  const displayName = teamName || team?.team_name || 'Team'
+  const badgeShortName = team?.short_name ?? null
 
   return (
     <div
-      className="manager-detail-modal-overlay player-detail-modal-overlay"
+      className="manager-detail-modal-overlay team-detail-modal-overlay"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="player-detail-modal-title"
+      aria-labelledby="team-detail-modal-title"
     >
       <div
-        className="manager-detail-modal-content player-detail-modal-content"
+        className="manager-detail-modal-content team-detail-modal-content"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="manager-detail-modal-header">
           <div className="manager-detail-modal-header-title-wrap player-detail-modal-header-row">
-            {playerDetailPlayer?.team_short_name && (
+            {badgeShortName && (
               <img
-                src={`/badges/${playerDetailPlayer.team_short_name}.svg`}
+                src={`/badges/${badgeShortName}.svg`}
                 alt=""
                 className="player-detail-modal-badge"
                 onError={(e) => { e.target.style.display = 'none' }}
               />
             )}
-            <h2 id="player-detail-modal-title" className="manager-detail-modal-title">
-              {playerName || 'Player'}
+            <h2 id="team-detail-modal-title" className="manager-detail-modal-title">
+              {displayName}
             </h2>
-            {playerDetailPlayer?.positionLabel && (
-              <span className="player-detail-modal-position-pill">
-                {playerDetailPlayer.positionLabel}
-              </span>
-            )}
           </div>
           <button
             type="button"
@@ -153,61 +139,39 @@ export default function PlayerDetailModal({
             <X size={20} strokeWidth={2} />
           </button>
         </div>
-        <div className="manager-detail-modal-body player-detail-modal-body">
+        <div className="manager-detail-modal-body player-detail-modal-body team-detail-modal-body">
           <div className="player-detail-details-bento bento-card bento-card-animate">
-            <span className="bento-card-label">Player details</span>
-            {playerDetailLoading ? (
+            <span className="bento-card-label">Team details</span>
+            {teamDetailLoading ? (
               <div className="bento-card-value loading">...</div>
             ) : (
               <div className="player-detail-details-grid">
                 <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Current price</span>
-                  <span className="player-detail-detail-value">
-                    {currentPrice != null ? `£${currentPrice.toFixed(1)}` : '—'}
-                  </span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Position rank (Pts)</span>
-                  <span className="player-detail-detail-value">{positionRank != null ? positionRank : '—'}</span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Overall rank (Pts)</span>
-                  <span className="player-detail-detail-value">{overallRank != null ? overallRank : '—'}</span>
+                  <span className="player-detail-detail-label">Rank (Pts)</span>
+                  <span className="player-detail-detail-value">{pointsRank != null ? pointsRank : '—'}</span>
                 </div>
                 <div className="player-detail-detail-row">
                   <span className="player-detail-detail-label">Total Pts</span>
                   <span className="player-detail-detail-value">{seasonPoints ?? '—'}</span>
                 </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Ownership (League)</span>
-                  <span className="player-detail-detail-value">
-                    {leagueOwnershipPct != null ? `${leagueOwnershipPct}%` : '—'}
-                  </span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Ownership (Overall)</span>
-                  <span className="player-detail-detail-value">
-                    {overallOwnershipPct != null ? `${overallOwnershipPct}%` : '—'}
-                  </span>
-                </div>
               </div>
             )}
           </div>
           <div className="player-detail-chart-bento bento-card bento-card-animate">
-            <div className="player-detail-chart-bento-header" ref={playerStatPopupRef}>
+            <div className="player-detail-chart-bento-header" ref={statPopupRef}>
               <span className="bento-card-label player-detail-chart-bento-label">
                 Stats by gameweek
                 <span className="bento-card-label-suffix">
-                  | {(() => { const o = playerStatOptions.find((opt) => opt.key === selectedPlayerStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
+                  | {(() => { const o = ALL_TEAM_STAT_OPTIONS.find((opt) => opt.key === selectedStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
                 </span>
               </span>
               <div className="player-detail-chart-bento-actions">
                 <button
                   type="button"
                   className="player-detail-chart-stat-btn"
-                  onClick={() => setShowPlayerStatPopup((v) => !v)}
+                  onClick={() => setShowStatPopup((v) => !v)}
                   aria-label="Filters: stat and GW range"
-                  aria-expanded={showPlayerStatPopup}
+                  aria-expanded={showStatPopup}
                   aria-haspopup="dialog"
                   title="Filters"
                 >
@@ -220,10 +184,11 @@ export default function PlayerDetailModal({
             )}
             <div className="player-detail-chart-wrap">
               <PlayerGameweekPointsChart
+                key={`team-chart-${selectedStat}-${chartRangeFilter}`}
                 data={gameweekPoints}
-                loading={playerDetailLoading}
-                statKey={selectedPlayerStat}
-                position={playerDetailPlayer?.position}
+                loading={teamDetailLoading}
+                statKey={selectedStat}
+                position={null}
                 onAverageChange={setChartAverage}
                 filter={chartRangeFilter}
                 onFilterChange={setChartRangeFilter}
@@ -231,30 +196,30 @@ export default function PlayerDetailModal({
             </div>
           </div>
           <ScheduleBento
-            teamId={playerDetailPlayer?.team_id}
+            teamId={resolvedTeamId}
             opponentStatsByTeamId={teamLast6ByTeamId}
             opponentStatsLoading={teamLast6Loading}
             difficultyOverridesByDimension={difficultyOverridesByDimension}
             useCustomDifficulty={useCustomDifficulty}
           />
           <ScheduleOpponentStatsTable
-            teamId={playerDetailPlayer?.team_id}
+            teamId={resolvedTeamId}
             opponentStatsByTeamId={teamLast6ByTeamId}
             opponentStatsLoading={teamLast6Loading}
           />
         </div>
-        {showPlayerStatPopup && typeof document !== 'undefined' && createPortal(
-          <div className="player-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'auto' }}>
+        {showStatPopup && typeof document !== 'undefined' && createPortal(
+          <div ref={filterPopupLayerRef} className="team-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none' }}>
             <div
               className="player-detail-filter-backdrop"
               style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}
-              onClick={() => setShowPlayerStatPopup(false)}
+              onClick={() => setShowStatPopup(false)}
               aria-hidden
             />
             <div
               className="player-detail-filter-popup-portal"
               style={{ position: 'fixed', inset: 0, zIndex: 1, pointerEvents: 'auto' }}
-              onClick={() => setShowPlayerStatPopup(false)}
+              onClick={() => setShowStatPopup(false)}
             >
               <div
                 className="player-detail-stat-popup stats-filter-overlay-panel"
@@ -269,7 +234,7 @@ export default function PlayerDetailModal({
                     <button
                       type="button"
                       className="stats-filter-overlay-close"
-                      onClick={() => setShowPlayerStatPopup(false)}
+                      onClick={() => setShowStatPopup(false)}
                       aria-label="Close"
                     >
                       <X size={20} strokeWidth={2} />
@@ -280,16 +245,16 @@ export default function PlayerDetailModal({
                   <div className="stats-filter-section">
                     <div className="stats-filter-section-title">Statistic</div>
                     <div className="stats-filter-buttons">
-                      {playerStatOptions.map(({ key, label }) => (
+                      {ALL_TEAM_STAT_OPTIONS.map(({ key, label }) => (
                         <button
                           key={key}
                           type="button"
-                          className={`stats-filter-option-btn ${selectedPlayerStat === key ? 'stats-filter-option-btn--active' : ''}`}
+                          className={`stats-filter-option-btn ${selectedStat === key ? 'stats-filter-option-btn--active' : ''}`}
                           onClick={() => {
-                            setSelectedPlayerStat(key)
-                            setShowPlayerStatPopup(false)
+                            setSelectedStat(key)
+                            setShowStatPopup(false)
                           }}
-                          aria-pressed={selectedPlayerStat === key}
+                          aria-pressed={selectedStat === key}
                         >
                           <CardStatLabel statKey={key} label={label} />
                         </button>
@@ -317,7 +282,7 @@ export default function PlayerDetailModal({
                   <button
                     type="button"
                     className="stats-filter-overlay-done"
-                    onClick={() => setShowPlayerStatPopup(false)}
+                    onClick={() => setShowStatPopup(false)}
                     aria-label="Done"
                   >
                     Done

@@ -19,6 +19,16 @@
   flex-shrink: 0;
 }
 
+/* Home bento: filter button on left side (mobile and desktop) */
+.bento-card .performance-chart-container .chart-filter-controls {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: auto;
+  margin-top: 0;
+  justify-content: flex-start;
+}
+
 .chart-chip-legend {
   display: flex;
   gap: 16px;
@@ -102,6 +112,227 @@
   padding: 0 10px;
 }
 
+/* Filter trigger button (opens popup); icon-only when in bento card */
+.performance-chart-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  min-height: 26px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bento-card .performance-chart-filter-btn {
+  width: 28px;
+  min-width: 28px;
+  height: 24px;
+  min-height: 24px;
+  padding: 0;
+  border-radius: 5px;
+}
+
+@media (hover: hover) {
+  .performance-chart-filter-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+    color: var(--text-primary);
+  }
+}
+
+/* Filter popup overlay (same structure as StatsSubpage / DefconSubpage) */
+.stats-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12px 12px 24px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.stats-filter-overlay[aria-modal="true"] {
+  pointer-events: auto;
+}
+
+.stats-filter-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+
+.stats-filter-overlay-panel.performance-chart-filter-panel {
+  position: relative;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(400px, calc(100vw - 24px));
+  height: max-content;
+  max-height: min(calc(100vh - 36px), 420px);
+  min-height: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.stats-filter-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.stats-filter-overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.stats-filter-overlay-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stats-filter-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .stats-filter-overlay-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+}
+
+.stats-filter-overlay-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stats-filter-overlay-footer {
+  flex-shrink: 0;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.stats-filter-overlay-done {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
+  border: 1px solid var(--accent-blue, #3b82f6);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .stats-filter-overlay-done:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+    border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+  }
+}
+
+.stats-filter-overlay-done:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+.stats-filter-section {
+  flex: 1 1 100%;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+
+.stats-filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.stats-filter-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.stats-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-filter-option-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .stats-filter-option-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+
+.stats-filter-option-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-secondary));
+}
+
+.stats-filter-option-btn .stats-filter-option-icon {
+  flex-shrink: 0;
+}
+
 /* Wrapper takes remaining space; filter controls sit below chart/legend */
 .performance-chart-svg-wrapper {
   flex: 1 1 0%;
@@ -157,6 +388,11 @@
   .chart-filter-controls {
     gap: 6px;
     margin-top: 10px;
+  }
+
+  .performance-chart-filter-btn {
+    padding: 5px 10px;
+    font-size: 10px;
   }
 
   .chart-filter-btn {

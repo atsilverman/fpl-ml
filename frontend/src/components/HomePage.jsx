@@ -45,6 +45,7 @@ export default function HomePage() {
   const [isPerformanceExpanded, setIsPerformanceExpanded] = useState(false)
   const [isPlayerPerformanceExpanded, setIsPlayerPerformanceExpanded] = useState(false)
   const [playerPerformanceChartFilter, setPlayerPerformanceChartFilter] = useState('last12') // 'all', 'last12', 'last6'
+  const [playerPerformanceStatKey, setPlayerPerformanceStatKey] = useState('total_points') // 'total_points', 'bps', 'goals_scored', 'assists'
   const [teamValueChartFilter, setTeamValueChartFilter] = useState('last12') // 'all', 'last12', 'last6'
   const [showTeamValueComparison, setShowTeamValueComparison] = useState(false)
   const [isTeamValueExpanded, setIsTeamValueExpanded] = useState(false)
@@ -66,7 +67,7 @@ export default function HomePage() {
   const { hasLiveGames } = useLiveGameweekStatus(gameweek)
   const { inPlay: managerInPlay } = useManagerLiveStatus(config?.managerId ?? null, gameweek)
   const hasManagerPlayerInPlay = hasLiveGames && (managerInPlay ?? 0) > 0
-  const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter)
+  const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter, playerPerformanceStatKey)
   const { data: currentGameweekPlayers, fixtures: currentGameweekFixtures, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
   const { fixtures: fplFixturesForMatchState } = useFPLFixturesForMatchState(gameweek ?? null, isGwPointsExpanded)
   const { fixtures: fixturesFromMatches } = useFixturesWithTeams(gameweek ?? null)
@@ -286,9 +287,9 @@ export default function HomePage() {
     const card = cards.find(c => c.id === id)
     if (!card) return ''
     
-    // Transform overall-rank to 2x3 when expanded
+    // Transform overall-rank to 3-wide × 3 rows when expanded (desktop)
     if (id === 'overall-rank' && isPerformanceExpanded) {
-      return 'bento-card-chart-large'
+      return 'bento-card-chart-large bento-card-overall-rank-expanded'
     }
     
     // Transform team-value to 2x3 when expanded
@@ -358,6 +359,10 @@ export default function HomePage() {
 
   const handlePlayerPerformanceChartFilterChange = (newFilter) => {
     setPlayerPerformanceChartFilter(newFilter)
+  }
+
+  const handlePlayerPerformanceStatChange = (newStatKey) => {
+    setPlayerPerformanceStatKey(newStatKey)
   }
 
   const handleTeamValueExpandClick = () => {
@@ -449,6 +454,8 @@ export default function HomePage() {
           let playerChartDataToUse = null
           let playerChartFilterToUse = 'all'
           let onPlayerChartFilterChangeToUse = null
+          let playerChartStatKeyToUse = 'total_points'
+          let onPlayerChartStatChangeToUse = null
           let currentGameweekPlayersDataToUse = null
           let gameweekFixturesFromPlayersToUse = null
           let gameweekFixturesFromFPLToUse = null
@@ -465,9 +472,9 @@ export default function HomePage() {
             chartFilterToUse = chartFilter
             showChartComparisonToUse = showChartComparison
             onChartFilterChangeToUse = showChartInOverallRank ? handleChartFilterChange : null
-            showTop10LinesToUse = showTop10Lines
-            top10LinesDataToUse = showChartInOverallRank && top10History?.length ? top10History : null
-            onShowTop10ChangeToUse = showChartInOverallRank ? setShowTop10Lines : null
+            showTop10LinesToUse = false
+            top10LinesDataToUse = null
+            onShowTop10ChangeToUse = null
           } else if (cardId === 'team-value') {
             showValue = showValueInTeamValue ? card.value : undefined
             showChange = showValueInTeamValue ? card.change : undefined
@@ -483,11 +490,13 @@ export default function HomePage() {
             playerChartDataToUse = isTotalPointsExpanded ? (playerData || []) : null
             playerChartFilterToUse = isTotalPointsExpanded ? playerPerformanceChartFilter : 'all'
             onPlayerChartFilterChangeToUse = isTotalPointsExpanded ? handlePlayerPerformanceChartFilterChange : null
+            playerChartStatKeyToUse = isTotalPointsExpanded ? playerPerformanceStatKey : 'total_points'
+            onPlayerChartStatChangeToUse = isTotalPointsExpanded ? handlePlayerPerformanceStatChange : null
             if (isTotalPointsExpanded) {
               console.log('Total points expanded, playerChartData:', playerChartDataToUse, 'loading:', playerPerformanceLoading)
             }
           } else if (cardId === 'gw-points') {
-            showValue = showValueInGwPoints ? card.value : undefined
+            showValue = card.value
             showChange = showValueInGwPoints ? card.change : undefined
             currentGameweekPlayersDataToUse = (currentGameweekPlayers || [])
             gameweekFixturesFromPlayersToUse = currentGameweekFixtures?.length ? currentGameweekFixtures : null
@@ -590,12 +599,15 @@ export default function HomePage() {
               playerChartData={playerChartDataToUse}
               playerChartFilter={playerChartFilterToUse}
               onPlayerChartFilterChange={onPlayerChartFilterChangeToUse}
+              playerChartStatKey={playerChartStatKeyToUse}
+              onPlayerChartStatChange={onPlayerChartStatChangeToUse}
               playerPointsByGameweek={cardId === 'total-points' ? playerPointsByGameweek : undefined}
               currentGameweekPlayersData={currentGameweekPlayersDataToUse}
               gameweekFixturesFromPlayers={cardId === 'gw-points' ? gameweekFixturesFromPlayersToUse : undefined}
               gameweekFixturesFromFPL={cardId === 'gw-points' ? gameweekFixturesFromFPLToUse : undefined}
               gameweekFixturesFromMatches={cardId === 'gw-points' ? gameweekFixturesFromMatchesToUse : undefined}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
+              showTop10Fill={cardId !== 'gw-points' || isGwPointsExpandedCard}
               impactByPlayerId={cardId === 'gw-points' ? impactByPlayerId : undefined}
               onPlayerRowClick={
                 cardId === 'gw-points'

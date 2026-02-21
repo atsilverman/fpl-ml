@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
+const API_BASE = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_BASE_URL
+  ? import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')
+  : ''
+
 /**
  * Apply simulated statuses to fixtures for UI testing (Scheduled / Live / Provisional / Final).
  * First 4 fixtures by order: [0]=scheduled, [1]=live, [2]=provisional, [3]=final.
@@ -29,10 +33,24 @@ function applySimulatedStatuses(fixtures) {
  * Optional simulateStatuses: when true, overrides first 4 fixtures to Scheduled / Live / Provisional / Final for UI testing.
  */
 export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}) {
-  const { data: fixturesWithTeams = [], isLoading, error } = useQuery({
+  const { data: result, isLoading, error } = useQuery({
     queryKey: ['fixtures-with-teams', gameweek, simulateStatuses],
     queryFn: async () => {
-      if (!gameweek) return []
+      if (!gameweek) return API_BASE ? { fixtures: [], playerStatsByFixture: {} } : []
+
+      if (API_BASE && !simulateStatuses) {
+        try {
+          const res = await fetch(`${API_BASE}/api/v1/fixtures?gameweek=${gameweek}`)
+          const data = await res.json()
+          if (!res.ok) return { fixtures: [], playerStatsByFixture: {} }
+          return {
+            fixtures: data.fixtures ?? [],
+            playerStatsByFixture: data.playerStatsByFixture ?? {}
+          }
+        } catch {
+          return { fixtures: [], playerStatsByFixture: {} }
+        }
+      }
 
       const { data: fixtures, error: fixturesError } = await supabase
         .from('fixtures')
@@ -60,18 +78,27 @@ export function useFixturesWithTeams(gameweek, { simulateStatuses = false } = {}
         teamMap[t.team_id] = { short_name: t.short_name, team_name: t.team_name }
       })
 
-      let result = fixtures.map(f => ({
+      let list = fixtures.map(f => ({
         ...f,
         homeTeam: teamMap[f.home_team_id] || { short_name: null, team_name: null },
         awayTeam: teamMap[f.away_team_id] || { short_name: null, team_name: null }
       }))
-      if (simulateStatuses) result = applySimulatedStatuses(result)
-      return result
+      if (simulateStatuses) list = applySimulatedStatuses(list)
+      return list
     },
     enabled: !!gameweek,
     staleTime: 30000,
     refetchInterval: simulateStatuses ? false : 30000
   })
 
-  return { fixtures: fixturesWithTeams, loading: isLoading, error }
+  const isApiResult = result && typeof result === 'object' && !Array.isArray(result) && 'playerStatsByFixture' in result
+  const fixtures = isApiResult ? (result.fixtures ?? []) : (Array.isArray(result) ? result : [])
+  const playerStatsByFixture = isApiResult ? (result.playerStatsByFixture ?? {}) : undefined
+
+  return {
+    fixtures,
+    loading: isLoading,
+    error,
+    playerStatsByFixture: playerStatsByFixture ?? undefined
+  }
 }

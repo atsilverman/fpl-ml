@@ -8,7 +8,7 @@ import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -111,12 +111,15 @@ export default function BentoCard({
   playerChartData = null,
   playerChartFilter = 'all',
   onPlayerChartFilterChange = null,
+  playerChartStatKey = 'total_points',
+  onPlayerChartStatChange = null,
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   gameweekFixturesFromPlayers = null,
   gameweekFixturesFromFPL = null,
   gameweekFixturesFromMatches = null,
   top10ByStat = null,
+  showTop10Fill = true,
   impactByPlayerId = null,
   gameweek = null,
   leagueChipData = null,
@@ -377,10 +380,6 @@ export default function BentoCard({
                     >
                       <div className="gw-legend-popup-title">Legend</div>
                       <div className="gw-legend-popup-row">
-                        <span className="gameweek-points-legend-badge rank-highlight">x</span>
-                        <span className="gw-legend-popup-text">Top 10 in GW</span>
-                      </div>
-                      <div className="gw-legend-popup-row">
                         <span className="bento-card-captain-badge gw-legend-popup-badge-c">C</span>
                         <span className="gw-legend-popup-text">Captain</span>
                       </div>
@@ -393,6 +392,18 @@ export default function BentoCard({
                           <span className="gw-legend-popup-dnp-badge" title="Did not play">!</span>
                         </span>
                         <span className="gw-legend-popup-text">Did not play</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-mp-dot gw-legend-popup-mp-dot--red" aria-hidden />
+                        </span>
+                        <span className="gw-legend-popup-text">Under 45' MP</span>
+                      </div>
+                      <div className="gw-legend-popup-row">
+                        <span className="gw-legend-popup-row-icon">
+                          <span className="gw-legend-popup-mp-dot gw-legend-popup-mp-dot--orange" aria-hidden />
+                        </span>
+                        <span className="gw-legend-popup-text">Under 80' MP</span>
                       </div>
                       <div className="gw-legend-popup-row">
                         <span className="gw-legend-popup-row-icon">
@@ -411,26 +422,10 @@ export default function BentoCard({
                         <span className="gw-legend-popup-text">Auto-subbed in</span>
                       </div>
                       <div className="gw-legend-popup-row">
-                        <span className="gameweek-points-legend-badge defcon-achieved" aria-hidden />
-                        <span className="gw-legend-popup-text">DEFCON or Save achieved</span>
-                      </div>
-                      <div className="gw-legend-popup-row">
                         <span className="gw-legend-popup-live-dot-wrap">
                           <span className="gw-legend-popup-live-dot" aria-hidden />
                         </span>
                         <span className="gw-legend-popup-text">Live match</span>
-                      </div>
-                      <div className="gw-legend-popup-row">
-                        <span className="gw-legend-popup-live-dot-wrap">
-                          <span className="gw-legend-popup-live-dot gw-legend-popup-complete-dot" aria-hidden />
-                        </span>
-                        <span className="gw-legend-popup-text">Match finished (confirmed)</span>
-                      </div>
-                      <div className="gw-legend-popup-row">
-                        <span className="gw-legend-popup-live-dot-wrap">
-                          <span className="gw-legend-popup-live-dot gw-legend-popup-provisional-dot" aria-hidden />
-                        </span>
-                        <span className="gw-legend-popup-text">Provisional (stats may update)</span>
                       </div>
                     </div>,
                     document.body
@@ -440,6 +435,42 @@ export default function BentoCard({
             <div
               className={`bento-card-expand-icon bento-card-expand-icon--collapse${showGwLegendPopup ? ' bento-card-expand-icon--legend-open' : ''}`}
               title={showGwLegendPopup ? undefined : 'Collapse'}
+              onClick={handleIconClick}
+            >
+              <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
+            </div>
+          </div>
+        ) : id === 'overall-rank' && isExpanded && onChartFilterChange ? (
+          <div className="bento-card-expand-icons bento-card-expand-icons--chart-range">
+            <div className="bento-card-chart-range-btns" role="group" aria-label="Chart range">
+              <button
+                type="button"
+                className={`bento-card-chart-range-btn ${chartFilter === 'all' ? 'bento-card-chart-range-btn--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onChartFilterChange('all') }}
+                aria-pressed={chartFilter === 'all'}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                className={`bento-card-chart-range-btn ${chartFilter === 'last12' ? 'bento-card-chart-range-btn--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onChartFilterChange('last12') }}
+                aria-pressed={chartFilter === 'last12'}
+              >
+                Last 12
+              </button>
+              <button
+                type="button"
+                className={`bento-card-chart-range-btn ${chartFilter === 'last6' ? 'bento-card-chart-range-btn--active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onChartFilterChange('last6') }}
+                aria-pressed={chartFilter === 'last6'}
+              >
+                Last 6
+              </button>
+            </div>
+            <div
+              className="bento-card-expand-icon bento-card-expand-icon--collapse"
+              title="Collapse"
               onClick={handleIconClick}
             >
               <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
@@ -459,11 +490,18 @@ export default function BentoCard({
           </div>
         )
       )}
-      <div className="bento-card-label">
-        {label}
-        {id === 'gw-points' && isExpanded && subtext && (
-          <span className="bento-card-label-suffix">| {subtext}</span>
+      <div className={id === 'gw-points' && isExpanded ? 'bento-card-label-row bento-card-label-row--gw-expanded' : 'bento-card-label'}>
+        {id === 'gw-points' && isExpanded && value !== undefined && (
+          <span className="bento-card-label-gw-value">
+            <AnimatedValue value={value}>{value}</AnimatedValue>
+          </span>
         )}
+        <span className={id === 'gw-points' && isExpanded ? 'bento-card-label-text' : undefined}>
+          {label}
+          {id === 'gw-points' && isExpanded && subtext && (
+            <span className="bento-card-label-suffix">| {subtext}</span>
+          )}
+        </span>
       </div>
       
       {loading ? (
@@ -611,7 +649,7 @@ export default function BentoCard({
         </div>
       ) : value !== undefined && id !== 'gw-debug' ? (
         <>
-          {!(id === 'league-rank' && isExpanded) && (
+          {!(id === 'league-rank' && isExpanded) && !(id === 'gw-points' && isExpanded) && (
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
               <AnimatedValue value={value}>{value}</AnimatedValue>
               {isStale && <span className="stale-indicator" title="Data may be out of date during live games">!</span>}
@@ -673,6 +711,7 @@ export default function BentoCard({
               onShowTop10Change={onShowTop10Change}
               currentManagerId={currentManagerId}
               isStale={isStale}
+              hideFilterUI={id === 'overall-rank'}
             />
           )}
         </div>
@@ -685,6 +724,8 @@ export default function BentoCard({
             loading={loading}
             filter={playerChartFilter}
             onFilterChange={onPlayerChartFilterChange}
+            statKey={playerChartStatKey}
+            onStatChange={onPlayerChartStatChange}
           />
         </div>
       )}
@@ -695,6 +736,7 @@ export default function BentoCard({
             data={currentGameweekPlayersData || []}
             loading={loading}
             top10ByStat={top10ByStat}
+            showTop10Fill={showTop10Fill}
             impactByPlayerId={impactByPlayerId ?? {}}
             isLiveUpdating={isLiveUpdating}
             fixtures={gameweekFixturesFromMatches !== undefined ? gameweekFixturesFromMatches : (gameweekFixturesFromFPL?.length ? gameweekFixturesFromFPL : (gameweekFixturesFromPlayers?.length ? gameweekFixturesFromPlayers : (gameweekDebugData?.fixtures ?? [])))}

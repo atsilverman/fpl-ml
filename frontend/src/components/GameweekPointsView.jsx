@@ -10,6 +10,9 @@ import AnimatedValue from './AnimatedValue'
 
 const IMPACT_TOOLTIP = 'Your share of this player\'s points vs the top third of your configured league (100% = in XI, 200% = captain, 300% = triple captain). Positive = you gain more than the top third; negative = the top third gains more.'
 
+/** Stat columns that get a subtle green fill when player is top 10 for that stat in the gameweek. Excludes: pts impact, G, A, CS, S, opp, MP, YC, RC. */
+const STAT_KEYS_TOP10_FILL = ['bps', 'bonus', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded']
+
 const PLAYER_NAME_MAX_LENGTH = 15
 
 const POPUP_PADDING = 12
@@ -23,7 +26,7 @@ function fixtureBool(v) {
   return false
 }
 
-export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null, sortable = true }) {
+export default function GameweekPointsView({ data = [], loading = false, topScorerPlayerIds = null, top10ByStat = null, showTop10Fill = true, isLiveUpdating = false, impactByPlayerId = {}, ownedByYouPlayerIds = null, fixtures: fixturesProp = [], onPlayerRowClick = null, sortable = true }) {
   const { fixtures: debugFixtures = [] } = useGameweekDebugData()
   const fixtures = (fixturesProp != null && Array.isArray(fixturesProp)) ? fixturesProp : debugFixtures
   // Support lookup by number or string (Supabase/API can return either) so we always resolve fixture and use fixture table state
@@ -44,6 +47,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
   const impactIconRef = useRef(null)
   const [sortColumn, setSortColumn] = useState(null)
   const [sortDirection, setSortDirection] = useState('desc')
+  const [hoverColIndex, setHoverColIndex] = useState(null)
   const scrollableRef = useRef(null)
   useAxisLockedScroll(scrollableRef, { mobileOnly: true })
 
@@ -134,6 +138,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     return [...starters, ...bench]
   }, [data, sortColumn, sortDirection, impactByPlayerId])
 
+  /** Max |impact| among currently listed players; scale bar so this = 100% width. At least 1 to avoid div-by-zero. */
+  const maxImpactInView = useMemo(() => {
+    if (!sortedData?.length || !impactByPlayerId) return 1
+    let max = 0
+    for (const p of sortedData) {
+      const pid = p.effective_player_id ?? p.player_id
+      const impact = impactByPlayerId[pid]
+      if (typeof impact === 'number' && !Number.isNaN(impact)) {
+        const abs = Math.abs(impact)
+        if (abs > max) max = abs
+      }
+    }
+    return max >= 1 ? max : 1
+  }, [sortedData, impactByPlayerId])
+
   const handleSort = (key) => {
     if (!sortable) return
     if (sortColumn === key) {
@@ -144,8 +163,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     }
   }
 
-  // Per-column top 10: use top10ByStat when provided, else fall back to topScorerPlayerIds for PTS only
-  const top10Pts = top10ByStat?.pts ?? (topScorerPlayerIds != null ? topScorerPlayerIds : new Set())
 
   if (loading) {
     return (
@@ -186,8 +203,6 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     }
   }
 
-  const IMPACT_BAR_MAX = 100
-
   const PlayerTableRow = ({ player, isFirstBenchRow: isFirstBenchRowProp, onRowClick }) => {
     const isDgwFirstRow = Boolean(player.isDgwRow && player.dgwRowIndex === 0)
     const isDgwSecondRow = Boolean(player.isDgwRow && player.dgwRowIndex === 1)
@@ -202,10 +217,26 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const isOwnedByYou = ownedByYouPlayerIds != null && playerId != null && ownedByYouPlayerIds.has(Number(playerId))
     const impact = impactByPlayerId[playerId]
     const hasImpact = typeof impact === 'number'
-    const impactWidth = hasImpact ? Math.min(IMPACT_BAR_MAX, Math.abs(impact)) / IMPACT_BAR_MAX : 0
+    const impactWidth = hasImpact ? Math.min(1, Math.abs(impact) / maxImpactInView) : 0
     const fid = player.fixture_id != null && player.fixture_id !== 0 ? player.fixture_id : null
-    const top10Key = playerId != null ? `${Number(playerId)}-${fid != null && fid !== 0 ? Number(fid) : 0}` : null
-    const isTop10Pts = top10Key != null && top10Pts.has(top10Key)
+    const rowKeyForTop10 = `${playerId ?? 0}-${fid ?? 0}`
+    const isTop10ForStat = (statKey) => {
+      if (!showTop10Fill || !top10ByStat || !top10ByStat[statKey]?.has) return false
+      const set = top10ByStat[statKey]
+      const pid = playerId ?? 0
+      if (set.has(rowKeyForTop10)) return true
+      if (fid) return set.has(`${pid}-0`)
+      return Array.from(set).some(k => String(k).startsWith(`${pid}-`))
+    }
+    const isTop10Pts = (() => {
+      if (!showTop10Fill || !top10ByStat?.pts?.has) return false
+      const set = top10ByStat.pts
+      const pid = String(playerId ?? 0)
+      if (set.has(rowKeyForTop10)) return true
+      if (fid) return set.has(`${pid}-0`)
+      return Array.from(set).some(k => String(k).startsWith(`${pid}-`))
+    })()
+    const isTop10PtsAnyFixture = isTop10Pts || (showTop10Fill && top10ByStat?.pts && Array.from(top10ByStat.pts).some(k => String(k).startsWith(`${playerId ?? 0}-`)))
     const isDefconAchieved = Boolean(player.defcon_points_achieved)
     const isAutosubOut = Boolean(player.was_auto_subbed_out)
     const isAutosubIn = Boolean(player.was_auto_subbed_in)
@@ -233,6 +264,10 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && !matchFinished && (isMatchLive || isMatchProvisional)
     // Don't show provisional dot when this player's bonus is already confirmed (e.g. from catch-up refresh)
     const minsDotProvisional = isMatchProvisional && !isMatchLive && player.bonus_status !== 'confirmed'
+    const mins = player.minutes != null ? Number(player.minutes) : 0
+    /* Risk dots only when game is fully finished, not live or provisional */
+    const showMinsRiskRed = matchFinished && mins > 0 && mins < 45
+    const showMinsRiskOrange = matchFinished && mins >= 45 && mins < 80
     const ptsDisplay = player.contributedPoints ?? player.points
 
     const isGk = player.position === 1
@@ -242,26 +277,34 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       if (n === 0) return '0'
       return n.toFixed(2)
     }
+    /** True when this stat cell represents FPL points impact (earns points); used for hollow pill border. Saves: only 3+ (not 1 or 2). */
+    const isImpactPillStat = (statKey, numVal) => {
+      if (statKey === 'goals' || statKey === 'assists' || statKey === 'clean_sheets') return numVal >= 1
+      if (statKey === 'saves') return isGk && numVal >= 3
+      if (statKey === 'defensive_contribution') return isDefconAchieved && numVal >= 1
+      if (statKey === 'bonus') return numVal >= 1
+      return false
+    }
     const renderStatCell = (value, statKey, opts = {}) => {
       const numVal = Number(value) || 0
       const isZero = numVal === 0
-      const isTop10ForColumn = top10Key != null && top10ByStat?.[statKey]?.has(top10Key)
       const isDefColumn = statKey === 'defensive_contribution'
       const isSavesColumn = statKey === 'saves'
       const isProvisionalBonus = opts.isProvisionalBonus ?? false
       const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
       const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
-      const statShowsTop10 = statKey === 'bps' || statKey === 'defensive_contribution' || expectedStatKeys.includes(statKey)
-      const showTop10Badge = statShowsTop10 && !isZero && (isTop10ForColumn || (isDefColumn && showDefconBadge))
-      const showBadge = showDefconBadge || showSavesBadge || showTop10Badge || isProvisionalBonus
+      const showBadge = showSavesBadge || isProvisionalBonus
+      const isImpactPill = isImpactPillStat(statKey, numVal)
+      const isTop10 = STAT_KEYS_TOP10_FILL.includes(statKey) && isTop10ForStat(statKey)
       const displayVal = expectedStatKeys.includes(statKey) ? formatExpected(value) : value
+      const dataCol = opts.colIndex != null ? { 'data-col': opts.colIndex } : {}
       if (isZero && !isProvisionalBonus) {
-        return <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted">{displayVal}</td>
+        return <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat gameweek-points-cell-muted${isTop10 ? ' gameweek-points-td-stat--top10' : ''}`} {...dataCol}>{isTop10 ? <span className="gameweek-points-stat-top10-pill">{displayVal}</span> : displayVal}</td>
       }
       if (isZero && isProvisionalBonus) {
         const title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
         return (
-          <td key={statKey} className="gameweek-points-td gameweek-points-td-stat gameweek-points-cell-provisional">
+          <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat gameweek-points-cell-provisional${isTop10 ? ' gameweek-points-td-stat--top10' : ''}`} {...dataCol}>
             <AnimatedValue value={value}>
               <span className="gameweek-points-player-points-badge gameweek-points-stat-provisional" title={title}>{displayVal}</span>
             </AnimatedValue>
@@ -270,29 +313,33 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
       }
       const badgeClass = [
         'gameweek-points-player-points-badge',
-        showTop10Badge && 'rank-highlight',
-        showDefconBadge && 'defcon-achieved',
-        showSavesBadge && 'saves-achieved',
         isProvisionalBonus && 'gameweek-points-stat-provisional'
       ].filter(Boolean).join(' ')
       let title
       if (isProvisionalBonus) {
         title = 'Provisional bonus (from BPS rank; confirmed ~1h after full-time)'
       } else if (showDefconBadge) {
-        title = isTop10ForColumn ? 'Top 10 in GW & Defcon achieved (DEF ≥ position threshold)' : 'Defcon achieved (DEF ≥ position threshold)'
+        title = 'Defcon achieved (DEF ≥ position threshold)'
       } else if (showSavesBadge) {
-        title = isTop10ForColumn ? 'Top 10 in GW & Saves achieved (3+ saves = 1 pt per 3)' : 'Saves achieved (3+ saves = 1 pt per 3)'
+        title = 'Saves achieved (3+ saves = 1 pt per 3)'
       } else {
-        title = `Top 10 in GW for ${statKey}`
+        title = undefined
       }
+      const inner = showBadge ? (
+        <span className={badgeClass} title={title}>{displayVal}</span>
+      ) : showDefconBadge ? (
+        <span className="gameweek-points-impact-pill-wrap" title={title}>{displayVal}</span>
+      ) : isImpactPill ? (
+        <span className="gameweek-points-impact-pill-wrap">{displayVal}</span>
+      ) : isTop10 ? (
+        <span className="gameweek-points-stat-top10-pill">{displayVal}</span>
+      ) : (
+        displayVal
+      )
       return (
-        <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat${isProvisionalBonus ? ' gameweek-points-cell-provisional' : ''}`}>
+        <td key={statKey} className={`gameweek-points-td gameweek-points-td-stat${isProvisionalBonus ? ' gameweek-points-cell-provisional' : ''}${isImpactPill ? ' gameweek-points-cell--impact-pill' : ''}${isTop10 ? ' gameweek-points-td-stat--top10' : ''}`} {...dataCol}>
           <AnimatedValue value={value}>
-            {showBadge ? (
-              <span className={badgeClass} title={title}>{displayVal}</span>
-            ) : (
-              displayVal
-            )}
+            {inner}
           </AnimatedValue>
         </td>
       )
@@ -312,11 +359,20 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
         onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleRowClick(e) } } : undefined}
         title={onRowClick && player.player_name ? `View details for ${player.player_name}` : undefined}
         className={`gameweek-points-tr ${isFirstBenchRow ? 'gameweek-points-tr-bench-first' : ''} ${isBench ? 'gameweek-points-tr-bench' : ''} ${isAutosubOut ? 'gameweek-points-tr-autosub-out' : ''} ${isAutosubIn ? 'gameweek-points-tr-autosub-in' : ''} ${isDgwFirstRow ? 'gameweek-points-tr-dgw-first' : ''} ${isDgwSecondRow ? 'gameweek-points-tr-dgw-second' : ''} ${onRowClick ? 'gameweek-points-tr-clickable' : ''}`}
+        onMouseMove={(e) => {
+          const td = e.target.closest('td')
+          if (td) {
+            const col = td.getAttribute('data-col')
+            if (col != null) setHoverColIndex(parseInt(col, 10))
+          }
+        }}
+        onMouseLeave={() => setHoverColIndex(null)}
       >
         {!isDgwSecondRow && (
           <td
             className={`gameweek-points-td gameweek-points-td-player gameweek-points-td-player-fixed${isDgwFirstRow ? ' gameweek-points-td-player-dgw-span' : ''}`}
             rowSpan={isDgwFirstRow ? 2 : undefined}
+            data-col="0"
           >
             <div className="gameweek-points-player-info-cell">
               {player.player_team_short_name && (
@@ -327,8 +383,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   onError={(e) => { e.target.style.display = 'none' }}
                 />
               )}
-              <div className="gameweek-points-name-and-autosub">
-                <span className={`gameweek-points-player-name-text${isOwnedByYou ? ' gameweek-points-player-name-text--owned-by-you' : ''}`} title={player.player_name}>
+              <div className={`gameweek-points-name-and-autosub${isOwnedByYou ? ' gameweek-points-name-and-autosub--owned-by-you' : ''}`}>
+                <span className="gameweek-points-player-name-text" title={player.player_name}>
                   {(() => {
                     const name = String(player.player_name ?? '')
                     return name.length > PLAYER_NAME_MAX_LENGTH ? name.slice(0, PLAYER_NAME_MAX_LENGTH) + '..' : name
@@ -355,23 +411,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
           </td>
         )}
         <td
-          className={`gameweek-points-td gameweek-points-td-pts ${!isTop10Pts && ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}`}
+          className={`gameweek-points-td gameweek-points-td-pts ${ptsDisplay === 0 ? 'gameweek-points-cell-muted' : ''}${(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? ' gameweek-points-cell-provisional' : ''}${isTop10PtsAnyFixture ? ' gameweek-points-td-pts--top10' : ''}`}
           title={(player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending ? (isBonusPending ? 'Points may update when bonus is confirmed (~1h after full-time)' : 'Includes provisional bonus (from BPS rank)') : player.multiplier && player.multiplier > 1 ? 'Points counted for your team (×C/×A)' : (player.isDgwRow ? 'Points for this match' : undefined)}
+          data-col="1"
         >
             <AnimatedValue value={ptsDisplay}>
-              <span
-                className={`gameweek-points-player-points-badge${isTop10Pts ? ' rank-highlight' : ''}`}
-                title={isTop10Pts ? 'Top 10 in GW for points' : undefined}
-              >
+              <span className="gameweek-points-player-points-badge">
                 {formatNumber(ptsDisplay)}
               </span>
             </AnimatedValue>
         </td>
-        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`}>
+        <td className={`gameweek-points-td gameweek-points-td-mins ${(player.minutes == null || player.minutes === 0) && matchFinishedOrProvisional ? 'gameweek-points-cell-muted' : ''}`} data-col="2">
           <span className="gameweek-points-mins-value-wrap">
             {(player.minutes != null && player.minutes > 0) ? (
-              <AnimatedValue value={player.minutes ?? 0}>
-                <>
+              <>
+                <AnimatedValue value={player.minutes ?? 0}>
                   {formatMinutes(Math.min(90, player.minutes ?? 0))}
                   {showMinsLiveDot && (
                     <span
@@ -380,8 +434,14 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                       aria-hidden
                     />
                   )}
-                </>
-              </AnimatedValue>
+                </AnimatedValue>
+                {!showMinsLiveDot && showMinsRiskRed && (
+                  <span className="gameweek-points-mins-risk-dot gameweek-points-mins-risk-dot--red" title="Under 45 minutes played" aria-hidden />
+                )}
+                {!showMinsLiveDot && showMinsRiskOrange && (
+                  <span className="gameweek-points-mins-risk-dot gameweek-points-mins-risk-dot--orange" title="Under 80 minutes played" aria-hidden />
+                )}
+              </>
             ) : !matchStartedOrFinished ? (
               (() => {
                 const kickoff = formatKickoffShort(effectiveKickoffTime)
@@ -402,7 +462,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             )}
           </span>
         </td>
-        <td className="gameweek-points-td gameweek-points-td-opp">
+        <td className="gameweek-points-td gameweek-points-td-opp" data-col="3">
           {player.opponent_team_short_name ? (
             <div className="gameweek-points-opponent-cell">
               <img
@@ -423,16 +483,21 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             '–'
           )}
         </td>
-        <td className="gameweek-points-td gameweek-points-td-impact">
+        <td className="gameweek-points-td gameweek-points-td-impact" data-col="4">
           {hasImpact ? (
             <div className="gameweek-points-impact-cell" title={IMPACT_TOOLTIP}>
               <div className="gameweek-points-impact-bar-wrap">
                 <div
-                  className={`gameweek-points-impact-bar ${impact > 0 ? 'gameweek-points-impact-bar--positive' : impact < 0 ? 'gameweek-points-impact-bar--negative' : ''}`}
+                  className={(() => {
+                    const abs = Math.abs(impact)
+                    const tier = abs >= 80 ? 'high' : abs >= 40 ? 'mid' : 'low'
+                    const sign = impact > 0 ? 'positive' : 'negative'
+                    return `gameweek-points-impact-bar gameweek-points-impact-bar--${sign} gameweek-points-impact-bar--${sign}-${tier}`
+                  })()}
                   style={{ width: `${impactWidth * 100}%` }}
                 />
               </div>
-              <span className={`gameweek-points-impact-value ${impact < 0 ? 'gameweek-points-impact-value--negative' : ''}`}>
+              <span className={`gameweek-points-impact-value ${impact > 0 ? 'gameweek-points-impact-value--positive' : impact < 0 ? 'gameweek-points-impact-value--negative' : ''}`}>
                 {impact < 0 ? `−${Math.abs(impact)}` : impact}%
               </span>
             </div>
@@ -440,19 +505,19 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             <span className="gameweek-points-cell-muted">–</span>
           )}
         </td>
-        {renderStatCell(player.goals_scored ?? 0, 'goals')}
-        {renderStatCell(player.assists ?? 0, 'assists')}
-        {renderStatCell(player.clean_sheets ?? 0, 'clean_sheets')}
-        {renderStatCell(player.saves ?? 0, 'saves')}
-        {renderStatCell(player.bps ?? 0, 'bps')}
-        {renderStatCell(player.bonus ?? 0, 'bonus', { isProvisionalBonus: (player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending })}
-        {renderStatCell(player.defensive_contribution ?? 0, 'defensive_contribution')}
-        {renderStatCell(player.yellow_cards ?? 0, 'yellow_cards')}
-        {renderStatCell(player.red_cards ?? 0, 'red_cards')}
-        {renderStatCell(player.expected_goals ?? 0, 'expected_goals')}
-        {renderStatCell(player.expected_assists ?? 0, 'expected_assists')}
-        {renderStatCell(player.expected_goal_involvements ?? 0, 'expected_goal_involvements')}
-        {renderStatCell(player.expected_goals_conceded ?? 0, 'expected_goals_conceded')}
+        {renderStatCell(player.goals_scored ?? 0, 'goals', { colIndex: 5 })}
+        {renderStatCell(player.assists ?? 0, 'assists', { colIndex: 6 })}
+        {renderStatCell(player.clean_sheets ?? 0, 'clean_sheets', { colIndex: 7 })}
+        {renderStatCell(player.bps ?? 0, 'bps', { colIndex: 8 })}
+        {renderStatCell(player.bonus ?? 0, 'bonus', { isProvisionalBonus: (player.bonus_status === 'provisional' && (player.bonus ?? 0) > 0) || isBonusPending, colIndex: 9 })}
+        {renderStatCell(player.defensive_contribution ?? 0, 'defensive_contribution', { colIndex: 10 })}
+        {renderStatCell(player.saves ?? 0, 'saves', { colIndex: 11 })}
+        {renderStatCell(player.yellow_cards ?? 0, 'yellow_cards', { colIndex: 12 })}
+        {renderStatCell(player.red_cards ?? 0, 'red_cards', { colIndex: 13 })}
+        {renderStatCell(player.expected_goals ?? 0, 'expected_goals', { colIndex: 14 })}
+        {renderStatCell(player.expected_assists ?? 0, 'expected_assists', { colIndex: 15 })}
+        {renderStatCell(player.expected_goal_involvements ?? 0, 'expected_goal_involvements', { colIndex: 16 })}
+        {renderStatCell(player.expected_goals_conceded ?? 0, 'expected_goals_conceded', { colIndex: 17 })}
       </tr>
     )
   }
@@ -461,10 +526,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     <div className="gameweek-points-view">
       <div ref={scrollableRef} className="gameweek-points-scrollable">
         <div className="gameweek-points-box-content">
-          <table className="gameweek-points-table">
+          <table className="gameweek-points-table" data-hover-col={hoverColIndex != null ? String(hoverColIndex) : undefined}>
             <thead>
               <tr>
                 <th
+                  data-col="0"
                   className={`gameweek-points-th gameweek-points-th-player${sortable ? ` gameweek-points-th-sortable${sortColumn === 'player' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
                     onClick: () => handleSort('player'),
@@ -474,11 +540,14 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'player' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by player name'
                   })}
+                  onMouseEnter={() => setHoverColIndex(0)}
+                  onMouseLeave={() => setHoverColIndex(null)}
                 >
                   PLAYER
                   {sortable && sortColumn === 'player' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
                 </th>
                 <th
+                  data-col="1"
                   className={`gameweek-points-th gameweek-points-th-pts${sortable ? ` gameweek-points-th-sortable${sortColumn === 'points' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
                     onClick: () => handleSort('points'),
@@ -488,8 +557,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'points' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by points'
                   })}
+                  onMouseEnter={() => setHoverColIndex(1)}
+                  onMouseLeave={() => setHoverColIndex(null)}
                 >PTS{sortable && sortColumn === 'points' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
+                  data-col="2"
                   className={`gameweek-points-th gameweek-points-th-mins${sortable ? ` gameweek-points-th-sortable${sortColumn === 'minutes' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
                     onClick: () => handleSort('minutes'),
@@ -499,8 +571,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'minutes' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by minutes played'
                   })}
+                  onMouseEnter={() => setHoverColIndex(2)}
+                  onMouseLeave={() => setHoverColIndex(null)}
                 >MP{sortable && sortColumn === 'minutes' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
+                  data-col="3"
                   className={`gameweek-points-th gameweek-points-th-opp${sortable ? ` gameweek-points-th-sortable${sortColumn === 'opp' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
                     onClick: () => handleSort('opp'),
@@ -510,8 +585,11 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'opp' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by opponent'
                   })}
+                  onMouseEnter={() => setHoverColIndex(3)}
+                  onMouseLeave={() => setHoverColIndex(null)}
                 >OPP{sortable && sortColumn === 'opp' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}</th>
                 <th
+                  data-col="4"
                   className={`gameweek-points-th gameweek-points-th-impact gameweek-points-th-impact--has-popup${sortable ? ` gameweek-points-th-sortable${sortColumn === 'impact' ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                   {...(sortable && {
                     onClick: () => handleSort('impact'),
@@ -521,6 +599,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                     'aria-sort': sortColumn === 'impact' ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                     title: 'Sort by importance'
                   })}
+                  onMouseEnter={() => setHoverColIndex(4)}
+                  onMouseLeave={() => setHoverColIndex(null)}
                 >
                   <span className="gameweek-points-th-impact-label">Imp</span>
                   {sortable && sortColumn === 'impact' && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
@@ -564,19 +644,20 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                   { key: 'goals_scored', label: 'G', title: 'Goals' },
                   { key: 'assists', label: 'A', title: 'Assists' },
                   { key: 'clean_sheets', label: 'CS', title: 'Clean sheets' },
-                  { key: 'saves', label: 'S', title: 'Saves' },
                   { key: 'bps', label: 'BPS', title: 'BPS' },
                   { key: 'bonus', label: 'B', title: 'Bonus' },
                   { key: 'defensive_contribution', label: 'DEFCON', title: 'DEFCON' },
+                  { key: 'saves', label: 'S', title: 'Saves' },
                   { key: 'yellow_cards', label: 'YC', title: 'Yellow cards' },
                   { key: 'red_cards', label: 'RC', title: 'Red cards' },
                   { key: 'expected_goals', label: 'xG', title: 'Expected goals' },
                   { key: 'expected_assists', label: 'xA', title: 'Expected assists' },
                   { key: 'expected_goal_involvements', label: 'xGI', title: 'Expected goal involvements' },
                   { key: 'expected_goals_conceded', label: 'xGC', title: 'Expected goals conceded' }
-                ].map(({ key, label, title }) => (
+                ].map(({ key, label, title }, idx) => (
                   <th
                     key={key}
+                    data-col={String(5 + idx)}
                     className={`gameweek-points-th gameweek-points-th-stat${sortable ? ` gameweek-points-th-sortable${sortColumn === key ? ` gameweek-points-th-sorted-${sortDirection}` : ''}` : ''}`}
                     {...(sortable && {
                       onClick: () => handleSort(key),
@@ -586,6 +667,8 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                       'aria-sort': sortColumn === key ? (sortDirection === 'desc' ? 'descending' : 'ascending') : undefined,
                       title: `Sort by ${title}`
                     })}
+                    onMouseEnter={() => setHoverColIndex(5 + idx)}
+                    onMouseLeave={() => setHoverColIndex(null)}
                   >
                     <CardStatLabel statKey={key} label={label} />
                     {sortable && sortColumn === key && (sortDirection === 'desc' ? <ArrowDown size={8} className="gameweek-points-th-sort-icon" aria-hidden /> : <ArrowUp size={8} className="gameweek-points-th-sort-icon" aria-hidden />)}
@@ -593,19 +676,36 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {(() => {
-                const firstBenchRowIndex = sortedData.findIndex((p) => p.position >= 12)
-                return sortedData.map((player, index) => (
+            <tbody className="gameweek-points-tbody-starters">
+              {sortedData
+                .filter((p) => p.position <= 11)
+                .map((player) => (
                   <PlayerTableRow
                     key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
                     player={player}
-                    isFirstBenchRow={index === firstBenchRowIndex}
+                    isFirstBenchRow={false}
                     onRowClick={onPlayerRowClick}
                   />
-                ))
-              })()}
+                ))}
             </tbody>
+            {sortedData.filter((p) => p.position >= 12).length > 0 && (
+              <tbody className="gameweek-points-tbody-bench" aria-label="Bench">
+                <tr className="gameweek-points-tr gameweek-points-tr-bench-divider" role="presentation">
+                  <td className="gameweek-points-td gameweek-points-td-bench-divider gameweek-points-td-bench-divider-fixed">Bench</td>
+                  <td className="gameweek-points-td gameweek-points-td-bench-divider-fill" colSpan={17} aria-hidden />
+                </tr>
+                {sortedData
+                  .filter((p) => p.position >= 12)
+                  .map((player) => (
+                    <PlayerTableRow
+                      key={player.isDgwRow ? `${player.position}-${player.player_id}-${player.fixture_id ?? player.dgwRowIndex}` : player.position}
+                      player={player}
+                      isFirstBenchRow={false}
+                      onRowClick={onPlayerRowClick}
+                    />
+                  ))}
+              </tbody>
+            )}
           </table>
         </div>
       </div>

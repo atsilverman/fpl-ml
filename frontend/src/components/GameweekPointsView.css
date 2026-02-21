@@ -17,6 +17,7 @@
 
 /* Single scroll container (like captaincy table) so sticky thead sticks when scrolling vertically */
 .gameweek-points-scrollable {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
@@ -26,6 +27,8 @@
   scrollbar-width: none;
   /* Prevent sticky header/column being pulled off on mobile drag */
   overscroll-behavior: none;
+  /* Left padding so player column can outdent into it */
+  padding-left: 12px;
 }
 
 .gameweek-points-scrollable::-webkit-scrollbar {
@@ -78,11 +81,12 @@
   background: var(--bg-secondary);
 }
 
-/* Sticky player header (corner): top + left; z above header row and body player column. Subtle fill so player column reads distinct from PTS/MP data columns. */
+/* Sticky player header (corner): top + left; z above header row and body player column. Outdent into scrollable padding. */
 .gameweek-points-table thead .gameweek-points-th-player {
   position: sticky;
   left: 0;
   z-index: 11;
+  margin-left: -12px;
   background: color-mix(in srgb, var(--bg-secondary) 85%, var(--bg-primary));
   padding-left: 16px;
   border-right: 1px solid var(--border-color);
@@ -99,6 +103,82 @@
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
   vertical-align: middle;
+}
+
+/* Desktop: very subtle column highlight on header hover */
+@media (min-width: 769px) and (hover: hover) {
+  .gameweek-points-table[data-hover-col="0"] thead th[data-col="0"],
+  .gameweek-points-table[data-hover-col="1"] thead th[data-col="1"],
+  .gameweek-points-table[data-hover-col="2"] thead th[data-col="2"],
+  .gameweek-points-table[data-hover-col="3"] thead th[data-col="3"],
+  .gameweek-points-table[data-hover-col="4"] thead th[data-col="4"],
+  .gameweek-points-table[data-hover-col="5"] thead th[data-col="5"],
+  .gameweek-points-table[data-hover-col="6"] thead th[data-col="6"],
+  .gameweek-points-table[data-hover-col="7"] thead th[data-col="7"],
+  .gameweek-points-table[data-hover-col="8"] thead th[data-col="8"],
+  .gameweek-points-table[data-hover-col="9"] thead th[data-col="9"],
+  .gameweek-points-table[data-hover-col="10"] thead th[data-col="10"],
+  .gameweek-points-table[data-hover-col="11"] thead th[data-col="11"],
+  .gameweek-points-table[data-hover-col="12"] thead th[data-col="12"],
+  .gameweek-points-table[data-hover-col="13"] thead th[data-col="13"],
+  .gameweek-points-table[data-hover-col="14"] thead th[data-col="14"],
+  .gameweek-points-table[data-hover-col="15"] thead th[data-col="15"],
+  .gameweek-points-table[data-hover-col="16"] thead th[data-col="16"],
+  .gameweek-points-table[data-hover-col="17"] thead th[data-col="17"] {
+    background: color-mix(in srgb, var(--border-color) 12%, var(--bg-secondary));
+  }
+  .gameweek-points-table[data-hover-col="0"] tbody td[data-col="0"],
+  .gameweek-points-table[data-hover-col="1"] tbody td[data-col="1"],
+  .gameweek-points-table[data-hover-col="2"] tbody td[data-col="2"],
+  .gameweek-points-table[data-hover-col="3"] tbody td[data-col="3"],
+  .gameweek-points-table[data-hover-col="4"] tbody td[data-col="4"],
+  .gameweek-points-table[data-hover-col="5"] tbody td[data-col="5"],
+  .gameweek-points-table[data-hover-col="6"] tbody td[data-col="6"],
+  .gameweek-points-table[data-hover-col="7"] tbody td[data-col="7"],
+  .gameweek-points-table[data-hover-col="8"] tbody td[data-col="8"],
+  .gameweek-points-table[data-hover-col="9"] tbody td[data-col="9"],
+  .gameweek-points-table[data-hover-col="10"] tbody td[data-col="10"],
+  .gameweek-points-table[data-hover-col="11"] tbody td[data-col="11"],
+  .gameweek-points-table[data-hover-col="12"] tbody td[data-col="12"],
+  .gameweek-points-table[data-hover-col="13"] tbody td[data-col="13"],
+  .gameweek-points-table[data-hover-col="14"] tbody td[data-col="14"],
+  .gameweek-points-table[data-hover-col="15"] tbody td[data-col="15"],
+  .gameweek-points-table[data-hover-col="16"] tbody td[data-col="16"],
+  .gameweek-points-table[data-hover-col="17"] tbody td[data-col="17"] {
+    background: color-mix(in srgb, var(--border-color) 12%, var(--bg-primary));
+  }
+  /* Autosub rows take precedence over column hover */
+  .gameweek-points-table[data-hover-col] .gameweek-points-tr-autosub-out .gameweek-points-td {
+    background: var(--gw-autosub-out-bg);
+  }
+  .gameweek-points-table[data-hover-col] .gameweek-points-tr-autosub-out .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-out-bg-solid);
+  }
+  .gameweek-points-table[data-hover-col] .gameweek-points-tr-autosub-in .gameweek-points-td {
+    background: var(--gw-autosub-in-bg);
+  }
+  .gameweek-points-table[data-hover-col] .gameweek-points-tr-autosub-in .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-in-bg-solid);
+  }
+  /* Row (y-axis) hover: same subtle effect as column (x-axis) for crosshair sync */
+  .gameweek-points-tr-clickable:hover .gameweek-points-td {
+    background: color-mix(in srgb, var(--border-color) 12%, var(--bg-primary));
+  }
+  .gameweek-points-tr-clickable:hover .gameweek-points-td-player-fixed {
+    background: color-mix(in srgb, var(--border-color) 12%, var(--bg-primary));
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td {
+    background: var(--gw-autosub-out-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-out-bg-solid);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td {
+    background: var(--gw-autosub-in-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-in-bg-solid);
+  }
 }
 
 .gameweek-points-th-sortable {
@@ -150,19 +230,19 @@
 }
 
 .gameweek-points-th-pts {
-  width: 50px;
-  min-width: 50px;
-  padding-left: 16px;
-  padding-right: 16px;
+  width: 56px;
+  min-width: 56px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* Impact column: your share of player points vs league average */
 .gameweek-points-th-impact {
-  min-width: 72px;
-  width: 72px;
+  min-width: 58px;
+  width: 58px;
   text-align: center;
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 6px;
+  padding-right: 6px;
 }
 .gameweek-points-th-impact--has-popup {
   position: relative;
@@ -235,9 +315,9 @@
 }
 
 .gameweek-points-td-impact {
-  min-width: 72px;
-  width: 72px;
-  padding: 6px 8px;
+  min-width: 58px;
+  width: 58px;
+  padding: 6px 6px;
   vertical-align: middle;
 }
 
@@ -249,8 +329,8 @@
 }
 
 .gameweek-points-impact-bar-wrap {
-  flex: 1;
-  min-width: 0;
+  width: 28px;
+  flex-shrink: 0;
   height: 8px;
   background: var(--border-color);
   border-radius: 4px;
@@ -263,11 +343,24 @@
   border-radius: 4px;
   transition: width 0.2s ease;
 }
-.gameweek-points-impact-bar--positive {
-  background: var(--impact-positive, #0d9488);
+/* Impact bar fill: green positive, red negative; stronger for larger |impact| (low < 40, mid 40–79, high 80+) */
+.gameweek-points-impact-bar--positive-low {
+  background: color-mix(in srgb, var(--impact-positive, var(--accent-green, #10b981)) 32%, var(--border-color));
 }
-.gameweek-points-impact-bar--negative {
-  background: var(--impact-negative, #dc2626);
+.gameweek-points-impact-bar--positive-mid {
+  background: color-mix(in srgb, var(--impact-positive, var(--accent-green, #10b981)) 52%, var(--border-color));
+}
+.gameweek-points-impact-bar--positive-high {
+  background: color-mix(in srgb, var(--impact-positive, var(--accent-green, #10b981)) 78%, var(--border-color));
+}
+.gameweek-points-impact-bar--negative-low {
+  background: color-mix(in srgb, var(--impact-negative, var(--accent-red, #ef4444)) 32%, var(--border-color));
+}
+.gameweek-points-impact-bar--negative-mid {
+  background: color-mix(in srgb, var(--impact-negative, var(--accent-red, #ef4444)) 52%, var(--border-color));
+}
+.gameweek-points-impact-bar--negative-high {
+  background: color-mix(in srgb, var(--impact-negative, var(--accent-red, #ef4444)) 78%, var(--border-color));
 }
 
 .gameweek-points-impact-value {
@@ -277,8 +370,12 @@
   font-weight: 600;
   color: var(--text-primary);
 }
+/* Green for positive, red for negative */
+.gameweek-points-impact-value--positive {
+  color: var(--impact-positive, var(--accent-green, #10b981));
+}
 .gameweek-points-impact-value--negative {
-  color: var(--impact-negative, #dc2626);
+  color: var(--impact-negative, var(--accent-red, #ef4444));
 }
 
 /* Extra stat columns – scroll right to see (G, A, CS, S, BPS, B, DEF, YC, RC) */
@@ -304,9 +401,41 @@
   color: var(--text-secondary);
 }
 
+/* Top 10: fill the badge/pill only (PTS column badge, stat badges, impact-pill-wrap, or new pill for plain values) */
+.gameweek-points-view .gameweek-points-td-pts--top10 .gameweek-points-player-points-badge {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+  border-radius: 6px;
+}
+html[data-theme="dark"] .gameweek-points-view .gameweek-points-td-pts--top10 .gameweek-points-player-points-badge {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+}
+.gameweek-points-td-stat--top10 .gameweek-points-player-points-badge,
+.gameweek-points-td-stat--top10 .gameweek-points-impact-pill-wrap {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+  border-radius: 6px;
+}
+.gameweek-points-stat-top10-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 1.4em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+  box-sizing: border-box;
+}
+/* When both top10 and impact-pill: fill the pill with green (override hollow) */
+.gameweek-points-td-stat--top10.gameweek-points-cell--impact-pill .gameweek-points-player-points-badge,
+.gameweek-points-td-stat--top10.gameweek-points-cell--impact-pill .gameweek-points-impact-pill-wrap {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+}
+
 /* Data cells (MP, PTS, Opp, etc.): --bg-primary. Player column uses a different background below. */
 .gameweek-points-td {
-  padding: 8px 8px;
+  padding: 10px 8px;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
   color: var(--text-primary);
@@ -314,11 +443,13 @@
   font-size: 8px;
 }
 
-/* Player column – sticky; background distinct from data columns (MP/PTS use --bg-primary). */
+/* Player column – sticky; outdent into scrollable padding; background distinct from data columns. */
 .gameweek-points-td-player-fixed {
   position: sticky;
   left: 0;
   z-index: 1;
+  margin-left: -12px;
+  padding-left: 16px; /* single left inset; matches thead .gameweek-points-th-player so name aligns */
   background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
   min-width: 0;
   overflow: visible;
@@ -329,9 +460,56 @@
   border-bottom: none;
 }
 
-/* Divider between Starting XI (pos 1–11) and Bench (pos 12–15) */
-.gameweek-points-tr-bench-first .gameweek-points-td {
-  border-top: 4px solid var(--border-color);
+/* Bench in its own tbody – physical border separation from starters */
+.gameweek-points-tbody-bench {
+  border-top: 2px solid var(--border-color);
+}
+.gameweek-points-tr-bench-divider .gameweek-points-td {
+  border-top: none;
+}
+.gameweek-points-tr-bench-divider .gameweek-points-td-bench-divider {
+  border-top: 2px solid var(--border-color); /* keep visible when sticky */
+}
+.gameweek-points-tbody-bench .gameweek-points-td {
+  background: var(--bg-primary);
+}
+.gameweek-points-tbody-bench .gameweek-points-td-player-fixed {
+  background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
+}
+
+/* Bench divider row label – sticky top (below thead) and sticky left (like player column) */
+.gameweek-points-tr-bench-divider {
+  position: relative;
+}
+.gameweek-points-td-bench-divider {
+  position: sticky;
+  top: 30px; /* match .gameweek-points-th height so divider sits just below thead */
+  z-index: 9;
+  padding: 6px 8px 8px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  border-top: 2px solid var(--border-color);
+  vertical-align: middle;
+  box-shadow: 0 1px 0 var(--border-color);
+}
+/* First cell of bench divider – pinned left like player column on horizontal scroll */
+.gameweek-points-td-bench-divider-fixed {
+  left: 0;
+  z-index: 9;
+  margin-left: -12px;
+  padding-left: 16px;
+  border-right: 1px solid var(--border-color);
+  min-width: 0;
+}
+.gameweek-points-td-bench-divider-fill {
+  background: var(--bg-secondary);
+  border-top: 2px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .gameweek-points-tr-clickable {
@@ -340,10 +518,23 @@
 /* Row hover only on devices with hover (desktop); no hover effect on mobile/touch */
 @media (hover: hover) {
   .gameweek-points-tr-clickable:hover .gameweek-points-td {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
   .gameweek-points-tr-clickable:hover .gameweek-points-td-player-fixed {
-    background: color-mix(in srgb, var(--bg-secondary) 92%, var(--bg-primary));
+    background: color-mix(in srgb, var(--bg-hover) 92%, var(--bg-primary));
+  }
+  /* Keep autosub row tint on hover */
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td {
+    background: var(--gw-autosub-out-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-out-bg-solid);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td {
+    background: var(--gw-autosub-in-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-in-bg-solid);
   }
 }
 @media (max-width: 768px) {
@@ -353,6 +544,18 @@
   .gameweek-points-tr-clickable:hover .gameweek-points-td-player-fixed {
     background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
   }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td {
+    background: var(--gw-autosub-out-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-out:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-out-bg-solid);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td {
+    background: var(--gw-autosub-in-bg);
+  }
+  .gameweek-points-tr-clickable.gameweek-points-tr-autosub-in:hover .gameweek-points-td-player-fixed {
+    background: var(--gw-autosub-in-bg-solid);
+  }
 }
 
 /* DGW: no divider between the two game rows (data columns only); keep divider in player column between different players */
@@ -360,6 +563,18 @@
   border-bottom: none;
 }
 .gameweek-points-td-player-dgw-span {
+  vertical-align: middle;
+}
+/* DGW: equal row height so both rows align; rowspan cell spans 2 × row height */
+.gameweek-points-tr-dgw-first .gameweek-points-td,
+.gameweek-points-tr-dgw-second .gameweek-points-td {
+  height: 1px;
+  min-height: 36px;
+  box-sizing: border-box;
+}
+.gameweek-points-tr-dgw-first .gameweek-points-td-player-dgw-span {
+  height: 1px;
+  min-height: 72px;
   vertical-align: middle;
 }
 /* DGW: second row PTS is per-match; optional subtle styling so both rows stay readable */
@@ -390,7 +605,7 @@
   min-width: 0;
   max-width: 100%;
   overflow: visible;
-  padding-left: 8px;
+  /* left spacing from .gameweek-points-td-player-fixed padding only */
 }
 
 /* Name + autosub arrows grouped so arrows sit right next to name/badges */
@@ -424,9 +639,9 @@
   flex: 1 1 0%;
   min-width: 0;
 }
-.gameweek-points-player-name-text--owned-by-you {
+/* Owned by you (config owner): player name in green */
+.gameweek-points-name-and-autosub--owned-by-you .gameweek-points-player-name-text {
   color: var(--accent-green, #10b981);
-  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
 }
 
 /* Captain badge – orange background, white text; match assistant badge (rounded, centered) */
@@ -503,13 +718,19 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-td-mins,
-.gameweek-points-td-opp,
-.gameweek-points-td-pts {
+.gameweek-points-td-opp {
   width: 50px;
   min-width: 50px;
   text-align: center;
   padding-left: 16px;
   padding-right: 16px;
+}
+.gameweek-points-td-pts {
+  width: 56px;
+  min-width: 56px;
+  text-align: center;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .gameweek-points-td-mins {
@@ -526,6 +747,55 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   justify-content: center;
   gap: 4px;
   font-size: 10px;
+}
+
+/* MP risk dots: < 45' red, < 80' orange (shown when match finished/provisional). Sibling of AnimatedValue so flex gap applies. */
+.gameweek-points-mins-value-wrap .gameweek-points-mins-risk-dot {
+  flex-shrink: 0;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+.gameweek-points-mins-risk-dot--red {
+  background: var(--accent-red, #ef4444);
+}
+.gameweek-points-mins-risk-dot--orange {
+  background: #f97316;
+}
+
+/* MP taper pill (legacy, unused after TriangleAlert change) */
+.gameweek-points-mins-pill {
+  --mins-pill-bg: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  margin: 0 -4px;
+  min-height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(
+    to right,
+    var(--mins-pill-bg) 0%,
+    var(--mins-pill-bg) var(--mins-pct, 100%),
+    transparent var(--mins-pct, 100%)
+  );
+  box-sizing: border-box;
+}
+.gameweek-points-mins-pill-full {
+  --mins-pill-bg: color-mix(in srgb, var(--accent-green, #10b981) 14%, transparent);
+}
+.gameweek-points-mins-pill-high {
+  --mins-pill-bg: color-mix(in srgb, var(--accent-green, #10b981) 22%, transparent);
+}
+.gameweek-points-mins-pill-mid {
+  --mins-pill-bg: color-mix(in srgb, #d97706 20%, transparent);
+}
+.gameweek-points-mins-pill-low {
+  --mins-pill-bg: color-mix(in srgb, #b45309 28%, transparent);
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
@@ -620,6 +890,18 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   opacity: 0.82;
 }
 
+/* 0 points badge: keep number clearly visible in light and dark mode */
+.gameweek-points-cell-muted .gameweek-points-player-points-badge {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+html[data-theme="light"] .gameweek-points-cell-muted .gameweek-points-player-points-badge {
+  color: #505050;
+}
+html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-points-badge {
+  color: #a0a0a0;
+}
+
 /* Provisional bonus / live scoring */
 .gameweek-points-cell-provisional {
   color: color-mix(in srgb, var(--text-secondary) 65%, var(--text-primary));
@@ -664,56 +946,52 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+.gameweek-points-td-pts .gameweek-points-player-points-badge {
+  font-size: 1.05em;
+}
 
-/* Top 10 gameweek scorer points badge – green; font inherits so points match other points */
-/* Subtle pill behind all pts; rank-highlight / defcon / saves override */
+/* Hollow border pill for FPL impact stats only (goals, assist, CS, save≥3, defcon, bonus). Same size as PTS. */
+.gameweek-points-cell--impact-pill .gameweek-points-player-points-badge,
+.gameweek-points-cell--impact-pill .gameweek-points-impact-pill-wrap {
+  border: 1px solid var(--stat-pill-border, #E7AD10);
+  border-radius: 6px;
+  background: transparent;
+  box-sizing: border-box;
+  min-width: 34px;
+  min-height: 1.4em;
+  padding: 4px 10px;
+}
+.gameweek-points-cell--impact-pill .gameweek-points-impact-pill-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* Same border color in light and dark (gold/amber) */
+.gameweek-points-cell--impact-pill .gameweek-points-player-points-badge,
+.gameweek-points-cell--impact-pill .gameweek-points-impact-pill-wrap {
+  --stat-pill-border: #E7AD10;
+}
+
+/* Subtle pill behind stat/points values – same size as PTS column for consistency */
 .gameweek-points-player-points-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 26px;
-  min-height: 1.35em;
-  padding: 2px 6px;
-  border-radius: 4px;
+  min-width: 34px;
+  min-height: 1.4em;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: inherit;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: var(--pts-badge-subtle-bg, rgba(0, 0, 0, 0.06));
+  box-sizing: border-box;
 }
-html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight):not(.defcon-achieved):not(.saves-achieved) {
+.gameweek-points-cell--impact-pill .gameweek-points-player-points-badge {
+  box-sizing: border-box;
+}
+html[data-theme="dark"] .gameweek-points-player-points-badge {
   background: var(--pts-badge-subtle-bg, rgba(255, 255, 255, 0.06));
-}
-.gameweek-points-player-points-badge.rank-highlight {
-  background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2));
-  color: var(--gw-top-scorer-color, var(--accent-green));
-}
-
-/* Defcon achieved: achieved border; when also top 10, keep green fill (no override) */
-.gameweek-points-player-points-badge.defcon-achieved {
-  border: 2px solid #FF9119;
-}
-/* Defcon only (not top 10): transparent fill, default text color */
-.gameweek-points-player-points-badge.defcon-achieved:not(.rank-highlight) {
-  background: transparent;
-  color: var(--text-primary);
-}
-/* Defcon achieved on DEF column: always green fill + green border (and when also top 10) */
-.gameweek-points-player-points-badge.defcon-achieved.rank-highlight {
-  background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2)) !important;
-  color: var(--gw-top-scorer-color, var(--accent-green)) !important;
-}
-
-/* Saves achieved (GK, 3+ saves = 1 pt per 3): same achieved border as defcon */
-.gameweek-points-player-points-badge.saves-achieved {
-  border: 2px solid #FF9119;
-}
-.gameweek-points-player-points-badge.saves-achieved:not(.rank-highlight) {
-  background: transparent;
-  color: var(--text-primary);
-}
-.gameweek-points-player-points-badge.saves-achieved.rank-highlight {
-  background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2)) !important;
-  color: var(--gw-top-scorer-color, var(--accent-green)) !important;
 }
 
 /* Legend below table (position 15) */
@@ -741,17 +1019,6 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   border-radius: 3px;
   font-size: 8px;
   font-weight: 700;
-}
-.gameweek-points-legend-badge.rank-highlight {
-  background: var(--gw-top-scorer-bg, rgba(16, 185, 129, 0.2));
-  color: var(--gw-top-scorer-color, var(--accent-green));
-}
-.gameweek-points-legend-badge.defcon-achieved,
-.gameweek-points-legend-badge.saves-achieved {
-  border: 2px solid #FF9119;
-  background: transparent;
-  color: var(--text-primary);
-  font-weight: 400;
 }
 .gameweek-points-legend-text {
   flex-shrink: 0;
@@ -781,7 +1048,9 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   }
 
   .gameweek-points-th-mins,
-  .gameweek-points-td-mins {
+  .gameweek-points-td-mins,
+  .gameweek-points-th-pts,
+  .gameweek-points-td-pts {
     width: 72px;
     min-width: 72px;
     padding-left: 20px;
@@ -789,9 +1058,7 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   }
 
   .gameweek-points-th-opp,
-  .gameweek-points-td-opp,
-  .gameweek-points-th-pts,
-  .gameweek-points-td-pts {
+  .gameweek-points-td-opp {
     width: 56px;
     min-width: 56px;
     padding-left: 20px;
@@ -799,16 +1066,16 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   }
 
   .gameweek-points-th-impact {
-    min-width: 88px;
-    width: 88px;
-    padding-left: 12px;
-    padding-right: 12px;
+    min-width: 72px;
+    width: 72px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .gameweek-points-td-impact {
-    min-width: 88px;
-    width: 88px;
-    padding: 8px 12px;
+    min-width: 72px;
+    width: 72px;
+    padding: 8px 10px;
   }
 
   .gameweek-points-impact-bar-wrap {
@@ -864,7 +1131,9 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
     min-width: 50px;
   }
   .gameweek-points-th-mins,
-  .gameweek-points-td-mins {
+  .gameweek-points-td-mins,
+  .gameweek-points-th-pts,
+  .gameweek-points-td-pts {
     width: 64px;
     min-width: 64px;
   }
@@ -925,29 +1194,60 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
     width: 20px;
     height: 20px;
   }
+
+  /* Home page bento on mobile: flush left (no outdent) so DGW player cell aligns with container */
+  .home-page .bento-card-chart-2x4 .gameweek-points-scrollable {
+    padding-left: 0;
+  }
+  .home-page .bento-card-chart-2x4 .gameweek-points-table thead .gameweek-points-th-player,
+  .home-page .bento-card-chart-2x4 .gameweek-points-table .gameweek-points-td-player-fixed {
+    margin-left: 0;
+  }
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-mins,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-mins,
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-opp,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-opp,
+  .home-page .bento-card-chart-2x4 .gameweek-points-th-pts,
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-pts {
+    width: 50px;
+    min-width: 50px;
+  }
 }
 
 /* Home page bento: expanded GW points uses mobile-like sizing, slightly larger (desktop only) */
 @media (min-width: 769px) {
+  .home-page .bento-card-chart-2x4 .gameweek-points-scrollable {
+    padding-left: 0;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-table thead .gameweek-points-th-player,
+  .home-page .bento-card-chart-2x4 .gameweek-points-table .gameweek-points-td-player-fixed {
+    margin-left: 0;
+  }
+
   .home-page .bento-card-chart-2x4 .gameweek-points-table {
     font-size: 12px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-th {
     height: 32px;
-    font-size: 9px;
+    font-size: 11px;
     padding: 10px 8px;
+  }
+
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-bench-divider {
+    top: 32px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-th-player {
     min-width: 110px;
-    padding-left: 12px;
+    padding-left: 16px; /* match td so "PLAYER" aligns with badge in first row */
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-th-mins,
   .home-page .bento-card-chart-2x4 .gameweek-points-td-mins {
-    width: 64px;
-    min-width: 64px;
+    width: 50px;
+    min-width: 50px;
     padding-left: 12px;
     padding-right: 12px;
   }
@@ -958,21 +1258,21 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   .home-page .bento-card-chart-2x4 .gameweek-points-td-pts {
     width: 50px;
     min-width: 50px;
-    padding-left: 12px;
-    padding-right: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-th-impact {
-    min-width: 72px;
-    width: 72px;
-    padding-left: 8px;
-    padding-right: 8px;
+    min-width: 58px;
+    width: 58px;
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-td-impact {
-    min-width: 72px;
-    width: 72px;
-    padding: 6px 8px;
+    min-width: 58px;
+    width: 58px;
+    padding: 6px 6px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-impact-bar-wrap {
@@ -1002,14 +1302,29 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-th-stat {
-    font-size: 8px;
+    font-size: 10px;
   }
 
   .home-page .bento-card-chart-2x4 .gameweek-points-td {
-    padding: 8px 8px;
+    padding: 10px 8px;
     font-size: 11px;
   }
 
+  /* Same pill height across PTS, stat, top10, impact-pill in expanded bento */
+  .home-page .bento-card-chart-2x4 .gameweek-points-player-points-badge,
+  .home-page .bento-card-chart-2x4 .gameweek-points-impact-pill-wrap,
+  .home-page .bento-card-chart-2x4 .gameweek-points-stat-top10-pill {
+    min-height: 22px;
+    padding: 4px 8px;
+    box-sizing: border-box;
+  }
+  .home-page .bento-card-chart-2x4 .gameweek-points-player-points-badge {
+    min-width: 22px;
+  }
+  .home-page .bento-card-chart-2x4 .gameweek-points-td-pts .gameweek-points-player-points-badge {
+    min-width: 28px;
+    font-size: 1.05em;
+  }
   .home-page .bento-card-chart-2x4 .gameweek-points-player-name-text {
     font-size: 11px;
   }
@@ -1183,7 +1498,7 @@ html[data-theme="dark"] .gameweek-points-player-points-badge:not(.rank-highlight
     font-size: 7px;
   }
   .manager-detail-modal-chart-wrap .gameweek-points-td {
-    padding: 8px 8px;
+    padding: 10px 8px;
     font-size: 11px;
   }
   .manager-detail-modal-chart-wrap .gameweek-points-player-name-text {

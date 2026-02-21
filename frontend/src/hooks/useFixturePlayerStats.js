@@ -2,10 +2,48 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 /**
+ * Map API preloaded stats (from backend /api/v1/fixtures) to homePlayers/awayPlayers shape.
+ */
+function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
+  if (!Array.isArray(preloaded) || !preloaded.length) return { homePlayers: [], awayPlayers: [] }
+  const byPointsDesc = (a, b) => (b.points - a.points) || (a.position - b.position) || (a.player_name || '').localeCompare(b.player_name || '')
+  const rows = preloaded.map((r) => ({
+    player_id: r.player_id,
+    fixture_id: r.fixture_id,
+    team_id: r.team_id,
+    player_name: r.web_name ?? 'Unknown',
+    position: r.position ?? 0,
+    player_team_short_name: r.team_short_name ?? null,
+    minutes: r.minutes ?? 0,
+    points: r.total_points ?? r.effective_total_points ?? 0,
+    goals_scored: r.goals_scored ?? 0,
+    assists: r.assists ?? 0,
+    clean_sheets: r.clean_sheets ?? 0,
+    saves: r.saves ?? 0,
+    bps: r.bps ?? 0,
+    bonus: 0,
+    bonus_status: 'provisional',
+    defensive_contribution: r.defensive_contribution ?? 0,
+    yellow_cards: r.yellow_cards ?? 0,
+    red_cards: r.red_cards ?? 0,
+    defcon_points_achieved: false,
+    expected_goals: Number(r.expected_goals) || 0,
+    expected_assists: Number(r.expected_assists) || 0,
+    expected_goal_involvements: Number(r.expected_goal_involvements) || 0,
+    expected_goals_conceded: Number(r.expected_goals_conceded) || 0
+  }))
+  const homePlayers = rows.filter((r) => r.team_id === homeTeamId).sort(byPointsDesc)
+  const awayPlayers = rows.filter((r) => r.team_id === awayTeamId).sort(byPointsDesc)
+  return { homePlayers, awayPlayers }
+}
+
+/**
  * Fetches player gameweek stats for a single fixture, split into home and away teams.
  * Used for the expanded "Show details" player tables on the Matches page.
+ * When preloadedFixtureStats is provided (from useFixturesWithTeams API response), no Supabase call is made.
  */
-export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled) {
+export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null) {
+  const hasPreloaded = Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
   const { data, isLoading, error } = useQuery({
     queryKey: ['fixture-player-stats', fixtureId, gameweek],
     queryFn: async () => {
@@ -106,9 +144,14 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
 
       return { homePlayers, awayPlayers }
     },
-    enabled: !!enabled && !!fixtureId && !!gameweek && !!homeTeamId && !!awayTeamId,
+    enabled: !!enabled && !!fixtureId && !!gameweek && !!homeTeamId && !!awayTeamId && !hasPreloaded,
     staleTime: 30000
   })
+
+  if (hasPreloaded && enabled) {
+    const { homePlayers, awayPlayers } = mapPreloadedToHomeAway(preloadedFixtureStats, homeTeamId, awayTeamId)
+    return { homePlayers, awayPlayers, loading: false, error: null }
+  }
 
   return {
     homePlayers: data?.homePlayers ?? [],

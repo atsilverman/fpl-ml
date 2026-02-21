@@ -72,7 +72,7 @@
 @media (hover: hover) {
   .header-user-button:hover {
     color: var(--text-primary);
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
     border-color: var(--border-color);
   }
 }
@@ -96,7 +96,7 @@
 
 @media (hover: hover) {
   .header-user-account:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
     border-color: var(--border-color);
   }
 }
@@ -149,7 +149,7 @@
 
 @media (hover: hover) {
   .header-login-google:hover {
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
     border-color: var(--border-color);
   }
 }
@@ -372,7 +372,7 @@
 @media (hover: hover) {
   .tracking-mode-button:hover {
     color: var(--text-primary);
-    background: var(--bg-card);
+    background: var(--bg-hover);
   }
 }
 
@@ -543,7 +543,7 @@
 @media (hover: hover) {
   .account-button:hover {
     color: var(--text-primary);
-    background: var(--bg-secondary);
+    background: var(--bg-hover);
   }
 }
 
@@ -576,6 +576,10 @@
     max-width: 880px;
     min-width: 320px;
     padding-top: calc(var(--dashboard-header-height, 64px) + 20px);
+  }
+  /* Home page only: allow 5 bentos wide (5*200 + 4*16 + 32 = 1096) */
+  .dashboard-content:has(.home-page) {
+    max-width: 1096px;
   }
 }
 
@@ -690,7 +694,7 @@
 @media (hover: hover) {
   .subpage-view-toggle-button:hover:not(.active) {
     color: var(--text-primary);
-    background: var(--bg-card);
+    background: var(--bg-hover);
   }
 }
 

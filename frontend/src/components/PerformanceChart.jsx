@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import * as d3 from 'd3'
-import { Users } from 'lucide-react'
+import { Users, Filter, X } from 'lucide-react'
 import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
 import './PerformanceChart.css'
@@ -27,7 +28,8 @@ export default function PerformanceChart({
   top10LinesData = null,
   onShowTop10Change = null,
   currentManagerId = null,
-  isStale = false
+  isStale = false,
+  hideFilterUI = false
 }) {
   const { toast } = useToast()
   const svgRef = useRef(null)
@@ -35,6 +37,8 @@ export default function PerformanceChart({
   const [dimensions, setDimensions] = useState(null)
   const [isMobile, setIsMobile] = useState(false)
   const [measurementReady, setMeasurementReady] = useState(false)
+  const [showFilterPopup, setShowFilterPopup] = useState(false)
+  const filterPopupRef = useRef(null)
   const prevDimensionsRef = useRef({ width: 0, height: 0 })
   
   // Chip display configuration
@@ -1167,59 +1171,96 @@ export default function PerformanceChart({
           className="performance-chart"
         />
       </div>
-      {/* Filter controls below legend, centered */}
-      {(onFilterChange || onShowTop10Change) && (
-        <div className="chart-filter-controls">
-          {onFilterChange && (
-            <>
-              <button
-                className={`chart-filter-btn ${filter === 'all' ? 'active' : ''}`}
-                onClick={() => {
-                  onFilterChange('all')
-                  toast('Showing all gameweeks')
-                }}
-              >
-                All
-              </button>
-              <button
-                className={`chart-filter-btn ${filter === 'last12' ? 'active' : ''}`}
-                onClick={() => {
-                  onFilterChange('last12')
-                  toast('Showing last 12 gameweeks')
-                }}
-              >
-                Last 12
-              </button>
-              <button
-                className={`chart-filter-btn ${filter === 'last6' ? 'active' : ''}`}
-                onClick={() => {
-                  onFilterChange('last6')
-                  toast('Showing last 6 gameweeks')
-                }}
-              >
-                Last 6
-              </button>
-            </>
+      {/* Filter: button opens popup (same pattern as DefconSubpage / FeedSubpage). Hidden when used in overall-rank bento (range buttons in card header). */}
+      {!hideFilterUI && (onFilterChange || onShowTop10Change) && (
+        <>
+          <div className="chart-filter-controls">
+            <button
+              type="button"
+              className="performance-chart-filter-btn"
+              onClick={() => setShowFilterPopup((open) => !open)}
+              aria-label="Chart range and options"
+              aria-expanded={showFilterPopup}
+              aria-haspopup="dialog"
+            >
+              <Filter size={14} strokeWidth={2} />
+            </button>
+          </div>
+          {showFilterPopup && typeof document !== 'undefined' && createPortal(
+            <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Chart filters">
+              <div className="stats-filter-overlay-backdrop" onClick={() => setShowFilterPopup(false)} aria-hidden />
+              <div className="stats-filter-overlay-panel performance-chart-filter-panel" ref={filterPopupRef}>
+                <div className="stats-filter-overlay-header">
+                  <span className="stats-filter-overlay-title">Filters</span>
+                  <div className="stats-filter-overlay-header-actions">
+                    <button type="button" className="stats-filter-overlay-close" onClick={() => setShowFilterPopup(false)} aria-label="Close filters">
+                      <X size={20} strokeWidth={2} />
+                    </button>
+                  </div>
+                </div>
+                <div className="stats-filter-overlay-body">
+                  {onFilterChange && (
+                    <div className="stats-filter-section">
+                      <div className="stats-filter-section-title">Range</div>
+                      <div className="stats-filter-buttons">
+                        <button
+                          type="button"
+                          className={`stats-filter-option-btn ${filter === 'all' ? 'stats-filter-option-btn--active' : ''}`}
+                          onClick={() => { onFilterChange('all'); toast('Showing all gameweeks'); setShowFilterPopup(false) }}
+                          aria-pressed={filter === 'all'}
+                        >
+                          All
+                        </button>
+                        <button
+                          type="button"
+                          className={`stats-filter-option-btn ${filter === 'last12' ? 'stats-filter-option-btn--active' : ''}`}
+                          onClick={() => { onFilterChange('last12'); toast('Showing last 12 gameweeks'); setShowFilterPopup(false) }}
+                          aria-pressed={filter === 'last12'}
+                        >
+                          Last 12
+                        </button>
+                        <button
+                          type="button"
+                          className={`stats-filter-option-btn ${filter === 'last6' ? 'stats-filter-option-btn--active' : ''}`}
+                          onClick={() => { onFilterChange('last6'); toast('Showing last 6 gameweeks'); setShowFilterPopup(false) }}
+                          aria-pressed={filter === 'last6'}
+                        >
+                          Last 6
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {onShowTop10Change && (
+                    <div className="stats-filter-section">
+                      <div className="stats-filter-section-title">Display</div>
+                      <div className="stats-filter-buttons">
+                        <button
+                          type="button"
+                          className={`stats-filter-option-btn ${showTop10Lines ? 'stats-filter-option-btn--active' : ''}`}
+                          onClick={() => {
+                            const next = !showTop10Lines
+                            onShowTop10Change(next)
+                            toast(next ? 'Compare Leader shown' : 'Compare Leader hidden')
+                          }}
+                          aria-pressed={showTop10Lines}
+                        >
+                          <Users size={14} strokeWidth={2} className="stats-filter-option-icon" aria-hidden />
+                          Compare Leader
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="stats-filter-overlay-footer">
+                  <button type="button" className="stats-filter-overlay-done" onClick={() => setShowFilterPopup(false)} aria-label="Done">
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
           )}
-          {onShowTop10Change && (
-            <>
-              <span className="chart-filter-sep" aria-hidden />
-              <button
-                type="button"
-                className={`chart-filter-btn chart-filter-btn-icon ${showTop10Lines ? 'active' : ''}`}
-                onClick={() => {
-                  const next = !showTop10Lines
-                  onShowTop10Change(next)
-                  toast(next ? 'League leader line shown' : 'League leader line hidden')
-                }}
-                title={showTop10Lines ? 'Hide league leader line' : 'Show league leader line'}
-                aria-pressed={showTop10Lines}
-              >
-                <Users size={14} strokeWidth={2} aria-hidden />
-              </button>
-            </>
-          )}
-        </div>
+        </>
       )}
     </div>
   )

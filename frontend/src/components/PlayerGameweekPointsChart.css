@@ -133,9 +133,15 @@
   fill: url(#player-gw-chart-hash-muted);
 }
 
-/* Expected stat: dot at value on bar (e.g. xG when viewing Goals) */
-.player-gw-chart-expected-dot {
+/* Expected stat: smooth dashed line (e.g. xG when viewing Goals); forecast color */
+.player-gw-chart-expected-line {
+  stroke: var(--chart-expected-line, #22d3ee);
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 6 4;
   pointer-events: none;
+  opacity: 0.9;
 }
 
 /* Threshold / reference lines: dashed grey in background, no labels */

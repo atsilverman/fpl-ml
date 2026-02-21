@@ -75,8 +75,8 @@ export default function ScheduleOpponentStatsTable({
         <table className="schedule-opponent-stats-table-grid">
           <thead>
             <tr>
-              <th className="schedule-opponent-stats-th-gw">GW#</th>
-              <th className="schedule-opponent-stats-th-opponent">Opponent</th>
+              <th className="schedule-opponent-stats-th-gw">GW</th>
+              <th className="schedule-opponent-stats-th-opponent">Opp</th>
               <th className="schedule-opponent-stats-th-stat">G</th>
               <th className="schedule-opponent-stats-th-stat">xG</th>
               <th className="schedule-opponent-stats-th-stat">GC</th>

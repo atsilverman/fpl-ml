@@ -61,18 +61,29 @@ function eventLabel(event) {
   }
 }
 
-function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, position, impact, isOwned }) {
+function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, position, impact, isOwned, isReversedByLater }) {
   const { label, delta } = eventLabel(event)
   const isPositive = event.points_delta > 0
   const isNegative = event.points_delta < 0
-  const isReversed = event.metadata?.reversed === true
+  const isReversed = event.metadata?.reversed === true || isReversedByLater === true
   const positionLabel = position != null ? (POSITION_LABELS[position] ?? '—') : null
+
+  const pointsBefore =
+    event.total_points_after != null && event.points_delta != null
+      ? event.total_points_after - event.points_delta
+      : null
+  const deltaSigned = event.points_delta >= 0 ? `+${event.points_delta}` : `${event.points_delta}`
+  const eventDeltaDisplay =
+    pointsBefore != null
+      ? `${pointsBefore} ${Math.abs(pointsBefore) === 1 ? 'pt' : 'pts'} (${deltaSigned})`
+      : delta
 
   const impactDisplay = impact != null
     ? (impact > 0 ? `+${impact.toFixed(1)}` : impact === 0 ? '0' : `−${Math.abs(impact).toFixed(1)}`)
     : null
   const impactIsPositive = impact != null && impact > 0
   const impactIsNegative = impact != null && impact < 0
+  const impactIsZero = impact != null && impact === 0
 
   return (
     <article
@@ -103,19 +114,38 @@ function FeedEventCard({ event, playerName, playerNameLoading, teamShortName, po
       </div>
       <div className="feed-event-card__event">
         <span className="feed-event-card__event-label">{label}</span>
-        <span
-          className={`feed-event-card__event-delta ${
-            isPositive ? 'feed-event-card__event-delta--positive' : ''
-          } ${isNegative ? 'feed-event-card__event-delta--negative' : ''}`}
-        >
-          {delta}
+        <span className="feed-event-card__event-delta">
+          {pointsBefore != null ? (
+            <>
+              <span className="feed-event-card__event-delta-before">
+                {pointsBefore} {Math.abs(pointsBefore) === 1 ? 'pt' : 'pts'}
+              </span>
+              <span
+                className={`feed-event-card__event-delta-change ${
+                  isPositive ? 'feed-event-card__event-delta--positive' : ''
+                } ${isNegative ? 'feed-event-card__event-delta--negative' : ''}`}
+              >
+                ({deltaSigned})
+              </span>
+            </>
+          ) : (
+            <span
+              className={`${
+                isPositive ? 'feed-event-card__event-delta--positive' : ''
+              } ${isNegative ? 'feed-event-card__event-delta--negative' : ''}`}
+            >
+              {delta}
+            </span>
+          )}
         </span>
       </div>
       <div className="feed-event-card__impact" title="League impact: net pts vs league average">
         <span
           className={`feed-event-card__impact-value ${
             impactIsPositive ? 'feed-event-card__impact-value--positive' : ''
-          } ${impactIsNegative ? 'feed-event-card__impact-value--negative' : ''}`}
+          } ${impactIsNegative ? 'feed-event-card__impact-value--negative' : ''}${
+            impactIsZero ? ' feed-event-card__impact-value--zero' : ''
+          }`}
         >
           {impactDisplay ?? '—'}
         </span>
@@ -188,6 +218,39 @@ export default function FeedSubpage({ isActive = true }) {
     })
     return list
   }, [events, kickoffByFixtureId])
+
+  /** Event IDs to show as struck: reversed by metadata, or reversed by a later removal event */
+  const reversedEventIds = useMemo(() => {
+    const set = new Set()
+    const list = sortedEvents
+    for (let i = 0; i < list.length; i++) {
+      const e = list[i]
+      if (e.metadata?.reversed) continue
+      const key = (p) =>
+        p.player_id === e.player_id &&
+        p.fixture_id === e.fixture_id &&
+        p.gameweek === e.gameweek
+      if (e.event_type === 'defcon_removed') {
+        for (let j = i + 1; j < list.length; j++) {
+          const p = list[j]
+          if (key(p) && p.event_type === 'defcon_achieved') {
+            set.add(p.id)
+            break
+          }
+        }
+      }
+      if (e.event_type === 'bonus_change' && e.points_delta < 0) {
+        for (let j = i + 1; j < list.length; j++) {
+          const p = list[j]
+          if (key(p) && p.event_type === 'bonus_change' && p.points_delta > 0) {
+            set.add(p.id)
+            break
+          }
+        }
+      }
+    }
+    return set
+  }, [sortedEvents])
 
   const playerIds = useMemo(() => [...new Set((sortedEvents || []).map((e) => e.player_id))], [sortedEvents])
 
@@ -808,6 +871,7 @@ export default function FeedSubpage({ isActive = true }) {
                   position={position}
                   impact={impactByEventId[event.id]}
                   isOwned={ownedPlayerIdSet.has(Number(event.player_id))}
+                  isReversedByLater={reversedEventIds.has(event.id)}
                 />
               </div>
             )
