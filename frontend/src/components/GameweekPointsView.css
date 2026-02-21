@@ -745,11 +745,11 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
   font-size: 10px;
 }
 
-/* MP risk dots: < 45' red, < 80' orange (shown when match finished/provisional). Sibling of AnimatedValue so flex gap applies. */
+/* MP risk dots: < 45' red, < 80' orange (shown when match finished/provisional). Flex gap on wrap separates from minutes value. */
 .gameweek-points-mins-value-wrap .gameweek-points-mins-risk-dot {
   flex-shrink: 0;
   display: inline-block;
@@ -799,7 +799,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
-  margin-left: 0;
+  margin-left: 8px;
   width: 6px;
   height: 6px;
   box-shadow: 0 0 0 0 var(--accent-green, #10b981);
@@ -807,6 +807,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-provisional {
+  margin-left: 8px;
   background: #FFB404;
   box-shadow: 0 0 0 0 rgba(255, 180, 4, 0.6);
   animation: gameweek-points-mins-provisional-pulse 2s ease-in-out infinite;

@@ -1245,6 +1245,12 @@ export default function MiniLeaguePage() {
                       <span className="gw-legend-popup-text">Did not play</span>
                     </div>
                     <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-live-dot-wrap">
+                        <span className="gw-legend-popup-live-dot" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Live match</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
                       <span className="gw-legend-popup-row-icon">
                         <span className="gw-legend-popup-mp-dot gw-legend-popup-mp-dot--red" aria-hidden />
                       </span>
@@ -1273,10 +1279,22 @@ export default function MiniLeaguePage() {
                       <span className="gw-legend-popup-text">Auto-subbed in</span>
                     </div>
                     <div className="gw-legend-popup-row">
-                      <span className="gw-legend-popup-live-dot-wrap">
-                        <span className="gw-legend-popup-live-dot" aria-hidden />
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-top10-swatch" aria-hidden />
                       </span>
-                      <span className="gw-legend-popup-text">Live match</span>
+                      <span className="gw-legend-popup-text">Top 10 in GW</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-impact-bar" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">Importance</span>
+                    </div>
+                    <div className="gw-legend-popup-row">
+                      <span className="gw-legend-popup-row-icon">
+                        <span className="gw-legend-popup-fpl-impact-pill" aria-hidden />
+                      </span>
+                      <span className="gw-legend-popup-text">FPL points impact</span>
                     </div>
                     {isViewingAnotherManager && (
                       <div className="gw-legend-popup-row">
