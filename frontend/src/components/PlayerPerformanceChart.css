@@ -2,11 +2,12 @@
 .total-points-chart {
   display: flex;
   flex-direction: column;
-  width: calc(100% + 12px);
-  margin-left: -12px;
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .total-points-chart--loading {
@@ -174,7 +175,7 @@
 
 .total-points-chart__gantt-x-label-spacer {
   flex-shrink: 0;
-  width: 88px;
+  width: 102px;
 }
 
 .total-points-chart__gantt-x-label-track {
@@ -289,13 +290,15 @@
 .total-points-chart__row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: 28px;
+  min-width: 0;
 }
 
 .total-points-chart__label {
-  flex: 0 0 88px;
-  width: 88px;
+  flex: 0 0 102px;
+  width: 102px;
+  max-width: 102px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -305,6 +308,7 @@
 .total-points-chart__name {
   flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
   font-size: 11px;
   font-weight: 500;
   color: var(--text-primary);
@@ -401,12 +405,13 @@ html[data-theme="light"] .total-points-chart__value--after-bar {
   }
 
   .total-points-chart__label {
-    flex: 0 0 80px;
-    width: 80px;
+    flex: 0 0 88px;
+    width: 88px;
+    max-width: 88px;
   }
 
   .total-points-chart__gantt-x-label-spacer {
-    width: 80px;
+    width: 88px;
   }
 
   .total-points-chart__name {

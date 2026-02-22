@@ -9,11 +9,12 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + summary + list header stay fixed; player list scrolls under */
+/* Sticky: search bar + filter + summary + list header stay fixed; player list scrolls under.
+   z-index above defcon-popup-backdrop (50) so info (i) popup shows on top of backdrop. */
 .defcon-subpage-sticky-header {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 51;
   background: var(--bg-primary);
   padding-bottom: 2px;
   flex-shrink: 0;
@@ -44,6 +45,8 @@
   gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
+  position: relative;
+  z-index: 55;
 }
 
 @media (max-width: 768px) {
@@ -402,6 +405,23 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+.stats-filter-overlay-reset {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue, #3b82f6);
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-reset:hover {
+    color: var(--accent-blue, #3b82f6);
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-secondary));
+  }
 }
 .stats-filter-overlay-close {
   display: inline-flex;

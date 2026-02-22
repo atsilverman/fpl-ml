@@ -700,6 +700,21 @@ export default function FeedSubpage({ isActive = true }) {
                 <div className="stats-filter-overlay-header">
                   <span className="stats-filter-overlay-title">Filters</span>
                   <div className="stats-filter-overlay-header-actions">
+                    {(scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || sortBy !== 'time') && (
+                      <button
+                        type="button"
+                        className="stats-filter-overlay-reset"
+                        onClick={() => {
+                          setScopeFilter('all')
+                          setPositionFilter('all')
+                          setMatchupFilter('all')
+                          setSortBy('time')
+                        }}
+                        aria-label="Reset all filters to default"
+                      >
+                        Reset
+                      </button>
+                    )}
                     <button type="button" className="stats-filter-overlay-close" onClick={() => setShowFilterPopup(false)} aria-label="Close filters">
                       <X size={20} strokeWidth={2} />
                     </button>

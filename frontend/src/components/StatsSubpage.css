@@ -1149,11 +1149,15 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   outline-offset: 2px;
 }
 
-/* Filters content inside overlay */
+/* Filters content inside overlay: tighter spacing between categories */
 .stats-filter-overlay-body .research-stats-filters {
   border-bottom: none;
   margin-bottom: 0;
   padding: 0;
+  gap: 8px 16px;
+}
+.stats-filter-overlay-body .research-stats-filters .stats-filter-section-title {
+  margin-bottom: 4px;
 }
 
 /* Inline filters (when used inside overlay body) */

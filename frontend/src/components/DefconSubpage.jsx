@@ -394,6 +394,20 @@ export default function DefconSubpage({ isActive = true }) {
             <div className="stats-filter-overlay-header">
               <span className="stats-filter-overlay-title">Filters</span>
               <div className="stats-filter-overlay-header-actions">
+                {(scopeFilter !== 'owned' || positionFilter !== 'all' || matchupFilter !== 'all') && (
+                  <button
+                    type="button"
+                    className="stats-filter-overlay-reset"
+                    onClick={() => {
+                      setScopeFilter('owned')
+                      setPositionFilter('all')
+                      setMatchupFilter('all')
+                    }}
+                    aria-label="Reset all filters to default"
+                  >
+                    Reset
+                  </button>
+                )}
                 <button type="button" className="stats-filter-overlay-close" onClick={() => setShowFilterPopup(false)} aria-label="Close filters">
                   <X size={20} strokeWidth={2} />
                 </button>

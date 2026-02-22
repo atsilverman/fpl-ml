@@ -468,6 +468,7 @@ class PlayerDataRefresher:
         live_only: bool = False,
         expect_live_unavailable: bool = False,
         element_summary_batch_size: int = 10,
+        element_summary_batch_delay: float = 0.5,
         use_delta: bool = True,
     ):
         """
@@ -487,6 +488,7 @@ class PlayerDataRefresher:
             live_only: If True, skip updating expected stats and ICT stats (static per match)
             expect_live_unavailable: If True, log fallback to element-summary at debug (e.g. backfill)
             element_summary_batch_size: Batch size for element-summary fallback (default 10).
+            element_summary_batch_delay: Seconds to sleep between batches (default 0.5). Use 0 to test API limits.
             use_delta: If True, only fetch element-summary for players who need refresh (default True).
         """
         if not active_player_ids:
@@ -567,7 +569,7 @@ class PlayerDataRefresher:
         select_fields = (
             "player_id, fixture_id, opponent_team_id, was_home, kickoff_time, team_id, "
             "minutes, goals_scored, assists, own_goals, penalties_missed, penalties_saved, "
-            "bonus, provisional_bonus, yellow_cards, red_cards, clean_sheets, saves, goals_conceded, "
+            "bonus, provisional_bonus, bps, yellow_cards, red_cards, clean_sheets, saves, goals_conceded, "
             "defensive_contribution, total_points"
         )
         if live_only:
@@ -1163,9 +1165,9 @@ class PlayerDataRefresher:
                 if batch_stats:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)
                 
-                # Small delay between batches
-                if i + element_summary_batch_size < len(player_list):
-                    await asyncio.sleep(0.5)
+                # Optional delay between batches (0 to test API limits; 0.5 default for live/orchestrator)
+                if element_summary_batch_delay > 0 and i + element_summary_batch_size < len(player_list):
+                    await asyncio.sleep(element_summary_batch_delay)
             
             # Compute and persist provisional_bonus for provisional fixtures (BPS rank 3/2/1)
             # so the frontend can show correct points when bonus not yet in API

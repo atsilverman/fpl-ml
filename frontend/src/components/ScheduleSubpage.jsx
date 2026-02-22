@@ -343,7 +343,7 @@ export default function ScheduleSubpage() {
                 type="button"
                 className="stats-filter-btn stats-compare-btn schedule-filter-btn"
                 disabled
-                aria-label="Customize difficulty (unavailable while loading)"
+                aria-label="Customize Difficulty (unavailable while loading)"
               >
                 <SlidersHorizontal size={14} strokeWidth={2} />
                 <span className="stats-toolbar-btn-label">Customize</span>
@@ -377,7 +377,7 @@ export default function ScheduleSubpage() {
                   type="button"
                   className="stats-filter-btn stats-compare-btn schedule-filter-btn"
                   onClick={() => setCustomizePopoverOpen(true)}
-                  aria-label="Customize difficulty"
+                  aria-label="Customize Difficulty"
                   aria-expanded={false}
                   aria-haspopup="dialog"
                 >
@@ -412,7 +412,7 @@ export default function ScheduleSubpage() {
               type="button"
               className={`stats-filter-btn stats-compare-btn schedule-filter-btn ${customizePopoverOpen ? 'stats-filter-btn-close' : ''} ${(config?.teamStrengthOverrides ?? config?.teamAttackOverrides ?? config?.teamDefenceOverrides) ? 'stats-compare-btn--active' : ''}`}
               onClick={() => setCustomizePopoverOpen((open) => !open)}
-              aria-label={customizePopoverOpen ? 'Close customize' : 'Customize difficulty'}
+              aria-label={customizePopoverOpen ? 'Close customize' : 'Customize Difficulty'}
               aria-expanded={customizePopoverOpen}
               aria-haspopup="dialog"
             >
@@ -556,11 +556,11 @@ export default function ScheduleSubpage() {
         </div>
       </div>
         {customizePopoverOpen && typeof document !== 'undefined' && createPortal(
-          <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Customize difficulty">
+          <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Customize Difficulty">
             <div className="stats-filter-overlay-backdrop" onClick={() => setCustomizePopoverOpen(false)} aria-hidden />
             <div className="stats-filter-overlay-panel stats-filter-overlay-panel--customize">
               <div className="schedule-filter-popover-header">
-                <span className="schedule-filter-popover-title">Customize difficulty</span>
+                <span className="schedule-filter-popover-title">Customize Difficulty</span>
                 <div className="schedule-filter-popover-header-actions">
                   {hasCustomizerOverrides && (
                     <button
@@ -611,14 +611,13 @@ export default function ScheduleSubpage() {
               <div className="stats-filter-overlay-footer stats-filter-overlay-footer--customize">
                 <button
                   type="button"
-                  className={`stats-filter-overlay-save ${hasCustomizerChanges ? 'stats-filter-overlay-save--active' : ''}`}
-                  onClick={() => hasCustomizerChanges && scheduleCustomizerRef.current?.save()}
-                  disabled={!hasCustomizerChanges}
-                  aria-label="Save difficulty changes"
+                  className="stats-filter-overlay-done"
+                  onClick={() => {
+                    if (hasCustomizerChanges && scheduleCustomizerRef.current?.save) scheduleCustomizerRef.current.save()
+                    setCustomizePopoverOpen(false)
+                  }}
+                  aria-label="Done"
                 >
-                  Save
-                </button>
-                <button type="button" className="stats-filter-overlay-done" onClick={() => setCustomizePopoverOpen(false)} aria-label="Done">
                   Done
                 </button>
               </div>

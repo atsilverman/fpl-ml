@@ -77,6 +77,9 @@
 }
 
 .schedule-customizer-stat-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 500;
@@ -85,6 +88,9 @@
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
+}
+.schedule-customizer-stat-tab-icon {
+  flex-shrink: 0;
 }
 
 @media (hover: hover) and (min-width: 769px) {

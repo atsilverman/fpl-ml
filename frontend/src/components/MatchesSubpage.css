@@ -1287,22 +1287,22 @@ html[data-theme="dark"] .matchup-detail-pts-badge {
   background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
   border-radius: 6px;
 }
+/* Standardized green pill: same width/height for top10 pill and stat badges (defcon, saves, provisional) in top10 cells */
 .matchup-detail-td-stat--top10 .matchup-detail-stat-badge,
 .matchup-detail-td-stat--top10 .matchup-detail-stat-top10-pill {
   background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
   border-radius: 6px;
-}
-.matchup-detail-stat-top10-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  min-height: 1.4em;
+  min-width: 30px;
+  min-height: 20px;
   padding: 3px 8px;
-  border-radius: 6px;
-  font-weight: 600;
+  box-sizing: border-box;
   font-variant-numeric: tabular-nums;
-  background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
+}
+.matchup-detail-stat-top10-pill {
+  font-weight: 600;
 }
 html[data-theme="dark"] .matchup-detail-td-pts--top10 .matchup-detail-pts-badge,
 html[data-theme="dark"] .matchup-detail-td-stat--top10 .matchup-detail-stat-badge,

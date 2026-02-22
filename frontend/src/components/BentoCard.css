@@ -309,6 +309,37 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   color: var(--text-secondary);
 }
 
+/* Total points expanded: filter button (DEFCON style, same size as collapse) – left of collapse */
+.bento-card-total-points-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  box-sizing: border-box;
+}
+
+.bento-card-total-points-filter-btn .bento-card-expand-icon-svg {
+  color: inherit;
+}
+
+@media (hover: hover) {
+  .bento-card-total-points-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+
 .bento-card-compare-btn {
   display: inline-flex;
   align-items: center;
@@ -2048,4 +2079,258 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
 html[data-theme="dark"] .captain-standings-bento-badge-v {
   color: #d1d5db;
   background: #4b5563;
+}
+
+/* Total points filter popup – same structure as Defcon stats-filter-overlay */
+.stats-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.stats-filter-overlay[aria-modal="true"] {
+  pointer-events: auto;
+}
+.stats-filter-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+.stats-filter-overlay-panel {
+  position: relative;
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+  height: max-content;
+  max-height: calc(100vh - 24px);
+  min-height: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.stats-filter-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+.stats-filter-overlay-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.stats-filter-overlay-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.stats-filter-overlay-reset {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue, #3b82f6);
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-reset:hover {
+    color: var(--accent-blue, #3b82f6);
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-secondary));
+  }
+}
+.stats-filter-overlay-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-close:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+  }
+}
+.stats-filter-overlay-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 14px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.stats-filter-overlay-footer {
+  flex-shrink: 0;
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.stats-filter-overlay-done {
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
+  border: 1px solid var(--accent-blue, #3b82f6);
+  border-radius: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-done:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+    border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
+  }
+}
+.stats-filter-overlay-done:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+
+.bento-total-points-filter-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.bento-total-points-filter-section {
+  margin-bottom: 10px;
+}
+.bento-total-points-filter-section:last-child {
+  margin-bottom: 0;
+}
+.bento-total-points-filter-section-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.bento-total-points-filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bento-total-points-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px;
+  font-size: 10px;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+@media (hover: hover) {
+  .bento-total-points-filter-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--text-secondary);
+  }
+}
+.bento-total-points-filter-btn--active {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+}
+.bento-total-points-filter-btn--exclude.bento-total-points-filter-btn--active {
+  background: var(--accent-orange-bg, rgba(249, 115, 22, 0.15));
+  border-color: var(--accent-orange, #f97316);
+  color: var(--accent-orange, #f97316);
+}
+
+.bento-card-total-points-filter-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+/* Overall rank expanded: filter button (same style as total-points filter btn) */
+.bento-card-overall-rank-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  box-sizing: border-box;
+}
+.bento-card-overall-rank-filter-btn .bento-card-expand-icon-svg {
+  color: inherit;
+}
+@media (hover: hover) {
+  .bento-card-overall-rank-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+.bento-card-overall-rank-filter-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+/* Team value expanded: filter button (same style as overall-rank / total-points) */
+.bento-card-team-value-filter-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  box-sizing: border-box;
+}
+.bento-card-team-value-filter-btn .bento-card-expand-icon-svg {
+  color: inherit;
+}
+@media (hover: hover) {
+  .bento-card-team-value-filter-btn:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+  }
+}
+.bento-card-team-value-filter-btn--active {
+  color: var(--accent-blue);
+  border-color: var(--accent-blue);
 }

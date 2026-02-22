@@ -558,6 +558,23 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   align-items: center;
   gap: 4px;
 }
+.stats-filter-overlay-reset {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-blue, #3b82f6);
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .stats-filter-overlay-reset:hover {
+    color: var(--accent-blue, #3b82f6);
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-secondary));
+  }
+}
 .stats-filter-overlay-close {
   display: inline-flex;
   align-items: center;

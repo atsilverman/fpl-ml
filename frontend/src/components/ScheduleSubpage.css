@@ -596,23 +596,51 @@
   margin-bottom: 0;
 }
 
-/* Schedule filters overlay: less space below Done button */
-.stats-filter-overlay-panel--schedule .stats-filter-overlay-footer {
-  padding-bottom: 12px;
-}
-
-/* Customize difficulty overlay: scrollable body so team list fits; theme matches filter overlay */
-.stats-filter-overlay-panel--customize {
-  max-height: min(85vh, 520px);
+/* Schedule filters overlay: same width rules as Stats (StatsSubpage) panel so panel is ~395–397px on desktop */
+.stats-filter-overlay-panel--schedule {
+  width: min(395px, calc(100vw - 24px));
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 24px));
+  max-height: calc(100vh - 36px);
+  min-height: min(420px, calc(100vh - 48px));
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  flex: 0 0 auto;
 }
-.stats-filter-overlay-body--customize {
+.stats-filter-overlay-panel--schedule .schedule-filter-popover-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+}
+.stats-filter-overlay-panel--schedule .stats-filter-overlay-footer {
+  padding-bottom: 12px;
+  flex-shrink: 0;
+}
+
+/* Customize difficulty overlay: fill more of screen like Defcon filter popup (wider, taller) */
+.stats-filter-overlay-panel--customize {
+  flex: 0 0 auto;
+  width: calc(100vw - 24px);
+  min-width: 280px;
+  max-width: min(480px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  min-height: min(420px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+}
+.stats-filter-overlay-body--customize {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.stats-filter-overlay-body--customize > * {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .stats-filter-overlay-body--customize .customize-section-subtitle {
   margin: 0 0 10px 0;
@@ -627,68 +655,27 @@
   margin-bottom: 10px;
 }
 .stats-filter-overlay-body--customize .customize-rows {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   max-height: 40vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-/* Footer: Save (left, colorized only when changed) + Done (right) */
+/* Footer: Done only (saves on Done if there are changes) */
 .stats-filter-overlay-footer--customize {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .stats-filter-overlay-footer--customize .stats-filter-overlay-done {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
-  text-align: center;
-}
-.stats-filter-overlay-save {
+  display: block;
+  width: 100%;
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  flex: 0 0 auto;
-}
-/* Demoted until a change is made: greyed out when disabled (no unsaved changes) */
-.stats-filter-overlay-save:disabled {
-  cursor: default;
-  opacity: 0.5;
-  color: var(--text-secondary);
-  background: var(--bg-tertiary, rgba(0, 0, 0, 0.04));
-  border-color: var(--border-color);
-}
-.stats-filter-overlay-save--active {
-  background: var(--accent-blue, #3b82f6);
-  border-color: var(--accent-blue, #3b82f6);
-  color: #fff;
-}
-@media (hover: hover) {
-  .stats-filter-overlay-save:hover:not(:disabled) {
-    background: var(--bg-card);
-    color: var(--text-primary);
-    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
-  }
-  .stats-filter-overlay-save--active:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
-    border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 85%, #000);
-    color: #fff;
-  }
-}
-.stats-filter-overlay-footer--customize .stats-filter-overlay-done {
-  flex: 1 1 auto;
-  min-width: 0;
-  justify-content: center;
-  text-align: center;
 }
 
 /* Toolbar right: Reset + legend info (i) button */

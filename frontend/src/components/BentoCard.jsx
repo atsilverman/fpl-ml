@@ -8,7 +8,7 @@ import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users } from 'lucide-react'
+import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -114,6 +114,9 @@ export default function BentoCard({
   playerChartStatKey = 'total_points',
   onPlayerChartFilterChange = null,
   onPlayerChartStatChange = null,
+  playerChartExcludeHaaland = undefined,
+  onPlayerChartExcludeHaalandChange = null,
+  playerChartHideFilterControls = false,
   playerPointsByGameweek = null,
   currentGameweekPlayersData = null,
   gameweekFixturesFromPlayers = null,
@@ -158,6 +161,12 @@ export default function BentoCard({
   const [stateDebugPopupPosition, setStateDebugPopupPosition] = useState(null)
   const [gwLegendPopupPosition, setGwLegendPopupPosition] = useState(null)
   const gwLegendPopupContentRef = useRef(null)
+  const [showTotalPointsFilterPopup, setShowTotalPointsFilterPopup] = useState(false)
+  const totalPointsFilterPopupRef = useRef(null)
+  const [showOverallRankFilterPopup, setShowOverallRankFilterPopup] = useState(false)
+  const overallRankFilterPopupRef = useRef(null)
+  const [showTeamValueFilterPopup, setShowTeamValueFilterPopup] = useState(false)
+  const teamValueFilterPopupRef = useRef(null)
 
   useEffect(() => {
     if (!showStateDebugPopup) setStateDebugPopupPosition(null)
@@ -219,6 +228,39 @@ export default function BentoCard({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showStateDebugPopup, id])
+
+  useEffect(() => {
+    if (!showTotalPointsFilterPopup || id !== 'total-points') return
+    const handleClickOutside = (e) => {
+      if (totalPointsFilterPopupRef.current && totalPointsFilterPopupRef.current.contains(e.target)) return
+      if (e.target.closest('.bento-card-total-points-filter-btn')) return
+      setShowTotalPointsFilterPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showTotalPointsFilterPopup, id])
+
+  useEffect(() => {
+    if (!showOverallRankFilterPopup || id !== 'overall-rank') return
+    const handleClickOutside = (e) => {
+      if (overallRankFilterPopupRef.current && overallRankFilterPopupRef.current.contains(e.target)) return
+      if (e.target.closest('.bento-card-overall-rank-filter-btn')) return
+      setShowOverallRankFilterPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showOverallRankFilterPopup, id])
+
+  useEffect(() => {
+    if (!showTeamValueFilterPopup || id !== 'team-value') return
+    const handleClickOutside = (e) => {
+      if (teamValueFilterPopupRef.current && teamValueFilterPopupRef.current.contains(e.target)) return
+      if (e.target.closest('.bento-card-team-value-filter-btn')) return
+      setShowTeamValueFilterPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showTeamValueFilterPopup, id])
 
   const { themeMode, cycleTheme } = useTheme()
   const isTransfersExpanded = id === 'transfers' && isExpanded
@@ -310,6 +352,234 @@ export default function BentoCard({
 
   return (
     <div className={cardClasses} style={style}>
+      {id === 'total-points' && showTotalPointsFilterPopup && typeof document !== 'undefined' && createPortal(
+        <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Total points filters">
+          <div className="stats-filter-overlay-backdrop" onClick={() => setShowTotalPointsFilterPopup(false)} aria-hidden />
+          <div className="stats-filter-overlay-panel" ref={totalPointsFilterPopupRef}>
+            <div className="stats-filter-overlay-header">
+              <span className="stats-filter-overlay-title">Filters</span>
+              <div className="stats-filter-overlay-header-actions">
+                {(playerChartFilter !== 'last12' || playerChartExcludeHaaland) && (
+                  <button
+                    type="button"
+                    className="stats-filter-overlay-reset"
+                    onClick={() => {
+                      onPlayerChartFilterChange && onPlayerChartFilterChange('last12')
+                      onPlayerChartExcludeHaalandChange && onPlayerChartExcludeHaalandChange(false)
+                    }}
+                    aria-label="Reset all filters to default"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button type="button" className="stats-filter-overlay-close" onClick={() => setShowTotalPointsFilterPopup(false)} aria-label="Close filters">
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-body">
+              <div className="bento-total-points-filter-sections">
+                <div className="bento-total-points-filter-section">
+                  <div className="bento-total-points-filter-section-title">Range</div>
+                  <div className="bento-total-points-filter-buttons">
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${playerChartFilter === 'all' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onPlayerChartFilterChange && onPlayerChartFilterChange('all')}
+                      aria-pressed={playerChartFilter === 'all'}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${playerChartFilter === 'last12' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onPlayerChartFilterChange && onPlayerChartFilterChange('last12')}
+                      aria-pressed={playerChartFilter === 'last12'}
+                    >
+                      Last 12
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${playerChartFilter === 'last6' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onPlayerChartFilterChange && onPlayerChartFilterChange('last6')}
+                      aria-pressed={playerChartFilter === 'last6'}
+                    >
+                      Last 6
+                    </button>
+                  </div>
+                </div>
+                <div className="bento-total-points-filter-section">
+                  <div className="bento-total-points-filter-section-title">Players</div>
+                  <div className="bento-total-points-filter-buttons">
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn bento-total-points-filter-btn--exclude ${playerChartExcludeHaaland ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onPlayerChartExcludeHaalandChange && onPlayerChartExcludeHaalandChange(!playerChartExcludeHaaland)}
+                      aria-pressed={playerChartExcludeHaaland}
+                      title="Exclude Haaland from view and recalculate percentages"
+                    >
+                      Exclude Haaland
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-footer">
+              <button type="button" className="stats-filter-overlay-done" onClick={() => setShowTotalPointsFilterPopup(false)} aria-label="Done">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {id === 'overall-rank' && showOverallRankFilterPopup && typeof document !== 'undefined' && createPortal(
+        <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Overall rank filters">
+          <div className="stats-filter-overlay-backdrop" onClick={() => setShowOverallRankFilterPopup(false)} aria-hidden />
+          <div className="stats-filter-overlay-panel" ref={overallRankFilterPopupRef}>
+            <div className="stats-filter-overlay-header">
+              <span className="stats-filter-overlay-title">Filters</span>
+              <div className="stats-filter-overlay-header-actions">
+                {(chartFilter !== 'last12' || showTop10Lines) && (
+                  <button
+                    type="button"
+                    className="stats-filter-overlay-reset"
+                    onClick={() => {
+                      onChartFilterChange && onChartFilterChange('last12')
+                      if (showTop10Lines && onShowTop10Change) onShowTop10Change()
+                    }}
+                    aria-label="Reset all filters to default"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button type="button" className="stats-filter-overlay-close" onClick={() => setShowOverallRankFilterPopup(false)} aria-label="Close filters">
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-body">
+              <div className="bento-total-points-filter-sections">
+                <div className="bento-total-points-filter-section">
+                  <div className="bento-total-points-filter-section-title">Range</div>
+                  <div className="bento-total-points-filter-buttons">
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'all' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('all')}
+                      aria-pressed={chartFilter === 'all'}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'last12' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('last12')}
+                      aria-pressed={chartFilter === 'last12'}
+                    >
+                      Last 12
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'last6' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('last6')}
+                      aria-pressed={chartFilter === 'last6'}
+                    >
+                      Last 6
+                    </button>
+                  </div>
+                </div>
+                {onShowTop10Change != null && (
+                  <div className="bento-total-points-filter-section">
+                    <div className="bento-total-points-filter-section-title">Chart</div>
+                    <div className="bento-total-points-filter-buttons">
+                      <button
+                        type="button"
+                        className={`bento-total-points-filter-btn ${showTop10Lines ? 'bento-total-points-filter-btn--active' : ''}`}
+                        onClick={() => onShowTop10Change()}
+                        aria-pressed={showTop10Lines}
+                        title={showTop10Lines ? 'Hide mini league leader line' : 'Show mini league leader line'}
+                      >
+                        Compare
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="stats-filter-overlay-footer">
+              <button type="button" className="stats-filter-overlay-done" onClick={() => setShowOverallRankFilterPopup(false)} aria-label="Done">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {id === 'team-value' && showTeamValueFilterPopup && typeof document !== 'undefined' && createPortal(
+        <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Team value filters">
+          <div className="stats-filter-overlay-backdrop" onClick={() => setShowTeamValueFilterPopup(false)} aria-hidden />
+          <div className="stats-filter-overlay-panel" ref={teamValueFilterPopupRef}>
+            <div className="stats-filter-overlay-header">
+              <span className="stats-filter-overlay-title">Filters</span>
+              <div className="stats-filter-overlay-header-actions">
+                {chartFilter !== 'last12' && (
+                  <button
+                    type="button"
+                    className="stats-filter-overlay-reset"
+                    onClick={() => onChartFilterChange && onChartFilterChange('last12')}
+                    aria-label="Reset all filters to default"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button type="button" className="stats-filter-overlay-close" onClick={() => setShowTeamValueFilterPopup(false)} aria-label="Close filters">
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-body">
+              <div className="bento-total-points-filter-sections">
+                <div className="bento-total-points-filter-section">
+                  <div className="bento-total-points-filter-section-title">Range</div>
+                  <div className="bento-total-points-filter-buttons">
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'all' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('all')}
+                      aria-pressed={chartFilter === 'all'}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'last12' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('last12')}
+                      aria-pressed={chartFilter === 'last12'}
+                    >
+                      Last 12
+                    </button>
+                    <button
+                      type="button"
+                      className={`bento-total-points-filter-btn ${chartFilter === 'last6' ? 'bento-total-points-filter-btn--active' : ''}`}
+                      onClick={() => onChartFilterChange && onChartFilterChange('last6')}
+                      aria-pressed={chartFilter === 'last6'}
+                    >
+                      Last 6
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-footer">
+              <button type="button" className="stats-filter-overlay-done" onClick={() => setShowTeamValueFilterPopup(false)} aria-label="Done">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
       {showStateDebugIcon && (
         <div className="bento-card-expand-icons" ref={stateDebugPopupRef}>
           <button
@@ -453,6 +723,22 @@ export default function BentoCard({
                   )}
               </>
             )}
+            {isTotalPointsExpanded && (
+              <button
+                type="button"
+                className={`bento-card-total-points-filter-btn${(playerChartFilter !== 'all' || playerChartExcludeHaaland) ? ' bento-card-total-points-filter-btn--active' : ''}`}
+                aria-label="Filter players"
+                aria-expanded={showTotalPointsFilterPopup}
+                aria-haspopup="dialog"
+                title="Filter players"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowTotalPointsFilterPopup((v) => !v)
+                }}
+              >
+                <Filter className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+              </button>
+            )}
             <div
               className={`bento-card-expand-icon bento-card-expand-icon--collapse${showGwLegendPopup ? ' bento-card-expand-icon--legend-open' : ''}`}
               title={showGwLegendPopup ? undefined : 'Collapse'}
@@ -461,46 +747,46 @@ export default function BentoCard({
               <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             </div>
           </div>
-        ) : (id === 'overall-rank' || id === 'team-value') && isExpanded && onChartFilterChange ? (
-          <div className="bento-card-expand-icons bento-card-expand-icons--chart-range">
-            <div className="bento-card-chart-range-btns" role="group" aria-label="Chart range">
-              <button
-                type="button"
-                className={`bento-card-chart-range-btn ${chartFilter === 'all' ? 'bento-card-chart-range-btn--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onChartFilterChange('all') }}
-                aria-pressed={chartFilter === 'all'}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                className={`bento-card-chart-range-btn ${chartFilter === 'last12' ? 'bento-card-chart-range-btn--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onChartFilterChange('last12') }}
-                aria-pressed={chartFilter === 'last12'}
-              >
-                Last 12
-              </button>
-              <button
-                type="button"
-                className={`bento-card-chart-range-btn ${chartFilter === 'last6' ? 'bento-card-chart-range-btn--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onChartFilterChange('last6') }}
-                aria-pressed={chartFilter === 'last6'}
-              >
-                Last 6
-              </button>
+        ) : id === 'overall-rank' && isExpanded ? (
+          <div className="bento-card-expand-icons">
+            <button
+              type="button"
+              className={`bento-card-overall-rank-filter-btn ${chartFilter !== 'all' || showTop10Lines ? 'bento-card-overall-rank-filter-btn--active' : ''}`}
+              aria-label="Filter chart"
+              aria-expanded={showOverallRankFilterPopup}
+              aria-haspopup="dialog"
+              title="Filter chart"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowOverallRankFilterPopup((v) => !v)
+              }}
+            >
+              <Filter className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+            </button>
+            <div
+              className="bento-card-expand-icon bento-card-expand-icon--collapse"
+              title="Collapse"
+              onClick={handleIconClick}
+            >
+              <Minimize2 className="bento-card-expand-icon-svg bento-card-collapse-x" size={11} strokeWidth={1.5} />
             </div>
-            {onShowTop10Change != null && (
-              <button
-                type="button"
-                className={`bento-card-compare-btn ${showTop10Lines ? 'bento-card-compare-btn--active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onShowTop10Change() }}
-                aria-pressed={showTop10Lines}
-                title={showTop10Lines ? 'Hide mini league leader line' : 'Show mini league leader line'}
-              >
-                <Users className="bento-card-compare-icon" size={14} strokeWidth={2} />
-                <span className="bento-card-compare-label">Compare</span>
-              </button>
-            )}
+          </div>
+        ) : id === 'team-value' && isExpanded ? (
+          <div className="bento-card-expand-icons">
+            <button
+              type="button"
+              className={`bento-card-team-value-filter-btn ${chartFilter !== 'all' ? 'bento-card-team-value-filter-btn--active' : ''}`}
+              aria-label="Filter chart"
+              aria-expanded={showTeamValueFilterPopup}
+              aria-haspopup="dialog"
+              title="Filter chart"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowTeamValueFilterPopup((v) => !v)
+              }}
+            >
+              <Filter className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+            </button>
             <div
               className="bento-card-expand-icon bento-card-expand-icon--collapse"
               title="Collapse"
@@ -764,8 +1050,9 @@ export default function BentoCard({
             loading={loading}
             filter={playerChartFilter}
             onFilterChange={onPlayerChartFilterChange}
-            statKey={playerChartStatKey}
-            onStatChange={onPlayerChartStatChange}
+            excludeHaaland={playerChartExcludeHaaland}
+            onExcludeHaalandChange={onPlayerChartExcludeHaalandChange}
+            hideFilterControls={playerChartHideFilterControls}
           />
         </div>
       )}

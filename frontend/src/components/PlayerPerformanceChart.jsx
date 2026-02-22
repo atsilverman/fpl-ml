@@ -1,17 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
-import { PLAYER_OWNED_STAT_KEYS } from '../hooks/usePlayerOwnedPerformance'
 import './PlayerPerformanceChart.css'
 
 const MOBILE_BREAKPOINT = 768
-
-const STAT_LABELS = {
-  total_points: 'Points',
-  bps: 'BPS',
-  goals_scored: 'Goals',
-  assists: 'Assists',
-}
 /** Bar width % above which we place the value inside the bar (right-aligned); below this, place after the bar. */
 const VALUE_ON_BAR_THRESHOLD_DESKTOP = 82
 const VALUE_ON_BAR_THRESHOLD_MOBILE = 72
@@ -38,15 +30,20 @@ function abbreviateName(name) {
  * Points shown are only those returned while the player was in the manager's starting XI (captain multiplier applied).
  * Filters: All / Last 12 / Last 6 gameweeks; Exclude Haaland.
  */
+/** Points-only chart: data[].total_points = contributed points (starting XI, captain applied). Sum of bars = config manager total in collapsed view. */
 export default function PlayerPerformanceChart({
   data = [],
   loading = false,
   filter = 'all',
   onFilterChange = null,
-  statKey = 'total_points',
-  onStatChange = null,
+  excludeHaaland: excludeHaalandProp,
+  onExcludeHaalandChange = null,
+  hideFilterControls = false,
 }) {
-  const [excludeHaaland, setExcludeHaaland] = useState(false)
+  const [internalExcludeHaaland, setInternalExcludeHaaland] = useState(false)
+  const isExcludeControlled = excludeHaalandProp !== undefined && onExcludeHaalandChange != null
+  const excludeHaaland = isExcludeControlled ? excludeHaalandProp : internalExcludeHaaland
+  const setExcludeHaaland = isExcludeControlled ? onExcludeHaalandChange : setInternalExcludeHaaland
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT)
   const { toast } = useToast()
 
@@ -165,73 +162,56 @@ export default function PlayerPerformanceChart({
           })}
       </div>
 
-      <div className="total-points-chart__controls">
-        {onStatChange && (
-          <>
-            {PLAYER_OWNED_STAT_KEYS.map((key) => (
+      {!hideFilterControls && (
+        <div className="total-points-chart__controls">
+          {onFilterChange && (
+            <>
               <button
-                key={key}
                 type="button"
-                className={`total-points-chart__btn ${statKey === key ? 'active' : ''}`}
+                className={`total-points-chart__btn ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => {
-                  onStatChange(key)
-                  toast(`Showing ${STAT_LABELS[key] ?? key}`)
+                  onFilterChange('all')
+                  toast('Showing all gameweeks')
                 }}
-                aria-pressed={statKey === key}
               >
-                {STAT_LABELS[key] ?? key}
+                All
               </button>
-            ))}
-            <span className="total-points-chart__separator" aria-hidden />
-          </>
-        )}
-        {onFilterChange && (
-          <>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('all')
-                toast('Showing all gameweeks')
-              }}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'last12' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('last12')
-                toast('Showing last 12 gameweeks')
-              }}
-            >
-              Last 12
-            </button>
-            <button
-              type="button"
-              className={`total-points-chart__btn ${filter === 'last6' ? 'active' : ''}`}
-              onClick={() => {
-                onFilterChange('last6')
-                toast('Showing last 6 gameweeks')
-              }}
-            >
-              Last 6
-            </button>
-            <span className="total-points-chart__separator" aria-hidden />
-          </>
-        )}
-        <button
-          type="button"
-          className={`total-points-chart__btn total-points-chart__btn--exclude ${excludeHaaland ? 'active' : ''}`}
-          onClick={() => {
-            setExcludeHaaland((prev) => !prev)
-            toast(excludeHaaland ? 'Including Haaland' : 'Excluding Haaland')
-          }}
-          title="Exclude Haaland from view and recalculate percentages"
-        >
-          Exclude Haaland
-        </button>
-      </div>
+              <button
+                type="button"
+                className={`total-points-chart__btn ${filter === 'last12' ? 'active' : ''}`}
+                onClick={() => {
+                  onFilterChange('last12')
+                  toast('Showing last 12 gameweeks')
+                }}
+              >
+                Last 12
+              </button>
+              <button
+                type="button"
+                className={`total-points-chart__btn ${filter === 'last6' ? 'active' : ''}`}
+                onClick={() => {
+                  onFilterChange('last6')
+                  toast('Showing last 6 gameweeks')
+                }}
+              >
+                Last 6
+              </button>
+              <span className="total-points-chart__separator" aria-hidden />
+            </>
+          )}
+          <button
+            type="button"
+            className={`total-points-chart__btn total-points-chart__btn--exclude ${excludeHaaland ? 'active' : ''}`}
+            onClick={() => {
+              setExcludeHaaland((prev) => !prev)
+              toast(excludeHaaland ? 'Including Haaland' : 'Excluding Haaland')
+            }}
+            title="Exclude Haaland from view and recalculate percentages"
+          >
+            Exclude Haaland
+          </button>
+        </div>
+      )}
     </div>
   )
 }

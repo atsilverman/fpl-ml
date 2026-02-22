@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
-import { Info } from 'lucide-react'
+import { Info, Swords, ShieldHalf } from 'lucide-react'
 import './ScheduleDifficultyCustomizer.css'
 
 export const SCHEDULE_STAT_OPTIONS = [
@@ -167,6 +167,8 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
               onClick={() => setSelectedStatId(optItem.id)}
               aria-pressed={selectedStatId === optItem.id}
             >
+              {optItem.id === 'attack' && <Swords size={14} strokeWidth={2} className="schedule-customizer-stat-tab-icon" aria-hidden />}
+              {optItem.id === 'defence' && <ShieldHalf size={14} strokeWidth={2} className="schedule-customizer-stat-tab-icon" aria-hidden />}
               {optItem.label}
             </button>
           ))}
@@ -286,6 +288,8 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
                   onClick={() => setSelectedStatId(optItem.id)}
                   aria-pressed={selectedStatId === optItem.id}
                 >
+                  {optItem.id === 'attack' && <Swords size={14} strokeWidth={2} className="schedule-customizer-stat-tab-icon" aria-hidden />}
+                  {optItem.id === 'defence' && <ShieldHalf size={14} strokeWidth={2} className="schedule-customizer-stat-tab-icon" aria-hidden />}
                   {optItem.label}
                 </button>
               ))}

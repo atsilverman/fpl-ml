@@ -53,7 +53,7 @@ function getFixtureStatus(fixture, _dataChecked = false) {
   return 'scheduled'
 }
 
-/** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). Bonus excluded (derived from BPS). */
+/** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). Bonus (B) excluded – green pill is only for raw stats; BPS = top 10 BPS across all players in the gameweek. */
 const STAT_KEYS_TOP10_FILL = ['bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
 const STAT_KEYS = [
@@ -178,7 +178,8 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
     const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
     const showBadge = showDefconBadge || showSavesBadge || isProvisionalBonus
-    const isTop10 = STAT_KEYS_TOP10_FILL.includes(key) && isTop10ForStat(player, key)
+    /* Green pill only for stats that are "top 10 in gameweek"; never for Bonus (B) column – that is derived from BPS. */
+    const isTop10 = key !== 'bonus' && STAT_KEYS_TOP10_FILL.includes(key) && isTop10ForStat(player, key)
     const displayVal = EXPECTED_STAT_KEYS.includes(key) ? formatExpected(value) : value
     if (isZero) {
       return (

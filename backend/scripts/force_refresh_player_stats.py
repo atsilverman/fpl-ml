@@ -9,6 +9,8 @@ the DB gets correct per-fixture defensive_contribution and fixture_id.
 Usage (from backend directory):
     python3 scripts/force_refresh_player_stats.py
     python3 scripts/force_refresh_player_stats.py --gw 25
+    python3 scripts/force_refresh_player_stats.py --gw 27 --batch-size 40 --batch-delay 0
+    MAX_REQUESTS_PER_MINUTE=90 MIN_REQUEST_INTERVAL=0.34 python3 scripts/force_refresh_player_stats.py --gw 27
 """
 
 import argparse
@@ -30,7 +32,11 @@ from refresh.players import PlayerDataRefresher
 from utils.logger import setup_logging
 
 
-async def force_refresh_player_stats(gameweek_override: Optional[int] = None) -> None:
+async def force_refresh_player_stats(
+    gameweek_override: Optional[int] = None,
+    batch_size: int = 30,
+    batch_delay: float = 0.0,
+) -> None:
     setup_logging()
     config = Config()
     db = SupabaseClient(config)
@@ -62,7 +68,7 @@ async def force_refresh_player_stats(gameweek_override: Optional[int] = None) ->
         return
 
     print(f"Refreshing player stats for GW{gw} ({len(player_ids)} players)...")
-    print("(Uses element-summary API; may take a minute.)\n")
+    print(f"(Batch size: {batch_size}, delay between batches: {batch_delay}s. Set MAX_REQUESTS_PER_MINUTE=90 to speed up.)\n")
 
     await refresher.refresh_player_gameweek_stats(
         gw,
@@ -73,6 +79,8 @@ async def force_refresh_player_stats(gameweek_override: Optional[int] = None) ->
         live_only=False,
         expect_live_unavailable=True,
         use_delta=False,
+        element_summary_batch_size=batch_size,
+        element_summary_batch_delay=batch_delay,
     )
 
     print("Done. player_gameweek_stats for this gameweek now have per-fixture data (e.g. DEFCON per game).")
@@ -88,8 +96,26 @@ def main() -> None:
         metavar="N",
         help="Gameweek to refresh (default: current gameweek from DB)",
     )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=30,
+        metavar="N",
+        help="Element-summary requests per batch (default 30). Try 40-50 with higher MAX_REQUESTS_PER_MINUTE.",
+    )
+    parser.add_argument(
+        "--batch-delay",
+        type=float,
+        default=0.0,
+        metavar="SECS",
+        help="Seconds to wait between batches (default 0). Use 0.5 if you hit 429 rate limits.",
+    )
     args = parser.parse_args()
-    asyncio.run(force_refresh_player_stats(gameweek_override=args.gw))
+    asyncio.run(force_refresh_player_stats(
+        gameweek_override=args.gw,
+        batch_size=args.batch_size,
+        batch_delay=args.batch_delay,
+    ))
 
 
 if __name__ == "__main__":
