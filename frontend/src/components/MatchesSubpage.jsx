@@ -36,21 +36,20 @@ function SortTriangle({ direction }) {
 /**
  * Fixture status: Final = match-level finished === true (FPL confirmed; reddish/orange).
  * Provisional = finished_provisional === true but finished === false (yellowish; label "Finished").
- * We treat started + minutes >= 90 + !finished as provisional so we never show "Live" for
- * provisionally finished games when finished_provisional is missing or stale.
+ * Live = started and not finished_provisional (same as debug panel / useRefreshState).
+ * We rely on finished_provisional only: at 90+ minutes the API often still reports minutes=90
+ * and finished_provisional=false until the final whistle, so we must not treat "minutes >= 90"
+ * as provisional or we show "Finished" during live stoppage time.
  */
 function getFixtureStatus(fixture, _dataChecked = false) {
   if (!fixture) return 'scheduled'
   const started = Boolean(fixture.started)
   const finished = Boolean(fixture.finished)
   const finishedProvisional = Boolean(fixture.finished_provisional)
-  const minutes = Number(fixture.minutes)
-  const atOrPast90 = !Number.isNaN(minutes) && minutes >= 90
-  const effectivelyProvisional = finishedProvisional || (started && !finished && atOrPast90)
   if (!started) return 'scheduled'
   if (started && finished) return 'final'
-  if (started && effectivelyProvisional) return 'provisional'
-  if (started && !effectivelyProvisional) return 'live'
+  if (started && finishedProvisional) return 'provisional'
+  if (started && !finishedProvisional) return 'live'
   return 'scheduled'
 }
 

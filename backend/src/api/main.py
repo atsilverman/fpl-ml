@@ -347,195 +347,150 @@ def get_team_stats(
 
 @app.get("/api/v1/fixtures")
 def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
-    """One response: fixtures with team names + all player stats per fixture from master MV. UI filters client-side."""
+    """Fixtures list always from fixtures table (full gameweek). Stats per fixture from MV, then player_gameweek_stats for any fixture with no MV data (per-match flex during live)."""
     db = get_db()
-    try:
-        r = (
-            db.client.table("mv_master_player_fixture_stats")
-            .select("*")
-            .eq("gameweek", gameweek)
-            .execute()
-        )
-    except Exception as e:
-        return {"fixtures": [], "playerStatsByFixture": {}, "error": str(e)}
-    rows = r.data or []
     by_fixture = {}
-    # Build distinct fixtures (one row per fixture has same fixture metadata)
-    seen = set()
-    fixtures = []
-    for row in rows:
-        fid = row.get("fixture_id")
-        if fid is None or fid in seen:
-            continue
-        seen.add(fid)
-        fixtures.append({
-            "fpl_fixture_id": fid,
-            "gameweek": row.get("gameweek"),
-            "home_team_id": row.get("home_team_id"),
-            "away_team_id": row.get("away_team_id"),
-            "home_team_short_name": row.get("home_team_short_name"),
-            "away_team_short_name": row.get("away_team_short_name"),
-            "kickoff_time": row.get("kickoff_time"),
-            "deadline_time": row.get("deadline_time"),
-            "home_score": row.get("home_score"),
-            "away_score": row.get("away_score"),
-            "started": row.get("started"),
-            "finished": row.get("finished"),
-            "finished_provisional": row.get("finished_provisional"),
-            "minutes": row.get("fixture_minutes"),
-            "homeTeam": {"short_name": row.get("home_team_short_name"), "team_name": None},
-            "awayTeam": {"short_name": row.get("away_team_short_name"), "team_name": None},
-        })
-    # When we have fixtures from MV, overlay live fields from fixtures table so scoreline/minutes stay current.
-    # The MV is not refreshed during live; the orchestrator updates the fixtures table every fast cycle.
-    if fixtures:
-        try:
-            f_r = db.client.table("fixtures").select(
-                "fpl_fixture_id, home_score, away_score, minutes, started, finished, finished_provisional"
-            ).eq("gameweek", gameweek).execute()
-            live_by_fid = {r["fpl_fixture_id"]: r for r in (f_r.data or []) if r.get("fpl_fixture_id") is not None}
-            for fi in fixtures:
-                fid = fi.get("fpl_fixture_id")
-                live = live_by_fid.get(fid) if fid is not None else None
-                if live:
-                    fi["home_score"] = live.get("home_score")
-                    fi["away_score"] = live.get("away_score")
-                    fi["minutes"] = live.get("minutes") if live.get("minutes") is not None else fi.get("minutes")
-                    fi["started"] = live.get("started")
-                    fi["finished"] = live.get("finished")
-                    fi["finished_provisional"] = live.get("finished_provisional")
-        except Exception:
-            pass
+    try:
+        # 1. Always build fixture list from fixtures table so we have all matches (live + finished + provisional).
+        f_r = db.client.table("fixtures").select("*").eq("gameweek", gameweek).order("kickoff_time").execute()
+        fix_list = f_r.data or []
         team_ids = set()
-        for fi in fixtures:
-            if fi.get("home_team_id") is not None:
-                team_ids.add(fi["home_team_id"])
-            if fi.get("away_team_id") is not None:
-                team_ids.add(fi["away_team_id"])
+        for f in fix_list:
+            if f.get("home_team_id"):
+                team_ids.add(f["home_team_id"])
+            if f.get("away_team_id"):
+                team_ids.add(f["away_team_id"])
+        team_map = {}
         if team_ids:
+            t_r = db.client.table("teams").select("team_id, short_name, team_name").in_("team_id", list(team_ids)).execute()
+            team_map = {t["team_id"]: {"short_name": t.get("short_name"), "team_name": t.get("team_name")} for t in (t_r.data or [])}
+        fixtures = []
+        for f in fix_list:
+            fixtures.append({
+                "fpl_fixture_id": f.get("fpl_fixture_id"),
+                "gameweek": f.get("gameweek"),
+                "home_team_id": f.get("home_team_id"),
+                "away_team_id": f.get("away_team_id"),
+                "home_team_short_name": team_map.get(f.get("home_team_id"), {}).get("short_name"),
+                "away_team_short_name": team_map.get(f.get("away_team_id"), {}).get("short_name"),
+                "kickoff_time": f.get("kickoff_time"),
+                "deadline_time": f.get("deadline_time"),
+                "home_score": f.get("home_score"),
+                "away_score": f.get("away_score"),
+                "started": f.get("started"),
+                "finished": f.get("finished"),
+                "finished_provisional": f.get("finished_provisional"),
+                "minutes": f.get("minutes"),
+                "homeTeam": team_map.get(f.get("home_team_id")) or {"short_name": None, "team_name": None},
+                "awayTeam": team_map.get(f.get("away_team_id")) or {"short_name": None, "team_name": None},
+            })
+        fixture_ids = {fi["fpl_fixture_id"] for fi in fixtures if fi.get("fpl_fixture_id") is not None}
+
+        # 2. Fill stats from MV where available.
+        try:
+            mv_r = db.client.table("mv_master_player_fixture_stats").select("*").eq("gameweek", gameweek).execute()
+            rows = mv_r.data or []
+            for row in rows:
+                fid = row.get("fixture_id")
+                if fid is None:
+                    continue
+                if fid not in by_fixture:
+                    by_fixture[fid] = []
+                eff_bonus = row.get("effective_bonus")
+                if eff_bonus is None:
+                    eff_bonus = row.get("bonus") if (row.get("bonus_status") == "confirmed" or (row.get("bonus") or 0) > 0) else row.get("provisional_bonus")
+                if eff_bonus is None:
+                    eff_bonus = 0
+                by_fixture[fid].append({
+                    "player_id": row.get("player_id"),
+                    "web_name": row.get("player_web_name"),
+                    "position": row.get("player_position"),
+                    "fixture_id": row.get("fixture_id"),
+                    "team_id": row.get("team_id"),
+                    "team_short_name": row.get("team_short_name"),
+                    "minutes": row.get("minutes"),
+                    "total_points": row.get("effective_total_points"),
+                    "effective_total_points": row.get("effective_total_points"),
+                    "bonus": int(eff_bonus) if eff_bonus is not None else 0,
+                    "bonus_status": row.get("bonus_status") or "provisional",
+                    "goals_scored": row.get("goals_scored"),
+                    "assists": row.get("assists"),
+                    "clean_sheets": row.get("clean_sheets"),
+                    "saves": row.get("saves"),
+                    "bps": row.get("bps"),
+                    "defensive_contribution": row.get("defensive_contribution"),
+                    "yellow_cards": row.get("yellow_cards"),
+                    "red_cards": row.get("red_cards"),
+                    "expected_goals": row.get("expected_goals"),
+                    "expected_assists": row.get("expected_assists"),
+                    "expected_goal_involvements": row.get("expected_goal_involvements"),
+                    "expected_goals_conceded": row.get("expected_goals_conceded"),
+                    "goals_conceded": row.get("goals_conceded"),
+                })
+        except Exception:
+            rows = []
+
+        # 3. For fixtures with no MV stats (e.g. during live when MV is stale), fill from player_gameweek_stats.
+        missing_fids = [fid for fid in fixture_ids if not by_fixture.get(fid)]
+        if missing_fids:
             try:
-                t_r = db.client.table("teams").select("team_id, short_name, team_name").in_("team_id", list(team_ids)).execute()
-                team_map = {t["team_id"]: {"short_name": t.get("short_name"), "team_name": t.get("team_name")} for t in (t_r.data or [])}
-                for fi in fixtures:
-                    if fi.get("home_team_id") is not None and fi["home_team_id"] in team_map:
-                        fi["homeTeam"] = team_map[fi["home_team_id"]].copy()
-                    if fi.get("away_team_id") is not None and fi["away_team_id"] in team_map:
-                        fi["awayTeam"] = team_map[fi["away_team_id"]].copy()
+                pgs_r = db.client.table("player_gameweek_stats").select(
+                    "player_id, fixture_id, team_id, minutes, total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, bonus_status, bonus, provisional_bonus"
+                ).eq("gameweek", gameweek).in_("fixture_id", missing_fids).execute()
+                pgs_rows = pgs_r.data or []
+                if pgs_rows:
+                    player_ids = list({r["player_id"] for r in pgs_rows})
+                    pl_r = db.client.table("players").select("fpl_player_id, web_name, position").in_("fpl_player_id", player_ids).execute()
+                    pl_map = {p["fpl_player_id"]: p for p in (pl_r.data or [])}
+                    team_ids_p = set(r["team_id"] for r in pgs_rows if r.get("team_id") is not None)
+                    t_r2 = db.client.table("teams").select("team_id, short_name").in_("team_id", list(team_ids_p)).execute()
+                    team_short = {t["team_id"]: t.get("short_name") for t in (t_r2.data or [])}
+                    for r in pgs_rows:
+                        fid = r.get("fixture_id")
+                        if fid is None or fid == 0:
+                            continue
+                        info = pl_map.get(r["player_id"]) or {}
+                        bonus_status = r.get("bonus_status") or "provisional"
+                        prov_b = int(r.get("provisional_bonus") or 0)
+                        off_b = int(r.get("bonus") or 0)
+                        total_pts = int(r.get("total_points") or 0)
+                        eff_pts = total_pts if (bonus_status == "confirmed" or off_b > 0) else total_pts + prov_b
+                        if fid not in by_fixture:
+                            by_fixture[fid] = []
+                        display_bonus = off_b if (bonus_status == "confirmed" or off_b > 0) else prov_b
+                        by_fixture[fid].append({
+                            "player_id": r.get("player_id"),
+                            "web_name": info.get("web_name", "Unknown"),
+                            "position": info.get("position"),
+                            "fixture_id": fid,
+                            "team_id": r.get("team_id"),
+                            "team_short_name": team_short.get(r["team_id"]),
+                            "minutes": r.get("minutes"),
+                            "total_points": eff_pts,
+                            "effective_total_points": eff_pts,
+                            "bonus": display_bonus,
+                            "bonus_status": bonus_status,
+                            "goals_scored": r.get("goals_scored"),
+                            "assists": r.get("assists"),
+                            "clean_sheets": r.get("clean_sheets"),
+                            "saves": r.get("saves"),
+                            "bps": r.get("bps"),
+                            "defensive_contribution": r.get("defensive_contribution"),
+                            "yellow_cards": r.get("yellow_cards"),
+                            "red_cards": r.get("red_cards"),
+                            "expected_goals": r.get("expected_goals"),
+                            "expected_assists": r.get("expected_assists"),
+                            "expected_goal_involvements": r.get("expected_goal_involvements"),
+                            "expected_goals_conceded": r.get("expected_goals_conceded"),
+                            "goals_conceded": r.get("goals_conceded"),
+                        })
             except Exception:
                 pass
-    # If no rows from MV (e.g. MV not populated), fall back to fixtures + teams tables
-    if not fixtures and not rows:
-        try:
-            f_r = db.client.table("fixtures").select("*").eq("gameweek", gameweek).order("kickoff_time").execute()
-            fix_list = f_r.data or []
-            if fix_list:
-                team_ids = set()
-                for f in fix_list:
-                    if f.get("home_team_id"):
-                        team_ids.add(f["home_team_id"])
-                    if f.get("away_team_id"):
-                        team_ids.add(f["away_team_id"])
-                t_r = db.client.table("teams").select("team_id, short_name, team_name").in_("team_id", list(team_ids)).execute()
-                team_map = {t["team_id"]: {"short_name": t.get("short_name"), "team_name": t.get("team_name")} for t in (t_r.data or [])}
-                for f in fix_list:
-                    f["homeTeam"] = team_map.get(f.get("home_team_id")) or {"short_name": None, "team_name": None}
-                    f["awayTeam"] = team_map.get(f.get("away_team_id")) or {"short_name": None, "team_name": None}
-                fixtures = fix_list
-                # When using fallback, MV had no rows so by_fixture would be empty. Populate from player_gameweek_stats.
-                try:
-                    pgs_r = db.client.table("player_gameweek_stats").select("player_id, fixture_id, team_id, minutes, total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, bonus_status, bonus, provisional_bonus").eq("gameweek", gameweek).execute()
-                    pgs_rows = pgs_r.data or []
-                    if pgs_rows:
-                        player_ids = list({r["player_id"] for r in pgs_rows})
-                        pl_r = db.client.table("players").select("fpl_player_id, web_name, position").in_("fpl_player_id", player_ids).execute()
-                        pl_map = {p["fpl_player_id"]: p for p in (pl_r.data or [])}
-                        team_ids_p = set(r["team_id"] for r in pgs_rows if r.get("team_id") is not None)
-                        t_r2 = db.client.table("teams").select("team_id, short_name").in_("team_id", list(team_ids_p)).execute()
-                        team_short = {t["team_id"]: t.get("short_name") for t in (t_r2.data or [])}
-                        for r in pgs_rows:
-                            fid = r.get("fixture_id")
-                            if fid is None or fid == 0:
-                                continue
-                            info = pl_map.get(r["player_id"]) or {}
-                            bonus_status = r.get("bonus_status") or "provisional"
-                            prov_b = int(r.get("provisional_bonus") or 0)
-                            off_b = int(r.get("bonus") or 0)
-                            total_pts = int(r.get("total_points") or 0)
-                            eff_pts = total_pts if (bonus_status == "confirmed" or off_b > 0) else total_pts + prov_b
-                            if fid not in by_fixture:
-                                by_fixture[fid] = []
-                            display_bonus = off_b if (bonus_status == "confirmed" or off_b > 0) else prov_b
-                            by_fixture[fid].append({
-                                "player_id": r.get("player_id"),
-                                "web_name": info.get("web_name", "Unknown"),
-                                "position": info.get("position"),
-                                "fixture_id": fid,
-                                "team_id": r.get("team_id"),
-                                "team_short_name": team_short.get(r["team_id"]),
-                                "minutes": r.get("minutes"),
-                                "total_points": eff_pts,
-                                "effective_total_points": eff_pts,
-                                "bonus": display_bonus,
-                                "bonus_status": bonus_status,
-                                "goals_scored": r.get("goals_scored"),
-                                "assists": r.get("assists"),
-                                "clean_sheets": r.get("clean_sheets"),
-                                "saves": r.get("saves"),
-                                "bps": r.get("bps"),
-                                "defensive_contribution": r.get("defensive_contribution"),
-                                "yellow_cards": r.get("yellow_cards"),
-                                "red_cards": r.get("red_cards"),
-                                "expected_goals": r.get("expected_goals"),
-                                "expected_assists": r.get("expected_assists"),
-                                "expected_goal_involvements": r.get("expected_goal_involvements"),
-                                "expected_goals_conceded": r.get("expected_goals_conceded"),
-                                "goals_conceded": r.get("goals_conceded"),
-                            })
-                except Exception:
-                    pass
-        except Exception:
-            pass
-    # Group player stats by fixture_id (from MV rows when available)
-    for row in rows:
-        fid = row.get("fixture_id")
-        if fid is None:
-            continue
-        if fid not in by_fixture:
-            by_fixture[fid] = []
-        eff_bonus = row.get("effective_bonus")
-        if eff_bonus is None:
-            eff_bonus = row.get("bonus") if (row.get("bonus_status") == "confirmed" or (row.get("bonus") or 0) > 0) else row.get("provisional_bonus")
-        if eff_bonus is None:
-            eff_bonus = 0
-        by_fixture[fid].append({
-            "player_id": row.get("player_id"),
-            "web_name": row.get("player_web_name"),
-            "position": row.get("player_position"),
-            "fixture_id": row.get("fixture_id"),
-            "team_id": row.get("team_id"),
-            "team_short_name": row.get("team_short_name"),
-            "minutes": row.get("minutes"),
-            "total_points": row.get("effective_total_points"),
-            "effective_total_points": row.get("effective_total_points"),
-            "bonus": int(eff_bonus) if eff_bonus is not None else 0,
-            "bonus_status": row.get("bonus_status") or "provisional",
-            "goals_scored": row.get("goals_scored"),
-            "assists": row.get("assists"),
-            "clean_sheets": row.get("clean_sheets"),
-            "saves": row.get("saves"),
-            "bps": row.get("bps"),
-            "defensive_contribution": row.get("defensive_contribution"),
-            "yellow_cards": row.get("yellow_cards"),
-            "red_cards": row.get("red_cards"),
-            "expected_goals": row.get("expected_goals"),
-            "expected_assists": row.get("expected_assists"),
-            "expected_goal_involvements": row.get("expected_goal_involvements"),
-            "expected_goals_conceded": row.get("expected_goals_conceded"),
-            "goals_conceded": row.get("goals_conceded"),
-        })
-    # Sort fixtures by kickoff_time
-    fixtures.sort(key=lambda x: (x.get("kickoff_time") or ""))
-    return {"fixtures": fixtures, "playerStatsByFixture": by_fixture}
+
+        fixtures.sort(key=lambda x: (x.get("kickoff_time") or ""))
+        return {"fixtures": fixtures, "playerStatsByFixture": by_fixture}
+    except Exception as e:
+        return {"fixtures": [], "playerStatsByFixture": {}, "error": str(e)}
 
 
 @app.get("/health")
