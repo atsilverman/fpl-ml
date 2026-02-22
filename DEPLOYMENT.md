@@ -70,6 +70,32 @@ sudo systemctl status fpl-refresh.service
 sudo journalctl -u fpl-refresh.service -f
 ```
 
+### 7b. Orchestrator not running / how long has it been down?
+
+**Check health from DB (run from your machine or droplet; needs backend `.env` with Supabase credentials):**
+
+```bash
+cd /opt/fpl-refresh  # or your repo root
+python3 backend/scripts/check_orchestrator_health.py
+```
+
+This prints the last refresh event time and age. If there is no event in the last 5 minutes, it exits with code 1 and tells you the orchestrator appears down.
+
+**Restart the orchestrator (on the droplet):**
+
+```bash
+sudo systemctl restart fpl-refresh.service
+sudo systemctl status fpl-refresh.service
+```
+
+If it keeps failing, check logs for the crash reason:
+
+```bash
+sudo journalctl -u fpl-refresh.service -n 100 --no-pager
+```
+
+**Common causes:** Missing or wrong `.env` (use `/opt/fpl-refresh/.env` or `/opt/fpl-refresh/backend/.env`; the service loads both), Python/venv path, or network/DB errors. The main entry point loads `.env` from both `backend/.env` and repo root so either location works.
+
 ### 8. Deploy updates to production (main → droplet)
 
 After pushing changes to `main`, deploy to the Digital Ocean droplet.

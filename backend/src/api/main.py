@@ -386,8 +386,26 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
             "homeTeam": {"short_name": row.get("home_team_short_name"), "team_name": None},
             "awayTeam": {"short_name": row.get("away_team_short_name"), "team_name": None},
         })
-    # When we have fixtures from MV, look up team_name from teams (MV only has short_name)
+    # When we have fixtures from MV, overlay live fields from fixtures table so scoreline/minutes stay current.
+    # The MV is not refreshed during live; the orchestrator updates the fixtures table every fast cycle.
     if fixtures:
+        try:
+            f_r = db.client.table("fixtures").select(
+                "fpl_fixture_id, home_score, away_score, minutes, started, finished, finished_provisional"
+            ).eq("gameweek", gameweek).execute()
+            live_by_fid = {r["fpl_fixture_id"]: r for r in (f_r.data or []) if r.get("fpl_fixture_id") is not None}
+            for fi in fixtures:
+                fid = fi.get("fpl_fixture_id")
+                live = live_by_fid.get(fid) if fid is not None else None
+                if live:
+                    fi["home_score"] = live.get("home_score")
+                    fi["away_score"] = live.get("away_score")
+                    fi["minutes"] = live.get("minutes") if live.get("minutes") is not None else fi.get("minutes")
+                    fi["started"] = live.get("started")
+                    fi["finished"] = live.get("finished")
+                    fi["finished_provisional"] = live.get("finished_provisional")
+        except Exception:
+            pass
         team_ids = set()
         for fi in fixtures:
             if fi.get("home_team_id") is not None:

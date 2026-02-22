@@ -12,9 +12,11 @@ import signal
 import sys
 from pathlib import Path
 
-# Load .env from backend directory before Config() is used
+# Load .env: backend/.env first, then repo root (e.g. /opt/fpl-refresh/.env for systemd)
 from dotenv import load_dotenv
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+_backend_dir = Path(__file__).resolve().parent.parent
+load_dotenv(_backend_dir / ".env")
+load_dotenv(_backend_dir.parent / ".env")
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
