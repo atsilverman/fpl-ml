@@ -24,19 +24,21 @@ Fixtures are the **single source** for "match live" and "match ended (provisiona
 
 | Field | Source | Persisted | Used for |
 |-------|--------|-----------|----------|
-| `started`, `finished`, `finished_provisional` | /fixtures/ | Yes | State: LIVE_MATCHES = started && !finished_provisional; BONUS_PENDING = all finished_provisional && !finished; baseline gate |
+| `started`, `finished`, `finished_provisional` | /fixtures/ | Yes | State: LIVE_MATCHES = started or (now >= kickoff_time) && !finished_provisional; BONUS_PENDING = all finished_provisional && !finished; baseline gate |
 | `minutes` | /fixtures/ primary; event-live can augment (max) | Yes | Clock display; player refresh gating |
-| `kickoff_time` | /fixtures/ | Yes | Kickoff window, "last match of day" rank monitor, idle sleep cap |
+| `kickoff_time` | /fixtures/ | Yes | **Live at kickoff:** we enter LIVE when now >= kickoff_time (exact minute), not when FPL flips started. Also: kickoff window, "last match of day" rank monitor, idle sleep cap. |
 | `team_h`, `team_a`, scores | /fixtures/; scores from API only (event-live used only to augment minutes) | Yes | DGW-safe scoreline; manager live-data path |
 
-**Hooks:** `_is_in_kickoff_window`, `_is_likely_live_window`, `get_next_kickoff_for_gameweek`, `get_first_kickoff_for_gameweek` — used to shorten idle sleep and enter live quickly.
+**Live detection uses current and next gameweek fixtures.** We load fixtures for both `is_current` and `is_next` so that when the first match of the *next* gameweek kicks off (by time), we enter LIVE even before FPL has set that gameweek as `is_current`. When the in-progress fixture is in the next GW, we set `current_gameweek` to that GW for the rest of the cycle (event-live, player refresh).
+
+**Hooks:** `_is_in_kickoff_window`, `_is_likely_live_window`, `get_next_kickoff_for_gameweek`, `get_first_kickoff_for_gameweek` — used to shorten idle sleep and enter live quickly. Idle sleep also considers next gameweek’s first kickoff so we use the short interval when the next GW’s match has started.
 
 ---
 
 ## State Definitions
 
-- **Live** = at least one fixture has `started === true` and `finished_provisional === false` (clock running).
-- **Bonus pending** = all fixtures have `finished_provisional === true` and `finished === false` (match(es) ended, FPL not yet confirmed).
+- **Live** = at least one fixture (current or **next** gameweek) is in progress: `started === true` **or** `now >= kickoff_time`, and `finished_provisional === false`. We use `kickoff_time` so we enter LIVE at the exact minute kickoff happens; we consider next-GW fixtures so we go live when the first match of the new GW kicks off even before FPL sets `is_current`.
+- **Bonus pending** = all fixtures (current GW only) have `finished_provisional === true` and `finished === false` (match(es) ended, FPL not yet confirmed).
 - **Final** = fixture `finished === true` (FPL confirmed).
 
 Backend (`_detect_state`) and frontend (`useRefreshState`) use the same order: price_window → live_matches → bonus_pending → transfer_deadline → idle.
@@ -64,8 +66,9 @@ Backend (`_detect_state`) and frontend (`useRefreshState`) use the same order: p
 
 ## Config and Cadence
 
-- **KICKOFF_WINDOW_MINUTES**: When now is within this many minutes of any fixture kickoff, use the shorter fast-loop interval so we discover `started === true` quickly.
-- Fast/slow loop intervals: see `backend/src/config.py`. Kickoff window drives shorter sleep so we enter LIVE_MATCHES soon after first kickoff.
+- **KICKOFF_WINDOW_MINUTES**: When now is within this many minutes of any fixture kickoff (current or next GW), use the shorter fast-loop interval so we discover live quickly.
+- Fast/slow loop intervals: see `backend/src/config.py`. Kickoff window and next-GW first kickoff drive shorter sleep so we enter LIVE_MATCHES at or right after first kickoff.
+- Idle sleep considers next gameweek’s first kickoff: when current GW has no future kickoff, we check if the next GW’s first match has kicked off and if so use the short interval so we detect live on the next cycle.
 
 ---
 

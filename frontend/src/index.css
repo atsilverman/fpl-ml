@@ -159,7 +159,7 @@ body {
   max-width: 100vw;
 }
 
-/* Hide scrollbars */
+/* Hide scrollbars on mobile */
 ::-webkit-scrollbar {
   display: none;
   width: 0;
@@ -169,6 +169,34 @@ body {
 * {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+/* Desktop: show scrollbars (thin, themed) */
+@media (hover: hover) and (min-width: 769px) {
+  ::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+    -ms-overflow-style: auto;
+  }
 }
 
 /* Toast notification – above bottom nav (.page-selector-bottom is ~43px, z-index 100) */

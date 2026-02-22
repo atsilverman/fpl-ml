@@ -209,31 +209,95 @@ class RefreshOrchestrator:
         if self._is_price_change_window(datetime.now(timezone.utc)):
             return RefreshState.PRICE_WINDOW
         
-        # Get fixtures for current gameweek
-        fixtures = self.db_client.client.table("fixtures").select("*").eq(
-            "gameweek", self.current_gameweek
+        # Get fixtures for current and next gameweek so we detect live when first match of *next* GW kicks off
+        # (e.g. Tot–Ars in GW27 while FPL has not yet set is_current=27).
+        gw_ids_for_fixtures = [current_gw["id"]]
+        next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+        next_gw = next_gws[0] if next_gws else None
+        if next_gw:
+            gw_ids_for_fixtures.append(next_gw["id"])
+        fixtures = self.db_client.client.table("fixtures").select("*").in_(
+            "gameweek", gw_ids_for_fixtures
         ).execute().data
         
-        # Check for live matches (match in progress: clock running, not yet provisionally finished)
-        live_matches = [
-            f for f in fixtures
-            if f.get("started") and not f.get("finished_provisional")
-        ]
+        # Fixtures for current GW only (for bonus_pending and later checks)
+        fixtures_current = [f for f in fixtures if f.get("gameweek") == current_gw["id"]]
         
+        now = datetime.now(timezone.utc)
+        # Live = in progress: at or past scheduled kickoff and not yet provisionally finished.
+        # Use kickoff_time so we enter LIVE at the exact minute kickoff happens, not when FPL API flips started.
+        def _fixture_in_progress(f: Dict[str, Any]) -> bool:
+            if f.get("finished_provisional"):
+                return False
+            if f.get("started"):
+                return True
+            k = f.get("kickoff_time")
+            if not k:
+                return False
+            try:
+                kickoff = datetime.fromisoformat(k.replace("Z", "+00:00"))
+                if kickoff.tzinfo is None:
+                    kickoff = kickoff.replace(tzinfo=timezone.utc)
+                return now >= kickoff
+            except (ValueError, TypeError):
+                return False
+
+        live_matches = [f for f in fixtures if _fixture_in_progress(f)]
         if live_matches:
+            # If live match is in next GW, use that as current so event-live and player refresh use correct GW
+            live_in_next = next((f for f in live_matches if f.get("gameweek") == next_gw["id"]), None) if next_gw else None
+            if live_in_next:
+                self.current_gameweek = next_gw["id"]
+                logger.info(
+                    "Live match in next gameweek (kickoff passed); using next GW as current",
+                    extra={"gameweek": next_gw["id"], "gameweek_name": next_gw.get("name")},
+                )
             return RefreshState.LIVE_MATCHES
         
-        # Check for bonus pending: all fixtures finished_provisional and not finished
-        if fixtures and all(
+        # Diagnostic: when no live found, log fixture state so we can see e.g. next GW kickoff passed but not detected
+        if fixtures and logger.isEnabledFor(logging.DEBUG):
+            def _past_kickoff(f: Dict[str, Any]) -> bool:
+                k = f.get("kickoff_time")
+                if not k:
+                    return False
+                try:
+                    ko = datetime.fromisoformat(k.replace("Z", "+00:00"))
+                    if ko.tzinfo is None:
+                        ko = ko.replace(tzinfo=timezone.utc)
+                    return now >= ko
+                except (ValueError, TypeError):
+                    return False
+            fixture_diag = [
+                {
+                    "gameweek": f.get("gameweek"),
+                    "kickoff_time": f.get("kickoff_time"),
+                    "started": f.get("started"),
+                    "finished_provisional": f.get("finished_provisional"),
+                    "past_kickoff": _past_kickoff(f),
+                }
+                for f in fixtures
+            ]
+            logger.debug(
+                "No live matches; fixture state",
+                extra={
+                    "current_gw_id": current_gw["id"],
+                    "next_gw_id": next_gw["id"] if next_gw else None,
+                    "fixture_count_current": len(fixtures_current),
+                    "fixture_count_next": len(fixtures) - len(fixtures_current),
+                    "fixtures": fixture_diag,
+                },
+            )
+        
+        # Check for bonus pending: all fixtures finished_provisional and not finished (current GW only)
+        if fixtures_current and all(
             f.get("finished_provisional") and not f.get("finished")
-            for f in fixtures
+            for f in fixtures_current
         ):
             return RefreshState.BONUS_PENDING
         
         # Check transfer deadline: enter when we're 30+ min past the relevant deadline.
         # (1) Next GW's deadline passed → wait for that GW to become is_current, then run batch.
         # (2) Current GW's deadline was 30+ min ago → FPL may have already flipped; enter and run batch for current.
-        now = datetime.now(timezone.utc)
         if not self.deadline_refresh_completed:
             next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
             if next_gws:
@@ -723,13 +787,40 @@ class RefreshOrchestrator:
                 "player_id"
             ).eq("gameweek", self.current_gameweek).execute()
             player_ids = list({r["player_id"] for r in (stats_result.data or [])})
+
+            # If no stats were collected during live (e.g. orchestrator wasn't running), backfill from
+            # element-summary for all players in teams that have a finished/provisional fixture this gameweek.
+            # This ensures the bonus subpage has BPS data for all matches.
+            use_delta = True
             if not player_ids:
-                logger.debug("Catch-up refresh: no player stats for gameweek", extra={"gameweek": self.current_gameweek})
-                return
-            logger.info("Catch-up player refresh (element-summary) for confirmed bonus", extra={
-                "gameweek": self.current_gameweek,
-                "player_count": len(player_ids),
-            })
+                team_ids = set()
+                for f in fixtures_by_gameweek.values():
+                    if f.get("finished") or f.get("finished_provisional"):
+                        th, ta = f.get("team_h"), f.get("team_a")
+                        if th is not None:
+                            team_ids.add(th)
+                        if ta is not None:
+                            team_ids.add(ta)
+                if not team_ids:
+                    logger.debug("Catch-up: no finished fixtures, skip", extra={"gameweek": self.current_gameweek})
+                    return
+                players_result = self.db_client.client.table("players").select(
+                    "fpl_player_id"
+                ).in_("team_id", list(team_ids)).execute()
+                player_ids = [r["fpl_player_id"] for r in (players_result.data or []) if r.get("fpl_player_id")]
+                if not player_ids:
+                    logger.debug("Catch-up: no players for teams in finished fixtures", extra={"gameweek": self.current_gameweek})
+                    return
+                use_delta = False
+                logger.info(
+                    "Catch-up backfill: no player_gameweek_stats for gameweek, fetching BPS for all players in finished fixtures (element-summary)",
+                    extra={"gameweek": self.current_gameweek, "player_count": len(player_ids), "team_count": len(team_ids)},
+                )
+            else:
+                logger.info("Catch-up player refresh (element-summary) for confirmed bonus", extra={
+                    "gameweek": self.current_gameweek,
+                    "player_count": len(player_ids),
+                })
             await self.player_refresher.refresh_player_gameweek_stats(
                 self.current_gameweek,
                 set(player_ids),
@@ -738,7 +829,14 @@ class RefreshOrchestrator:
                 bootstrap=bootstrap,
                 live_only=True,
                 expect_live_unavailable=True,
+                use_delta=use_delta,
             )
+            # After a backfill (no stats existed), refresh the fixtures MV so the API serves BPS for all matches
+            if not use_delta:
+                try:
+                    self.db_client.refresh_materialized_view("mv_master_player_fixture_stats")
+                except Exception as mv_err:
+                    logger.warning("MV refresh after backfill failed", extra={"error": str(mv_err)})
             # Validation: stop when no player has provisional status
             if not self._has_any_provisional_bonus(self.current_gameweek):
                 self._catch_up_done_gameweeks.add(self.current_gameweek)
@@ -1258,6 +1356,8 @@ class RefreshOrchestrator:
         """
         When state is IDLE, return sleep seconds so we run at least once before/during the
         kickoff window. Uses next (future) kickoff to cap sleep and avoid skipping the window.
+        Considers both current and next gameweek so we use short interval when next GW's first
+        match has kicked off (FPL may not have set is_current yet).
         When in gameweek, never exceed max_idle_sleep_seconds so we match API cadence (~1 min).
         """
         if self._is_in_kickoff_window() or self._is_likely_live_window():
@@ -1272,6 +1372,19 @@ class RefreshOrchestrator:
             return s
         try:
             next_kickoff_raw = self.db_client.get_next_kickoff_for_gameweek(self.current_gameweek)
+            # If no future kickoff in current GW, check next gameweek (first match may have kicked off)
+            if not next_kickoff_raw:
+                next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
+                if next_gws:
+                    next_gw_id = next_gws[0]["id"]
+                    first_kickoff_raw = self.db_client.get_first_kickoff_for_gameweek(next_gw_id)
+                    if first_kickoff_raw:
+                        first_kickoff = datetime.fromisoformat(first_kickoff_raw.replace("Z", "+00:00"))
+                        if first_kickoff.tzinfo is None:
+                            first_kickoff = first_kickoff.replace(tzinfo=timezone.utc)
+                        if datetime.now(timezone.utc) >= first_kickoff:
+                            return self.config.fast_loop_interval_live
+                    next_kickoff_raw = self.db_client.get_next_kickoff_for_gameweek(next_gw_id)
             if not next_kickoff_raw:
                 return cap_for_gameweek(default_sleep)
             kickoff = datetime.fromisoformat(next_kickoff_raw.replace("Z", "+00:00"))
@@ -1464,6 +1577,19 @@ class RefreshOrchestrator:
                         self.db_client.insert_refresh_duration_log("fixtures", "fast", self.current_state.value, duration_ms)
                     except Exception:
                         pass
+                # Re-detect state after refreshing fixtures so we transition to LIVE_MATCHES in the same
+                # cycle we get started=true from FPL (otherwise we stay IDLE until the next cycle).
+                new_state_after_fixtures = await self._detect_state()
+                if new_state_after_fixtures != self.current_state:
+                    logger.info("State transition (after fixtures refresh)", extra={
+                        "from": self.current_state.value,
+                        "to": new_state_after_fixtures.value,
+                    })
+                    if new_state_after_fixtures == RefreshState.LIVE_MATCHES:
+                        logger.info("First fixture started, entering LIVE_MATCHES", extra={"gameweek": self.current_gameweek})
+                    if self.current_state in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING) and new_state_after_fixtures not in (RefreshState.LIVE_MATCHES, RefreshState.BONUS_PENDING):
+                        self._last_live_standings_in_fast_cycle = None
+                    self.current_state = new_state_after_fixtures
                 # Catch-up: when fixtures finished but we stopped normal refresh, pull confirmed bonus via element-summary
                 t2 = datetime.now(timezone.utc)
                 await self._run_catch_up_player_refresh(

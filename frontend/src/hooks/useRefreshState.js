@@ -14,10 +14,23 @@ function isPriceWindow() {
   return pstMinutes >= windowStart && pstMinutes <= windowEnd
 }
 
+/** Fixture in progress: started (API) or at/past scheduled kickoff, and not provisionally finished. */
+function fixtureInProgress(f, now) {
+  if (f.finished_provisional) return false
+  if (f.started) return true
+  const k = f.kickoff_time
+  if (!k) return false
+  try {
+    const kickoff = new Date(k.replace('Z', '+00:00'))
+    return now >= kickoff
+  } catch {
+    return false
+  }
+}
+
 /**
  * Derives the refresh orchestrator state from gameweeks + fixtures (same logic as backend).
- * State is only LIVE_MATCHES when fixtures have started && !finished_provisional (backend does not
- * use kickoff/likely-live window for state—those affect polling interval only).
+ * Live = at or past scheduled kickoff (we have exact minute) and not finished_provisional.
  */
 export function useRefreshState() {
   const { data: gwData } = useQuery({
@@ -44,18 +57,19 @@ export function useRefreshState() {
       const start = performance.now()
       const { data, error } = await supabase
         .from('fixtures')
-        .select('started, finished, finished_provisional')
+        .select('started, finished, finished_provisional, kickoff_time')
         .eq('gameweek', currentGameweek)
       if (error) return []
       const f = data ?? []
+      const now = Date.now()
       let logState = 'idle'
       if (gwData?.is_current) {
         if (isPriceWindow()) logState = 'price_window'
-        else if (f.some((x) => x.started && !x.finished_provisional)) logState = 'live_matches'
+        else if (f.some((x) => fixtureInProgress(x, now))) logState = 'live_matches'
         else if (f.length && f.every((x) => x.finished_provisional && !x.finished)) logState = 'bonus_pending'
         else if (deadlineTime) {
           const d = new Date(deadlineTime.replace('Z', '+00:00'))
-          const mins = (Date.now() - d) / 60000
+          const mins = (now - d) / 60000
           if (mins >= 30 && mins <= DEADLINE_WINDOW_END_MINUTES) logState = 'transfer_deadline'
         }
       } else if (!gwData) logState = 'outside_gameweek'
@@ -74,7 +88,8 @@ export function useRefreshState() {
     // Match backend order: price window first, then live, bonus, deadline, idle
     if (isPriceWindow()) return 'price_window'
 
-    const liveMatches = fixtures.filter((f) => f.started && !f.finished_provisional)
+    const now = Date.now()
+    const liveMatches = fixtures.filter((f) => fixtureInProgress(f, now))
     if (liveMatches.length) return 'live_matches'
 
     const allBonusPending = fixtures.length > 0 && fixtures.every((f) => f.finished_provisional && !f.finished)

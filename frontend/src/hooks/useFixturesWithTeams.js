@@ -65,60 +65,64 @@ async function fetchFixturesFromSupabase(gameweek, simulateStatuses) {
   if (simulateStatuses) list = applySimulatedStatuses(list)
 
   const playerStatsByFixture = {}
-  try {
-    const { data: pgsRows, error: pgsError } = await supabase
-      .from('player_gameweek_stats')
-      .select('player_id, fixture_id, team_id, minutes, total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, bonus_status, bonus, provisional_bonus')
-      .eq('gameweek', gameweek)
+  const { data: pgsRows, error: pgsError } = await supabase
+    .from('player_gameweek_stats')
+    .select('player_id, fixture_id, team_id, minutes, total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, bonus_status, bonus, provisional_bonus')
+    .eq('gameweek', gameweek)
 
-    if (!pgsError && pgsRows?.length) {
-      const playerIds = [...new Set(pgsRows.map(r => r.player_id))]
+  if (!pgsError && pgsRows?.length) {
+    const playerIds = [...new Set(pgsRows.map(r => r.player_id))]
+    let playerMap = {}
+    let teamShortMap = {}
+    try {
       const [playersRes, teamsPRes] = await Promise.all([
         supabase.from('players').select('fpl_player_id, web_name, position').in('fpl_player_id', playerIds),
         supabase.from('teams').select('team_id, short_name').in('team_id', [...new Set(pgsRows.map(r => r.team_id).filter(Boolean))])
       ])
-      const playerMap = Object.fromEntries((playersRes.data ?? []).map(p => [p.fpl_player_id, p]))
-      const teamShortMap = Object.fromEntries((teamsPRes.data ?? []).map(t => [t.team_id, t.short_name]))
-
-      for (const r of pgsRows) {
-        const fid = r.fixture_id != null && r.fixture_id !== 0 ? Number(r.fixture_id) : null
-        if (fid == null) continue
-        const info = playerMap[r.player_id] ?? {}
-        const bonusStatus = r.bonus_status ?? 'provisional'
-        const provB = Number(r.provisional_bonus) ?? 0
-        const offB = Number(r.bonus) ?? 0
-        const totalPts = Number(r.total_points) ?? 0
-        const effPts = (bonusStatus === 'confirmed' || offB > 0) ? totalPts : totalPts + provB
-        const key = fid
-        if (!playerStatsByFixture[key]) playerStatsByFixture[key] = []
-        playerStatsByFixture[key].push({
-          player_id: r.player_id,
-          web_name: info.web_name ?? 'Unknown',
-          position: info.position,
-          fixture_id: fid,
-          team_id: r.team_id,
-          team_short_name: teamShortMap[r.team_id] ?? null,
-          minutes: r.minutes,
-          total_points: effPts,
-          effective_total_points: effPts,
-          goals_scored: r.goals_scored,
-          assists: r.assists,
-          clean_sheets: r.clean_sheets,
-          saves: r.saves,
-          bps: r.bps,
-          defensive_contribution: r.defensive_contribution,
-          yellow_cards: r.yellow_cards,
-          red_cards: r.red_cards,
-          expected_goals: r.expected_goals,
-          expected_assists: r.expected_assists,
-          expected_goal_involvements: r.expected_goal_involvements,
-          expected_goals_conceded: r.expected_goals_conceded,
-          goals_conceded: r.goals_conceded
-        })
-      }
+      playerMap = Object.fromEntries((playersRes.data ?? []).map(p => [p.fpl_player_id, p]))
+      teamShortMap = Object.fromEntries((teamsPRes.data ?? []).map(t => [t.team_id, t.short_name]))
+    } catch (_) {
+      // Enrichment failed; still push stats with Unknown names so BPS/bonus show
     }
-  } catch (_) {
-    // ignore
+    for (const r of pgsRows) {
+      const fid = r.fixture_id != null && r.fixture_id !== 0 ? Number(r.fixture_id) : null
+      if (fid == null) continue
+      const info = playerMap[r.player_id] ?? {}
+      const bonusStatus = r.bonus_status ?? 'provisional'
+      const provB = Number(r.provisional_bonus) ?? 0
+      const offB = Number(r.bonus) ?? 0
+      const totalPts = Number(r.total_points) ?? 0
+      const effPts = (bonusStatus === 'confirmed' || offB > 0) ? totalPts : totalPts + provB
+      const key = fid
+      if (!playerStatsByFixture[key]) playerStatsByFixture[key] = []
+      const displayBonus = (bonusStatus === 'confirmed' || offB > 0) ? offB : provB
+      playerStatsByFixture[key].push({
+        player_id: r.player_id,
+        web_name: info.web_name ?? 'Unknown',
+        position: info.position,
+        fixture_id: fid,
+        team_id: r.team_id,
+        team_short_name: teamShortMap[r.team_id] ?? null,
+        minutes: r.minutes,
+        total_points: effPts,
+        effective_total_points: effPts,
+        bonus: displayBonus,
+        bonus_status: bonusStatus,
+        goals_scored: r.goals_scored,
+        assists: r.assists,
+        clean_sheets: r.clean_sheets,
+        saves: r.saves,
+        bps: r.bps,
+        defensive_contribution: r.defensive_contribution,
+        yellow_cards: r.yellow_cards,
+        red_cards: r.red_cards,
+        expected_goals: r.expected_goals,
+        expected_assists: r.expected_assists,
+        expected_goal_involvements: r.expected_goal_involvements,
+        expected_goals_conceded: r.expected_goals_conceded,
+        goals_conceded: r.goals_conceded
+      })
+    }
   }
   return { fixtures: list, playerStatsByFixture }
 }

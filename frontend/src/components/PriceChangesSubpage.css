@@ -105,6 +105,29 @@
   display: none;
 }
 
+/* Desktop: show scrollbars on Price Changes subpage */
+@media (hover: hover) and (min-width: 769px) {
+  .price-changes-bento-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .price-changes-bento-scroll::-webkit-scrollbar {
+    display: block;
+    width: 8px;
+    height: 8px;
+  }
+  .price-changes-bento-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .price-changes-bento-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .price-changes-bento-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 .price-changes-bento-scroll-hint {
   position: absolute;
   bottom: 2px;

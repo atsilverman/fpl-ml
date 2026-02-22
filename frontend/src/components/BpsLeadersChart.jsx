@@ -88,7 +88,7 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
   const barWidthPercent = (bps) =>
     maxBps > 0 ? Math.min(100, ((bps ?? 0) / maxBps) * 100) : 0
 
-  /** Bonus 3 = gold, 2 = silver, 1 = bronze, 0 = neutral. */
+  /** Bonus 3 = gold (1st), 2 = silver (2nd), 1 = bronze (3rd), 0 = neutral. Uses effective_bonus or bonus from player. */
   const barClassForBonus = (bonus) => {
     const b = bonus ?? 0
     if (b === 3) return 'bps-chart__fill--bonus-1'
@@ -182,9 +182,11 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
           const bps = player.bps ?? 0
           const widthPct = barWidthPercent(bps)
           const valueOnBar = widthPct >= VALUE_ON_BAR_MIN_WIDTH_PCT
-          const apiBonus = player.bonus ?? 0
-          const bonus = apiBonus >= 1 && apiBonus <= 3
-            ? apiBonus
+          const apiBonus = player.bonus ?? player.effective_bonus ?? 0
+          const numBonus = Number(apiBonus)
+          const hasOfficialBonus = numBonus >= 1 && numBonus <= 3
+          const bonus = hasOfficialBonus
+            ? numBonus
             : isProvisional
               ? (index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0)
               : 0

@@ -176,6 +176,18 @@ Set up Row Level Security policies if you need multi-tenant support.
 - Check deployment logs in Vercel dashboard
 - Monitor Supabase egress usage in Supabase dashboard
 
+## Duck DNS / optional fixtures API
+
+If you run the **FastAPI server** (e.g. at `https://fpl-ml.duckdns.org`) to serve `/api/v1/fixtures`:
+
+- **HTTPS required when frontend is on HTTPS:** If the frontend is deployed on HTTPS (e.g. Vercel) and `VITE_API_BASE_URL` is `http://...`, the browser blocks the request (mixed content). The app then uses **Supabase only** for fixtures and player stats (BPS/bonus). So either:
+  - Use **HTTPS** for the API (e.g. reverse proxy with Let’s Encrypt on the duck host), and set `VITE_API_BASE_URL=https://fpl-ml.duckdns.org`, or
+  - Leave `VITE_API_BASE_URL` unset so the frontend always uses Supabase; ensure the **orchestrator** (see below) is running so the DB has fixtures and `player_gameweek_stats`.
+
+- **Live feed events:** The **Feed** (live subpage) is populated by the **refresh orchestrator** (`fpl-refresh.service`), not by the API. When a match is live, the orchestrator must be running and entering `LIVE_MATCHES` so it can write to `gameweek_feed_events`. If the Feed stays empty during a live game, check that the orchestrator is running on the droplet and that logs show `LIVE_MATCHES` and player refresh (e.g. `journalctl -u fpl-refresh.service -f`).
+
+- **BPS for completed games:** After matches finish, run the backfill so `player_gameweek_stats` is filled, then refresh materialized views. With `VITE_API_BASE_URL` unset, the frontend reads BPS from Supabase (`player_gameweek_stats`); with the API set (HTTPS), it can use the API’s MV-backed response.
+
 ## Troubleshooting
 
 ### Backend Issues

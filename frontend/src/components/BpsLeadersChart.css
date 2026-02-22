@@ -80,6 +80,28 @@
   gap: 6px;
 }
 
+/* Desktop: show scrollbars in Bonus subpage chart */
+@media (hover: hover) and (min-width: 769px) {
+  .bps-chart__bars {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .bps-chart__bars::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .bps-chart__bars::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .bps-chart__bars::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .bps-chart__bars::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 .bps-chart__row {
   display: flex;
   align-items: center;

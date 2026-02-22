@@ -1445,6 +1445,17 @@ html[data-theme="dark"] .schedule-scroll-wrap {
   border-radius: 4px;
 }
 
+/* Desktop: show scrollbars on Fixtures/Schedule subpage */
+@media (hover: hover) and (min-width: 769px) {
+  .schedule-scroll-wrap {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .schedule-scroll-wrap::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 .schedule-table {
   display: table;
   width: max-content;

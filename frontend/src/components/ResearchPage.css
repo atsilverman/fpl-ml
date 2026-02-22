@@ -59,6 +59,28 @@
   }
 }
 
+/* Desktop: show scrollbars when Research content area scrolls (e.g. Stats/Schedule/Price Changes) */
+@media (hover: hover) and (min-width: 769px) {
+  .research-page .research-page-content {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .research-page .research-page-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .research-page .research-page-content::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .research-page .research-page-content::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .research-page .research-page-content::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 /* Mobile landscape only: Schedule view – subpage selectors on left, stacked vertically, table on right */
 @media (max-width: 768px) and (orientation: landscape) {
   .research-page.research-page--schedule-view {

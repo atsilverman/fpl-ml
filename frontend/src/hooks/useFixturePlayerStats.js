@@ -49,12 +49,14 @@ function mapPreloadedToHomeAway(preloaded, homeTeamId, awayTeamId) {
 export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamId, enabled, preloadedFixtureStats = null, preferSupabaseStats = false) {
   const { state: refreshState } = useRefreshState()
   const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
-  // When live, don't use preloaded so the per-fixture query runs and refetches (numeric MP). When not live, use preloaded to avoid N extra requests.
-  const hasPreloaded = !isLive && Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
+  // Use preloaded only when we have non-empty data for this fixture.
+  const hasPreloaded = Array.isArray(preloadedFixtureStats) && preloadedFixtureStats.length > 0 && !!homeTeamId && !!awayTeamId
+  // During live_matches we don't use preloaded so we get fresh minutes; for final/provisional we still want to show BPS so we fall back to API or Supabase.
+  const usePreloaded = hasPreloaded && (refreshState === 'bonus_pending' || refreshState !== 'live_matches')
 
   const apiBase = getApiBase()
   const needApiFallback =
-    !hasPreloaded &&
+    !usePreloaded &&
     !preferSupabaseStats &&
     !!apiBase &&
     !!gameweek &&
@@ -84,6 +86,17 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
     needApiFallback &&
     Array.isArray(statsForThisFixture) &&
     statsForThisFixture.length > 0
+
+  // Run Supabase whenever we don't have preloaded and aren't using API stats for this fixture.
+  // Don't wait for API — so final/provisional fixtures get BPS from Supabase even when API only has the live fixture.
+  const runSupabaseFallback =
+    !!enabled &&
+    !!fixtureId &&
+    !!gameweek &&
+    !!homeTeamId &&
+    !!awayTeamId &&
+    !usePreloaded &&
+    !useApiStats
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['fixture-player-stats', fixtureId, gameweek],
@@ -186,21 +199,13 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
 
       return { homePlayers, awayPlayers }
     },
-    enabled:
-      !!enabled &&
-      !!fixtureId &&
-      !!gameweek &&
-      !!homeTeamId &&
-      !!awayTeamId &&
-      !hasPreloaded &&
-      (!needApiFallback || apiStatsData !== undefined || apiStatsError) &&
-      !useApiStats,
+    enabled: runSupabaseFallback,
     staleTime: isLive ? 20 * 1000 : 30000,
     refetchInterval: isLive ? 25 * 1000 : false,
     refetchIntervalInBackground: isLive
   })
 
-  if (hasPreloaded && enabled) {
+  if (usePreloaded && enabled) {
     const { homePlayers, awayPlayers } = mapPreloadedToHomeAway(preloadedFixtureStats, homeTeamId, awayTeamId)
     return { homePlayers, awayPlayers, loading: false, error: null }
   }
@@ -210,13 +215,21 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
     return { homePlayers, awayPlayers, loading: false, error: null }
   }
 
+  // Prefer Supabase data when we have it (final/provisional fixtures) so we always show BPS when available.
+  const supabaseHome = data?.homePlayers ?? []
+  const supabaseAway = data?.awayPlayers ?? []
+  const hasSupabaseData = supabaseHome.length > 0 || supabaseAway.length > 0
+  if (hasSupabaseData) {
+    return { homePlayers: supabaseHome, awayPlayers: supabaseAway, loading: false, error: null }
+  }
+
   if (needApiFallback && apiStatsLoading) {
     return { homePlayers: [], awayPlayers: [], loading: true, error: null }
   }
 
   return {
-    homePlayers: data?.homePlayers ?? [],
-    awayPlayers: data?.awayPlayers ?? [],
+    homePlayers: supabaseHome,
+    awayPlayers: supabaseAway,
     loading: isLoading,
     error
   }

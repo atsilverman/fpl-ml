@@ -36,16 +36,21 @@ function SortTriangle({ direction }) {
 /**
  * Fixture status: Final = match-level finished === true (FPL confirmed; reddish/orange).
  * Provisional = finished_provisional === true but finished === false (yellowish; label "Finished").
+ * We treat started + minutes >= 90 + !finished as provisional so we never show "Live" for
+ * provisionally finished games when finished_provisional is missing or stale.
  */
 function getFixtureStatus(fixture, _dataChecked = false) {
   if (!fixture) return 'scheduled'
   const started = Boolean(fixture.started)
   const finished = Boolean(fixture.finished)
   const finishedProvisional = Boolean(fixture.finished_provisional)
+  const minutes = Number(fixture.minutes)
+  const atOrPast90 = !Number.isNaN(minutes) && minutes >= 90
+  const effectivelyProvisional = finishedProvisional || (started && !finished && atOrPast90)
   if (!started) return 'scheduled'
-  if (started && !finishedProvisional) return 'live'
   if (started && finished) return 'final'
-  if (started && finishedProvisional && !finished) return 'provisional'
+  if (started && effectivelyProvisional) return 'provisional'
+  if (started && !effectivelyProvisional) return 'live'
   return 'scheduled'
 }
 
@@ -835,7 +840,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
                 onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
-                preloadedFixtureStats={toggleBonus ? null : (playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id])}
+                preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
             )

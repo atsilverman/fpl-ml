@@ -446,6 +446,7 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
                             eff_pts = total_pts if (bonus_status == "confirmed" or off_b > 0) else total_pts + prov_b
                             if fid not in by_fixture:
                                 by_fixture[fid] = []
+                            display_bonus = off_b if (bonus_status == "confirmed" or off_b > 0) else prov_b
                             by_fixture[fid].append({
                                 "player_id": r.get("player_id"),
                                 "web_name": info.get("web_name", "Unknown"),
@@ -456,6 +457,8 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
                                 "minutes": r.get("minutes"),
                                 "total_points": eff_pts,
                                 "effective_total_points": eff_pts,
+                                "bonus": display_bonus,
+                                "bonus_status": bonus_status,
                                 "goals_scored": r.get("goals_scored"),
                                 "assists": r.get("assists"),
                                 "clean_sheets": r.get("clean_sheets"),
@@ -481,6 +484,11 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
             continue
         if fid not in by_fixture:
             by_fixture[fid] = []
+        eff_bonus = row.get("effective_bonus")
+        if eff_bonus is None:
+            eff_bonus = row.get("bonus") if (row.get("bonus_status") == "confirmed" or (row.get("bonus") or 0) > 0) else row.get("provisional_bonus")
+        if eff_bonus is None:
+            eff_bonus = 0
         by_fixture[fid].append({
             "player_id": row.get("player_id"),
             "web_name": row.get("player_web_name"),
@@ -491,6 +499,8 @@ def get_fixtures(gameweek: int = Query(..., description="Gameweek number")):
             "minutes": row.get("minutes"),
             "total_points": row.get("effective_total_points"),
             "effective_total_points": row.get("effective_total_points"),
+            "bonus": int(eff_bonus) if eff_bonus is not None else 0,
+            "bonus_status": row.get("bonus_status") or "provisional",
             "goals_scored": row.get("goals_scored"),
             "assists": row.get("assists"),
             "clean_sheets": row.get("clean_sheets"),

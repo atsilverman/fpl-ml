@@ -676,6 +676,28 @@
   padding-bottom: 10px;
 }
 
+/* Desktop: show scrollbars on league table (Standings, Captains, Transfers, Chips) */
+@media (hover: hover) and (min-width: 769px) {
+  .mini-league-page .league-standings-page .league-standings-bento-table-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .mini-league-page .league-standings-page .league-standings-bento-table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .mini-league-page .league-standings-page .league-standings-bento-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .mini-league-page .league-standings-page .league-standings-bento-table-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .mini-league-page .league-standings-page .league-standings-bento-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 /* Desktop: bento body and table wrapper size to content for all views so bottom aligns with last row (Standings, Captains, Transfers, Chips) */
 @media (min-width: 769px) {
   .mini-league-page .league-standings-bento.league-standings-page {
@@ -774,6 +796,64 @@
   .mini-league-page .league-standings-bento-table-wrapper .league-standings-bento-table thead th,
   .mini-league-page .league-standings-bento-table-wrapper .league-transfers-table thead th {
     background: var(--bg-secondary);
+  }
+}
+
+/* Desktop: show scrollbars when league bento scrolls (e.g. long table on smaller viewport) */
+@media (hover: hover) and (min-width: 769px) {
+  .mini-league-page .league-standings-bento.league-standings-page {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  .manager-detail-modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .manager-detail-modal-body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .manager-detail-modal-body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .manager-detail-modal-body::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .manager-detail-modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+  .league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .league-page-transfers-summary .gw-top-points-content .transfers-summary-columns-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
   }
 }
 

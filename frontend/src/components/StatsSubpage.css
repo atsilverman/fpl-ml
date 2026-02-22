@@ -1453,6 +1453,28 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   min-height: 0;
 }
 
+/* Desktop: show scrollbars on Statistics subpage table wrapper */
+@media (hover: hover) and (min-width: 769px) {
+  .research-stats-page .league-standings-bento-table-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 @media (min-width: 769px) {
   .research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync {
     flex: 1 1 100%;

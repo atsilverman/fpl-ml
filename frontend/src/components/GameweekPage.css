@@ -93,6 +93,28 @@
   -webkit-overflow-scrolling: touch; /* iOS momentum scrolling inside panels */
 }
 
+/* Desktop: show scrollbars on all Gameweek subpages (Matches, Bonus, DEFCON, Feed) */
+@media (hover: hover) and (min-width: 769px) {
+  .gameweek-subpage {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  }
+  .gameweek-subpage::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .gameweek-subpage::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .gameweek-subpage::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--border-color) 70%, transparent);
+    border-radius: 4px;
+  }
+  .gameweek-subpage::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+}
+
 /* Mobile: no slide animation when changing subpage (instant switch) */
 @media (max-width: 768px) {
   .gameweek-swipe-track {

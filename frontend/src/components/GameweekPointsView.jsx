@@ -255,13 +255,16 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
     const matchStarted = fixtureForMatchState ? fixtureBool(fixtureForMatchState.started) : Boolean(player.match_started)
     const matchFinished = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished) : Boolean(player.match_finished)
     const matchFinishedProvisional = fixtureForMatchState ? fixtureBool(fixtureForMatchState.finished_provisional) : Boolean(player.match_finished_provisional)
-    const matchStartedOrFinished = matchStarted || matchFinished || matchFinishedProvisional
-    const matchFinishedOrProvisional = matchFinished || matchFinishedProvisional
+    const fixtureMins = fixtureForMatchState?.minutes != null ? Number(fixtureForMatchState.minutes) : null
+    const fixtureAtOrPast90 = fixtureMins != null && !Number.isNaN(fixtureMins) && fixtureMins >= 90
+    const effectivelyProvisional = matchFinishedProvisional || (matchStarted && !matchFinished && fixtureAtOrPast90)
+    const matchStartedOrFinished = matchStarted || matchFinished || effectivelyProvisional
+    const matchFinishedOrProvisional = matchFinished || effectivelyProvisional
     // Dot state is 100% fixture-driven (source of truth). No fixture = never show green.
     const hasFixtureLiveState = Boolean(fixtureForMatchState)
-    const fixtureSaysLive = hasFixtureLiveState && matchStarted && !matchFinished && !matchFinishedProvisional
+    const fixtureSaysLive = hasFixtureLiveState && matchStarted && !matchFinished && !effectivelyProvisional
     const isMatchLive = hasFixtureLiveState && fixtureSaysLive
-    const isMatchProvisional = matchFinishedProvisional && !matchFinished
+    const isMatchProvisional = effectivelyProvisional && !matchFinished
     const isBonusPending = isMatchProvisional && player.bonus_status === 'provisional'
     // Only show live-updating indicator when match is live (minutes can change). Do not show it for provisional/finished; use minutes risk dots only for those.
     const showMinsLiveDot = (player.minutes != null && player.minutes > 0) && isMatchLive
