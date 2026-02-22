@@ -484,20 +484,41 @@ class SupabaseClient:
     def update_fixture_scores(
         self,
         fpl_fixture_id: int,
-        home_score: Optional[int],
-        away_score: Optional[int],
+        home_score: Optional[int] = None,
+        away_score: Optional[int] = None,
         minutes: Optional[int] = None,
     ):
         """
         Update home_score, away_score and optionally minutes for a fixture (e.g. from event-live).
-        Used during live matches so the matches page stays in sync with GW points and match clock.
+        Only includes fields that are not None. Minutes are monotonic: we never write a lower value
+        than already stored (avoids FPL API glitches showing 16 after 45).
         """
-        payload = {
-            "home_score": home_score,
-            "away_score": away_score,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-        }
+        payload = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        if home_score is not None:
+            payload["home_score"] = home_score
+        if away_score is not None:
+            payload["away_score"] = away_score
         if minutes is not None:
+            # Never decrease minutes: read current and use max(current, new)
+            try:
+                row = (
+                    self.client.table("fixtures")
+                    .select("minutes")
+                    .eq("fpl_fixture_id", fpl_fixture_id)
+                    .limit(1)
+                    .execute()
+                )
+                if row.data and len(row.data) > 0:
+                    current = row.data[0].get("minutes")
+                    if current is not None:
+                        try:
+                            current_int = int(current)
+                            if minutes < current_int:
+                                minutes = current_int
+                        except (TypeError, ValueError):
+                            pass
+            except Exception:
+                pass
             payload["minutes"] = minutes
         result = self.client.table("fixtures").update(payload).eq(
             "fpl_fixture_id", fpl_fixture_id

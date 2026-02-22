@@ -854,17 +854,14 @@ class RefreshOrchestrator:
         fixtures_by_gameweek: Optional[Dict[int, Dict[str, Any]]],
     ) -> None:
         """
-        Update fixture home_score, away_score and minutes from event-live (same source as GW points),
-        but never show a lower value than the /fixtures/ API (hybrid of both sources).
-
-        - Scoreline: Fixtures API can update before event-live (e.g. stoppage-time goals at 45+2).
-          We take max(api score, event-live derived) so the 5th goal appears as soon as either source has it.
-        - Minutes: Fixtures API has the match clock (e.g. 66'); event-live has "minutes played" per
-          player (e.g. 62' for a sub). We take max(api minutes, max player minutes) so we don't show 62' when
-          the live clock is 66'.
+        Update fixture home_score, away_score and minutes from event-live (same source as GW points).
+        - Scoreline: Fixtures API only (never event-live goals; DGW-safe). Only write when both scores present.
+        - Minutes: max(api minutes, max player minutes, elapsed since kickoff). We always update minutes when
+          we have live data so the clock never sticks; DB client enforces monotonicity (never decrease).
         """
         if not bootstrap or not fixtures_by_gameweek or not live_data.get("elements"):
             return
+        now = datetime.now(timezone.utc)
         elements = bootstrap.get("elements", [])
         player_team = {int(e["id"]): int(e["team"]) for e in elements if "id" in e and "team" in e}
         for fpl_fixture_id, fixture in fixtures_by_gameweek.items():
@@ -872,35 +869,38 @@ class RefreshOrchestrator:
             team_a = fixture.get("team_a")
             if team_h is None or team_a is None:
                 continue
-            home_goals = 0
-            away_goals = 0
             max_minutes = 0
             for elem in live_data.get("elements", []):
                 pid = elem.get("id")
                 stats = elem.get("stats") or {}
-                goals = stats.get("goals_scored", 0) or 0
                 mins = stats.get("minutes", 0) or 0
                 team_id = player_team.get(pid)
-                if team_id == team_h:
-                    home_goals += goals
+                if team_id == team_h or team_id == team_a:
                     if mins > max_minutes:
                         max_minutes = mins
-                elif team_id == team_a:
-                    away_goals += goals
-                    if mins > max_minutes:
-                        max_minutes = mins
-            # Score: use fixtures API only. Do NOT use event-live derived goals for the scoreline:
-            # live_data "elements" are aggregated per player per gameweek, so for DGW we would sum
-            # total GW goals (e.g. Arsenal 2+1) and show wrong score on this fixture.
+            api_minutes = fixture.get("minutes") or 0
+            # Floor: elapsed time since kickoff so we never show behind real time when FPL API lags
+            elapsed_minutes = 0
+            k = fixture.get("kickoff_time")
+            if k:
+                try:
+                    kickoff = datetime.fromisoformat(k.replace("Z", "+00:00"))
+                    if kickoff.tzinfo is None:
+                        kickoff = kickoff.replace(tzinfo=timezone.utc)
+                    if now >= kickoff:
+                        elapsed_minutes = int((now - kickoff).total_seconds() / 60)
+                        elapsed_minutes = min(elapsed_minutes, 120)  # cap at 120 for long stoppage
+                except (ValueError, TypeError):
+                    pass
+            minutes_value = max(api_minutes, max_minutes, elapsed_minutes)
+            if minutes_value <= 0:
+                minutes_value = max(api_minutes, max_minutes)  # fallback without floor
+
             api_home = fixture.get("team_h_score")
             api_away = fixture.get("team_a_score")
-            api_minutes = fixture.get("minutes") or 0
-            if api_home is None or api_away is None:
-                # Skip score update until API has both; never use event-live goals (DGW-safe).
-                continue
-            home_score = api_home
-            away_score = api_away
-            minutes_value = max(api_minutes, max_minutes) if (api_minutes > 0 or max_minutes > 0) else 0
+            home_score = api_home if api_home is not None and api_away is not None else None
+            away_score = api_away if api_home is not None and api_away is not None else None
+
             try:
                 self.db_client.update_fixture_scores(
                     fpl_fixture_id,
