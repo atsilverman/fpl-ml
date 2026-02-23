@@ -3,18 +3,30 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useGameweekData } from './useGameweekData'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useRefreshEvents } from './useRefreshEvents'
+import { useRefreshPhaseTimestamps, PHASE_SOURCE_LABELS } from './useRefreshPhaseTimestamps'
+
+const DEBUG_REFETCH_INTERVAL = 5_000
 
 /**
- * Sources that map to backend fast path (gameweeks, fixtures, GW players) or slow path (manager points, MVs).
- * Frontend timestamps = React Query dataUpdatedAt. Backend timestamps = refresh_events.occurred_at per path.
+ * Path-level sources (refresh_events). Used when phase data is unavailable.
  */
 const SOURCES = [
-  { path: 'Fast', source: 'Gameweeks', queryKey: (gw) => ['gameweek', 'current'] },
-  { path: 'Fast', source: 'Fixtures', queryKey: (gw) => ['fixtures', 'current-gw', gw] },
-  { path: 'Fast', source: 'GW Players', queryKey: (gw, managerId) => ['current-gameweek-players', managerId, gw] },
-  { path: 'Slow', source: 'Manager', queryKey: (gw, managerId, leagueId) => ['manager', managerId, gw, leagueId] },
-  { path: 'Slow', source: 'League standings', queryKey: (gw, _m, leagueId) => ['standings', leagueId, gw] },
+  { path: 'Fast', source: 'Gameweeks', queryKey: (gw) => ['gameweek', 'current'], phaseSource: 'gameweeks' },
+  { path: 'Fast', source: 'Fixtures', queryKey: (gw) => ['fixtures', 'current-gw', gw], phaseSource: 'fixtures' },
+  { path: 'Fast', source: 'GW Players', queryKey: (gw, managerId) => ['current-gameweek-players', managerId, gw], phaseSource: 'gw_players' },
+  { path: 'Slow', source: 'Manager', queryKey: (gw, managerId, leagueId) => ['manager', managerId, gw, leagueId], phaseSource: 'manager_points' },
+  { path: 'Slow', source: 'League standings', queryKey: (gw, _m, leagueId) => ['standings', leagueId, gw], phaseSource: 'live_standings' },
 ]
+
+/** Phase source -> queryKey for "Since frontend" (optional) */
+const PHASE_TO_QUERY_KEY = {
+  gameweeks: (gw) => ['gameweek', 'current'],
+  fixtures: (gw) => ['fixtures', 'current-gw', gw],
+  gw_players: (gw, managerId) => ['current-gameweek-players', managerId, gw],
+  live_standings: (gw, _m, leagueId) => ['standings', leagueId, gw],
+  manager_points: (gw, managerId, leagueId) => ['manager', managerId, gw, leagueId],
+  mvs: (gw, _m, leagueId) => ['standings', leagueId, gw],
+}
 
 function formatLocalTime(ms) {
   if (ms == null || typeof ms !== 'number') return '—'
@@ -35,11 +47,20 @@ function formatTimeSince(ms) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
-export function useUpdateTimestamps() {
+/**
+ * @param {{ isDebugOpen?: boolean }} options - When true, poll refresh_events and phase log more often and include phase/MV rows.
+ */
+export function useUpdateTimestamps(options = {}) {
+  const isDebugOpen = options.isDebugOpen ?? false
   const queryClient = useQueryClient()
   const { gameweek } = useGameweekData()
   const { config } = useConfiguration()
-  const { fastAt, slowAt } = useRefreshEvents()
+  const { fastAt, slowAt } = useRefreshEvents(
+    isDebugOpen ? { refetchInterval: DEBUG_REFETCH_INTERVAL } : {}
+  )
+  const { phases, mvsAt, available: phaseDataAvailable } = useRefreshPhaseTimestamps(
+    isDebugOpen ? { refetchInterval: DEBUG_REFETCH_INTERVAL } : { refetchInterval: 30_000 }
+  )
   const managerId = config?.managerId ?? import.meta.env.VITE_MANAGER_ID ?? null
   const leagueId = config?.leagueId ?? import.meta.env.VITE_LEAGUE_ID ?? null
 
@@ -52,6 +73,35 @@ export function useUpdateTimestamps() {
   }, [])
 
   const rows = useMemo(() => {
+    if (phaseDataAvailable && Object.keys(phases).length > 0) {
+      // Phase-centric rows: each backend phase + MVs row with "Since MV"
+      const order = ['gameweeks', 'fixtures', 'gw_players', 'live_standings', 'manager_points', 'mvs']
+      return order.map((phaseSource) => {
+        const phase = phases[phaseSource]
+        const label = PHASE_SOURCE_LABELS[phaseSource]
+        const path = phase ? (phase.path === 'fast' ? 'Fast' : 'Slow') : '—'
+        const backendAt = phase?.occurred_at ? new Date(phase.occurred_at).getTime() : null
+        const durationMs = phase?.duration_ms ?? null
+        const queryKeyFn = PHASE_TO_QUERY_KEY[phaseSource]
+        const dataUpdatedAt = queryKeyFn
+          ? (() => {
+              const key = queryKeyFn(gameweek, managerId, leagueId)
+              return queryClient.getQueryState(key)?.dataUpdatedAt ?? null
+            })()
+          : null
+        return {
+          path,
+          source: phaseSource === 'mvs' ? 'MVs (UI reads these)' : label,
+          dataUpdatedAt,
+          timeSince: formatTimeSince(dataUpdatedAt),
+          backendAt,
+          timeSinceBackend: formatTimeSince(backendAt),
+          durationMs,
+          isMv: phaseSource === 'mvs',
+        }
+      })
+    }
+    // Fallback: path-level only (original 5 rows)
     return SOURCES.map(({ path, source, queryKey }) => {
       const key = queryKey(gameweek, managerId, leagueId)
       const state = queryClient.getQueryState(key)
@@ -66,9 +116,11 @@ export function useUpdateTimestamps() {
         backendAt,
         backendTimeStr: formatLocalTime(backendAt),
         timeSinceBackend: formatTimeSince(backendAt),
+        durationMs: null,
+        isMv: false,
       }
     })
-  }, [queryClient, gameweek, managerId, leagueId, now, fastAt, slowAt])
+  }, [queryClient, gameweek, managerId, leagueId, now, fastAt, slowAt, phaseDataAvailable, phases])
 
   // Subscribe to cache so we re-run when any of these queries update
   useEffect(() => {

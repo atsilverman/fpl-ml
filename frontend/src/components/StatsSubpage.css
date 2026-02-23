@@ -1484,12 +1484,13 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
     flex: 1 1 100%;
     width: 100%;
   }
+  /* Desktop: table wrapper full width so edges align with player/team toggle and filter button row */
   .research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync--team-view {
-    flex: 0 0 auto;
-    width: fit-content;
+    flex: 1 1 100%;
+    width: 100%;
     max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
@@ -1500,12 +1501,28 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   box-sizing: border-box;
 }
 
-/* Team view: fewer columns – shrink-wrap table width and center (mobile uses same centering) */
-.research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync--team-view {
-  width: fit-content;
-  max-width: 100%;
-  margin-left: auto;
-  margin-right: auto;
+/* Team view: on mobile, fewer columns – shrink-wrap table width and center; desktop uses full width (see media query) */
+@media (max-width: 768px) {
+  .research-stats-page .league-standings-bento-table-wrapper.research-stats-table-wrapper-sync--team-view {
+    width: fit-content;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* Desktop only: team view table fits container, data columns same width */
+@media (min-width: 769px) {
+  .research-stats-page .research-stats-table-wrapper-sync--team-view .research-stats-table.league-standings-bento-table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .research-stats-page .research-stats-table-wrapper-sync--team-view .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+  .research-stats-page .research-stats-table-wrapper-sync--team-view .research-stats-table.league-standings-bento-table td.league-standings-bento-total {
+    width: 0;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 }
 
 /* Player/team column: 120px, single-line layout so names and info fit without extra rows */

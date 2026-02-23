@@ -1558,7 +1558,13 @@ class RefreshOrchestrator:
                                         }, exc_info=True)
                             # Only refresh standings MV when all managers updated so we don't show incomplete data
                             if all_managers_updated:
+                                t_mv = datetime.now(timezone.utc)
                                 self.db_client.refresh_materialized_views_for_live()
+                                mv_duration_ms = int((datetime.now(timezone.utc) - t_mv).total_seconds() * 1000)
+                                try:
+                                    self.db_client.insert_refresh_duration_log("mvs", "fast", self.current_state.value, mv_duration_ms)
+                                except Exception:
+                                    pass
                         self._last_live_standings_in_fast_cycle = datetime.now(timezone.utc)
                         duration_ms = int((datetime.now(timezone.utc) - t_live_standings).total_seconds() * 1000)
                         try:

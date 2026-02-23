@@ -196,6 +196,12 @@ html[data-theme="dark"] .debug-modal-state-button--outside_gameweek {
   overflow-x: auto;
 }
 
+.debug-modal-section .updates-debug-th-duration,
+.debug-modal-section .updates-debug-duration {
+  white-space: nowrap;
+  text-align: right;
+}
+
 /* Attribute verification (vs FPL API) */
 .debug-modal-verify-intro {
   font-size: 12px;

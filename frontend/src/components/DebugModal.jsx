@@ -43,7 +43,7 @@ function GwDebugBadge({ value }) {
 export default function DebugModal({ isOpen, onClose }) {
   const { gameweekRow: gameweekDebugRow, fixtures: gameweekDebugFixtures, loading: gameweekDebugLoading, error: fplDebugError } = useGameweekDebugDataFromFPL(isOpen)
   const { gameweekRow: gameweekFromDb, fixtures: fixturesFromDb, loading: dbLoading } = useGameweekDebugData()
-  const updateTimestampsData = useUpdateTimestamps()
+  const updateTimestampsData = useUpdateTimestamps({ isDebugOpen: isOpen })
   const useFplFallback = Boolean(fplDebugError && !gameweekDebugRow)
   const gwRow = gameweekDebugRow ?? gameweekFromDb ?? null
   const gwFixtures = (gameweekDebugFixtures?.length ? gameweekDebugFixtures : fixturesFromDb) ?? []
@@ -325,7 +325,7 @@ export default function DebugModal({ isOpen, onClose }) {
 
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Updates (debug)</h3>
-            <p className="debug-modal-section-source">Source: backend update timestamps + frontend cache (derived from refresh/query state).</p>
+            <p className="debug-modal-section-source">Source: backend <code>refresh_events</code> + <code>refresh_duration_log</code> (per-phase) + frontend cache. MVs row = when materialized views (standings, GW points, etc.) were last refreshed.</p>
             {updateTimestampsData ? (
               <div className="updates-debug-bento-content">
                 <div className="updates-debug-now">Local time: {updateTimestampsData.localTimeNow}</div>
@@ -337,16 +337,24 @@ export default function DebugModal({ isOpen, onClose }) {
                         <th>Path</th>
                         <th>Source</th>
                         <th className="updates-debug-th-since">Since backend</th>
+                        {updateTimestampsData.rows.some((r) => r.durationMs != null) && (
+                          <th className="updates-debug-th-duration">Duration</th>
+                        )}
                         <th className="updates-debug-th-since">Since frontend</th>
                       </tr>
                     </thead>
                     <tbody>
                       {updateTimestampsData.rows.map((row, i) => (
-                        <tr key={`${row.path}-${row.source}`}>
+                        <tr key={`${row.path}-${row.source}-${i}`}>
                           <td className="updates-debug-rank">{i + 1}</td>
                           <td className="updates-debug-path">{row.path}</td>
                           <td className="updates-debug-source">{row.source}</td>
                           <td className="updates-debug-since">{row.timeSinceBackend ?? '—'}</td>
+                          {updateTimestampsData.rows.some((r) => r.durationMs != null) && (
+                            <td className="updates-debug-duration">
+                              {row.durationMs != null ? `${(row.durationMs / 1000).toFixed(1)}s` : '—'}
+                            </td>
+                          )}
                           <td className="updates-debug-since">{row.timeSince}</td>
                         </tr>
                       ))}

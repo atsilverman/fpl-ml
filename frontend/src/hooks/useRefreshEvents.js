@@ -1,11 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
+const DEFAULT_REFETCH_INTERVAL = 30_000
+const DEBUG_REFETCH_INTERVAL = 5_000
+
 /**
  * Fetches latest backend refresh event timestamps (fast and slow path).
  * Used by Updates (debug) to show "Backend last" and "Time since backend".
+ * @param {{ refetchInterval?: number }} options - When debug modal is open, pass { refetchInterval: 5000 } for tighter polling.
  */
-export function useRefreshEvents() {
+export function useRefreshEvents(options = {}) {
+  const refetchInterval = options.refetchInterval ?? DEFAULT_REFETCH_INTERVAL
   const { data: events = [] } = useQuery({
     queryKey: ['refresh-events'],
     queryFn: async () => {
@@ -17,8 +22,8 @@ export function useRefreshEvents() {
       if (error) throw error
       return data ?? []
     },
-    staleTime: 15_000,
-    refetchInterval: 30_000,
+    staleTime: Math.min(15_000, refetchInterval),
+    refetchInterval,
   })
 
   // Latest occurred_at per path (ms); events are ordered occurred_at desc

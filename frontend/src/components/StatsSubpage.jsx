@@ -1088,7 +1088,7 @@ export default function StatsSubpage() {
                 >
                   <table
                     className="research-stats-table league-standings-bento-table research-stats-compare-table"
-                    style={{ width: 'auto', minWidth: 0 }}
+                    style={teamView ? undefined : { width: 'auto', minWidth: 0 }}
                   >
                     <thead>
                       <tr>
@@ -1228,7 +1228,7 @@ export default function StatsSubpage() {
             >
               <table
                 className="research-stats-table league-standings-bento-table"
-                style={{ width: 'auto', minWidth: 0 }}
+                style={teamView ? undefined : { width: 'auto', minWidth: 0 }}
               >
                 <thead>
                   <tr>
