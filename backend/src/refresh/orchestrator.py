@@ -75,7 +75,6 @@ class RefreshOrchestrator:
         self._hourly_rank_refresh_interval_seconds: int = 3600  # 1 hour
         # Throttle live standings inside fast cycle so most fast cycles are short (gameweeks + fixtures + players only)
         self._last_live_standings_in_fast_cycle: Optional[datetime] = None
-        
     async def initialize(self):
         """Initialize orchestrator and clients."""
         logger.info("Orchestrator starting")

@@ -35,7 +35,7 @@ export function useGameweekTopBps() {
       const playerIds = [...new Set(stats.map((s) => s.player_id))]
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('fpl_player_id, web_name, team_id, position, teams(short_name)')
+        .select('fpl_player_id, web_name, team_id, position, teams!fk_players_team(short_name)')
         .in('fpl_player_id', playerIds)
 
       if (playersError) {

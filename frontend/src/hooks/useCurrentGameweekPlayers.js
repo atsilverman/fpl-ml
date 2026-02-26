@@ -179,7 +179,7 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           web_name,
           position,
           team_id,
-          teams(short_name)
+          teams!fk_players_team(short_name)
         `)
         .in('fpl_player_id', Array.from(playerIds))
 

@@ -142,7 +142,7 @@ export function useFixturePlayerStats(fixtureId, gameweek, homeTeamId, awayTeamI
           web_name,
           position,
           team_id,
-          teams(short_name)
+          teams!fk_players_team(short_name)
         `)
         .in('fpl_player_id', playerIds)
 

@@ -22,7 +22,7 @@ export function useLeaguePlayerSearch(query) {
           position,
           cost_tenths,
           selected_by_percent,
-          teams(short_name)
+          teams!fk_players_team(short_name)
         `)
         .ilike('web_name', `%${trimmed}%`)
         .order('web_name', { ascending: true })

@@ -33,7 +33,7 @@ export function useLastH2HPlayerStats(gameweek, enabled) {
           web_name,
           position,
           team_id,
-          teams(short_name)
+          teams!fk_players_team(short_name)
         `)
         .in('fpl_player_id', playerIds)
 

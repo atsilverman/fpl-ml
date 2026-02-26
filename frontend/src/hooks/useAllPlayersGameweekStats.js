@@ -193,7 +193,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
         const { data: players, error: playersError } = await supabase
           .from('players')
-          .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams(short_name, team_name)')
+          .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams!fk_players_team(short_name, team_name)')
           .in('fpl_player_id', playerIds)
 
         if (playersError) {
@@ -267,7 +267,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams(short_name, team_name)')
+        .select('fpl_player_id, web_name, team_id, position, cost_tenths, selected_by_percent, teams!fk_players_team(short_name, team_name)')
         .in('fpl_player_id', playerIds)
 
       if (playersError) {

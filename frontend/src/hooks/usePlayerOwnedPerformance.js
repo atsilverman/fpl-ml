@@ -178,7 +178,7 @@ export function usePlayerOwnedPerformance(filter = 'all', statKey = 'total_point
 
         const playersResult = await supabase
           .from('players')
-          .select('fpl_player_id, web_name, position, team_id, teams(short_name)')
+          .select('fpl_player_id, web_name, position, team_id, teams!fk_players_team(short_name)')
           .in('fpl_player_id', playerIds)
 
         if (playersResult.error) {
@@ -255,7 +255,7 @@ export function usePlayerOwnedPerformance(filter = 'all', statKey = 'total_point
           if (playerIds.length > 0) {
             const playersResult = await supabase
               .from('players')
-              .select('fpl_player_id, team_id, teams(short_name)')
+              .select('fpl_player_id, team_id, teams!fk_players_team(short_name)')
               .in('fpl_player_id', playerIds)
             
             if (!playersResult.error && playersResult.data) {

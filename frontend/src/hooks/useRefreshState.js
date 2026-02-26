@@ -5,6 +5,11 @@ import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 /** Typical gap from GW deadline to first kickoff; we show "Deadline" only in this window (30 min–90 min after deadline). */
 const DEADLINE_WINDOW_END_MINUTES = 90
 
+/** Minutes before/after a fixture kickoff in which we poll fixtures more often so we detect "live" quickly. */
+const KICKOFF_WINDOW_MINUTES = 10
+const REFETCH_FAST_MS = 8_000
+const REFETCH_IDLE_MS = 30_000
+
 /** 17:30–17:36 PST (matches backend price change window). */
 function isPriceWindow() {
   const now = new Date()
@@ -26,6 +31,25 @@ function fixtureInProgress(f, now) {
   } catch {
     return false
   }
+}
+
+/** True when we should poll fixtures frequently: within KICKOFF_WINDOW_MINUTES of any kickoff or past kickoff and not yet finished_provisional. */
+function isInKickoffWindow(fixtures) {
+  if (!Array.isArray(fixtures) || fixtures.length === 0) return false
+  const now = Date.now()
+  const windowMs = KICKOFF_WINDOW_MINUTES * 60 * 1000
+  return fixtures.some((f) => {
+    const k = f?.kickoff_time
+    if (!k) return false
+    try {
+      const kickoff = new Date(k.replace('Z', '+00:00')).getTime()
+      if (now < kickoff - windowMs) return false
+      if (f.finished_provisional) return false
+      return true
+    } catch {
+      return false
+    }
+  })
 }
 
 /**
@@ -78,7 +102,8 @@ export function useRefreshState() {
     },
     enabled: currentGameweek != null,
     staleTime: 30_000,
-    refetchInterval: 30_000, // Poll so Updates (debug) and state stay in sync with backend fast loop
+    refetchInterval: (query) =>
+      isInKickoffWindow(query.state.data) ? REFETCH_FAST_MS : REFETCH_IDLE_MS,
   })
 
   const state = (() => {

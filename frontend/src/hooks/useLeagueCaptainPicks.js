@@ -33,7 +33,7 @@ export function useLeagueCaptainPicks(gameweek = null) {
 
       const { data: picks, error: picksError } = await supabase
         .from('manager_picks')
-        .select('manager_id, player_id, is_captain, is_vice_captain, players(web_name, teams(short_name))')
+        .select('manager_id, player_id, is_captain, is_vice_captain, players(web_name, teams!fk_players_team(short_name))')
         .in('manager_id', managerIds)
         .eq('gameweek', gameweek)
         .or('is_captain.eq.true,is_vice_captain.eq.true')

@@ -39,7 +39,7 @@ export function useDefconGameweekPlayers() {
       const [playerResult, fixturesResult] = await Promise.all([
         supabase
           .from('players')
-          .select('fpl_player_id, web_name, position, team_id, teams(short_name)')
+          .select('fpl_player_id, web_name, position, team_id, teams!fk_players_team(short_name)')
           .in('fpl_player_id', playerIds),
         supabase
           .from('fixtures')

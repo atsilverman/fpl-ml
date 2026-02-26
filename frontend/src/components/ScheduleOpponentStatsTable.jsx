@@ -78,9 +78,9 @@ export default function ScheduleOpponentStatsTable({
               <th className="schedule-opponent-stats-th-gw">GW</th>
               <th className="schedule-opponent-stats-th-opponent">Opp</th>
               <th className="schedule-opponent-stats-th-stat">G</th>
-              <th className="schedule-opponent-stats-th-stat">xG</th>
+              <th className="schedule-opponent-stats-th-stat schedule-opponent-stats-th-stat-lowercase-prefix">xG</th>
               <th className="schedule-opponent-stats-th-stat schedule-opponent-stats-th-stat--defense-start">GC</th>
-              <th className="schedule-opponent-stats-th-stat">xGC</th>
+              <th className="schedule-opponent-stats-th-stat schedule-opponent-stats-th-stat-lowercase-prefix">xGC</th>
               <th className="schedule-opponent-stats-th-stat">CS</th>
             </tr>
           </thead>

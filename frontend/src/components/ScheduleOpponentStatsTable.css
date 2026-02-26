@@ -86,6 +86,11 @@
   white-space: nowrap;
 }
 
+/* xG, xGC etc: keep lowercase x (override thead th text-transform: uppercase) */
+.schedule-opponent-stats-table-grid .schedule-opponent-stats-th-stat-lowercase-prefix {
+  text-transform: none;
+}
+
 /* Vertical divider between attacking (G, xG) and defending (GC, xGC, CS) */
 .schedule-opponent-stats-th-stat--defense-start,
 .schedule-opponent-stats-td-stat--defense-start {

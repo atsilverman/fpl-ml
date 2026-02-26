@@ -15,7 +15,7 @@ export function usePlayerTeamMap() {
     queryFn: async () => {
       const { data, error: err } = await supabase
         .from('players')
-        .select('web_name, teams(short_name)')
+        .select('web_name, teams!fk_players_team(short_name)')
 
       if (err) throw err
 

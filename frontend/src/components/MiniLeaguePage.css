@@ -2115,6 +2115,17 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.player-detail-modal-transfermarkt-link {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-left: 8px;
+}
+.player-detail-modal-transfermarkt-link:hover {
+  text-decoration: underline;
+  color: var(--text-primary);
+}
 
 /* Player detail bentos: scope under modal body so we beat .bento-card (HomePage.css) fixed height; size to content, body scrolls */
 .player-detail-modal-body .player-detail-details-bento,
