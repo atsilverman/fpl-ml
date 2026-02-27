@@ -283,11 +283,13 @@ export default function HomePage() {
     {
       id: 'transfers',
       label: 'Transfers',
-      value: managerData != null
-        ? (managerData.activeChip === 'wildcard' || managerData.activeChip === 'freehit')
-          ? '—'
-          : `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
-        : undefined,
+      value: showGameUpdatingBanner
+        ? '—'
+        : managerData != null
+          ? (managerData.activeChip === 'wildcard' || managerData.activeChip === 'freehit')
+            ? '—'
+            : `${managerData.transfersMade} of ${managerData.freeTransfersAvailable}`
+          : undefined,
       size: '1x1',
       isTransfers: true
     },
