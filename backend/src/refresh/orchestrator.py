@@ -294,9 +294,8 @@ class RefreshOrchestrator:
         ):
             return RefreshState.BONUS_PENDING
         
-        # Check transfer deadline: enter when we're 30+ min past the relevant deadline.
-        # (1) Next GW's deadline passed → wait for that GW to become is_current, then run batch.
-        # (2) Current GW's deadline was 30+ min ago → FPL may have already flipped; enter and run batch for current.
+        # Check transfer deadline: enter as soon as next GW's deadline has passed; we poll for is_current
+        # and run the batch as soon as we see the flip (no 40-min freeze).
         if not self.deadline_refresh_completed:
             next_gws = self.db_client.get_gameweeks(is_next=True, limit=1)
             if next_gws:
@@ -305,34 +304,23 @@ class RefreshOrchestrator:
                 if next_deadline_raw:
                     next_deadline = datetime.fromisoformat(next_deadline_raw.replace("Z", "+00:00"))
                     time_since = (now - next_deadline).total_seconds()
-                    if time_since >= 2400:  # 40 min after next GW's deadline (avoid FPL API freeze)
+                    if time_since >= 0:
                         self._deadline_target_gameweek_id = next_gw["id"]
                         logger.info(
                             "Entering TRANSFER_DEADLINE: watching for GW to become is_current",
                             extra={"target_gameweek": next_gw["id"], "gameweek_name": next_gw.get("name")},
                         )
                         return RefreshState.TRANSFER_DEADLINE
-            # Also enter when current GW's deadline was 40+ min ago (FPL may have already flipped)
-            current_deadline_raw = current_gw.get("deadline_time")
-            if current_deadline_raw:
-                current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
-                if (now - current_deadline).total_seconds() >= 2400:
-                    self._deadline_target_gameweek_id = current_gw["id"]
-                    logger.info(
-                        "Entering TRANSFER_DEADLINE: watching for GW to become is_current",
-                        extra={"target_gameweek": current_gw["id"], "gameweek_name": current_gw.get("name")},
-                    )
-                    return RefreshState.TRANSFER_DEADLINE
         
         # Mismatch recovery: if current GW has no successful deadline batch, enter TRANSFER_DEADLINE
         # so we run (or retry) the batch. Ensures we refresh when is_current has no batch (e.g. backend
-        # was down at flip, or previous run failed).
+        # was down at flip, or previous run failed). No delay: proceed as soon as current's deadline has passed.
         current_gw_id = current_gw.get("id")
         if current_gw_id is not None:
             current_deadline_raw = current_gw.get("deadline_time")
             if current_deadline_raw:
                 current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
-                if (now - current_deadline).total_seconds() >= 2400 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
+                if (now - current_deadline).total_seconds() >= 0 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
                     self._deadline_target_gameweek_id = current_gw_id
                     logger.info(
                         "Deadline batch mismatch: current GW has no successful batch, entering TRANSFER_DEADLINE to refresh",
@@ -1655,8 +1643,8 @@ class RefreshOrchestrator:
                         logger.warning("Rank monitor check failed", extra={"error": str(e)}, exc_info=True)
             
             if self.current_state == RefreshState.TRANSFER_DEADLINE:
-                # Post-deadline refresh: runs only after 30+ min past deadline and when target GW is is_current
-                # (API freeze released). Bootstrap check confirms API is responsive before we run.
+                # Post-deadline refresh: runs when target GW is is_current (we enter TRANSFER_DEADLINE as soon as
+                # next GW's deadline passed and poll until we see the flip). Bootstrap check confirms API is responsive.
                 # Refreshes picks, transfers, baselines, whitelist for all managers in all tracked leagues
                 # (mini_league_managers) plus REQUIRED_MANAGER_IDS. Sets up the gameweek that just passed (e.g. GW27).
                 # Run batch only when target gameweek is now is_current (trigger on flip).

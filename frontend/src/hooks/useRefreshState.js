@@ -74,6 +74,36 @@ export function useRefreshState() {
   const currentGameweek = gwData?.id ?? null
   const deadlineTime = gwData?.deadline_time ?? null
 
+  const { data: nextGameweek } = useQuery({
+    queryKey: ['gameweek', 'next'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gameweeks')
+        .select('id, deadline_time')
+        .eq('is_next', true)
+        .single()
+      if (error) return null
+      return data
+    },
+    staleTime: 30_000,
+  })
+
+  // Any GW: so we show GW Setup as soon as backend starts the batch (e.g. for 28) even if client still has current=27
+  const { data: anyDeadlineBatchInProgress = false } = useQuery({
+    queryKey: ['deadline-batch-in-progress', 'any'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('deadline_batch_runs')
+        .select('id')
+        .is('finished_at', null)
+        .limit(1)
+      if (error) throw error
+      return (data?.length ?? 0) > 0
+    },
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+  })
+
   const { data: fixtures = [] } = useQuery({
     queryKey: ['fixtures', 'current-gw', currentGameweek],
     queryFn: async () => {
@@ -94,7 +124,7 @@ export function useRefreshState() {
         else if (deadlineTime) {
           const d = new Date(deadlineTime.replace('Z', '+00:00'))
           const mins = (now - d) / 60000
-          if (mins >= 30 && mins <= DEADLINE_WINDOW_END_MINUTES) logState = 'transfer_deadline'
+          if (mins >= 30 && mins <= DEADLINE_WINDOW_END_MINUTES) logState = 'post_deadline'
         }
       } else if (!gwData) logState = 'outside_gameweek'
       logRefreshFetchDuration('Fixtures', performance.now() - start, logState)
@@ -106,11 +136,31 @@ export function useRefreshState() {
       isInKickoffWindow(query.state.data) ? REFETCH_FAST_MS : REFETCH_IDLE_MS,
   })
 
+  const beforeFirstKickoff = (() => {
+    if (!fixtures?.length) return false
+    let first = null
+    for (const f of fixtures) {
+      const k = f?.kickoff_time
+      if (!k) continue
+      try {
+        const t = new Date(k.replace('Z', '+00:00')).getTime()
+        if (first == null || t < first) first = t
+      } catch {}
+    }
+    return first != null && Date.now() < first
+  })()
+
+  const nextDeadlinePassed = (() => {
+    if (!nextGameweek?.deadline_time) return false
+    const nextDeadlineMs = new Date(nextGameweek.deadline_time.replace('Z', '+00:00')).getTime()
+    return Date.now() > nextDeadlineMs
+  })()
+
   const state = (() => {
     if (!gwData) return 'outside_gameweek'
     if (!gwData.is_current) return 'outside_gameweek'
 
-    // Match backend order: price window first, then live, bonus, deadline, idle
+    // Match backend order: price window first, then live, bonus, then GW Setup / FPL Updating, idle
     if (isPriceWindow()) return 'price_window'
 
     const now = Date.now()
@@ -120,12 +170,14 @@ export function useRefreshState() {
     const allBonusPending = fixtures.length > 0 && fixtures.every((f) => f.finished_provisional && !f.finished)
     if (allBonusPending) return 'bonus_pending'
 
-    // Only show Deadline in the post-deadline batch window: 30 min after deadline until ~1.5 h (typical gap to first kickoff).
-    if (deadlineTime) {
-      const now = new Date()
-      const deadline = new Date(deadlineTime.replace('Z', '+00:00'))
-      const minutesAfterDeadline = (now - deadline) / (60 * 1000)
-      if (minutesAfterDeadline >= 30 && minutesAfterDeadline <= DEADLINE_WINDOW_END_MINUTES) return 'transfer_deadline'
+    // GW Setup first: any deadline batch running (picks, baselines, whitelist) before first kickoff or while past next deadline
+    // Uses "any" batch so we show GW Setup as soon as backend starts the batch for the new GW even if client still has stale current
+    if (anyDeadlineBatchInProgress && (beforeFirstKickoff || nextDeadlinePassed)) return 'gw_setup'
+
+    // FPL Updating: next GW deadline passed but is_current hasn't flipped yet (still on previous GW)
+    if (nextGameweek?.deadline_time != null && currentGameweek != null && nextGameweek.id != null) {
+      const nextDeadlineMs = new Date(nextGameweek.deadline_time.replace('Z', '+00:00')).getTime()
+      if (now > nextDeadlineMs && currentGameweek === nextGameweek.id - 1) return 'fpl_updating'
     }
 
     return 'idle'
@@ -137,7 +189,8 @@ export function useRefreshState() {
       live_matches: 'Live',
       bonus_pending: 'Bonus Pending',
       price_window: 'Price Window',
-      transfer_deadline: 'Deadline',
+      fpl_updating: 'FPL Updating',
+      gw_setup: 'GW Setup',
       idle: 'Idle',
     }[state] ?? state
 

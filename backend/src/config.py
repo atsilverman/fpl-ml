@@ -45,8 +45,8 @@ class Config:
     kickoff_window_minutes: int = int(os.getenv("KICKOFF_WINDOW_MINUTES", "5"))
     # When in gameweek (IDLE), never sleep longer than this so we detect live/kickoff within ~1 min (match API cadence)
     max_idle_sleep_seconds: int = int(os.getenv("MAX_IDLE_SLEEP_SECONDS", "60"))
-    # Post-deadline: wait N seconds before starting batch (lets API endpoints settle); keep short so fast loop isn't blocked long
-    post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "60"))
+    # Post-deadline: wait N seconds before starting batch after detecting is_current flip (0 = no lag, proceed immediately)
+    post_deadline_settle_seconds: int = int(os.getenv("POST_DEADLINE_SETTLE_SECONDS", "0"))
     # Post-deadline: picks+transfers batch size (managers per batch) and sleep between batches (seconds)
     deadline_batch_size: int = int(os.getenv("DEADLINE_BATCH_SIZE", "15"))
     deadline_batch_sleep_seconds: float = float(os.getenv("DEADLINE_BATCH_SLEEP_SECONDS", "1.0"))

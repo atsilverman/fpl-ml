@@ -24,7 +24,6 @@ import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useRefreshState } from '../hooks/useRefreshState'
-import { useDeadlineBatchInProgress } from '../hooks/useDeadlineBatchRuns'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { RefreshCcw } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
@@ -60,7 +59,6 @@ export default function HomePage() {
   
   // Hooks that depend on state
   const { gameweek, gwFinished, loading: gwLoading } = useGameweekData()
-  const { inProgress: deadlineBatchInProgress } = useDeadlineBatchInProgress(gameweek ?? null)
   const { managerData, loading: managerLoading } = useManagerData()
   const { totalManagers } = useTotalManagers()
   const { historyData, loading: historyLoading } = useManagerHistory()
@@ -91,14 +89,6 @@ export default function HomePage() {
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
 
-  // Before first kickoff (post-deadline baseline run, not during live/bonus)
-  const beforeFirstKickoff = useMemo(() => {
-    const first = fixturesFromMatches?.[0]?.kickoff_time
-    if (!first || !fixturesFromMatches?.length) return false // need fixture data; no data => don't assume before kickoff
-    return Date.now() < new Date(first).getTime()
-  }, [fixturesFromMatches])
-  const isLiveOrBonusPending = refreshState === 'live_matches' || refreshState === 'bonus_pending'
-
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
     queryFn: async () => {
@@ -113,6 +103,14 @@ export default function HomePage() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const nextDeadlineGwLabel = useMemo(() => {
+    if (!nextGameweek) return ''
+    const name = nextGameweek.name?.trim()
+    if (name) return name
+    if (nextGameweek.id != null) return `Gameweek ${nextGameweek.id}`
+    return ''
+  }, [nextGameweek?.name, nextGameweek?.id])
+
   const nextDeadlineLocal = useMemo(() => {
     const iso = nextGameweek?.deadline_time
     if (!iso) return null
@@ -124,17 +122,8 @@ export default function HomePage() {
     }
   }, [nextGameweek?.deadline_time])
 
-  // Game updating banner: (A) next deadline passed but is_current hasn't flipped yet, or (B) our deadline batch running before first kickoff
-  const showWaitingOnFplBanner = useMemo(() => {
-    if (!nextGameweek?.deadline_time || isLiveOrBonusPending) return false
-    const deadlineMs = new Date(nextGameweek.deadline_time.replace('Z', '+00:00')).getTime()
-    if (Date.now() <= deadlineMs) return false
-    // Current GW is still the one before "next" => FPL hasn't flipped yet
-    return gameweek != null && nextGameweek.id != null && gameweek === nextGameweek.id - 1
-  }, [nextGameweek?.deadline_time, nextGameweek?.id, gameweek, isLiveOrBonusPending])
-
-  const showSyncBanner = deadlineBatchInProgress && beforeFirstKickoff && !isLiveOrBonusPending
-  const showGameUpdatingBanner = showWaitingOnFplBanner || showSyncBanner
+  // Game updating banner: FPL Updating (waiting on flip) or GW Setup (our batch running before first kickoff)
+  const showGameUpdatingBanner = refreshState === 'fpl_updating' || refreshState === 'gw_setup'
 
   // GW total from starting XI (same source as expanded table: contributedPoints with auto-subs, minus transfer cost)
   const gwPointsFromPlayers = useMemo(() => {
@@ -445,7 +434,7 @@ export default function HomePage() {
       )}
       {!showGameUpdatingBanner && nextDeadlineLocal && (
         <p className="home-page-next-deadline">
-          Next deadline: {nextGameweek?.name ? `${nextGameweek.name} ` : ''}{nextDeadlineLocal}
+          Next deadline: {nextDeadlineGwLabel && `${nextDeadlineGwLabel} `}{nextDeadlineLocal}
         </p>
       )}
       <div className="bento-grid">

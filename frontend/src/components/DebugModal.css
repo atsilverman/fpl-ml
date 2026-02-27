@@ -73,7 +73,12 @@ html[data-theme="dark"] .debug-modal-state-button {
   background: rgba(59, 130, 246, 0.1);
 }
 
-.debug-modal-state-button--transfer_deadline {
+.debug-modal-state-button--fpl_updating {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.debug-modal-state-button--gw_setup {
   border-color: #8b5cf6;
   background: rgba(139, 92, 246, 0.1);
 }
@@ -134,7 +139,11 @@ html[data-theme="dark"] .debug-modal-state-button--outside_gameweek {
   background: #3b82f6;
 }
 
-.state-debug-dl-dot--transfer_deadline {
+.state-debug-dl-dot--fpl_updating {
+  background: #f59e0b;
+}
+
+.state-debug-dl-dot--gw_setup {
   background: #8b5cf6;
 }
 

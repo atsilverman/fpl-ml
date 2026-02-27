@@ -17,8 +17,9 @@ const STATE_DEBUG_DEFINITIONS = [
   { term: 'Live', colorKey: 'live_matches', description: 'At least one fixture: started and not finished_provisional.' },
   { term: 'Bonus Pending', colorKey: 'bonus_pending', description: 'All fixtures: finished_provisional and not finished.' },
   { term: 'Price Window', colorKey: 'price_window', description: 'Time is in 17:30–17:36 PST (configurable).' },
-  { term: 'Deadline', colorKey: 'transfer_deadline', description: 'Current GW exists, ≥30 min after GW deadline (post-deadline refresh window).' },
-  { term: 'Idle', colorKey: 'idle', description: 'Current GW with no live/bonus/price/deadline conditions, or no current gameweek in DB (outside GW).' }
+  { term: 'FPL Updating', colorKey: 'fpl_updating', description: 'Next GW deadline has passed but is_current/is_next have not flipped yet; waiting on FPL.' },
+  { term: 'GW Setup', colorKey: 'gw_setup', description: 'Post-deadline batch running (picks, baselines, whitelist, etc.) before first kickoff; resets to Idle when batch finishes.' },
+  { term: 'Idle', colorKey: 'idle', description: 'Current GW with no live/bonus/price/FPL-updating/GW-setup conditions, or no current gameweek in DB (outside GW).' }
 ]
 
 function formatDeadlineGw(iso) {
@@ -51,7 +52,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const { state, stateLabel } = useRefreshState()
   useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
-  const { latest: deadlineBatchLatest, phaseRows: deadlinePhaseRows, failureReason: deadlineFailureReason, successRate: deadlineSuccessRate, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
+  const { latest: deadlineBatchLatest, latestInProgress: deadlineBatchInProgress, phaseRows: deadlinePhaseRows, failureReason: deadlineFailureReason, successRate: deadlineSuccessRate, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
   const [showStateCriteria, setShowStateCriteria] = useState(false)
   const stateCriteriaRef = useRef(null)
 
@@ -242,6 +243,11 @@ export default function DebugModal({ isOpen, onClose }) {
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Deadline batch</h3>
             <p className="debug-modal-section-source">Source: backend (Supabase <code>refresh_duration_log</code> / deadline batch metadata).</p>
+            {deadlineBatchInProgress && deadlineBatchLatest && deadlineBatchLatest.gameweek === gwRow?.id && (
+              <div className="deadline-batch-in-progress-callout" role="status" aria-live="polite">
+                Orchestrator running: setting up GW {deadlineBatchLatest.gameweek ?? '—'} (picks, baselines, whitelist, MVs). Started {deadlineBatchLatest.started_at ? formatDeadlineGw(deadlineBatchLatest.started_at) : '—'}.
+              </div>
+            )}
             {deadlineBatchLoading ? (
               <div className="bento-card-value loading">
                 <div className="skeleton-text" />

@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { useRefreshState } from './useRefreshState'
+import { useGameweekData } from './useGameweekData'
 
 const PHASE_LABELS = {
   bootstrap_check_sec: 'Bootstrap check',
@@ -14,9 +16,11 @@ const PHASE_LABELS = {
 
 /**
  * Fetches latest deadline batch run(s) for the Debug panel.
- * Shows when updates started (is_current detected), finished, duration, and phase breakdown.
+ * Prefers the in-progress run so the panel shows the active GW (e.g. GW 28) when it's running, not the last completed (e.g. GW 27).
  */
 export function useDeadlineBatchRuns() {
+  const { state: refreshState } = useRefreshState()
+  const { gameweek: currentGameweek } = useGameweekData()
   const { data: runs = [], isLoading, error } = useQuery({
     queryKey: ['deadline-batch-runs'],
     queryFn: async () => {
@@ -29,10 +33,18 @@ export function useDeadlineBatchRuns() {
       return data ?? []
     },
     staleTime: 15_000,
-    refetchInterval: 30_000,
+    refetchInterval: refreshState === 'gw_setup' ? 10_000 : 30_000,
   })
 
-  const latest = runs[0] ?? null
+  // Always prefer the run for the current gameweek (is_current = true): in-progress first, then any run for current GW, then fallbacks
+  const activeRun =
+    runs.find((r) => r.finished_at == null && r.gameweek === currentGameweek) ??
+    runs.find((r) => r.gameweek === currentGameweek) ??
+    runs.find((r) => r.finished_at == null) ??
+    runs[0] ??
+    null
+  const latest = activeRun
+  const latestInProgress = latest?.finished_at == null
   const phaseRows = latest?.phase_breakdown && typeof latest.phase_breakdown === 'object'
     ? Object.entries(latest.phase_breakdown)
         .filter(([key, sec]) => key !== 'failure_reason' && key !== 'success_rate' && sec != null && typeof sec === 'number')
@@ -48,6 +60,7 @@ export function useDeadlineBatchRuns() {
   return {
     runs,
     latest,
+    latestInProgress,
     phaseRows,
     failureReason,
     successRate,
