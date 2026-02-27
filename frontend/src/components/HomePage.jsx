@@ -91,14 +91,13 @@ export default function HomePage() {
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
 
-  // Only show "Leagues and Managers Updating" before first kickoff (post-deadline baseline run, not during live/bonus)
+  // Before first kickoff (post-deadline baseline run, not during live/bonus)
   const beforeFirstKickoff = useMemo(() => {
     const first = fixturesFromMatches?.[0]?.kickoff_time
     if (!first || !fixturesFromMatches?.length) return false // need fixture data; no data => don't assume before kickoff
     return Date.now() < new Date(first).getTime()
   }, [fixturesFromMatches])
   const isLiveOrBonusPending = refreshState === 'live_matches' || refreshState === 'bonus_pending'
-  const showLeaguesManagersUpdatingBanner = deadlineBatchInProgress && beforeFirstKickoff && !isLiveOrBonusPending
 
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
@@ -124,6 +123,18 @@ export default function HomePage() {
       return null
     }
   }, [nextGameweek?.deadline_time])
+
+  // Game updating banner: (A) next deadline passed but is_current hasn't flipped yet, or (B) our deadline batch running before first kickoff
+  const showWaitingOnFplBanner = useMemo(() => {
+    if (!nextGameweek?.deadline_time || isLiveOrBonusPending) return false
+    const deadlineMs = new Date(nextGameweek.deadline_time.replace('Z', '+00:00')).getTime()
+    if (Date.now() <= deadlineMs) return false
+    // Current GW is still the one before "next" => FPL hasn't flipped yet
+    return gameweek != null && nextGameweek.id != null && gameweek === nextGameweek.id - 1
+  }, [nextGameweek?.deadline_time, nextGameweek?.id, gameweek, isLiveOrBonusPending])
+
+  const showSyncBanner = deadlineBatchInProgress && beforeFirstKickoff && !isLiveOrBonusPending
+  const showGameUpdatingBanner = showWaitingOnFplBanner || showSyncBanner
 
   // GW total from starting XI (same source as expanded table: contributedPoints with auto-subs, minus transfer cost)
   const gwPointsFromPlayers = useMemo(() => {
@@ -222,8 +233,10 @@ export default function HomePage() {
     {
       id: 'gw-rank',
       label: 'GW Rank',
-      value: formatNumberWithTwoDecimals(managerData?.gameweekRank),
-      subtext: getGwRankPercentileLabel(managerData?.gameweekRank ?? null, totalManagers ?? null),
+      value: showGameUpdatingBanner ? '—' : formatNumberWithTwoDecimals(managerData?.gameweekRank),
+      subtext: showGameUpdatingBanner
+        ? undefined
+        : getGwRankPercentileLabel(managerData?.gameweekRank ?? null, totalManagers ?? null),
       size: '1x1'
     },
     {
@@ -239,9 +252,11 @@ export default function HomePage() {
     {
       id: 'gw-points',
       label: 'GW Points',
-      value: gwPointsFromPlayers != null
-        ? formatNumber(gwPointsFromPlayers)
-        : formatNumber(managerData?.gameweekPoints),
+      value: showGameUpdatingBanner
+        ? '—'
+        : gwPointsFromPlayers != null
+          ? formatNumber(gwPointsFromPlayers)
+          : formatNumber(managerData?.gameweekPoints),
       subtext: `Gameweek ${gameweek}`,
       size: '1x1'
     },
@@ -420,13 +435,13 @@ export default function HomePage() {
 
   return (
     <div className="home-page">
-      {showLeaguesManagersUpdatingBanner && (
+      {showGameUpdatingBanner && (
         <div className="home-page-deadline-banner" aria-live="polite">
           <RefreshCcw className="home-page-deadline-banner-icon" size={18} />
           <span>Leagues and Managers Updating</span>
         </div>
       )}
-      {nextDeadlineLocal && (
+      {!showGameUpdatingBanner && nextDeadlineLocal && (
         <p className="home-page-next-deadline">
           Next deadline: {nextGameweek?.name ? `${nextGameweek.name} ` : ''}{nextDeadlineLocal}
         </p>
@@ -660,9 +675,9 @@ export default function HomePage() {
               currentManagerId={cardId === 'overall-rank' || cardId === 'league-rank' || cardId === 'captain' || cardId === 'chips' ? (config?.managerId ?? null) : undefined}
               currentManagerGwPoints={cardId === 'league-rank' ? (gwPointsFromPlayers != null ? gwPointsFromPlayers : (managerData?.gameweekPoints ?? 0)) : undefined}
               currentManagerTotalPoints={cardId === 'league-rank' ? (totalPointsFromPlayers != null ? totalPointsFromPlayers : (managerData?.totalPoints ?? 0)) : undefined}
-              captainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_captain)?.player_name ?? null) : undefined}
-              viceCaptainName={cardId === 'captain' ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
-              leagueCaptainData={cardId === 'captain' ? leagueCaptainData : undefined}
+              captainName={cardId === 'captain' && !showGameUpdatingBanner ? (currentGameweekPlayers?.find(p => p.is_captain)?.player_name ?? null) : undefined}
+              viceCaptainName={cardId === 'captain' && !showGameUpdatingBanner ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
+              leagueCaptainData={cardId === 'captain' && !showGameUpdatingBanner ? leagueCaptainData : undefined}
               leagueCaptainLoading={cardId === 'captain' ? leagueCaptainLoading : undefined}
             />
           )

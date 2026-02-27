@@ -1228,11 +1228,11 @@ export default function StatsSubpage() {
             >
               <table
                 className="research-stats-table league-standings-bento-table"
-                style={teamView ? undefined : { width: 'auto', minWidth: 0 }}
+                style={{ width: 'auto', minWidth: 0 }}
               >
                 <thead>
                   <tr>
-                    <th className="league-standings-bento-team">Team</th>
+                    <th className="league-standings-bento-team">TEAM</th>
                     {visibleColumns.map(({ key, label, field }) => (
                       <th key={key} className="league-standings-bento-total">
                         {isSortableColumn(field) ? (
