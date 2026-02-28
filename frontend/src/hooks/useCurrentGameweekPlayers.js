@@ -552,7 +552,8 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
           const isBonusConfirmed = bonusStatus === 'confirmed'
-          const bonusToAdd = provisionalBonus || officialBonus
+          // When status is provisional, use only our BPS-based provisional_bonus (ignore bonus column until FPL confirms).
+          const bonusToAdd = isBonusConfirmed ? officialBonus : provisionalBonus
           const fixtureFinished = effectiveFixture != null && (effectiveFixture.finished === true || effectiveFixture.finished === 'true')
           const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
           const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + bonusToAdd

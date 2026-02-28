@@ -58,6 +58,11 @@ Run these migrations in order for a fresh database setup:
 - Used by frontend for Gantt gradient in "All" filter (single query instead of picks + stats)
 - refresh_manager_player_gameweek_points() added; included in refresh_all_materialized_views()
 
+### Points consistency (GW / total including bonus)
+- **Single source of truth:** `v_manager_player_gameweek_points` defines "points including provisional or official bonus" (adds provisional_bonus when NOT confirmed; treats NULL bonus_status as provisional).
+- **Home bento** and **league standings** (mv_mini_league_standings) must both use this view (or the same logic). Do not add separate bonus logic elsewhere.
+- After changing this view or player_gameweek_stats, refresh `mv_mini_league_standings` so the league page shows latest points.
+
 ### 006: Baseline Columns
 - Adds baseline preservation columns to manager_gameweek_history
 - Adds baseline columns to manager_transfers

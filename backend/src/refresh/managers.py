@@ -727,6 +727,26 @@ class ManagerDataRefresher:
             else:
                 player_fixtures[pid] = {"finished": False, "finished_provisional": False}
 
+        # 5. Provisional bonus from DB (API total_points excludes bonus until ~1h after full-time)
+        # When bonus_status='provisional' and bonus=0, add provisional_bonus so manager total matches display.
+        stats_result = self.db_client.client.table("player_gameweek_stats").select(
+            "player_id, bonus_status, bonus, provisional_bonus"
+        ).eq("gameweek", gameweek).in_("player_id", player_ids).execute()
+        stats_rows = stats_result.data or []
+        provisional_extra: Dict[int, int] = {}
+        for pid in player_ids:
+            rows = [r for r in stats_rows if r.get("player_id") == pid]
+            if not rows:
+                continue
+            any_provisional = any(
+                (r.get("bonus_status") or "").lower() == "provisional" and (r.get("bonus") or 0) == 0
+                for r in rows
+            )
+            if any_provisional:
+                provisional_extra[pid] = sum(int(r.get("provisional_bonus") or 0) for r in rows)
+            else:
+                provisional_extra[pid] = 0
+
         # Group picks by manager
         picks_by_manager: Dict[int, List[Dict]] = {}
         for p in picks_all:
@@ -763,6 +783,8 @@ class ManagerDataRefresher:
                 pts = 0
                 if pid in live_elements and live_elements[pid].get("stats") is not None:
                     pts = int(live_elements[pid].get("stats", {}).get("total_points") or 0)
+                # Include provisional bonus when FPL has not yet confirmed (avoids double-count when confirmed)
+                pts += provisional_extra.get(pid, 0)
                 raw_points += pts * mult
             if active_chip == "bboost":
                 for pick in bench:
@@ -770,6 +792,7 @@ class ManagerDataRefresher:
                     pts = 0
                     if pid in live_elements and live_elements[pid].get("stats") is not None:
                         pts = int(live_elements[pid].get("stats", {}).get("total_points") or 0)
+                    pts += provisional_extra.get(pid, 0)
                     raw_points += pts
 
             gameweek_points = max(0, raw_points - transfer_cost)

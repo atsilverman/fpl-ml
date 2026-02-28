@@ -323,8 +323,8 @@ export default function MiniLeaguePage() {
         _displayName: displayName,
         _leftToPlay: leftToPlay,
         _inPlay: inPlay,
-        _totalForSort: isYou ? currentManagerTotalPointsDisplay : (s.total_points ?? 0),
-        _gwForSort: isYou ? currentManagerGwPointsDisplay : (s.gameweek_points ?? 0),
+        _totalForSort: selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null ? selectedManagerTotalDisplay : (s.total_points ?? 0),
+        _gwForSort: selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null ? selectedManagerGwDisplay : (s.gameweek_points ?? 0),
         _captainName: captainName,
         _viceName: viceName
       }
@@ -353,21 +353,19 @@ export default function MiniLeaguePage() {
       }
     }
     return [...rows].sort(cmp)
-  }, [standings, liveStatusByManager, captainByManagerId, effectiveSort.column, effectiveSort.dir, currentManagerId, currentManagerTotalPointsDisplay, currentManagerGwPointsDisplay])
+  }, [standings, liveStatusByManager, captainByManagerId, effectiveSort.column, effectiveSort.dir, selectedManagerId, selectedManagerTotalDisplay, selectedManagerGwDisplay])
 
   const { transfersByManager, loading: leagueTransfersLoading } = useLeagueTransferImpacts(leagueManagerIds, gameweek)
 
   const displayRows = sortedRows
 
-  /** Top third by GW points (league page only): manager_id -> 1..N for tapering fill on GW column; class capped at 5. Ties get same rank (competition ranking), next rank skips. No highlight when all GW points are 0. */
+  /** Top third by GW points (league page only): manager_id -> 1..N for tapering fill on GW column; class capped at 5. Ties get same rank (competition ranking), next rank skips. No highlight when all GW points are 0. Uses standings gameweek_points for all so order is consistent across users. */
   const gwTopRankByManagerId = useMemo(() => {
     if (!standings.length) return new Map()
-    const withGw = standings.map((s) => {
-      const gw = currentManagerId != null && s.manager_id === currentManagerId
-        ? (currentManagerGwPointsDisplay ?? 0)
-        : (s.gameweek_points ?? 0)
-      return { manager_id: s.manager_id, gw: Number(gw) || 0 }
-    })
+    const withGw = standings.map((s) => ({
+      manager_id: s.manager_id,
+      gw: Number(s.gameweek_points ?? 0) || 0
+    }))
     const anyNonZero = withGw.some((x) => x.gw > 0)
     if (!anyNonZero) return new Map()
     const sorted = [...withGw].sort((a, b) => b.gw - a.gw || a.manager_id - b.manager_id)
@@ -379,17 +377,15 @@ export default function MiniLeaguePage() {
       if (rank <= topN) map.set(sorted[i].manager_id, Math.min(rank, 5))
     }
     return map
-  }, [standings, currentManagerId, currentManagerGwPointsDisplay])
+  }, [standings])
 
-  /** Top third by total points (league page only): manager_id -> 1..N for tapering fill on total column; class capped at 5. Ties get same rank (competition ranking), next rank skips. */
+  /** Top third by total points (league page only): manager_id -> 1..N for tapering fill on total column; class capped at 5. Ties get same rank (competition ranking), next rank skips. Uses standings total_points for all so order is consistent across users. */
   const totalTopRankByManagerId = useMemo(() => {
     if (!standings.length) return new Map()
     const withTotal = standings.map((s) => {
-      const total = currentManagerId != null && s.manager_id === currentManagerId
-        ? (currentManagerTotalPointsDisplay ?? 0)
-        : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null
-          ? selectedManagerTotalDisplay
-          : (s.total_points ?? 0)
+      const total = selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null
+        ? selectedManagerTotalDisplay
+        : (s.total_points ?? 0)
       return { manager_id: s.manager_id, total: Number(total) || 0 }
     })
     const sorted = [...withTotal].sort((a, b) => b.total - a.total || a.manager_id - b.manager_id)
@@ -401,7 +397,7 @@ export default function MiniLeaguePage() {
       if (rank <= topN) map.set(sorted[i].manager_id, Math.min(rank, 5))
     }
     return map
-  }, [standings, currentManagerId, currentManagerTotalPointsDisplay, selectedManagerId, selectedManagerTotalDisplay])
+  }, [standings, selectedManagerId, selectedManagerTotalDisplay])
 
   const managerIdsOwningAnySet = useMemo(
     () => new Set(managerIdsOwningAny),
@@ -1008,19 +1004,15 @@ export default function MiniLeaguePage() {
                     )}
                     {!showCView && (
                       <>
-                        <td className={`league-standings-bento-total ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerTotalPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerTotalDisplay : s.total_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}${(() => { const r = totalTopRankByManagerId.get(s.manager_id); const totalVal = (currentManagerId != null && s.manager_id === currentManagerId ? currentManagerTotalPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerTotalDisplay : s.total_points) ?? null; return r != null && totalVal != null && totalVal !== 0 ? ` league-standings-total-top-${Math.min(r, 5)}` : ''; })()}`}>
-                          {currentManagerId != null && s.manager_id === currentManagerId
-                            ? (currentManagerTotalPointsDisplay ?? '—')
-                            : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null
-                              ? selectedManagerTotalDisplay
-                              : (s.total_points ?? '—')}
+                        <td className={`league-standings-bento-total ${((selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerTotalDisplay : s.total_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}${(() => { const r = totalTopRankByManagerId.get(s.manager_id); const totalVal = (selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null ? selectedManagerTotalDisplay : s.total_points) ?? null; return r != null && totalVal != null && totalVal !== 0 ? ` league-standings-total-top-${Math.min(r, 5)}` : ''; })()}`}>
+                          {selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerTotalDisplay != null
+                            ? selectedManagerTotalDisplay
+                            : (s.total_points ?? '—')}
                         </td>
-                        <td className={`league-standings-bento-gw ${((currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}${(() => { const r = gwTopRankByManagerId.get(s.manager_id); const gwVal = (currentManagerId != null && s.manager_id === currentManagerId ? currentManagerGwPointsDisplay : selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null; return r != null && gwVal != null && gwVal !== 0 ? ` league-standings-gw-top-${Math.min(r, 5)}` : ''; })()}`}>
-                          {currentManagerId != null && s.manager_id === currentManagerId
-                            ? (currentManagerGwPointsDisplay ?? '—')
-                            : selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null
-                              ? selectedManagerGwDisplay
-                              : (s.gameweek_points ?? '—')}
+                        <td className={`league-standings-bento-gw ${((selectedManagerId != null && s.manager_id === selectedManagerId ? selectedManagerGwDisplay : s.gameweek_points) ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}${(() => { const r = gwTopRankByManagerId.get(s.manager_id); const gwVal = (selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null ? selectedManagerGwDisplay : s.gameweek_points) ?? null; return r != null && gwVal != null && gwVal !== 0 ? ` league-standings-gw-top-${Math.min(r, 5)}` : ''; })()}`}>
+                          {selectedManagerId != null && s.manager_id === selectedManagerId && selectedManagerGwDisplay != null
+                            ? selectedManagerGwDisplay
+                            : (s.gameweek_points ?? '—')}
                         </td>
                         <td className={`league-standings-bento-left-to-play ${leftToPlay === 0 ? 'league-standings-bento-cell-muted' : ''}`}>
                           {leftToPlay !== null && leftToPlay !== undefined ? leftToPlay : '—'}

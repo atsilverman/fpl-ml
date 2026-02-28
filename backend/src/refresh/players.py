@@ -49,28 +49,29 @@ class PlayerDataRefresher:
         """
         Calculate provisional bonus from BPS ranking with official FPL tie rules.
 
-        Official rules (Premier League):
-        - Tie for first: Players 1 & 2 get 3 each, Player 3 gets 1 (skip 2).
-        - Tie for second: Player 1 gets 3, Players 2 & 3 get 2 each (skip 1).
-        - Tie for third: Player 1 gets 3, Player 2 gets 2, Players 3 & 4 get 1 each.
+        Official FPL rules: ranking is by BPS only. When players have the same BPS that is a tie;
+        ties are resolved by distribution (no secondary tiebreaker like goals/assists).
+        - Tie for 1st: Players 1 & 2 get 3 each, Player 3 gets 1.
+        - Tie for 2nd: Player 1 gets 3, Players 2 & 3 get 2 each.
+        - Tie for 3rd: Player 1 gets 3, Player 2 gets 2, Players 3 & 4 get 1 each.
 
         Args:
             player_id: Player ID
-            player_bps: Player's BPS score
+            player_bps: Unused; we look up in all_players_in_fixture
             fixture_id: Fixture ID
-            all_players_in_fixture: All players in the fixture with BPS (and optionally id)
+            all_players_in_fixture: List of dicts with id and bps (goals/assists/CS not used)
 
         Returns:
             Provisional bonus points (0-3)
         """
         if not all_players_in_fixture:
             return 0
-        # Sort by BPS descending, then by id ascending for deterministic tiebreaker
+        # Sort by BPS desc only; use id asc for deterministic order when BPS is equal
         sorted_players = sorted(
             all_players_in_fixture,
             key=lambda p: (-(p.get("bps") or 0), p.get("id") or 0),
         )
-        # Group consecutive players with the same BPS
+        # Group consecutive players with same BPS (official: equal BPS = tie, no secondary tiebreaker)
         groups: List[List[Dict]] = []
         for p in sorted_players:
             bps = p.get("bps") or 0
@@ -606,7 +607,11 @@ class PlayerDataRefresher:
                     if fixture.get("team_h") == team_id or fixture.get("team_a") == team_id:
                         if f_id not in fixture_players:
                             fixture_players[f_id] = []
-                        fixture_players[f_id].append({"id": player_id, "bps": st.get("bps", 0), "minutes": st.get("minutes", 0)})
+                        fixture_players[f_id].append({
+                            "id": player_id,
+                            "bps": st.get("bps", 0) or 0,
+                            "minutes": st.get("minutes", 0) or 0,
+                        })
             fixture_past_threshold = {
                 fid: max((p["minutes"] for p in plist), default=0) > 45
                 for fid, plist in fixture_players.items()
@@ -840,7 +845,8 @@ class PlayerDataRefresher:
                         row_goals = existing_stat.get("goals_scored", 0) or 0
                         row_assists = existing_stat.get("assists", 0) or 0
                         row_bps = existing_stat.get("bps", 0) or 0
-                        row_bonus = existing_stat.get("bonus", 0) if (existing_stat.get("bonus_status") == "confirmed" or (existing_stat.get("bonus") or 0) > 0) else (existing_stat.get("provisional_bonus", 0) or existing_stat.get("bonus", 0))
+                        # When status is provisional, use only our computed provisional_bonus (do not re-persist stale existing bonus).
+                        row_bonus = existing_stat.get("bonus", 0) if (existing_stat.get("bonus_status") == "confirmed" or (existing_stat.get("bonus") or 0) > 0) else (existing_stat.get("provisional_bonus", 0))
                     else:
                         use_remainder = len(player_fixtures) > 1 and (sum_finished_minutes > 0 or sum_finished_points > 0)
                         raw_mins = remainder_minutes if use_remainder else (live_minutes if is_first_row else 0)
@@ -875,6 +881,8 @@ class PlayerDataRefresher:
                             return float(existing)
                         return 0.0
                     
+                    # When bonus_status is provisional, never persist non-zero in bonus column (use 0 until FPL confirms).
+                    bonus_to_persist = 0 if bonus_status == "provisional" else row_bonus
                     # For finished row use existing for all stat fields; for live row use remainder or live
                     if this_fixture_finished and existing_stat:
                         stats_data = {
@@ -888,7 +896,7 @@ class PlayerDataRefresher:
                             "minutes": row_minutes,
                             "started": row_minutes > 0,
                             "total_points": row_points,
-                            "bonus": row_bonus,
+                            "bonus": bonus_to_persist,
                             "provisional_bonus": provisional_bonus_val,
                             "bps": row_bps,
                             "bonus_status": bonus_status,
@@ -926,7 +934,7 @@ class PlayerDataRefresher:
                             "minutes": row_minutes,
                             "started": row_minutes > 0,
                             "total_points": row_points,
-                            "bonus": row_bonus,
+                            "bonus": bonus_to_persist,
                             "provisional_bonus": provisional_bonus_val,
                             "bps": row_bps,
                             "bonus_status": bonus_status,
@@ -1075,6 +1083,8 @@ class PlayerDataRefresher:
                     for gw_data in gw_data_list:
                         bonus = gw_data.get("bonus", 0)
                         bonus_status = "confirmed" if bonus > 0 else "provisional"
+                        # When provisional, never persist non-zero in bonus column (trust FPL only when confirmed).
+                        bonus_to_persist = 0 if bonus_status == "provisional" else bonus
                         defcon = self._calculate_defcon(gw_data, position)
                         fixture_id = gw_data.get("fixture") or 0
                         match_finished = False
@@ -1097,7 +1107,7 @@ class PlayerDataRefresher:
                             "minutes": _mins,
                             "started": _mins > 0,
                             "total_points": gw_data.get("total_points", 0),
-                            "bonus": bonus,
+                            "bonus": bonus_to_persist,
                             "provisional_bonus": 0,
                             "bps": gw_data.get("bps", 0),
                             "bonus_status": bonus_status,
@@ -1170,7 +1180,8 @@ class PlayerDataRefresher:
                     await asyncio.sleep(element_summary_batch_delay)
             
             # Compute and persist provisional_bonus for provisional fixtures (BPS rank 3/2/1)
-            # so the frontend can show correct points when bonus not yet in API
+            # so the frontend and league standings (v_manager_player_gameweek_points) show correct points.
+            # Include bonus_status IS NULL so rows written from live path get provisional_bonus too.
             provisional_fixture_ids = [
                 fid for fid, f in fixtures_by_id.items()
                 if f.get("finished_provisional") and not f.get("finished")
@@ -1184,18 +1195,20 @@ class PlayerDataRefresher:
                     ).execute().data or []
                     to_update = [
                         r for r in rows
-                        if (r.get("bonus_status") == "provisional" and (r.get("bonus") or 0) == 0)
+                        if ((r.get("bonus_status") == "provisional" or r.get("bonus_status") is None)
+                            and (r.get("bonus") or 0) == 0)
                     ]
+                    # Build fixture_players from ALL rows in the fixture so ranking is over full fixture
+                    fixture_players: Dict[int, List[Dict]] = {}
+                    for r in rows:
+                        fid = r.get("fixture_id")
+                        if fid not in fixture_players:
+                            fixture_players[fid] = []
+                        fixture_players[fid].append({
+                            "id": r["player_id"],
+                            "bps": r.get("bps") or 0,
+                        })
                     if to_update:
-                        fixture_players: Dict[int, List[Dict]] = {}
-                        for r in to_update:
-                            fid = r.get("fixture_id")
-                            if fid not in fixture_players:
-                                fixture_players[fid] = []
-                            fixture_players[fid].append({
-                                "id": r["player_id"],
-                                "bps": r.get("bps") or 0
-                            })
                         for r in to_update:
                             fid = r.get("fixture_id")
                             plist = fixture_players.get(fid, [])

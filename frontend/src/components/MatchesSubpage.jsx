@@ -329,7 +329,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
   )
 }
 
-/** FPL bonus tiebreaker: BPS desc, then goals, assists, clean_sheets. Used to get top 3 / bonus-only list. */
+/** FPL bonus tiebreaker: BPS desc, then goals, assists, clean_sheets, then player_id (match backend for consistent 3rd place). */
 function sortByBpsAndTiebreakers(players) {
   return [...players].sort((a, b) => {
     const bpsA = a.bps ?? 0
@@ -344,20 +344,16 @@ function sortByBpsAndTiebreakers(players) {
     const csA = a.clean_sheets ?? 0
     const csB = b.clean_sheets ?? 0
     if (csB !== csA) return csB - csA
-    return (a.player_name || '').localeCompare(b.player_name || '')
+    return (a.player_id ?? 0) - (b.player_id ?? 0)
   })
 }
 
-/** When bonus view is on: only players in the bonus (1–3 pts from official or BPS top 3). */
-function bonusPlayersOnly(merged, isProvisional) {
+/** When bonus view is on: only the top 3 by BPS in the fixture (per FPL: exactly 3 get bonus). Never use API bonus to pick who appears — that can return 6+ and wrong order. */
+function bonusPlayersOnly(merged) {
   if (!merged?.length) return []
   const withBps = merged.filter((p) => (p.bps ?? 0) > 0)
   if (!withBps.length) return []
   const sorted = sortByBpsAndTiebreakers(withBps)
-  const hasOfficialBonus = sorted.some((p) => (p.bonus ?? 0) >= 1 && (p.bonus ?? 0) <= 3)
-  if (hasOfficialBonus) {
-    return sorted.filter((p) => (p.bonus ?? 0) >= 1 && (p.bonus ?? 0) <= 3)
-  }
   return sorted.slice(0, 3)
 }
 
@@ -428,8 +424,14 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   }, [homePlayers, awayPlayers, home_team_id, away_team_id])
   const bonusOnlyPlayers = useMemo(() => {
     if (!showBonusChart || !mergedPlayersForBps.length) return []
-    return bonusPlayersOnly(mergedPlayersForBps, fixtureStatus === 'live' || fixtureStatus === 'provisional')
-  }, [showBonusChart, mergedPlayersForBps, fixtureStatus])
+    return bonusPlayersOnly(mergedPlayersForBps)
+  }, [showBonusChart, mergedPlayersForBps])
+  /** All players with BPS > 0, sorted (for expanded bonus chart). Collapsed shows only top 3. */
+  const allBpsPlayersSorted = useMemo(() => {
+    if (!showBonusChart || !mergedPlayersForBps.length) return []
+    const withBps = mergedPlayersForBps.filter((p) => (p.bps ?? 0) > 0)
+    return sortByBpsAndTiebreakers(withBps)
+  }, [showBonusChart, mergedPlayersForBps])
 
   const status = fixtureStatus
   const hasStarted = fixture.started
@@ -558,7 +560,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
             ) : (
               <div className="bps-chart-wrap">
                 <BpsLeadersChart
-                  players={mergedPlayersForBps}
+                  players={expanded ? allBpsPlayersSorted : bonusOnlyPlayers}
                   loading={statsLoading}
                   gameweekMaxBps={gameweekMaxBps}
                   isProvisional={isProvisionalBps}

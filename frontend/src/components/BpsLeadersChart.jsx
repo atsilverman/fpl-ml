@@ -39,7 +39,7 @@ function abbreviateName(name) {
   return name.slice(0, MAX_NAME_LENGTH - 1) + '…'
 }
 
-/** FPL bonus tiebreaker: BPS desc, then goals, assists, clean_sheets for ordering. */
+/** FPL bonus tiebreaker: BPS desc, then goals, assists, clean_sheets, then player_id (match backend). */
 function sortByBpsAndTiebreakers(players) {
   return [...players].sort((a, b) => {
     const bpsA = a.bps ?? 0
@@ -54,7 +54,7 @@ function sortByBpsAndTiebreakers(players) {
     const csA = a.clean_sheets ?? 0
     const csB = b.clean_sheets ?? 0
     if (csB !== csA) return csB - csA
-    return (a.player_name || '').localeCompare(b.player_name || '')
+    return (a.player_id ?? 0) - (b.player_id ?? 0)
   })
 }
 
@@ -182,14 +182,8 @@ export default function BpsLeadersChart({ players = [], loading = false, gamewee
           const bps = player.bps ?? 0
           const widthPct = barWidthPercent(bps)
           const valueOnBar = widthPct >= VALUE_ON_BAR_MIN_WIDTH_PCT
-          const apiBonus = player.bonus ?? player.effective_bonus ?? 0
-          const numBonus = Number(apiBonus)
-          const hasOfficialBonus = numBonus >= 1 && numBonus <= 3
-          const bonus = hasOfficialBonus
-            ? numBonus
-            : isProvisional
-              ? (index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0)
-              : 0
+          // Always assign displayed bonus by BPS rank so order is logical (1st=3+, 2nd=2+, 3rd=1+).
+          const bonus = index === 0 ? 3 : index === 1 ? 2 : index === 2 ? 1 : 0
           const inBonus = bonus >= 1 && bonus <= 3
           return (
             <div
