@@ -1,11 +1,41 @@
 import { useEffect, useRef } from 'react'
 
-const DEFAULT_MIN_SWIPE = 50
+const DEFAULT_MIN_SWIPE = 80
 const DEFAULT_AXIS_LOCK = 10
+
+/**
+ * Returns true if node is inside an element (up to root) that has horizontal overflow
+ * and is scrollable (scrollWidth > clientWidth). Used to avoid capturing subpage swipe
+ * when the user is scrolling a table or list horizontally.
+ */
+function isInsideHorizontallyScrollableElement(node, root) {
+  let el = node
+  while (el && el !== root) {
+    if (el.nodeType !== 1) {
+      el = el.parentNode
+      continue
+    }
+    try {
+      const style = typeof getComputedStyle !== 'undefined' ? getComputedStyle(el) : null
+      if (style) {
+        const overflowX = style.overflowX
+        if ((overflowX === 'auto' || overflowX === 'scroll') && el.scrollWidth > el.clientWidth) {
+          return true
+        }
+      }
+    } catch (_) {
+      // getComputedStyle can throw for detached or cross-origin nodes
+    }
+    el = el.parentElement
+  }
+  return false
+}
 
 /**
  * Mobile-only horizontal swipe to change subpage index. No loop: at first page
  * swipe-right does nothing; at last page swipe-left does nothing.
+ * Skips subpage swipe when the touch starts on a horizontally scrollable element
+ * (e.g. table wrapper) so inner horizontal scroll is prioritized.
  *
  * @param {React.RefObject<HTMLElement | null>} containerRef - Element to attach touch listeners to
  * @param {object} options
@@ -13,7 +43,7 @@ const DEFAULT_AXIS_LOCK = 10
  * @param {number} options.totalPages - Number of subpages
  * @param {(index: number) => void} options.onSwipeToIndex - Called with new index on successful swipe
  * @param {boolean} options.enabled - If false, listeners are not attached (e.g. when not mobile)
- * @param {number} [options.minSwipeDistance] - Min horizontal distance to count as swipe (default 50)
+ * @param {number} [options.minSwipeDistance] - Min horizontal distance to count as swipe (default 80)
  * @param {number} [options.axisLockThreshold] - Pixels before deciding horizontal vs vertical (default 10)
  */
 export function useSubpageSwipe(containerRef, options) {
@@ -29,6 +59,7 @@ export function useSubpageSwipe(containerRef, options) {
   const startX = useRef(0)
   const startY = useRef(0)
   const isHorizontalSwipe = useRef(null)
+  const skipSubpageSwipe = useRef(false)
   const onSwipeRef = useRef(onSwipeToIndex)
   onSwipeRef.current = onSwipeToIndex
 
@@ -42,10 +73,12 @@ export function useSubpageSwipe(containerRef, options) {
       startX.current = e.touches[0].clientX
       startY.current = e.touches[0].clientY
       isHorizontalSwipe.current = null
+      skipSubpageSwipe.current = isInsideHorizontallyScrollableElement(e.target, el)
     }
 
     const onTouchMove = (e) => {
       if (e.touches.length !== 1) return
+      if (skipSubpageSwipe.current) return
       const x = e.touches[0].clientX
       const y = e.touches[0].clientY
       const dx = x - startX.current
@@ -65,6 +98,7 @@ export function useSubpageSwipe(containerRef, options) {
     }
 
     const onTouchEnd = (e) => {
+      if (skipSubpageSwipe.current) return
       if (isHorizontalSwipe.current !== true) return
       const endX = e.changedTouches?.[0]?.clientX ?? startX.current
       const dx = endX - startX.current
