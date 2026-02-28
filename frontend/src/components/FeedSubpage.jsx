@@ -393,19 +393,6 @@ export default function FeedSubpage({ isActive = true }) {
     }))
   }, [fixtures, teamsMap])
 
-  const filterSummaryText = useMemo(() => {
-    const scopeLabel = scopeFilter === 'all' ? 'All' : scopeFilter === 'owned' ? 'Owned' : 'Not owned'
-    const positionLabel = positionFilter === 'all' ? 'All positions' : (positionFilter === 2 ? 'DEF' : positionFilter === 3 ? 'MID' : 'FWD')
-    let matchupLabel = 'All matchups'
-    if (matchupFilter !== 'all') {
-      const fid = Number(matchupFilter)
-      const m = matchups.find(mu => Number(mu.fixtureId) === fid)
-      if (m) matchupLabel = `${m.homeShort ?? '?'} v ${m.awayShort ?? '?'}`
-    }
-    const sortLabel = sortBy === 'time' ? 'Time (newest)' : sortBy === 'impact_positive' ? 'Impact (+)' : 'Impact (−)'
-    return `${scopeLabel} · ${positionLabel} · ${matchupLabel} · ${sortLabel}`
-  }, [scopeFilter, positionFilter, matchupFilter, matchups, sortBy])
-
   const suggestions = useMemo(() => {
     const events = sortedEvents || []
     if (!events.length) return []
@@ -645,9 +632,6 @@ export default function FeedSubpage({ isActive = true }) {
                 </button>
               </div>
             </div>
-            <p className="feed-filter-summary" aria-live="polite">
-              <span className="feed-filter-summary-viewing">Viewing:</span> {filterSummaryText}
-            </p>
             {sortedFilteredEvents.length > 0 && (
               <div className="gameweek-list-header" aria-hidden="true">
                 <div className="gameweek-list-header__player">Player</div>

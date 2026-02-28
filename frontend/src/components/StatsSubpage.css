@@ -915,11 +915,6 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   opacity: 0.9;
   text-align: center;
 }
-.research-stats-filter-summary-viewing {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .research-stats-footer-wrap {
   display: flex;
   flex-direction: column;
@@ -1086,12 +1081,17 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Prominent Players/Teams slider at top of filter overlay (dictates filters below) */
+/* Prominent Players/Teams slider at top of filter overlay (dictates filters below). Desktop: hidden (toggle is in toolbar). */
 .stats-filter-view-toggle-wrap {
   width: 100%;
   margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-color);
+}
+@media (min-width: 769px) {
+  .stats-filter-overlay .stats-filter-view-toggle-wrap {
+    display: none;
+  }
 }
 .stats-filter-overlay .stats-filter-view-toggle {
   width: 100%;
@@ -1445,9 +1445,9 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   isolation: isolate; /* Clear scroll container for sticky (same as fixture table) */
-  overscroll-behavior-x: contain; /* keep horizontal scroll inside table */
-  overscroll-behavior-y: auto;   /* when at top/bottom, chain to page so rest of page can scroll */
-  touch-action: pan-x pan-y;     /* allow both axes; vertical chain lets page scroll after table end */
+  /* Prevent sticky header/column being pulled off on mobile drag (same as GameweekPointsView) */
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;     /* allow both axes */
 }
 
 /* Main table only: vertical scroll inside this container so header row and player column stay fixed. */
@@ -1593,11 +1593,11 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   margin-left: 2px;
 }
 
-/* Team view: single line = badge + full name (no position/price); allow name to wrap so we don't abbreviate */
+/* Team view: single line = badge + full name (no position/price); truncate with ellipsis */
 .research-stats-table .research-stats-team-cell .league-standings-bento-team-name {
-  white-space: normal;
-  text-overflow: clip;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .research-stats-table .research-stats-team-cell .research-stats-player-cell-lines {
   justify-content: center;

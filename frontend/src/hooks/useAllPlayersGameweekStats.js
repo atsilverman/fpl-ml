@@ -171,10 +171,12 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
             source: 'api',
             players: data.players ?? [],
             team_goals_conceded: data.team_goals_conceded ?? {},
+            team_expected_goals_conceded: data.team_expected_goals_conceded ?? {},
             total_count: data.total_count ?? (data.players ?? []).length,
             page: data.page ?? apiPage,
             page_size: data.page_size ?? pageSize,
-            top_10_player_ids_by_field: data.top_10_player_ids_by_field ?? null
+            top_10_player_ids_by_field: data.top_10_player_ids_by_field ?? null,
+            top_20_player_ids_by_field: data.top_20_player_ids_by_field ?? null
           }
         } catch {
           return null
@@ -235,7 +237,22 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           }
         }
 
-        return { source: 'mv', rows: mvRows || [], playerMap }
+        let team_goals_conceded = {}
+        let team_expected_goals_conceded = {}
+        try {
+          const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+          if (rpcData?.length) {
+            for (const item of rpcData) {
+              const tid = item?.team_id
+              if (tid != null) {
+                team_goals_conceded[tid] = Number(item.goals_conceded) ?? 0
+                const xgc = item.expected_goals_conceded
+                team_expected_goals_conceded[tid] = xgc != null ? Number(xgc) : 0
+              }
+            }
+          }
+        } catch (_) {}
+        return { source: 'mv', rows: mvRows || [], playerMap, team_goals_conceded, team_expected_goals_conceded }
       }
 
       // Fallback: raw fetch + aggregate
@@ -309,7 +326,22 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
         }
       }
 
-      return { source: 'raw', rawStats: stats, playerMap }
+      let team_goals_conceded = {}
+      let team_expected_goals_conceded = {}
+      try {
+        const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (rpcData?.length) {
+          for (const item of rpcData) {
+            const tid = item?.team_id
+            if (tid != null) {
+              team_goals_conceded[tid] = Number(item.goals_conceded) ?? 0
+              const xgc = item.expected_goals_conceded
+              team_expected_goals_conceded[tid] = xgc != null ? Number(xgc) : 0
+            }
+          }
+        }
+      } catch (_) {}
+      return { source: 'raw', rawStats: stats, playerMap, team_goals_conceded, team_expected_goals_conceded }
     },
     enabled: !!gameweek && !gwLoading,
     staleTime: isLive ? 25 * 1000 : 2 * 60 * 1000,
@@ -318,35 +350,13 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   })
 
   const teamGoalsConceded = useMemo(() => {
-    if (!cache || cache.source !== 'api') return {}
+    if (!cache) return {}
     return cache.team_goals_conceded ?? {}
   }, [cache])
 
-  const totalCount = useMemo(() => {
-    if (!cache) return 0
-    if (cache.source === 'api') return cache.total_count ?? (cache.players?.length ?? 0)
-    return 0
-  }, [cache])
-
-  const pagination = useMemo(() => {
-    if (!cache || cache.source !== 'api') return { page: 1, page_size: 0, total_count: 0 }
-    return {
-      page: cache.page ?? 1,
-      page_size: cache.page_size ?? PAGE_SIZE_PLAYER_VIEW,
-      total_count: cache.total_count ?? (cache.players?.length ?? 0)
-    }
-  }, [cache])
-
-  /** Global top 10 player IDs per stat (from API only); same for every page so fill does not recalc per page */
-  const top10PlayerIdsByField = useMemo(() => {
-    if (!cache || cache.source !== 'api' || !cache.top_10_player_ids_by_field) return null
-    const raw = cache.top_10_player_ids_by_field
-    if (typeof raw !== 'object' || Object.keys(raw).length === 0) return null
-    const sets = {}
-    for (const [field, ids] of Object.entries(raw)) {
-      if (Array.isArray(ids)) sets[field] = new Set(ids.map((id) => Number(id)).filter((n) => n > 0))
-    }
-    return Object.keys(sets).length > 0 ? sets : null
+  const teamExpectedGoalsConceded = useMemo(() => {
+    if (!cache) return {}
+    return cache.team_expected_goals_conceded ?? {}
   }, [cache])
 
   const players = useMemo(() => {
@@ -401,12 +411,60 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     return []
   }, [cache, gameweek, gwFilter, locationFilter])
 
+  const totalCount = useMemo(() => {
+    if (!cache) return 0
+    if (cache.source === 'api') return cache.total_count ?? (cache.players?.length ?? 0)
+    if (cache.source === 'mv' || cache.source === 'raw') return players.length
+    return 0
+  }, [cache, players])
+
+  const pagination = useMemo(() => {
+    if (!cache) return { page: 1, page_size: 0, total_count: 0 }
+    if (cache.source === 'api') {
+      return {
+        page: cache.page ?? 1,
+        page_size: cache.page_size ?? PAGE_SIZE_PLAYER_VIEW,
+        total_count: cache.total_count ?? (cache.players?.length ?? 0)
+      }
+    }
+    if (cache.source === 'mv' || cache.source === 'raw') {
+      return { page: 1, page_size: PAGE_SIZE_PLAYER_VIEW, total_count: players.length }
+    }
+    return { page: 1, page_size: 0, total_count: 0 }
+  }, [cache, players])
+
+  /** Global top 10 player IDs per stat (from API only); same for every page so fill does not recalc per page */
+  const top10PlayerIdsByField = useMemo(() => {
+    if (!cache || cache.source !== 'api' || !cache.top_10_player_ids_by_field) return null
+    const raw = cache.top_10_player_ids_by_field
+    if (typeof raw !== 'object' || Object.keys(raw).length === 0) return null
+    const sets = {}
+    for (const [field, ids] of Object.entries(raw)) {
+      if (Array.isArray(ids)) sets[field] = new Set(ids.map((id) => Number(id)).filter((n) => n > 0))
+    }
+    return Object.keys(sets).length > 0 ? sets : null
+  }, [cache])
+
+  /** Global top 20 player IDs per stat (from API only) */
+  const top20PlayerIdsByField = useMemo(() => {
+    if (!cache || cache.source !== 'api' || !cache.top_20_player_ids_by_field) return null
+    const raw = cache.top_20_player_ids_by_field
+    if (typeof raw !== 'object' || Object.keys(raw).length === 0) return null
+    const sets = {}
+    for (const [field, ids] of Object.entries(raw)) {
+      if (Array.isArray(ids)) sets[field] = new Set(ids.map((id) => Number(id)).filter((n) => n > 0))
+    }
+    return Object.keys(sets).length > 0 ? sets : null
+  }, [cache])
+
   return {
     players,
     teamGoalsConceded,
+    teamExpectedGoalsConceded,
     totalCount,
     pagination,
     top10PlayerIdsByField,
+    top20PlayerIdsByField,
     loading: isLoading || gwLoading
   }
 }

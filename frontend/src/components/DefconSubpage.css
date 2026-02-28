@@ -9,14 +9,13 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + summary + list header stay fixed; player list scrolls under.
-   z-index above defcon-popup-backdrop (50) so info (i) popup shows on top of backdrop. */
+/* Sticky: search bar + filter + list header stay fixed; player list scrolls under. Match Feed spacing. */
 .defcon-subpage-sticky-header {
   position: sticky;
   top: 0;
-  z-index: 51;
+  z-index: 5;
   background: var(--bg-primary);
-  padding-bottom: 2px;
+  padding: 8px 0 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -55,23 +54,8 @@
   }
 }
 
-/* Match Feed filter summary: sizing and placement; extra space below to match feed spacing before list header */
-.defcon-filter-summary {
-  margin: 14px 0 10px;
-  padding: 0 0 2px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  text-align: center;
-  opacity: 0.9;
-}
-
-.defcon-filter-summary-viewing {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .defcon-subpage-sticky-header .gameweek-list-header {
-  margin-top: 6px;
+  margin-top: 14px;
 }
 
 /* Shift Progress label left so it aligns with the centered progress bar below */
@@ -164,41 +148,7 @@
   }
 }
 
-/* Backdrop when info or filter popup is open */
-.defcon-popup-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 50;
-  cursor: default;
-}
-
-.defcon-info-btn {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 0;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 5px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-@media (hover: hover) {
-  .defcon-info-btn:hover {
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
-  }
-}
-
-/* DEFCON info popup: same format as GW legend (BentoCard), so it uses .gw-legend-popup classes.
-   If BentoCard is not mounted, these rules ensure the popup still looks correct. */
+/* Legend popup (info button removed; these rules kept in case popup is re-used elsewhere) */
 .defcon-subpage .gw-legend-popup {
   position: absolute;
   top: 100%;
@@ -898,7 +848,6 @@ html[data-theme="dark"] .defcon-position-badge {
     border-radius: 4px 0 0 4px;
   }
 
-  .defcon-info-btn,
   .defcon-filter-btn {
     width: 32px;
     height: 32px;

@@ -111,21 +111,21 @@
     gap: 6px;
   }
 
-  /* Vertical slider for 4 options: 26px button height + 6px gap = 32px per slot */
+  /* Vertical slider: 28px button height + 6px gap = 34px per slot (match shared toggle height) */
   .research-page.research-page--schedule-view .subpage-view-toggle[data-options="3"] .subpage-view-toggle-slider {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     left: 50%;
-    margin-left: -13px;
+    margin-left: -14px;
     top: 6px;
-    transform: translateY(calc(var(--slider-offset, 0) * 32px));
+    transform: translateY(calc(var(--slider-offset, 0) * 34px));
   }
 
   .research-page.research-page--schedule-view .subpage-view-toggle-button {
-    flex: 0 0 26px;
-    min-width: 26px;
-    width: 26px;
-    height: 26px;
+    flex: 0 0 28px;
+    min-width: 28px;
+    width: 28px;
+    height: 28px;
     padding: 0;
     margin: 0 auto;
   }

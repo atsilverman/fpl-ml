@@ -93,10 +93,10 @@ def get_stats(
         return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": str(e)}
     mv_rows = r.data or []
     if not mv_rows:
-        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
     player_ids = list({row["player_id"] for row in mv_rows if row.get("player_id") is not None})
     if not player_ids:
-        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
     try:
         players_r = (
             db.client.table("players")
@@ -187,7 +187,7 @@ def get_stats(
         return (1, (val or "").lower() if isinstance(val, str) else str(val or ""))
     players.sort(key=sort_key, reverse=reverse)
     total_count = len(players)
-    # Top 10 player_ids per stat (from full filtered list) so frontend can show green fill on any page
+    # Top 10 and top 20 player_ids per stat (from full filtered list) so frontend can show green fill on any page
     STAT_FIELDS_TOP10 = [
         "points", "minutes", "goals_scored", "assists", "expected_goals", "expected_assists",
         "expected_goal_involvements", "clean_sheets", "saves", "bps", "defensive_contribution",
@@ -195,6 +195,7 @@ def get_stats(
     ]
     LOWER_IS_BETTER = {"expected_goals_conceded", "goals_conceded", "yellow_cards", "red_cards"}
     top_10_player_ids_by_field = {}
+    top_20_player_ids_by_field = {}
     for field in STAT_FIELDS_TOP10:
         def _key(p, f=field):
             val = p.get(f)
@@ -203,11 +204,13 @@ def get_stats(
             return (0, float(val))
         sorted_by_field = sorted(players, key=_key, reverse=(field not in LOWER_IS_BETTER))
         top_10_player_ids_by_field[field] = [p["player_id"] for p in sorted_by_field[:10] if p.get("player_id") is not None]
+        top_20_player_ids_by_field[field] = [p["player_id"] for p in sorted_by_field[:20] if p.get("player_id") is not None]
     # Paginate
     start = (page - 1) * page_size
     players = players[start : start + page_size]
-    # Deduped team goals conceded (MAX per fixture then SUM) so team view does not inflate
+    # Deduped team GC and xGC (MAX per fixture from DEF/GK then SUM) so team view does not inflate
     team_goals_conceded = {}
+    team_expected_goals_conceded = {}
     try:
         rpc = db.client.rpc("get_team_goals_conceded_bulk", {"p_gw_filter": gw_filter, "p_location": location})
         if rpc.data:
@@ -215,6 +218,8 @@ def get_stats(
                 tid = item.get("team_id")
                 if tid is not None:
                     team_goals_conceded[int(tid)] = int(item.get("goals_conceded") or 0)
+                    xgc = item.get("expected_goals_conceded")
+                    team_expected_goals_conceded[int(tid)] = float(xgc) if xgc is not None else 0.0
     except Exception:
         pass
     return {
@@ -223,7 +228,9 @@ def get_stats(
         "page": page,
         "page_size": page_size,
         "team_goals_conceded": team_goals_conceded,
+        "team_expected_goals_conceded": team_expected_goals_conceded,
         "top_10_player_ids_by_field": top_10_player_ids_by_field,
+        "top_20_player_ids_by_field": top_20_player_ids_by_field,
     }
 
 
@@ -305,15 +312,16 @@ def get_team_stats(
         expected_goals += float(row.get("expected_goals") or 0)
         expected_assists += float(row.get("expected_assists") or 0)
         expected_goal_involvements += float(row.get("expected_goal_involvements") or 0)
-        expected_goals_conceded += float(row.get("expected_goals_conceded") or 0)
 
-    # Team goals_conceded must be deduped (not summed from players). Use RPC.
+    # Team GC and xGC must be deduped (MAX from DEF/GK per fixture). Use RPC.
     try:
         rpc = db.client.rpc("get_team_goals_conceded_bulk", {"p_gw_filter": gw_filter, "p_location": location})
         if rpc.data:
             for item in rpc.data:
                 if item.get("team_id") == team_id:
                     goals_conceded = int(item.get("goals_conceded") or 0)
+                    xgc = item.get("expected_goals_conceded")
+                    expected_goals_conceded = float(xgc) if xgc is not None else 0.0
                     break
     except Exception:
         pass

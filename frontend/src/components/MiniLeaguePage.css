@@ -65,8 +65,8 @@
 /* Subpage selector: match Research/Gameweek height, don’t let it squish in column layout */
 .mini-league-page .subpage-toolbar-wrap .subpage-view-toggle {
   flex-shrink: 0;
-  min-height: 36px;
-  height: 36px;
+  min-height: 40px;
+  height: 40px;
 }
 
 /* Content below sticky strip: stretch to same width as toolbar (match Dashboard toolbar bleed) */
@@ -159,7 +159,7 @@
     gap: 8px;
     width: 100%;
     min-width: 140px;
-    height: 36px;
+    height: 40px;
     padding: 0 12px;
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -330,7 +330,8 @@
   background: var(--bg-card, #fff);
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 6px;
-  height: 36px;
+  height: 40px;
+  min-height: 40px;
   box-sizing: border-box;
   position: relative;
 }

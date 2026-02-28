@@ -206,13 +206,6 @@ export default function ScheduleSubpage() {
   }
 
   const hasActiveScheduleFilters = difficultySource !== 'fpl' || difficultyDimension !== 'overall' || showReverseScores
-  const scheduleFilterSummaryText = useMemo(() => {
-    const sourceLabel = difficultySource === 'fpl' ? 'FPL Difficulty' : 'Custom Difficulty'
-    const dimensionLabel = difficultyDimension === 'overall' ? 'Overall Rating' : difficultyDimension === 'attack' ? 'Attacking Rating' : 'Defensive Rating'
-    const parts = [sourceLabel, dimensionLabel]
-    if (showReverseScores) parts.push('Last H2H')
-    return parts.join(' · ')
-  }, [difficultySource, difficultyDimension, showReverseScores])
   const handleResetScheduleFilters = useCallback(() => {
     setDifficultySource('fpl')
     setDifficultyDimension('overall')
@@ -432,22 +425,6 @@ export default function ScheduleSubpage() {
             </button>
           </div>
         </div>
-        <p className="research-stats-filter-summary" aria-live="polite">
-          <span className="research-stats-filter-summary-viewing">Viewing:</span> {scheduleFilterSummaryText}
-          {hiddenDifficultyValues.size > 0 && (
-            <>
-              {' · '}
-              <button
-                type="button"
-                className="schedule-reset-difficulty-visibility-btn"
-                onClick={resetDifficultyVisibility}
-                aria-label="Show difficulty on all opponent cells again"
-              >
-                Reset difficulty
-              </button>
-            </>
-          )}
-        </p>
       </div>
       <div className={`schedule-recommendations-bento ${recommendationsExpanded ? 'schedule-recommendations-bento--expanded' : 'schedule-recommendations-bento--collapsed'}`}>
         <div className="schedule-recommendations-bento-content">

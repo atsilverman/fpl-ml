@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Filter, Info, X } from 'lucide-react'
+import { Filter, X } from 'lucide-react'
 import { useDefconGameweekPlayers } from '../hooks/useDefconGameweekPlayers'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
@@ -105,7 +105,6 @@ export default function DefconSubpage({ isActive = true }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [showFilterPopup, setShowFilterPopup] = useState(false)
-  const [showInfoPopup, setShowInfoPopup] = useState(false)
   /** Section 1: ownership — all, owned only, not owned. Default: owned when visiting page. */
   const [scopeFilter, setScopeFilter] = useState('owned')
   /** Section 2: position — all, DEF (2), MID (3), FWD (4). Default: all. */
@@ -115,7 +114,6 @@ export default function DefconSubpage({ isActive = true }) {
   const inputRef = useRef(null)
   const dropdownRef = useRef(null)
   const filterPopupRef = useRef(null)
-  const infoPopupRef = useRef(null)
 
   const { data: teamsMap = {} } = useQuery({
     queryKey: ['teams-short-names'],
@@ -165,17 +163,6 @@ export default function DefconSubpage({ isActive = true }) {
       finished: f.finished,
     }))
   }, [fixtures, teamsMap])
-
-  const filterSummaryText = useMemo(() => {
-    const scopeLabel = scopeFilter === 'all' ? 'All' : scopeFilter === 'owned' ? 'Owned' : 'Not owned'
-    const positionLabel = positionFilter === 'all' ? 'All positions' : (positionFilter === 2 ? 'DEF' : positionFilter === 3 ? 'MID' : 'FWD')
-    const matchupLabel = matchupFilter === 'live'
-      ? 'Live'
-      : matchupFilter !== 'all' && typeof matchupFilter === 'number'
-        ? (() => { const m = matchups.find(mu => mu.fixtureId === matchupFilter); return m ? `${m.homeShort ?? '?'} v ${m.awayShort ?? '?'}` : 'All matchups' })()
-        : 'All matchups'
-    return `${scopeLabel} · ${positionLabel} · ${matchupLabel}`
-  }, [scopeFilter, positionFilter, matchupFilter, matchups])
 
   const suggestions = useMemo(() => {
     if (!players?.length) return []
@@ -238,9 +225,6 @@ export default function DefconSubpage({ isActive = true }) {
       if (filterPopupRef.current && !filterPopupRef.current.contains(e.target) && !e.target.closest('.defcon-filter-btn')) {
         setShowFilterPopup(false)
       }
-      if (infoPopupRef.current && !infoPopupRef.current.contains(e.target) && !e.target.closest('.defcon-info-btn')) {
-        setShowInfoPopup(false)
-      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -264,20 +248,8 @@ export default function DefconSubpage({ isActive = true }) {
 
   const hasActiveFilters = scopeFilter !== 'owned' || positionFilter !== 'all' || matchupFilter !== 'all'
 
-  const showBackdrop = showInfoPopup
-
   return (
     <div className="defcon-subpage">
-      {showBackdrop && (
-        <div
-          className="defcon-popup-backdrop"
-          aria-hidden
-          onClick={() => {
-            setShowInfoPopup(false)
-            setShowFilterPopup(false)
-          }}
-        />
-      )}
       <div className="defcon-subpage-sticky-header">
         <div className="defcon-search-row">
           <div className={`defcon-search-wrap${searchQuery.length > 0 ? ' defcon-search-wrap--has-value' : ''}`} ref={dropdownRef}>
@@ -333,39 +305,6 @@ export default function DefconSubpage({ isActive = true }) {
           <div className="defcon-search-row-actions">
             <button
               type="button"
-              className="defcon-info-btn"
-              onClick={() => setShowInfoPopup(open => !open)}
-              aria-label="Status indicators explained"
-              aria-expanded={showInfoPopup}
-              aria-haspopup="dialog"
-            >
-              <Info size={14} strokeWidth={2} />
-            </button>
-            {showInfoPopup && (
-              <div className="gw-legend-popup" ref={infoPopupRef} role="dialog" aria-label="Legend">
-                <div className="gw-legend-popup-title">Legend</div>
-                <div className="gw-legend-popup-row">
-                  <span className="gw-legend-popup-live-dot-wrap">
-                    <span className="gw-legend-popup-dot gw-legend-popup-dot--live" aria-hidden />
-                  </span>
-                  <span className="gw-legend-popup-text">Match in progress (live)</span>
-                </div>
-                <div className="gw-legend-popup-row">
-                  <span className="gw-legend-popup-row-icon">
-                    <span className="gw-legend-popup-defcon-achieved-sample" aria-hidden />
-                  </span>
-                  <span className="gw-legend-popup-text">DEFCON achieved</span>
-                </div>
-                <div className="gw-legend-popup-row">
-                  <span className="gw-legend-popup-row-icon">
-                    <span className="defcon-v-opp">vs X</span>
-                  </span>
-                  <span className="gw-legend-popup-text">Double GW</span>
-                </div>
-              </div>
-            )}
-            <button
-              type="button"
               className={`defcon-filter-btn ${hasActiveFilters ? 'defcon-filter-btn--active' : ''}`}
               onClick={() => setShowFilterPopup(open => !open)}
               aria-label="Filter DEFCON players"
@@ -376,9 +315,6 @@ export default function DefconSubpage({ isActive = true }) {
             </button>
           </div>
         </div>
-        <p className="defcon-filter-summary" aria-live="polite">
-          <span className="defcon-filter-summary-viewing">Viewing:</span> {filterSummaryText}
-        </p>
         {filteredPlayers.length > 0 && (
           <div className="gameweek-list-header" aria-hidden="true">
             <div className="gameweek-list-header__player">Player</div>

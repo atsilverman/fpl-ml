@@ -67,14 +67,16 @@ const STAT_COLUMNS = [
 
 /**
  * Stats that must not be summed for team view (duplication / not meaningful at team level).
- * - clean_sheets: summing counts player-CS credits (up to 11 per match), not matches with a clean sheet.
- * - expected_goals_conceded: same chance attributed to multiple defenders; sum overstates team xGC.
- * - goals_conceded: same value for all defenders/GK per fixture; sum would inflate (use API deduped team_goals_conceded).
- * - selected_by_percent (TSB%): player-level ownership; not meaningful at team level.
- * Team aggregation and team visible columns are derived from STAT_COLUMNS excluding these.
- * Minutes is still aggregated (for Per 90 denominator) but not shown or ranked in team view.
+ * GC and xGC are filled from API deduped team_goals_conceded / team_expected_goals_conceded; we still exclude from sum.
+ * Team aggregation sums only TEAM_AGGREGATION_FIELDS. GC/xGC are shown in team view but come from the API maps.
  */
 const TEAM_AGGREGATION_EXCLUDED = ['clean_sheets', 'expected_goals_conceded', 'goals_conceded', 'selected_by_percent']
+
+/** Columns hidden in team view: CS and TSB% (not meaningful at team level). GC and xGC are shown and come from API. */
+const TEAM_VIEW_HIDDEN_FIELDS = ['clean_sheets', 'selected_by_percent']
+
+/** Columns hidden in player view only. xGC and GC shown in team view only. */
+const PLAYER_VIEW_HIDDEN_FIELDS = ['expected_goals_conceded', 'goals_conceded']
 
 /** Fields we aggregate for team rows (STAT_COLUMNS minus TEAM_AGGREGATION_EXCLUDED). Single source of truth. */
 const TEAM_AGGREGATION_FIELDS = STAT_COLUMNS
@@ -142,8 +144,8 @@ export default function StatsSubpage() {
   const [denominatorMode, setDenominatorMode] = useState('total')
   /** 6 | 12 | null - which top-N highlight is on (Display section; only one at a time) */
   const [topHighlightMode, setTopHighlightMode] = useState(null)
-  /** When true (default), show green top-10 fill per stat for player view. Toggle in filter popup. */
-  const [showTop10Fill, setShowTop10Fill] = useState(true)
+  /** null | 10 | 20 - green fill per stat for player view: No display, Top 10, or Top 20. Default 10. */
+  const [topFillMode, setTopFillMode] = useState(10)
   /** null | 'topBottom6' - team view Display: None or Top/Bottom 6 green/red highlight. Default on for team mode. */
   const [teamDisplayMode, setTeamDisplayMode] = useState('topBottom6')
   const displayMode = denominatorMode === 'per90' ? 'per90' : 'total'
@@ -224,7 +226,7 @@ export default function StatsSubpage() {
     })
   }, [])
 
-  const { players, teamGoalsConceded, totalCount, pagination, top10PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
+  const { players, teamGoalsConceded, teamExpectedGoalsConceded, totalCount, pagination, top10PlayerIdsByField, top20PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
     page: statsPage,
     sortBy: mainSort.column,
     sortDir: mainSort.dir,
@@ -243,7 +245,9 @@ export default function StatsSubpage() {
   const visibleColumns = useMemo(() => {
     let base = STAT_COLUMNS.filter((c) => c.field !== 'minutes')
     if (teamView) {
-      base = base.filter((c) => !TEAM_AGGREGATION_EXCLUDED.includes(c.field))
+      base = base.filter((c) => !TEAM_VIEW_HIDDEN_FIELDS.includes(c.field))
+    } else {
+      base = base.filter((c) => !PLAYER_VIEW_HIDDEN_FIELDS.includes(c.field))
     }
     if (statCategory === 'all') return base
     return base.filter((c) => {
@@ -322,9 +326,10 @@ export default function StatsSubpage() {
     }
     return Array.from(byTeam.values()).map((t) => ({
       ...t,
-      goals_conceded: t.team_id != null && teamGoalsConceded[t.team_id] != null ? teamGoalsConceded[t.team_id] : (t.goals_conceded ?? 0)
+      goals_conceded: t.team_id != null && teamGoalsConceded[t.team_id] != null ? teamGoalsConceded[t.team_id] : (t.goals_conceded ?? 0),
+      expected_goals_conceded: t.team_id != null && teamExpectedGoalsConceded[t.team_id] != null ? teamExpectedGoalsConceded[t.team_id] : (t.expected_goals_conceded ?? 0)
     }))
-  }, [playersAboveMinMinutes, teamGoalsConceded])
+  }, [playersAboveMinMinutes, teamGoalsConceded, teamExpectedGoalsConceded])
 
   const filteredTeams = useMemo(() => {
     if (!teamStats.length) return []
@@ -447,6 +452,35 @@ export default function StatsSubpage() {
     return out
   }, [playersAboveMinMinutes])
 
+  /** Global top 10/20 player IDs per stat from full filtered list (when not from API). Used for green fill across pages. */
+  const STAT_FIELDS_TOP_N = ['points', 'minutes', 'goals_scored', 'assists', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'clean_sheets', 'saves', 'bps', 'defensive_contribution', 'expected_goals_conceded', 'goals_conceded', 'yellow_cards', 'red_cards', 'selected_by_percent']
+  const LOWER_IS_BETTER_TOP_N = new Set(['expected_goals_conceded', 'goals_conceded', 'yellow_cards', 'red_cards'])
+  const topNFromFilteredPlayers = useMemo(() => {
+    if (!filteredPlayers.length) return { 10: null, 20: null }
+    const out = { 10: {}, 20: {} }
+    for (const field of STAT_FIELDS_TOP_N) {
+      const reverse = !LOWER_IS_BETTER_TOP_N.has(field)
+      const sorted = [...filteredPlayers].sort((a, b) => {
+        const av = Number(a[field]) ?? 0
+        const bv = Number(b[field]) ?? 0
+        return reverse ? bv - av : av - bv
+      })
+      const ids10 = sorted.slice(0, 10).map((p) => p.player_id).filter((id) => id != null)
+      const ids20 = sorted.slice(0, 20).map((p) => p.player_id).filter((id) => id != null)
+      out[10][field] = new Set(ids10.map((id) => Number(id)))
+      out[20][field] = new Set(ids20.map((id) => Number(id)))
+    }
+    return out
+  }, [filteredPlayers])
+
+  /** Resolved top-N sets for current display mode: from API when available, else from filtered list. */
+  const resolvedTopNByField = useMemo(() => {
+    if (topFillMode === 10 && top10PlayerIdsByField) return top10PlayerIdsByField
+    if (topFillMode === 20 && top20PlayerIdsByField) return top20PlayerIdsByField
+    if (topFillMode === 10 || topFillMode === 20) return topNFromFilteredPlayers[topFillMode] ?? null
+    return null
+  }, [topFillMode, top10PlayerIdsByField, top20PlayerIdsByField, topNFromFilteredPlayers])
+
   const handleMainSort = useCallback((column) => {
     setMainSort((prev) => ({
       column,
@@ -477,6 +511,14 @@ export default function StatsSubpage() {
     if (compareSelectedIds.length === 0) return sortedPlayers
     return sortedPlayers.filter((p) => !compareSelectedSet.has(p.player_id))
   }, [sortedPlayers, compareSelectedIds.length, compareSelectedSet])
+
+  /** Current page slice for player table when paginated (Supabase path has full list; API path hook already returns one page). */
+  const paginatedMainTablePlayers = useMemo(() => {
+    if (!hasMultiplePages || !pagination.page_size) return mainTablePlayers
+    if (mainTablePlayers.length <= pagination.page_size) return mainTablePlayers
+    const start = (statsPage - 1) * pagination.page_size
+    return mainTablePlayers.slice(start, start + pagination.page_size)
+  }, [hasMultiplePages, mainTablePlayers, pagination.page_size, statsPage])
 
   /** When compare has selection in team view, main table shows only non-selected teams */
   const mainTableTeams = useMemo(() => {
@@ -662,26 +704,6 @@ export default function StatsSubpage() {
   const isSortableColumn = (field) =>
     ['points', 'selected_by_percent', 'minutes', 'goals_scored', 'assists', 'clean_sheets', 'saves', 'bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded', 'goals_conceded', 'yellow_cards', 'red_cards'].includes(field)
 
-  const filterSummaryText = useMemo(() => {
-    const viewLabel = teamView ? 'Teams' : 'Players'
-    const gwLabel = gwFilter === 'all' ? (gameweek != null ? `GW1-${gameweek}` : 'All gameweeks') : gwFilter === 'last6' ? 'Last 6' : 'Last 12'
-    const locationLabel = locationFilter === 'all' ? 'All locations' : locationFilter === 'home' ? 'Home' : 'Away'
-    const positionLabel = teamView ? null : (positionFilter === 'all' ? 'All positions' : (POSITION_LABELS[Number(positionFilter)] ?? 'All positions'))
-    const ownershipLabel = !teamView && ownershipFilter !== 'all' ? (ownershipFilter === 'owned' ? 'Owned' : 'Unowned') : null
-    const parts = [viewLabel, gwLabel, locationLabel, ...(positionLabel ? [positionLabel] : []), ...(ownershipLabel ? [ownershipLabel] : [])]
-    if (!teamView) {
-      const denomLabel = { total: 'Total', per90: 'Per 90', perM: 'Per £M' }[denominatorMode]
-      parts.push(denomLabel)
-      if (showTop10Fill) parts.push('Top 10')
-      if (topHighlightMode === 6) parts.push('Top 6')
-      if (topHighlightMode === 12) parts.push('Top 12')
-    } else {
-      if (teamDisplayMode === 'topBottom6') parts.push('Top/Bottom 6')
-    }
-    if (statCategory !== 'all') parts.push(statCategory === 'attacking' ? 'Attacking' : statCategory === 'goalie' ? 'Goalie' : 'Defending')
-    return parts.join(' · ')
-  }, [gwFilter, gameweek, locationFilter, positionFilter, ownershipFilter, denominatorMode, statCategory, showTop10Fill, topHighlightMode, teamDisplayMode, teamView])
-
   const filtersHaveChanged = useMemo(() => {
     return (
       teamView ||
@@ -691,11 +713,11 @@ export default function StatsSubpage() {
       ownershipFilter !== 'all' ||
       statCategory !== 'all' ||
       denominatorMode !== 'total' ||
-      !showTop10Fill ||
+      topFillMode !== 10 ||
       topHighlightMode != null ||
       (teamView && teamDisplayMode != null)
     )
-  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, showTop10Fill, topHighlightMode, teamDisplayMode])
+  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, topFillMode, topHighlightMode, teamDisplayMode])
 
   const handleResetFilters = useCallback(() => {
     setTeamView(false)
@@ -705,7 +727,7 @@ export default function StatsSubpage() {
     setOwnershipFilter('all')
     setStatCategory('all')
     setDenominatorMode('total')
-    setShowTop10Fill(true)
+    setTopFillMode(10)
     setTopHighlightMode(null)
     setTeamDisplayMode(null)
   }, [])
@@ -806,9 +828,6 @@ export default function StatsSubpage() {
             {teamView ? 'Select more than 1 team to compare.' : 'Select more than 1 player to compare.'}
           </p>
         )}
-        <p className="research-stats-filter-summary" aria-live="polite">
-          <span className="research-stats-filter-summary-viewing">Viewing:</span> {filterSummaryText}
-        </p>
       </div>
       <div className="research-stats-card research-card bento-card bento-card-animate bento-card-expanded">
         {showFilters && typeof document !== 'undefined' && createPortal(
@@ -994,21 +1013,30 @@ export default function StatsSubpage() {
                         <div className="stats-filter-buttons">
                           <button
                             type="button"
-                            className={`stats-filter-option-btn ${showTop10Fill ? 'stats-filter-option-btn--active' : ''}`}
-                            onClick={() => setShowTop10Fill(true)}
-                            aria-pressed={showTop10Fill}
-                            title="Green fill for top 10 per stat (by current filters)"
+                            className={`stats-filter-option-btn ${topFillMode === null ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setTopFillMode(null)}
+                            aria-pressed={topFillMode === null}
+                            title="No green fill highlight"
                           >
-                            Top 10 on
+                            No display
                           </button>
                           <button
                             type="button"
-                            className={`stats-filter-option-btn ${!showTop10Fill ? 'stats-filter-option-btn--active' : ''}`}
-                            onClick={() => setShowTop10Fill(false)}
-                            aria-pressed={!showTop10Fill}
-                            title="Hide green top 10 fill"
+                            className={`stats-filter-option-btn ${topFillMode === 10 ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setTopFillMode(10)}
+                            aria-pressed={topFillMode === 10}
+                            title="Green fill for top 10 per stat (global)"
                           >
-                            Top 10 off
+                            Top 10
+                          </button>
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${topFillMode === 20 ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setTopFillMode(20)}
+                            aria-pressed={topFillMode === 20}
+                            title="Green fill for top 20 per stat (global)"
+                          >
+                            Top 20
                           </button>
                         </div>
                       </div>
@@ -1511,18 +1539,17 @@ export default function StatsSubpage() {
                               const showLeaderFilled = !topOn && isCompareBest
                               const showLeaderBorderOnBlue = topOn && showPill && isCompareBest
                               const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
-                              // Top 10 fill: use API global top-10 sets when available (any page); else use client rank only when single page (full filtered set in memory)
+                              // Top N fill (global): from API or computed from filtered list; taper color by rank (1 = strongest)
                               const pid = p.player_id != null ? Number(p.player_id) : null
-                              const isInTop10FromApi = pid != null && top10PlayerIdsByField?.[field]?.has(pid)
-                              const rankFromClient = rankByField[field]?.[p.player_id] ?? rankByField[field]?.[pid]
-                              const rankForTop10Fill = !top10PlayerIdsByField && showTop10Fill && !hasMultiplePages ? (rankFromClient ?? null) : null
-                              const isTop10Fill = compareSelectedPlayers.length < 2 && showTop10Fill && (isInTop10FromApi === true || (rankForTop10Fill != null && rankForTop10Fill <= 10))
-                              const top10Strength = isTop10Fill ? (rankForTop10Fill != null ? ((11 - rankForTop10Fill) / 10) ** 1.5 : 0.7) : undefined
+                              const isTopNFill = compareSelectedPlayers.length < 2 && topFillMode != null && resolvedTopNByField != null && pid != null && resolvedTopNByField[field]?.has(pid)
+                              const topNStrength = isTopNFill && fieldRank != null && topFillMode != null
+                                ? Math.max(0.25, ((topFillMode + 1 - fieldRank) / topFillMode) ** 1.2)
+                                : isTopNFill ? 0.5 : undefined
                               return (
                                 <td
                                   key={key}
-                                  className={`league-standings-bento-total${isTop10Fill ? ' research-stats-cell--top10-fill' : ''}`}
-                                  style={top10Strength != null ? { '--stats-top10-strength': top10Strength } : undefined}
+                                  className={`league-standings-bento-total${isTopNFill ? ' research-stats-cell--top10-fill' : ''}`}
+                                  style={topNStrength != null ? { '--stats-top10-strength': topNStrength } : undefined}
                                 >
                                   {showBluePill ? (
                                     <span
@@ -1650,7 +1677,7 @@ export default function StatsSubpage() {
                       </tr>
                     ))
                   ) : (
-                    mainTablePlayers.map((p, index) => (
+                    paginatedMainTablePlayers.map((p, index) => (
                       <tr
                         key={`${p.player_id}-${mainSort.column}-${mainSort.dir}`}
                         className="league-standings-bento-row research-stats-row-animate"
@@ -1723,18 +1750,17 @@ export default function StatsSubpage() {
                             : null
                           const mainCellClass = `research-stats-cell-main${isDemoted ? ' research-stats-cell-main--demoted' : ''}${isZero ? ' research-stats-cell-main--zero' : ''}`
                           const pillStrength = showPill && rank != null && N != null ? Math.max(0.35, 1 - (rank - 1) / N * 0.65) : undefined
-                          // Top 10 fill: use API global top-10 sets when available (any page); else use client rank only when single page (full filtered set in memory)
+                          // Top N fill (global): from API or computed from filtered list; taper color by rank (1 = strongest)
                           const pid = p.player_id != null ? Number(p.player_id) : null
-                          const isInTop10FromApi = pid != null && top10PlayerIdsByField?.[field]?.has(pid)
-                          const rankFromClient = rankByField[field]?.[p.player_id] ?? rankByField[field]?.[pid]
-                          const rankForTop10Fill = !top10PlayerIdsByField && showTop10Fill && !hasMultiplePages ? (rankFromClient ?? null) : null
-                          const isTop10Fill = compareSelectedPlayers.length < 2 && showTop10Fill && (isInTop10FromApi === true || (rankForTop10Fill != null && rankForTop10Fill <= 10))
-                          const top10Strength = isTop10Fill ? (rankForTop10Fill != null ? ((11 - rankForTop10Fill) / 10) ** 1.5 : 0.7) : undefined
+                          const isTopNFill = compareSelectedPlayers.length < 2 && topFillMode != null && resolvedTopNByField != null && pid != null && resolvedTopNByField[field]?.has(pid)
+                          const topNStrength = isTopNFill && rank != null && topFillMode != null
+                            ? Math.max(0.25, ((topFillMode + 1 - rank) / topFillMode) ** 1.2)
+                            : isTopNFill ? 0.5 : undefined
                           return (
                             <td
                               key={key}
-                              className={`league-standings-bento-total${isTop10Fill ? ' research-stats-cell--top10-fill' : ''}`}
-                              style={top10Strength != null ? { '--stats-top10-strength': top10Strength } : undefined}
+                              className={`league-standings-bento-total${isTopNFill ? ' research-stats-cell--top10-fill' : ''}`}
+                              style={topNStrength != null ? { '--stats-top10-strength': topNStrength } : undefined}
                             >
                               {showPill ? (
                                 <span className="research-stats-pts-pill" data-rank={rank} title={`#${rank} in ${label}`} style={pillStrength != null ? { '--pill-strength': pillStrength } : undefined}>
@@ -1775,7 +1801,7 @@ export default function StatsSubpage() {
         {!loading && (teamView ? teamStats.length : playersAboveMinMinutes.length) > 0 && (
           <div className="research-stats-footer-wrap">
             <p className="research-stats-count-footer" role="status" aria-live="polite">
-              Showing {teamView ? filteredTeams.length : filteredPlayers.length} of {teamView ? teamStats.length : (hasMultiplePages ? totalCount : playersAboveMinMinutes.length)} {teamView ? 'teams' : 'players'}
+              Showing {teamView ? filteredTeams.length : (hasMultiplePages ? paginatedMainTablePlayers.length : filteredPlayers.length)} of {teamView ? teamStats.length : (hasMultiplePages ? totalCount : playersAboveMinMinutes.length)} {teamView ? 'teams' : 'players'}
             </p>
             {hasMultiplePages && (
               <nav className="research-stats-pagination" aria-label="Stats table pages">

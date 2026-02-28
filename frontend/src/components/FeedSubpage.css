@@ -6,13 +6,13 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + summary + list header stay fixed; event list scrolls under. Match Defcon: no extra top padding. */
+/* Sticky: search bar + filter + list header stay fixed; event list scrolls under. Match Defcon spacing. */
 .feed-subpage-sticky-header {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding-bottom: 2px;
+  padding: 8px 0 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -493,13 +493,8 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   opacity: 0.9;
 }
 
-.feed-filter-summary-viewing {
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
 .feed-subpage-sticky-header .gameweek-list-header {
-  margin-top: 6px;
+  margin-top: 14px;
 }
 
 /* Filter overlay: same structure as Research (StatsSubpage) */
