@@ -21,6 +21,8 @@ import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, Arro
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
+import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
+import { useIsMobile } from '../hooks/useIsMobile'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
 import './GameweekPointsView.css'
@@ -144,9 +146,17 @@ export default function MiniLeaguePage() {
   const transfersTableScrollRef = useRef(null)
   const managerDetailModalBodyRef = useRef(null)
   const toolbarWrapRef = useRef(null)
+  const subpageSwipeRef = useRef(null)
+  const isMobile = useIsMobile()
   useAxisLockedScroll(standingsTableScrollRef)
   useAxisLockedScroll(transfersTableScrollRef)
   useAxisLockedScroll(managerDetailModalBodyRef)
+  useSubpageSwipe(subpageSwipeRef, {
+    currentIndex: leagueViewIndex,
+    totalPages: LEAGUE_VIEW_ORDER.length,
+    onSwipeToIndex: (i) => setLeagueView(LEAGUE_VIEW_ORDER[i]),
+    enabled: isMobile
+  })
 
   useEffect(() => {
     const mql = window.matchMedia(`(max-width: ${MANAGER_ABBREV_MAX_WIDTH - 1}px)`)
@@ -617,7 +627,7 @@ export default function MiniLeaguePage() {
           </div>
         )}
       </div>
-      <div className="league-standings-bento league-standings-page">
+      <div ref={subpageSwipeRef} className="league-standings-bento league-standings-page">
         <div className="league-standings-bento-body">
         {showTransfersView && <div className="league-standings-transfers-spacer" aria-hidden="true" />}
         {showTransfersView && (() => {

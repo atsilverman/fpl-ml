@@ -464,7 +464,14 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
                 return <span className="gameweek-points-mins-upcoming gameweek-points-mins-upcoming-tbd">–</span>
               })()
             ) : isMatchLive ? (
-              <span className="gameweek-points-mins-live-badge" title="Match in progress – stats updating">Live</span>
+              <>
+                <span className="gameweek-points-mins-live-zero">0</span>
+                <span
+                  className="live-updating-indicator gameweek-points-mins-live"
+                  title="Match in progress – stats updating"
+                  aria-hidden
+                />
+              </>
             ) : (
               <span className="gameweek-points-mins-dnp-badge" title="Did not play">!</span>
             )}

@@ -1,8 +1,11 @@
 import { useSearchParams } from 'react-router-dom'
+import { useRef } from 'react'
 import { CirclePoundSterling, CalendarDays, ListOrdered } from 'lucide-react'
 import PriceChangesSubpage from './PriceChangesSubpage'
 import ScheduleSubpage from './ScheduleSubpage'
 import StatsSubpage from './StatsSubpage'
+import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
+import { useIsMobile } from '../hooks/useIsMobile'
 import './HomePage.css'
 import './ResearchPage.css'
 
@@ -17,6 +20,15 @@ export default function ResearchPage() {
   const view = VALID_VIEWS.includes(rawView) ? rawView : 'stats'
   const viewIndex = RESEARCH_VIEW_ORDER.indexOf(view) >= 0 ? RESEARCH_VIEW_ORDER.indexOf(view) : 0
   const setView = (v) => setSearchParams({ view: v }, { replace: true })
+
+  const subpageSwipeRef = useRef(null)
+  const isMobile = useIsMobile()
+  useSubpageSwipe(subpageSwipeRef, {
+    currentIndex: viewIndex,
+    totalPages: RESEARCH_VIEW_ORDER.length,
+    onSwipeToIndex: (i) => setView(RESEARCH_VIEW_ORDER[i]),
+    enabled: isMobile
+  })
 
   return (
     <div className={`research-page ${view === 'schedule' ? 'research-page--schedule-view' : ''}`}>
@@ -49,7 +61,7 @@ export default function ResearchPage() {
           })}
         </nav>
       </div>
-      <div className="research-page-content">
+      <div ref={subpageSwipeRef} className="research-page-content">
         {view === 'price-changes' && <PriceChangesSubpage />}
         {view === 'schedule' && <ScheduleSubpage />}
         {view === 'stats' && <StatsSubpage />}

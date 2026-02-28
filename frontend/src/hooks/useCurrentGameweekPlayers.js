@@ -5,59 +5,58 @@ import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
 
+const getStats = (playerId, statsByPlayer) => {
+  const key = playerId != null ? Number(playerId) : playerId
+  return statsByPlayer[key] ?? statsByPlayer[playerId] ?? statsByPlayer[String(playerId)] ?? []
+}
+const getInfo = (playerId, playerInfoMap) =>
+  playerInfoMap[playerId] ?? playerInfoMap[Number(playerId)] ?? playerInfoMap[String(playerId)] ?? {}
+const getMatchFinishedForStarter = (playerId, statsByPlayer, playerInfoMap, fixtureList) => {
+  const statsRows = getStats(playerId, statsByPlayer)
+  if (statsRows.length > 0) {
+    return statsRows.some((r) => r.match_finished || r.match_finished_provisional)
+  }
+  const info = getInfo(playerId, playerInfoMap)
+  const teamId = info.team_id ?? null
+  if (!teamId) return false
+  const teamFixtures = fixtureList.filter(
+    (f) => f.home_team_id === teamId || f.away_team_id === teamId
+  )
+  return teamFixtures.some(
+    (f) => f.finished === true || f.finished === 'true' || f.finished_provisional === true || f.finished_provisional === 'true'
+  )
+}
+
 /**
- * Infer automatic substitutions from picks + stats + player positions.
- * Same rules as backend: starter 0 mins + match finished/provisional -> first valid bench
- * (position-compatible, bench match finished, bench minutes > 0).
- * When a starter has no stats rows, use fixtureList + team to treat as DNP+finished if their team's fixture is finished.
- * Returns [{ element_out, element_in }].
+ * Infer automatic substitutions (applied subs only: first compatible bench who played).
+ * Used for points logic. Returns [{ element_out, element_in }].
  */
 function inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList = []) {
   const automaticSubs = []
   const usedBenchPositions = new Set()
   const benchPlayers = picks.filter((p) => p.position > 11).sort((a, b) => a.position - b.position)
-  const getStats = (playerId) => {
-    const key = playerId != null ? Number(playerId) : playerId
-    return statsByPlayer[key] ?? statsByPlayer[playerId] ?? statsByPlayer[String(playerId)] ?? []
-  }
-  const getInfo = (playerId) =>
-    playerInfoMap[playerId] ?? playerInfoMap[Number(playerId)] ?? playerInfoMap[String(playerId)] ?? {}
-  const getMatchFinishedForStarter = (playerId) => {
-    const statsRows = getStats(playerId)
-    if (statsRows.length > 0) {
-      return statsRows.some((r) => r.match_finished || r.match_finished_provisional)
-    }
-    const info = getInfo(playerId)
-    const teamId = info.team_id ?? null
-    if (!teamId) return false
-    const teamFixtures = fixtureList.filter(
-      (f) => f.home_team_id === teamId || f.away_team_id === teamId
-    )
-    return teamFixtures.some(
-      (f) => f.finished === true || f.finished === 'true' || f.finished_provisional === true || f.finished_provisional === 'true'
-    )
-  }
-  for (const pick of picks) {
+  const sortedPicks = [...picks].sort((a, b) => a.position - b.position)
+  for (const pick of sortedPicks) {
     if (pick.position > 11) continue
     const playerId = pick.player_id
-    const statsRows = getStats(playerId)
+    const statsRows = getStats(playerId, statsByPlayer)
     const totalMinutes = statsRows.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
-    const matchFinished = getMatchFinishedForStarter(playerId)
+    const matchFinished = getMatchFinishedForStarter(playerId, statsByPlayer, playerInfoMap, fixtureList)
     if (!(matchFinished && totalMinutes === 0)) continue
-    const slotPlayerInfo = getInfo(playerId)
+    const slotPlayerInfo = getInfo(playerId, playerInfoMap)
     const starterPositionType = slotPlayerInfo.position || 0
     let substituteId = null
     for (const benchPick of benchPlayers) {
       if (usedBenchPositions.has(benchPick.position)) continue
       const benchPlayerId = benchPick.player_id
-      const benchInfo = getInfo(benchPlayerId)
+      const benchInfo = getInfo(benchPlayerId, playerInfoMap)
       const benchPositionType = benchInfo.position || 0
       if (starterPositionType === 1) {
         if (benchPositionType !== 1) continue
       } else {
         if (benchPositionType === 1) continue
       }
-      const benchStats = getStats(benchPlayerId)
+      const benchStats = getStats(benchPlayerId, statsByPlayer)
       const benchMinutes = benchStats.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
       const benchMatchFinished = benchStats.some((r) => r.match_finished || r.match_finished_provisional)
       if (benchMatchFinished && benchMinutes > 0) {
@@ -71,6 +70,64 @@ function inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixture
     }
   }
   return automaticSubs
+}
+
+/**
+ * Infer display subs for UI: first position-compatible bench by order (designated),
+ * so the correct name shows even before that bench player's match. If designated's
+ * match is finished and they DNP, cascade to first compatible bench who played.
+ * Returns [{ element_out, element_in }] for indicator/name display.
+ */
+function inferDisplaySubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList = []) {
+  const displaySubs = []
+  const usedBenchDesignated = new Set()
+  const usedBenchApplied = new Set()
+  const benchPlayers = picks.filter((p) => p.position > 11).sort((a, b) => a.position - b.position)
+  const sortedPicks = [...picks].sort((a, b) => a.position - b.position)
+  for (const pick of sortedPicks) {
+    if (pick.position > 11) continue
+    const playerId = pick.player_id
+    const statsRows = getStats(playerId, statsByPlayer)
+    const totalMinutes = statsRows.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
+    const matchFinished = getMatchFinishedForStarter(playerId, statsByPlayer, playerInfoMap, fixtureList)
+    if (!(matchFinished && totalMinutes === 0)) continue
+    const slotPlayerInfo = getInfo(playerId, playerInfoMap)
+    const starterPositionType = slotPlayerInfo.position || 0
+    let designatedIn = null
+    let appliedIn = null
+    for (const benchPick of benchPlayers) {
+      const benchPlayerId = benchPick.player_id
+      const benchPosition = benchPick.position
+      const benchInfo = getInfo(benchPlayerId, playerInfoMap)
+      const benchPositionType = benchInfo.position || 0
+      if (starterPositionType === 1) {
+        if (benchPositionType !== 1) continue
+      } else {
+        if (benchPositionType === 1) continue
+      }
+      if (designatedIn == null && !usedBenchDesignated.has(benchPosition)) {
+        designatedIn = benchPlayerId
+        usedBenchDesignated.add(benchPosition)
+      }
+      const benchStats = getStats(benchPlayerId, statsByPlayer)
+      const benchMinutes = benchStats.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
+      const benchMatchFinished = benchStats.some((r) => r.match_finished || r.match_finished_provisional)
+      if (appliedIn == null && benchMatchFinished && benchMinutes > 0 && !usedBenchApplied.has(benchPosition)) {
+        appliedIn = benchPlayerId
+        usedBenchApplied.add(benchPosition)
+      }
+    }
+    if (designatedIn == null) continue
+    const designatedStats = getStats(designatedIn, statsByPlayer)
+    const designatedMinutes = designatedStats.reduce((sum, r) => sum + (r.minutes ?? 0), 0)
+    const designatedMatchFinished = designatedStats.some((r) => r.match_finished || r.match_finished_provisional)
+    const displayIn =
+      !designatedMatchFinished || designatedMinutes > 0
+        ? designatedIn
+        : (appliedIn != null ? appliedIn : designatedIn)
+    displaySubs.push({ element_out: playerId, element_in: displayIn })
+  }
+  return displaySubs
 }
 
 /**
@@ -232,14 +289,14 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
       const fixturesById = {}
       const fixtureList = fixturesResult.data || []
 
-      // Auto-sub state: when we have stats, use inferred (correct DGW total minutes); else use DB
+      // Auto-sub state: when we have stats, use display subs (designated by bench order; cascade if DNP)
       const subbedOutSet = new Set()
       const replacedBySubIn = new Map() // sub_in_player_id -> replaced_player_id (element_out)
       const norm = (id) => (id != null ? Number(id) : id)
-      const inferredSubs = inferAutomaticSubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList)
       const hasStats = Object.keys(statsByPlayer).length > 0
+      const inferredDisplaySubs = inferDisplaySubsFromData(picks, statsByPlayer, playerInfoMap, fixtureList)
       if (hasStats) {
-        inferredSubs.forEach((s) => {
+        inferredDisplaySubs.forEach((s) => {
           subbedOutSet.add(norm(s.element_out))
           replacedBySubIn.set(norm(s.element_in), norm(s.element_out))
         })
@@ -295,7 +352,10 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
         const slotTeamShortName = slotPlayerInfo.teams?.short_name || null
         const multiplier = pick.multiplier || 1
         const wasAutoSubbedOut = subbedOutSet.has(norm(pick.player_id))
-        const wasAutoSubbedIn = pick.was_auto_subbed_in || replacedBySubIn.has(norm(pick.player_id))
+        // When we have stats, use only inferred display subs so 1 sub-off = 1 sub-on (ignore stale DB)
+        const wasAutoSubbedIn = hasStats
+          ? replacedBySubIn.has(norm(pick.player_id))
+          : (pick.was_auto_subbed_in || replacedBySubIn.has(norm(pick.player_id)))
 
         if (statsRows.length === 0) {
           // No player_gameweek_stats yet (scheduled game before refresh) – derive fixture/kickoff/opponent from schedule

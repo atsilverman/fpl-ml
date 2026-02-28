@@ -4,6 +4,8 @@ import { Swords, UserStar, ShieldCheck, Radio } from 'lucide-react'
 import DefconSubpage from './DefconSubpage'
 import FeedSubpage from './FeedSubpage'
 import MatchesSubpage from './MatchesSubpage'
+import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
+import { useIsMobile } from '../hooks/useIsMobile'
 import './GameweekPage.css'
 
 const GAMEWEEK_VIEW_ORDER = ['matches', 'bonus', 'defcon', 'feed']
@@ -36,6 +38,15 @@ export default function GameweekPage() {
 
   const pageIndex = viewToIndex(view)
   const setView = (v) => setSearchParams({ ...Object.fromEntries(searchParams.entries()), view: v }, { replace: true })
+
+  const swipeContainerRef = useRef(null)
+  const isMobile = useIsMobile()
+  useSubpageSwipe(swipeContainerRef, {
+    currentIndex: pageIndex,
+    totalPages: GAMEWEEK_VIEW_ORDER.length,
+    onSwipeToIndex: (i) => setView(GAMEWEEK_VIEW_ORDER[i]),
+    enabled: isMobile
+  })
 
   /* Track is 400% wide (4 panels); translateX % is relative to track, so one panel = 25% */
   const percentPerPanel = 100 / 4
@@ -77,7 +88,7 @@ export default function GameweekPage() {
           Simulating statuses: fixture 1 = Scheduled, 2 = Live, 3 = Finished (provisional), 4 = Final. Remove <code>?simulate=1</code> from URL to use real data.
         </div>
       )}
-      <div className="gameweek-page-content gameweek-swipe-container" style={{ touchAction: 'pan-y' }}>
+      <div ref={swipeContainerRef} className="gameweek-page-content gameweek-swipe-container" style={{ touchAction: 'pan-y' }}>
         <div
           className="gameweek-swipe-track"
           style={{ transform: `translateX(${translatePercent}%)` }}

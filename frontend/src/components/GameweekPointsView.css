@@ -799,10 +799,12 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 }
 
 .gameweek-points-mins-value-wrap .live-updating-indicator.gameweek-points-mins-live {
-  margin-left: 8px;
+  margin-left: 6px;
   width: 6px;
   height: 6px;
-  box-shadow: 0 0 0 0 var(--accent-green, #10b981);
+  border-radius: 50%;
+  background: var(--accent-green, #10b981);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
   animation: gameweek-points-mins-live-pulse 2s ease-in-out infinite;
 }
 
@@ -848,12 +850,10 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
   flex-shrink: 0;
 }
 
-/* Live match in progress – stats not yet populated */
-.gameweek-points-mins-live-badge {
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--live-dot, #eab308);
-  letter-spacing: 0.02em;
+/* Live match in progress – 0 minutes, show 0 + pulsing green indicator */
+.gameweek-points-mins-live-zero {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
 }
 
 /* Upcoming match: day + time in local TZ (subtle, not DNP) */

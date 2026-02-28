@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { X, Filter } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
-import { usePlayerTransfermarkt } from '../hooks/usePlayerTransfermarkt'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import PlayerGameweekPointsChart, { CHART_RANGE_FILTERS } from './PlayerGameweekPointsChart'
@@ -55,7 +54,6 @@ export default function PlayerDetailModal({
   } = usePlayerDetail(playerId, gameweek, leagueManagerCount, leagueManagerIds)
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
-  const { profileUrl: transfermarktProfileUrl } = usePlayerTransfermarkt(playerId, playerDetailPlayer?.web_name)
   const config = useConfiguration()
   const difficultyOverridesByDimension = useMemo(
     () => ({
@@ -139,17 +137,6 @@ export default function PlayerDetailModal({
               <span className="player-detail-modal-position-pill">
                 {playerDetailPlayer.positionLabel}
               </span>
-            )}
-            {transfermarktProfileUrl && (
-              <a
-                href={transfermarktProfileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="player-detail-modal-transfermarkt-link"
-                title="View player on Transfermarkt"
-              >
-                Transfermarkt
-              </a>
             )}
           </div>
           <button

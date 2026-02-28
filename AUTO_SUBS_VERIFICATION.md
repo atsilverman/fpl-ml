@@ -1,5 +1,7 @@
 # Auto-Subs Verification - Standings Accuracy
 
+**See also:** [FPL Auto-Sub Rules (reference)](docs/FPL_AUTO_SUB_RULES.md) for official FPL rules, bench order, formation, and our designated vs applied (display) logic.
+
 ## Status: ✅ **IMPLEMENTED** | ⚠️ **REFRESH FLOW UPDATED**
 
 Auto-subs are correctly implemented and applied in standings calculations. Refresh orchestrator now updates manager points during live matches to apply auto-subs progressively.

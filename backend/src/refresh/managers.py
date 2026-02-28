@@ -116,7 +116,8 @@ class ManagerDataRefresher:
                 {"player_id": row["player_id"], "position": row["position"]}
                 for row in picks_rows
             ]
-            automatic_subs = self.points_calculator.infer_automatic_subs_from_db(
+            # Use display subs (designated sub by bench order; cascade to applied if designated DNP)
+            automatic_subs = self.points_calculator.get_auto_sub_display_subs(
                 gameweek, picks_for_inference
             )
             subbed_out: Set[int] = set()
@@ -252,12 +253,12 @@ class ManagerDataRefresher:
                     {"player_id": p["element"], "position": p["position"]}
                     for p in picks
                 ]
-                automatic_subs = self.points_calculator.infer_automatic_subs_from_db(
+                automatic_subs = self.points_calculator.get_auto_sub_display_subs(
                     gameweek, picks_for_inference
                 )
                 if automatic_subs:
                     logger.debug(
-                        "Inferred automatic_subs from DB (API had none)",
+                        "Inferred display automatic_subs from DB (API had none)",
                         extra={
                             "manager_id": manager_id,
                             "gameweek": gameweek,
@@ -267,7 +268,27 @@ class ManagerDataRefresher:
             active_chip = picks_data.get("active_chip")
             entry_history = picks_data.get("entry_history") or {}
             gameweek_rank = entry_history.get("rank")
-            
+
+            # Captain/vice IDs and whether captain was auto-subbed out (for persisting effective multiplier)
+            captain_player_id = next((p["element"] for p in picks if p.get("is_captain")), None)
+            vice_player_id = next((p["element"] for p in picks if p.get("is_vice_captain")), None)
+            captain_was_subbed_out = bool(
+                captain_player_id
+                and any(
+                    auto_sub.get("element_out") == captain_player_id
+                    for auto_sub in automatic_subs
+                )
+            )
+            # Vice only gets captain multiplier if vice was not also subbed out
+            vice_was_subbed_out = bool(
+                vice_player_id
+                and any(
+                    auto_sub.get("element_out") == vice_player_id
+                    for auto_sub in automatic_subs
+                )
+            )
+            vice_gets_captain_mult = captain_was_subbed_out and not vice_was_subbed_out
+
             for pick in picks:
                 is_captain = pick.get("is_captain", False)
                 raw_mult = pick.get("multiplier", 1)
@@ -289,7 +310,7 @@ class ManagerDataRefresher:
                     "auto_sub_replaced_player_id": None,
                     "updated_at": datetime.now(timezone.utc).isoformat()
                 }
-                
+
                 # Check if this pick was auto-subbed
                 for auto_sub in automatic_subs:
                     if auto_sub.get("element_out") == pick["element"]:
@@ -297,7 +318,13 @@ class ManagerDataRefresher:
                     if auto_sub.get("element_in") == pick["element"]:
                         pick_data["was_auto_subbed_in"] = True
                         pick_data["auto_sub_replaced_player_id"] = auto_sub.get("element_out")
-                
+
+                # Persist effective multiplier: when captain subbed out, ex-captain 1x and vice 2x/3x (FPL rule)
+                if captain_was_subbed_out and pick["element"] == captain_player_id:
+                    pick_data["multiplier"] = 1
+                elif vice_gets_captain_mult and pick["element"] == vice_player_id:
+                    pick_data["multiplier"] = 3 if active_chip == "3xc" else 2
+
                 self.db_client.upsert_manager_pick(pick_data)
             
             logger.debug("Refreshed manager picks", extra={
@@ -668,9 +695,9 @@ class ManagerDataRefresher:
         elements = live_data.get("elements", [])
         live_elements = {int(e["id"]): e for e in elements if "id" in e}
 
-        # 1. Batched picks
+        # 1. Batched picks (include is_captain, is_vice_captain for captain→vice multiplier when captain subbed out)
         picks_result = self.db_client.client.table("manager_picks").select(
-            "manager_id, player_id, position, multiplier"
+            "manager_id, player_id, position, multiplier, is_captain, is_vice_captain"
         ).eq("gameweek", gameweek).in_("manager_id", manager_ids).execute()
         picks_all = picks_result.data or []
 
@@ -766,12 +793,18 @@ class ManagerDataRefresher:
             baseline = hist.get("baseline_total_points")
             prev_total = prev_by_manager.get(manager_id)
 
+            automatic_subs = self.points_calculator.get_auto_sub_display_subs(
+                gameweek, manager_picks
+            )
             adjusted_picks = self.points_calculator.apply_automatic_subs(
                 manager_picks,
-                [],
+                automatic_subs,
                 player_minutes,
                 player_fixtures,
                 position_by_player_id=position_by_player_id,
+            )
+            adjusted_picks = self.points_calculator.apply_captain_vice_multiplier_after_sub(
+                adjusted_picks, active_chip
             )
             starters = [p for p in adjusted_picks if p["position"] <= 11]
             bench = [p for p in adjusted_picks if p["position"] > 11]

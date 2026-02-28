@@ -31,12 +31,12 @@ html[data-theme="dark"] {
   --shadow-accent-blue: rgba(59, 130, 246, 0.15);
   --shadow-accent-blue-subtle: rgba(59, 130, 246, 0.1);
   --gw-bench-fill: rgba(255, 255, 255, 0.04);
-  --gw-autosub-out-bg: rgba(239, 68, 68, 0.07);
-  --gw-autosub-in-bg: rgba(16, 185, 129, 0.07);
-  /* Opaque equivalents for sticky player column – subtle red/green */
+  --gw-autosub-out-bg: rgba(239, 68, 68, 0.16);
+  --gw-autosub-in-bg: rgba(16, 185, 129, 0.16);
+  /* Opaque equivalents for sticky player column – red/green tint */
   --gw-bench-fill-solid: #0f1329;
-  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 7%, var(--bg-primary) 93%);
-  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 7%, var(--bg-primary) 93%);
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 16%, var(--bg-primary) 84%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 16%, var(--bg-primary) 84%);
   --collapse-icon-color: #a0aec0;
   --collapse-badge-bg: rgba(255, 255, 255, 0.06);
   --collapse-badge-border: rgba(255, 255, 255, 0.12);
@@ -80,12 +80,12 @@ html[data-theme="light"] {
   --shadow-accent-blue: rgba(37, 99, 235, 0.15);
   --shadow-accent-blue-subtle: rgba(37, 99, 235, 0.1);
   --gw-bench-fill: rgba(0, 0, 0, 0.04);
-  --gw-autosub-out-bg: rgba(239, 68, 68, 0.06);
-  --gw-autosub-in-bg: rgba(16, 185, 129, 0.06);
-  /* Opaque equivalents for sticky player column – subtle red/green */
+  --gw-autosub-out-bg: rgba(239, 68, 68, 0.14);
+  --gw-autosub-in-bg: rgba(16, 185, 129, 0.14);
+  /* Opaque equivalents for sticky player column – red/green tint */
   --gw-bench-fill-solid: #eef1f5;
-  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 6%, var(--bg-primary) 94%);
-  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 6%, var(--bg-primary) 94%);
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #ef4444 14%, var(--bg-primary) 86%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #10b981 14%, var(--bg-primary) 86%);
   --collapse-icon-color: #64748b;
   --collapse-badge-bg: rgba(0, 0, 0, 0.06);
   --collapse-badge-border: rgba(0, 0, 0, 0.08);
