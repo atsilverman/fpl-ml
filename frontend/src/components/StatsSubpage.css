@@ -199,9 +199,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   /* Full-bleed background so scrolling content doesn’t show through at edges; shadow extends opaque block below */
   padding-top: 2px;
   /* Extend opaque block up (above header/tabs) and down so scrolling content doesn’t show through */
-  box-shadow:
-    0 -80px 0 var(--bg-primary, #fff),
-    0 6px 16px -4px var(--bg-primary, #fff);
+  box-shadow: 0 -80px 0 var(--bg-primary, #fff);
 }
 
 /* Stats toolbar: left = Player/Team, right = Search + Compare + Filter */
@@ -253,12 +251,12 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   /* Use system blue for Player/Team toggle (matches other subpage toggles) */
   .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
     background: var(--accent-blue, #3b82f6);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(59, 130, 246, 0.25);
+    box-shadow: none;
   }
 
   html[data-theme="light"] .research-stats-page .research-stats-view-toggle .subpage-view-toggle-slider {
     background: var(--accent-blue, #2563eb);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(37, 99, 235, 0.28);
+    box-shadow: none;
   }
 
   .research-stats-toolbar-right {
@@ -653,7 +651,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   min-height: 320px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   margin: auto;
   flex-shrink: 0;
 }
@@ -1007,7 +1005,7 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.14);
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1104,11 +1102,11 @@ html[data-theme="dark"] .research-stats-compare-details-pill--leader {
   height: 28px;
   top: 6px;
   background: var(--accent-blue, #3b82f6);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 8px rgba(59, 130, 246, 0.25);
+  box-shadow: none;
 }
 html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpage-view-toggle-slider {
   background: var(--accent-blue, #2563eb);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 8px rgba(37, 99, 235, 0.28);
+  box-shadow: none;
 }
 .stats-filter-overlay .stats-filter-view-toggle[data-options="2"] .subpage-view-toggle-slider {
   width: calc((100% - 16px - 8px) / 2);
@@ -1297,7 +1295,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   top: 0;
   z-index: 15;
   background: var(--bg-secondary);
-  box-shadow: 0 1px 0 var(--border-color), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 0 var(--border-color);
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead tr {
   position: sticky;
@@ -1343,7 +1341,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   z-index: 10;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1448,6 +1446,14 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   /* Prevent sticky header/column being pulled off on mobile drag (same as GameweekPointsView) */
   overscroll-behavior: none;
   touch-action: pan-x pan-y;     /* allow both axes */
+}
+
+/* Mobile: no transform on wrapper so position:sticky left works (transform creates containing block that breaks sticky on iOS/Safari) */
+@media (max-width: 768px) {
+  .research-stats-page .league-standings-bento-table-wrapper {
+    transform: none;
+    -webkit-transform: none;
+  }
 }
 
 /* Main table only: vertical scroll inside this container so header row and player column stay fixed. */
