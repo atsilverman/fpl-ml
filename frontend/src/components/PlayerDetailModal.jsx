@@ -4,6 +4,8 @@ import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
 import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
+import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
+import { useLeaguePlayerOwnership } from '../hooks/useLeaguePlayerOwnership'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import PlayerGameweekPointsChart, { CHART_RANGE_FILTERS } from './PlayerGameweekPointsChart'
 import ScheduleBento from './ScheduleBento'
@@ -166,6 +168,7 @@ export default function PlayerDetailModal({
   const [chartExpanded, setChartExpanded] = useState(true)
   const [scheduleExpanded, setScheduleExpanded] = useState(true)
   const [opponentStatsExpanded, setOpponentStatsExpanded] = useState(true)
+  const [leagueOwnershipExpanded, setLeagueOwnershipExpanded] = useState(true)
   const playerStatPopupRef = useRef(null)
   const filterPopupPanelRef = useRef(null)
 
@@ -189,7 +192,14 @@ export default function PlayerDetailModal({
   const gwTotalPts = gwStats?.effective_points ?? gwStats?.points ?? 0
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
+  const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
+  const { managerIdsOwningPlayer, loading: ownershipLoading } = useLeaguePlayerOwnership(playerId, gameweek)
+  const managerIdsOwningPlayerSet = useMemo(
+    () => new Set((managerIdsOwningPlayer ?? []).map((id) => Number(id))),
+    [managerIdsOwningPlayer]
+  )
   const config = useConfiguration()
+  const currentManagerId = config?.managerId ?? null
   const difficultyOverridesByDimension = useMemo(
     () => ({
       overall: config?.teamStrengthOverrides ?? null,
@@ -524,6 +534,77 @@ export default function PlayerDetailModal({
                     opponentStatsByTeamId={teamLast6ByTeamId}
                     opponentStatsLoading={teamLast6Loading}
                   />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={`player-detail-bento-collapsible ${leagueOwnershipExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setLeagueOwnershipExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLeagueOwnershipExpanded((v) => !v); } }}
+                aria-expanded={leagueOwnershipExpanded}
+                aria-label={leagueOwnershipExpanded ? 'Collapse League Ownership' : 'Expand League Ownership'}
+              >
+                <span className="player-detail-bento-collapsible-title">League Ownership</span>
+                <span className="player-detail-bento-collapsible-expand-icon" title={leagueOwnershipExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {leagueOwnershipExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                </span>
+              </div>
+              {leagueOwnershipExpanded && (
+                <div className="player-detail-bento-collapsible-body">
+                  {leagueStandingsLoading ? (
+                    <div className="bento-card-value loading">Loading standings…</div>
+                  ) : !leagueStandings?.length ? (
+                    <div className="player-detail-league-ownership-empty">No league configured or no standings</div>
+                  ) : (
+                    <div className="player-detail-league-ownership-table-wrapper">
+                        <table className="league-standings-bento-table player-detail-league-ownership-table">
+                          <colgroup>
+                            <col className="player-detail-league-ownership-col-rank" />
+                            <col className="player-detail-league-ownership-col-manager" />
+                          </colgroup>
+                          <thead>
+                            <tr>
+                              <th className="league-standings-bento-rank">Rank</th>
+                              <th className="league-standings-bento-team">Manager</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {leagueStandings.map((s, index) => {
+                              const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
+                              const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
+                              const ownsPlayer = !ownershipLoading && managerIdsOwningPlayerSet.has(Number(s.manager_id))
+                              const isDemoted = !ownershipLoading && !ownsPlayer
+                              const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
+                              return (
+                                <tr
+                                  key={s.manager_id}
+                                  className={`league-standings-bento-row ${ownsPlayer ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
+                                >
+                                  <td className="league-standings-bento-rank">
+                                    <span className="league-standings-bento-rank-inner">
+                                      <span className="league-standings-bento-rank-value">{rank}</span>
+                                    </span>
+                                  </td>
+                                  <td className="league-standings-bento-team" title={displayName}>
+                                    <div className="league-standings-bento-team-cell-inner">
+                                      <span className="league-standings-bento-team-name">{displayName}</span>
+                                      {isCurrentUser && (
+                                        <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

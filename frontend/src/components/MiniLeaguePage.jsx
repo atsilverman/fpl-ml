@@ -1223,7 +1223,10 @@ export default function MiniLeaguePage() {
             <div className="manager-detail-modal-header">
               <div className="manager-detail-modal-header-title-wrap">
                 <h2 id="manager-detail-modal-title" className="manager-detail-modal-title">
-                  {selectedManagerSummary?.managerTeamName || selectedManagerDisplayName}
+                  <span className="manager-detail-modal-title-name">{selectedManagerSummary?.managerTeamName || selectedManagerDisplayName}</span>
+                  {selectedManagerId != null && currentManagerId != null && Number(selectedManagerId) === Number(currentManagerId) && (
+                    <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                  )}
                 </h2>
                 {(() => {
                   const personName = (selectedManagerSummary?.managerName ?? selectedManagerName)?.trim?.() ?? ''

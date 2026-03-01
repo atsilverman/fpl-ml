@@ -1758,6 +1758,127 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   }
 }
 
+/* Player detail modal: League Ownership bento — fixed height scroll, same ownership/demoted styling */
+.player-detail-league-ownership-table-wrapper {
+  max-height: 660px;
+  overflow-y: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+  width: 100%;
+  min-width: 100%;
+}
+.player-detail-league-ownership-table-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius: 4px;
+}
+.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, rgba(0, 0, 0, 0.25));
+}
+.player-detail-league-ownership-empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.player-detail-league-ownership-table-wrapper .player-detail-league-ownership-table col.player-detail-league-ownership-col-rank {
+  width: 40px;
+}
+.player-detail-league-ownership-table-wrapper .player-detail-league-ownership-table col.player-detail-league-ownership-col-manager {
+  width: auto;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table th.league-standings-bento-rank,
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table td.league-standings-bento-rank {
+  width: 40px;
+  max-width: 40px;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table th.league-standings-bento-team,
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table td.league-standings-bento-team {
+  min-width: 0;
+  overflow: hidden;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table thead th {
+  padding: 6px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team {
+  min-width: 0;
+  overflow: hidden;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-cell-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-rank-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-change-badge.positive {
+  background: rgba(16, 185, 129, 0.18);
+  color: var(--accent-green, #10b981);
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-change-badge.negative {
+  background: rgba(239, 68, 68, 0.18);
+  color: var(--accent-red, #ef4444);
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-primary));
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
+  border-left: 3px solid var(--accent-blue, #3b82f6);
+}
+.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--demoted td {
+  background: var(--bg-secondary);
+  opacity: 0.5;
+  color: var(--text-secondary);
+}
+@media (hover: hover) {
+  .player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
+    opacity: 0.75;
+  }
+}
+
 /* Manager detail modal: same layout and UI as GW Points expanded card */
 .manager-detail-modal-overlay {
   position: fixed;
@@ -1810,6 +1931,15 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   flex-shrink: 0;
 }
 .manager-detail-modal-header-title-wrap {
+  min-width: 0;
+}
+.manager-detail-modal-overlay .manager-detail-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.manager-detail-modal-title-name {
   min-width: 0;
 }
 .manager-detail-modal-title {
@@ -2181,6 +2311,10 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   gap: 8px;
   min-width: 0;
   flex: 1 1 auto;
+}
+/* League Ownership body: prevent shrink so table/wrapper fill full width */
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-league-ownership-table-wrapper) .player-detail-bento-collapsible-body {
+  min-width: 100%;
 }
 .player-detail-modal-body .player-detail-bento-collapsible-header.player-detail-chart-bento-header {
   flex-wrap: nowrap;
