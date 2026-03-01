@@ -1448,19 +1448,27 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   touch-action: pan-x pan-y;     /* allow both axes */
 }
 
-/* Mobile: no transform on wrapper so position:sticky left works (transform creates containing block that breaks sticky on iOS/Safari) */
-@media (max-width: 768px) {
-  .research-stats-page .league-standings-bento-table-wrapper {
-    transform: none;
-    -webkit-transform: none;
-  }
-}
-
 /* Main table only: vertical scroll inside this container so header row and player column stay fixed. */
 .research-stats-page .league-standings-bento-table-wrapper:not(.research-stats-compare-table-wrapper) {
   overflow-y: auto;
   max-height: 60vh;
   min-height: 0;
+}
+
+/* Mobile: match Schedule (fixtures) subpage so sticky column works: horizontal-only scroll, no transform/isolation.
+   Vertical scroll happens on the page (research-page-content); wrapper only scrolls horizontally like .schedule-scroll-wrap. */
+@media (max-width: 768px) {
+  .research-stats-page .league-standings-bento-table-wrapper {
+    overflow-x: auto;
+    transform: none;
+    -webkit-transform: none;
+    isolation: auto;
+  }
+  .research-stats-page .league-standings-bento-table-wrapper:not(.research-stats-compare-table-wrapper) {
+    overflow-y: visible;
+    max-height: none;
+    min-height: 0;
+  }
 }
 
 /* Desktop: show scrollbars on Statistics subpage table wrapper */

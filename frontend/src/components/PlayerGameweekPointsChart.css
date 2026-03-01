@@ -131,7 +131,7 @@
   pointer-events: none;
 }
 
-/* DNP indicator: red circle + "!" + "DNP" text (match GW points bento) */
+/* DNP indicator: red circle + "!" icon only (no text label) */
 .player-gw-chart-dnp-wrap {
   pointer-events: none;
 }
@@ -143,11 +143,6 @@
 .player-gw-chart-dnp-icon-text {
   fill: #fff;
   font-weight: 700;
-}
-
-.player-gw-chart-dnp-label {
-  fill: var(--text-secondary, #64748b);
-  font-weight: 600;
 }
 
 /* DEFCON/Saves: solid = threshold achieved, hashed = below threshold (fill set in D3) */

@@ -2037,7 +2037,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 
 /* Player detail modal (same layout as manager modal, stacked above when open) */
 .player-detail-modal-overlay {
-  /* Top-level stacking so it appears above dashboard header (z 100) and bottom nav (z 99) */
+  /* Above dashboard header (z 100), bottom nav (z 99), and subpage sticky toolbars (e.g. Stats z 15) */
   z-index: 1100;
 }
 
@@ -2058,7 +2058,9 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 
 .player-detail-modal-content {
   position: relative;
-  max-width: min(90vw, 480px);
+  /* Match manager detail modal size so player details match across subpages (Stats, Matches, Schedule, etc.) */
+  max-width: min(90vw, 900px);
+  min-height: min(70vh, 500px);
   max-height: 85vh;
   display: flex;
   flex-direction: column;
@@ -2086,6 +2088,111 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   min-height: 0;
   -webkit-overflow-scrolling: touch;
 }
+
+/* Player detail collapsible bentos – same pattern as .gw-top-points-card (league transfers) */
+.player-detail-modal-body .player-detail-bento-collapsible {
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+@media (hover: hover) {
+  .player-detail-modal-body .player-detail-bento-collapsible:hover {
+    border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
+    box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
+  }
+}
+.player-detail-modal-body .player-detail-bento-collapsible-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.player-detail-modal-body .player-detail-bento-collapsible-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  padding: 2px 0;
+  margin: -2px 0;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.player-detail-modal-body .player-detail-bento-collapsible-header:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+.player-detail-modal-body .player-detail-bento-collapsible-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+.player-detail-modal-body .player-detail-bento-collapsible-expand-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  opacity: 0.6;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+  border-radius: 4px;
+}
+@media (hover: hover) {
+  .player-detail-modal-body .player-detail-bento-collapsible-expand-icon:hover {
+    opacity: 1;
+  }
+}
+.player-detail-modal-body .player-detail-bento-collapsible--expanded .player-detail-bento-collapsible-expand-icon {
+  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
+  border-radius: 6px;
+  opacity: 0.85;
+}
+@media (hover: hover) {
+  .player-detail-modal-body .player-detail-bento-collapsible--expanded .player-detail-bento-collapsible-expand-icon:hover {
+    border-color: var(--collapse-icon-color, #64748b);
+    opacity: 1;
+  }
+}
+.player-detail-modal-body .player-detail-bento-collapsible-body {
+  margin-top: 0;
+  padding-top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.player-detail-modal-body .player-detail-bento-collapsible-header.player-detail-chart-bento-header {
+  flex-wrap: nowrap;
+}
+.player-detail-modal-body .player-detail-chart-bento-header-inner {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.player-detail-modal-body .player-detail-bento-collapsible-body--hide-label .bento-card-label,
+.player-detail-modal-body .player-detail-bento-collapsible-body--hide-label .schedule-bento-label {
+  display: none;
+}
+
 /* Player detail header: one row = badge (left) + name + position pill (right); no team abbreviation */
 .player-detail-modal-overlay .manager-detail-modal-header-title-wrap.player-detail-modal-header-row {
   display: flex;
@@ -2118,7 +2225,8 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 }
 /* Player detail bentos: scope under modal body so we beat .bento-card (HomePage.css) fixed height; size to content, body scrolls */
 .player-detail-modal-body .player-detail-details-bento,
-.player-detail-modal-body .player-detail-chart-bento {
+.player-detail-modal-body .player-detail-chart-bento,
+.player-detail-modal-body .player-detail-points-impact-bento {
   width: 100%;
   min-width: 0;
   padding: 12px 14px;
@@ -2172,6 +2280,118 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   color: var(--text-primary);
 }
 
+/* Points impact bento: event list + total */
+.player-detail-points-impact-bento .bento-card-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+.player-detail-points-impact-empty {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.player-detail-points-impact-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.player-detail-points-impact-row:last-of-type {
+  border-bottom: none;
+}
+.player-detail-points-impact-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-icon {
+  flex-shrink: 0;
+  width: 11px;
+  height: 16px;
+}
+.player-detail-points-impact-icon--yc {
+  color: #eab308;
+}
+.player-detail-points-impact-icon--rc {
+  color: #dc2626;
+}
+html[data-theme="dark"] .player-detail-points-impact-icon--yc {
+  color: #facc15;
+}
+html[data-theme="dark"] .player-detail-points-impact-icon--rc {
+  color: #ef4444;
+}
+.player-detail-points-impact-pts {
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-block;
+}
+.player-detail-points-impact-pts.positive {
+  color: #166534;
+  background: rgba(34, 197, 94, 0.15);
+}
+.player-detail-points-impact-pts.negative {
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.15);
+}
+html[data-theme="dark"] .player-detail-points-impact-pts.positive {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.2);
+}
+html[data-theme="dark"] .player-detail-points-impact-pts.negative {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.2);
+}
+.player-detail-points-impact-row--provisional .player-detail-points-impact-label {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-total-provisional-hint {
+  font-size: 10px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+.player-detail-points-impact-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+.player-detail-points-impact-total-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-total-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
 /* Chart bento header: label left, eye (stat filter) button right */
 .player-detail-chart-bento-header {
   display: flex;
@@ -2184,7 +2404,8 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 .player-detail-chart-bento-label {
   margin-bottom: 0;
 }
-.player-detail-chart-bento-label .bento-card-label-suffix {
+.player-detail-chart-bento-label .bento-card-label-suffix,
+.player-detail-bento-collapsible-title .bento-card-label-suffix {
   font-size: 10px;
   font-weight: 400;
   opacity: 0.65;
@@ -2430,7 +2651,9 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 }
 .team-detail-modal-content {
   position: relative;
-  max-width: min(90vw, 480px);
+  /* Match manager detail modal size for consistency across subpages */
+  max-width: min(90vw, 900px);
+  min-height: min(70vh, 500px);
   max-height: 85vh;
   display: flex;
   flex-direction: column;

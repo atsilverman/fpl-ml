@@ -15,7 +15,7 @@ export function usePlayerGameweekStats(playerId, gameweek) {
       const { data: rows, error: err } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
+          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, bonus_status, provisional_bonus, defensive_contribution, yellow_cards, red_cards, own_goals, penalties_missed, penalties_saved, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
         )
         .eq('player_id', playerId)
         .eq('gameweek', gameweek)
@@ -35,30 +35,50 @@ export function usePlayerGameweekStats(playerId, gameweek) {
         defensive_contribution: 0,
         yellow_cards: 0,
         red_cards: 0,
+        own_goals: 0,
+        penalties_missed: 0,
+        penalties_saved: 0,
         expected_goals: 0,
         expected_assists: 0,
         expected_goal_involvements: 0,
         expected_goals_conceded: 0,
         goals_conceded: 0,
+        bonus_status: 'confirmed',
+        provisional_bonus: 0,
+        effective_points: 0,
       }
+      let anyProvisional = false
       for (const r of rows) {
-        agg.points += r.total_points ?? 0
+        const totalPoints = r.total_points ?? 0
+        const officialBonus = Number(r.bonus) ?? 0
+        const status = r.bonus_status ?? 'provisional'
+        const provBonus = Number(r.provisional_bonus) ?? 0
+        const useOfficial = status === 'confirmed' || officialBonus > 0
+        if (!useOfficial && status === 'provisional') anyProvisional = true
+
+        agg.points += totalPoints
+        agg.bonus += useOfficial ? officialBonus : 0
+        agg.provisional_bonus += useOfficial ? 0 : provBonus
+        agg.effective_points += useOfficial ? totalPoints : totalPoints + provBonus
         agg.minutes += r.minutes ?? 0
         agg.goals_scored += r.goals_scored ?? 0
         agg.assists += r.assists ?? 0
         agg.clean_sheets += r.clean_sheets ?? 0
         agg.saves += r.saves ?? 0
         agg.bps += r.bps ?? 0
-        agg.bonus += r.bonus ?? 0
         agg.defensive_contribution += r.defensive_contribution ?? 0
         agg.yellow_cards += r.yellow_cards ?? 0
         agg.red_cards += r.red_cards ?? 0
+        agg.own_goals += r.own_goals ?? 0
+        agg.penalties_missed += r.penalties_missed ?? 0
+        agg.penalties_saved += r.penalties_saved ?? 0
         agg.expected_goals += Number(r.expected_goals) || 0
         agg.expected_assists += Number(r.expected_assists) || 0
         agg.expected_goal_involvements += Number(r.expected_goal_involvements) || 0
         agg.expected_goals_conceded += Number(r.expected_goals_conceded) || 0
         agg.goals_conceded += r.goals_conceded ?? 0
       }
+      agg.bonus_status = anyProvisional ? 'provisional' : 'confirmed'
       return agg
     },
     enabled: playerId != null && gameweek != null,

@@ -445,7 +445,7 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-    // DNP indicator: red circle with "!" (match GW points bento) + "DNP" text, no pill background
+    // DNP indicator: red circle with "!" only (no "DNP" label), centered in band
     const dnpData = filteredData.filter(isDnp)
     const dnpLabelY = baselineY - DNP_LABEL_OFFSET_Y
     g.selectAll('.player-gw-chart-dnp-wrap')
@@ -460,12 +460,12 @@ export default function PlayerGameweekPointsChart({
             el.append('circle')
               .attr('class', 'player-gw-chart-dnp-icon')
               .attr('r', DNP_ICON_R)
-              .attr('cx', -DNP_ICON_R - 4)
+              .attr('cx', 0)
               .attr('cy', 0)
               .attr('fill', 'var(--impact-negative, var(--accent-red, #dc2626))')
             el.append('text')
               .attr('class', 'player-gw-chart-dnp-icon-text')
-              .attr('x', -DNP_ICON_R - 4)
+              .attr('x', 0)
               .attr('y', 0)
               .attr('text-anchor', 'middle')
               .attr('dominant-baseline', 'middle')
@@ -473,16 +473,6 @@ export default function PlayerGameweekPointsChart({
               .attr('font-weight', 700)
               .attr('fill', '#fff')
               .text('!')
-            el.append('text')
-              .attr('class', 'player-gw-chart-dnp-label')
-              .attr('x', 4)
-              .attr('y', 0)
-              .attr('text-anchor', 'start')
-              .attr('dominant-baseline', 'middle')
-              .attr('font-size', barLabelFontSize)
-              .attr('font-weight', 600)
-              .attr('fill', 'var(--text-secondary, #64748b)')
-              .text('DNP')
           })
           wrap.transition(barTransition).delay(barLabelDelay).attr('opacity', 1)
         },
@@ -491,7 +481,6 @@ export default function PlayerGameweekPointsChart({
             const el = d3.select(this)
             const centerX = xScale(String(d.gameweek)) + bandWidth / 2
             el.attr('transform', `translate(${centerX}, ${dnpLabelY})`)
-            el.select('.player-gw-chart-dnp-label').attr('font-size', barLabelFontSize)
           }),
         (exit) => exit.remove()
       )
