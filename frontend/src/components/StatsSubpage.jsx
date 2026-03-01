@@ -226,7 +226,7 @@ export default function StatsSubpage() {
     })
   }, [])
 
-  const { players, teamGoalsConceded, teamExpectedGoalsConceded, totalCount, pagination, top10PlayerIdsByField, top20PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
+  const { players, teamGoals, teamGoalsConceded, teamExpectedGoalsConceded, totalCount, pagination, top10PlayerIdsByField, top20PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
     page: statsPage,
     sortBy: mainSort.column,
     sortDir: mainSort.dir,
@@ -324,12 +324,16 @@ export default function StatsSubpage() {
         TEAM_AGGREGATION_FIELDS.forEach((f) => { existing[f] += Number(p[f]) || 0 })
       }
     }
-    return Array.from(byTeam.values()).map((t) => ({
-      ...t,
-      goals_conceded: t.team_id != null && teamGoalsConceded[t.team_id] != null ? teamGoalsConceded[t.team_id] : (t.goals_conceded ?? 0),
-      expected_goals_conceded: t.team_id != null && teamExpectedGoalsConceded[t.team_id] != null ? teamExpectedGoalsConceded[t.team_id] : (t.expected_goals_conceded ?? 0)
-    }))
-  }, [playersAboveMinMinutes, teamGoalsConceded, teamExpectedGoalsConceded])
+    return Array.from(byTeam.values()).map((t) => {
+      const tid = t.team_id != null ? Number(t.team_id) : null
+      return {
+        ...t,
+        goals_scored: tid != null && teamGoals[tid] != null ? teamGoals[tid] : (t.goals_scored ?? 0),
+        goals_conceded: tid != null && teamGoalsConceded[tid] != null ? teamGoalsConceded[tid] : (t.goals_conceded ?? 0),
+        expected_goals_conceded: tid != null && teamExpectedGoalsConceded[tid] != null ? teamExpectedGoalsConceded[tid] : (t.expected_goals_conceded ?? 0)
+      }
+    })
+  }, [playersAboveMinMinutes, teamGoals, teamGoalsConceded, teamExpectedGoalsConceded])
 
   const filteredTeams = useMemo(() => {
     if (!teamStats.length) return []

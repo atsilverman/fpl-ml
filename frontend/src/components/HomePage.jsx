@@ -668,6 +668,20 @@ export default function HomePage() {
               currentManagerTotalPoints={cardId === 'league-rank' ? (totalPointsFromPlayers != null ? totalPointsFromPlayers : (managerData?.totalPoints ?? 0)) : undefined}
               captainName={cardId === 'captain' && !showGameUpdatingBanner ? (currentGameweekPlayers?.find(p => p.is_captain)?.player_name ?? null) : undefined}
               viceCaptainName={cardId === 'captain' && !showGameUpdatingBanner ? (currentGameweekPlayers?.find(p => p.is_vice_captain)?.player_name ?? null) : undefined}
+              captainDnp={cardId === 'captain' && !showGameUpdatingBanner ? (() => {
+                const captainRows = (currentGameweekPlayers ?? []).filter(p => p.is_captain)
+                if (!captainRows.length) return false
+                const anyFinished = captainRows.some(r => r.match_finished || r.match_finished_provisional)
+                const totalMinutes = captainRows.reduce((s, r) => s + (r.minutes ?? 0), 0)
+                return !!(anyFinished && totalMinutes === 0)
+              })() : undefined}
+              viceCaptainDnp={cardId === 'captain' && !showGameUpdatingBanner ? (() => {
+                const viceRows = (currentGameweekPlayers ?? []).filter(p => p.is_vice_captain)
+                if (!viceRows.length) return false
+                const anyFinished = viceRows.some(r => r.match_finished || r.match_finished_provisional)
+                const totalMinutes = viceRows.reduce((s, r) => s + (r.minutes ?? 0), 0)
+                return !!(anyFinished && totalMinutes === 0)
+              })() : undefined}
               leagueCaptainData={cardId === 'captain' && !showGameUpdatingBanner ? leagueCaptainData : undefined}
               leagueCaptainLoading={cardId === 'captain' ? leagueCaptainLoading : undefined}
             />

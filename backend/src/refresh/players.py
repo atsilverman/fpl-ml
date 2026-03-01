@@ -910,7 +910,11 @@ class PlayerDataRefresher:
                             "defensive_contribution": existing_stat.get("defensive_contribution", 0) or 0,
                             "saves": existing_stat.get("saves", 0) or 0,
                             "clean_sheets": existing_stat.get("clean_sheets", 0) or 0,
-                            "goals_conceded": existing_stat.get("goals_conceded", 0) or 0,
+                            "goals_conceded": (
+                                (team_a_score if was_home else team_h_score)
+                                if team_h_score is not None and team_a_score is not None
+                                else (existing_stat.get("goals_conceded", 0) or 0)
+                            ),
                             "penalties_saved": existing_stat.get("penalties_saved", 0) or 0,
                             "yellow_cards": existing_stat.get("yellow_cards", 0) or 0,
                             "red_cards": existing_stat.get("red_cards", 0) or 0,
@@ -948,7 +952,11 @@ class PlayerDataRefresher:
                             "defensive_contribution": row_defcon if not this_fixture_finished else 0,
                             "saves": stats.get("saves", 0) if not this_fixture_finished else 0,
                             "clean_sheets": stats.get("clean_sheets", 0) if not this_fixture_finished else 0,
-                            "goals_conceded": stats.get("goals_conceded", 0) if not this_fixture_finished else 0,
+                            "goals_conceded": (
+                                (team_a_score if was_home else team_h_score)
+                                if team_h_score is not None and team_a_score is not None
+                                else (stats.get("goals_conceded", 0) if not this_fixture_finished else 0)
+                            ),
                             "penalties_saved": stats.get("penalties_saved", 0) if not this_fixture_finished else 0,
                             "yellow_cards": stats.get("yellow_cards", 0) if not this_fixture_finished else 0,
                             "red_cards": stats.get("red_cards", 0) if not this_fixture_finished else 0,
@@ -1095,12 +1103,22 @@ class PlayerDataRefresher:
                                 match_finished = fixture.get("finished", False)
                                 match_finished_provisional = fixture.get("finished_provisional", False)
                         
+                        # Prefer goals_conceded from fixture (source of truth) when scores exist
+                        team_id_here = player_info.get("team", 0)
+                        goals_conceded_val = gw_data.get("goals_conceded", 0)
+                        if fixture_id and fixtures_by_id and fixture_id in fixtures_by_id:
+                            fixture = fixtures_by_id.get(fixture_id)
+                            if fixture and fixture.get("team_h_score") is not None and fixture.get("team_a_score") is not None:
+                                goals_conceded_val = (
+                                    fixture["team_a_score"] if fixture.get("team_h") == team_id_here else fixture["team_h_score"]
+                                )
+                        
                         _mins = min(90, gw_data.get("minutes", 0) or 0)  # no single fixture > 90
                         stats_data = {
                             "player_id": player_id,
                             "gameweek": gameweek,
                             "fixture_id": fixture_id,
-                            "team_id": player_info.get("team", 0),
+                            "team_id": team_id_here,
                             "opponent_team_id": gw_data.get("opponent_team"),
                             "was_home": gw_data.get("was_home"),
                             "kickoff_time": gw_data.get("kickoff_time"),
@@ -1121,7 +1139,7 @@ class PlayerDataRefresher:
                             "defensive_contribution": defcon,
                             "saves": gw_data.get("saves", 0),
                             "clean_sheets": gw_data.get("clean_sheets", 0),
-                            "goals_conceded": gw_data.get("goals_conceded", 0),
+                            "goals_conceded": goals_conceded_val,
                             "penalties_saved": gw_data.get("penalties_saved", 0),
                             "yellow_cards": gw_data.get("yellow_cards", 0),
                             "red_cards": gw_data.get("red_cards", 0),

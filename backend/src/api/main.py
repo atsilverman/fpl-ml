@@ -82,21 +82,21 @@ def get_stats(
 ):
     """Player stats from research MV + player dimension. Paginated; optional position/search filter."""
     if gw_filter not in MV_TABLE_BY_GW or location not in ("all", "home", "away"):
-        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": "Invalid gw_filter or location"}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}, "error": "Invalid gw_filter or location"}
     if sort_by not in STATS_SORT_COLUMNS or sort_dir not in ("asc", "desc"):
-        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": "Invalid sort_by or sort_dir"}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}, "error": "Invalid sort_by or sort_dir"}
     db = get_db()
     table = MV_TABLE_BY_GW[gw_filter]
     try:
         r = db.client.table(table).select(MV_SELECT).eq("location", location).execute()
     except Exception as e:
-        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": str(e)}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}, "error": str(e)}
     mv_rows = r.data or []
     if not mv_rows:
-        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
     player_ids = list({row["player_id"] for row in mv_rows if row.get("player_id") is not None})
     if not player_ids:
-        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
+        return {"players": [], "total_count": 0, "page": page, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}}
     try:
         players_r = (
             db.client.table("players")
@@ -105,7 +105,7 @@ def get_stats(
             .execute()
         )
     except Exception as e:
-        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "error": str(e)}
+        return {"players": [], "total_count": 0, "page": 1, "page_size": page_size, "team_goals": {}, "team_goals_conceded": {}, "team_expected_goals_conceded": {}, "error": str(e)}
     players_list = players_r.data or []
     player_map = {}
     for p in players_list:
@@ -208,16 +208,26 @@ def get_stats(
     # Paginate
     start = (page - 1) * page_size
     players = players[start : start + page_size]
-    # Deduped team GC and xGC (MAX per fixture from DEF/GK then SUM) so team view does not inflate
+    # Team G and GC from fixtures table (source of truth); xGC from DEF/GK RPC
+    team_goals = {}
     team_goals_conceded = {}
     team_expected_goals_conceded = {}
+    try:
+        rpc_fixtures = db.client.rpc("get_team_goals_from_fixtures", {"p_gw_filter": gw_filter, "p_location": location})
+        if rpc_fixtures.data:
+            for item in rpc_fixtures.data:
+                tid = item.get("team_id")
+                if tid is not None:
+                    team_goals[int(tid)] = int(item.get("goals") or 0)
+                    team_goals_conceded[int(tid)] = int(item.get("goals_conceded") or 0)
+    except Exception:
+        pass
     try:
         rpc = db.client.rpc("get_team_goals_conceded_bulk", {"p_gw_filter": gw_filter, "p_location": location})
         if rpc.data:
             for item in rpc.data:
                 tid = item.get("team_id")
                 if tid is not None:
-                    team_goals_conceded[int(tid)] = int(item.get("goals_conceded") or 0)
                     xgc = item.get("expected_goals_conceded")
                     team_expected_goals_conceded[int(tid)] = float(xgc) if xgc is not None else 0.0
     except Exception:
@@ -227,6 +237,7 @@ def get_stats(
         "total_count": total_count,
         "page": page,
         "page_size": page_size,
+        "team_goals": team_goals,
         "team_goals_conceded": team_goals_conceded,
         "team_expected_goals_conceded": team_expected_goals_conceded,
         "top_10_player_ids_by_field": top_10_player_ids_by_field,
@@ -301,7 +312,6 @@ def get_team_stats(
             continue
         points += row.get("effective_total_points") or 0
         minutes += row.get("minutes") or 0
-        goals_scored += row.get("goals_scored") or 0
         assists += row.get("assists") or 0
         clean_sheets += row.get("clean_sheets") or 0
         saves += row.get("saves") or 0
@@ -313,13 +323,22 @@ def get_team_stats(
         expected_assists += float(row.get("expected_assists") or 0)
         expected_goal_involvements += float(row.get("expected_goal_involvements") or 0)
 
-    # Team GC and xGC must be deduped (MAX from DEF/GK per fixture). Use RPC.
+    # Team G and GC from fixtures table (source of truth); xGC from player RPC.
+    try:
+        rpc_fixtures = db.client.rpc("get_team_goals_from_fixtures", {"p_gw_filter": gw_filter, "p_location": location})
+        if rpc_fixtures.data:
+            for item in rpc_fixtures.data:
+                if item.get("team_id") == team_id:
+                    goals_scored = int(item.get("goals") or 0)
+                    goals_conceded = int(item.get("goals_conceded") or 0)
+                    break
+    except Exception:
+        pass
     try:
         rpc = db.client.rpc("get_team_goals_conceded_bulk", {"p_gw_filter": gw_filter, "p_location": location})
         if rpc.data:
             for item in rpc.data:
                 if item.get("team_id") == team_id:
-                    goals_conceded = int(item.get("goals_conceded") or 0)
                     xgc = item.get("expected_goals_conceded")
                     expected_goals_conceded = float(xgc) if xgc is not None else 0.0
                     break

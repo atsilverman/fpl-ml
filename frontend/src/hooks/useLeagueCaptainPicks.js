@@ -51,19 +51,24 @@ export function useLeagueCaptainPicks(gameweek = null) {
             captain_name: '—',
             vice_captain_name: '—',
             captain_team_short_name: null,
-            vice_captain_team_short_name: null
+            vice_captain_team_short_name: null,
+            captain_dnp: false,
+            vice_captain_dnp: false
           }
         })
       }
 
       const byManager = {}
+      const captainVicePlayerIds = new Set()
       ;(picks || []).forEach(p => {
         if (!byManager[p.manager_id]) {
           byManager[p.manager_id] = {
             captain_name: null,
             vice_captain_name: null,
             captain_team_short_name: null,
-            vice_captain_team_short_name: null
+            vice_captain_team_short_name: null,
+            captain_player_id: null,
+            vice_player_id: null
           }
         }
         const name = p.players?.web_name ?? '—'
@@ -71,19 +76,46 @@ export function useLeagueCaptainPicks(gameweek = null) {
         if (p.is_captain) {
           byManager[p.manager_id].captain_name = name
           byManager[p.manager_id].captain_team_short_name = teamShortName
+          byManager[p.manager_id].captain_player_id = p.player_id
+          if (p.player_id != null) captainVicePlayerIds.add(p.player_id)
         }
         if (p.is_vice_captain) {
           byManager[p.manager_id].vice_captain_name = name
           byManager[p.manager_id].vice_captain_team_short_name = teamShortName
+          byManager[p.manager_id].vice_player_id = p.player_id
+          if (p.player_id != null) captainVicePlayerIds.add(p.player_id)
         }
       })
+
+      let dnpByPlayerId = {}
+      if (captainVicePlayerIds.size > 0) {
+        const { data: statsRows } = await supabase
+          .from('player_gameweek_stats')
+          .select('player_id, minutes, match_finished, match_finished_provisional')
+          .eq('gameweek', gameweek)
+          .in('player_id', Array.from(captainVicePlayerIds))
+        const statsByPlayer = {}
+        ;(statsRows || []).forEach((r) => {
+          const pid = r.player_id
+          if (!statsByPlayer[pid]) statsByPlayer[pid] = []
+          statsByPlayer[pid].push(r)
+        })
+        captainVicePlayerIds.forEach((pid) => {
+          const rows = statsByPlayer[pid] || []
+          const anyFinished = rows.some((r) => r.match_finished || r.match_finished_provisional)
+          const totalMinutes = rows.reduce((s, r) => s + (r.minutes ?? 0), 0)
+          dnpByPlayerId[pid] = !!(anyFinished && totalMinutes === 0)
+        })
+      }
 
       return standings.map(s => {
         const caps = byManager[s.manager_id] || {
           captain_name: null,
           vice_captain_name: null,
           captain_team_short_name: null,
-          vice_captain_team_short_name: null
+          vice_captain_team_short_name: null,
+          captain_player_id: null,
+          vice_player_id: null
         }
         const displayName = (s.manager_team_name && s.manager_team_name.trim())
           ? s.manager_team_name
@@ -95,7 +127,9 @@ export function useLeagueCaptainPicks(gameweek = null) {
           captain_name: caps.captain_name ?? '—',
           vice_captain_name: caps.vice_captain_name ?? '—',
           captain_team_short_name: caps.captain_team_short_name ?? null,
-          vice_captain_team_short_name: caps.vice_captain_team_short_name ?? null
+          vice_captain_team_short_name: caps.vice_captain_team_short_name ?? null,
+          captain_dnp: caps.captain_player_id != null ? !!(dnpByPlayerId[caps.captain_player_id]) : false,
+          vice_captain_dnp: caps.vice_player_id != null ? !!(dnpByPlayerId[caps.vice_player_id]) : false
         }
       })
     },

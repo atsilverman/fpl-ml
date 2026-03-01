@@ -167,10 +167,23 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           const res = await fetch(`${API_BASE}/api/v1/stats?${params.toString()}`)
           const data = await res.json()
           if (!res.ok) return null
+          const team_goals = {}
+          const team_goals_conceded = {}
+          if (data.team_goals && typeof data.team_goals === 'object') {
+            for (const [k, v] of Object.entries(data.team_goals)) {
+              team_goals[Number(k)] = Number(v) ?? 0
+            }
+          }
+          if (data.team_goals_conceded && typeof data.team_goals_conceded === 'object') {
+            for (const [k, v] of Object.entries(data.team_goals_conceded)) {
+              team_goals_conceded[Number(k)] = Number(v) ?? 0
+            }
+          }
           return {
             source: 'api',
             players: data.players ?? [],
-            team_goals_conceded: data.team_goals_conceded ?? {},
+            team_goals,
+            team_goals_conceded,
             team_expected_goals_conceded: data.team_expected_goals_conceded ?? {},
             total_count: data.total_count ?? (data.players ?? []).length,
             page: data.page ?? apiPage,
@@ -237,22 +250,36 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           }
         }
 
-        let team_goals_conceded = {}
-        let team_expected_goals_conceded = {}
-        try {
-          const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
-          if (rpcData?.length) {
-            for (const item of rpcData) {
-              const tid = item?.team_id
-              if (tid != null) {
-                team_goals_conceded[tid] = Number(item.goals_conceded) ?? 0
-                const xgc = item.expected_goals_conceded
-                team_expected_goals_conceded[tid] = xgc != null ? Number(xgc) : 0
-              }
+      let team_goals = {}
+      let team_goals_conceded = {}
+      let team_expected_goals_conceded = {}
+      try {
+        const { data: fixturesData } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (fixturesData?.length) {
+          for (const item of fixturesData) {
+            const tid = item?.team_id
+            if (tid != null) {
+              const key = Number(tid)
+              team_goals[key] = Number(item.goals) ?? 0
+              team_goals_conceded[key] = Number(item.goals_conceded) ?? 0
             }
           }
-        } catch (_) {}
-        return { source: 'mv', rows: mvRows || [], playerMap, team_goals_conceded, team_expected_goals_conceded }
+        }
+        const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (rpcData?.length) {
+          for (const item of rpcData) {
+            const tid = item?.team_id
+            if (tid != null) {
+              const key = Number(tid)
+              const xgc = item.expected_goals_conceded
+              team_expected_goals_conceded[key] = xgc != null ? Number(xgc) : 0
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[Stats] get_team_goals_from_fixtures / get_team_goals_conceded_bulk failed:', e)
+      }
+      return { source: 'mv', rows: mvRows || [], playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded }
       }
 
       // Fallback: raw fetch + aggregate
@@ -326,28 +353,47 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
         }
       }
 
+      let team_goals = {}
       let team_goals_conceded = {}
       let team_expected_goals_conceded = {}
       try {
+        const { data: fixturesData } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (fixturesData?.length) {
+          for (const item of fixturesData) {
+            const tid = item?.team_id
+            if (tid != null) {
+              const key = Number(tid)
+              team_goals[key] = Number(item.goals) ?? 0
+              team_goals_conceded[key] = Number(item.goals_conceded) ?? 0
+            }
+          }
+        }
         const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
         if (rpcData?.length) {
           for (const item of rpcData) {
             const tid = item?.team_id
             if (tid != null) {
-              team_goals_conceded[tid] = Number(item.goals_conceded) ?? 0
+              const key = Number(tid)
               const xgc = item.expected_goals_conceded
-              team_expected_goals_conceded[tid] = xgc != null ? Number(xgc) : 0
+              team_expected_goals_conceded[key] = xgc != null ? Number(xgc) : 0
             }
           }
         }
-      } catch (_) {}
-      return { source: 'raw', rawStats: stats, playerMap, team_goals_conceded, team_expected_goals_conceded }
+      } catch (e) {
+        console.error('[Stats] get_team_goals_from_fixtures / get_team_goals_conceded_bulk failed:', e)
+      }
+      return { source: 'raw', rawStats: stats, playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded }
     },
     enabled: !!gameweek && !gwLoading,
     staleTime: isLive ? 25 * 1000 : 2 * 60 * 1000,
     refetchInterval: isLive ? 25 * 1000 : false,
     refetchIntervalInBackground: true
   })
+
+  const teamGoals = useMemo(() => {
+    if (!cache) return {}
+    return cache.team_goals ?? {}
+  }, [cache])
 
   const teamGoalsConceded = useMemo(() => {
     if (!cache) return {}
@@ -459,6 +505,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
 
   return {
     players,
+    teamGoals,
     teamGoalsConceded,
     teamExpectedGoalsConceded,
     totalCount,

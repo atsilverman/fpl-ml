@@ -134,6 +134,8 @@ export default function BentoCard({
   currentManagerTotalPoints = null,
   captainName = null,
   viceCaptainName = null,
+  captainDnp = false,
+  viceCaptainDnp = false,
   leagueCaptainData = null,
   leagueCaptainLoading = false,
   stateDebugValue = null,
@@ -908,11 +910,11 @@ export default function BentoCard({
       ) : id === 'captain' && !isExpanded ? (
         <div className="bento-card-captain-collapsed">
           <div className="bento-card-value bento-card-captain-row">
-            <span className="bento-card-captain-name">{captainName ?? '—'}</span>
+            <span className={`bento-card-captain-name${captainDnp ? ' bento-card-captain-name--dnp' : ''}`}>{captainName ?? '—'}</span>
             <span className="bento-card-captain-badge">C</span>
           </div>
           <div className="bento-card-captain-vice-row">
-            <span className="bento-card-captain-vice-name">{viceCaptainName ?? '—'}</span>
+            <span className={`bento-card-captain-vice-name${viceCaptainDnp ? ' bento-card-captain-vice-name--dnp' : ''}`}>{viceCaptainName ?? '—'}</span>
             <span className="bento-card-captain-vice-badge">V</span>
           </div>
         </div>
@@ -1227,7 +1229,7 @@ export default function BentoCard({
                                 onError={(e) => { e.target.style.display = 'none' }}
                               />
                             )}
-                            <span className="captain-standings-bento-player-name">{row.captain_name}</span>
+                            <span className={`captain-standings-bento-player-name${row.captain_dnp ? ' captain-standings-bento-player-name--dnp' : ''}`}>{row.captain_name}</span>
                           </span>
                         </td>
                         <td className="captain-standings-bento-vice" title={row.vice_captain_name}>
@@ -1240,7 +1242,7 @@ export default function BentoCard({
                                 onError={(e) => { e.target.style.display = 'none' }}
                               />
                             )}
-                            <span className="captain-standings-bento-player-name">{row.vice_captain_name}</span>
+                            <span className={`captain-standings-bento-player-name${row.vice_captain_dnp ? ' captain-standings-bento-player-name--dnp' : ''}`}>{row.vice_captain_name}</span>
                           </span>
                         </td>
                       </tr>

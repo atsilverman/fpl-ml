@@ -1931,6 +1931,11 @@ html[data-theme="dark"] .transfers-summary-column-count {
   white-space: nowrap;
 }
 
+.bento-card-captain-name--dnp {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
 .bento-card-captain-badge {
   flex-shrink: 0;
   display: inline-flex;
@@ -1959,6 +1964,11 @@ html[data-theme="dark"] .transfers-summary-column-count {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.bento-card-captain-vice-name--dnp {
+  text-decoration: line-through;
+  opacity: 0.85;
 }
 
 .bento-card-captain-vice-badge {
@@ -2032,6 +2042,11 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.captain-standings-bento-player-name--dnp {
+  text-decoration: line-through;
+  opacity: 0.85;
 }
 
 .captain-standings-bento-header-cell {
