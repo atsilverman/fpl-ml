@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useOutletContext } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useGameweekData } from '../hooks/useGameweekData'
@@ -30,6 +31,8 @@ import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { supabase } from '../lib/supabase'
 import BentoCard from './BentoCard'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerBreakdownPopup from './PlayerBreakdownPopup'
+import './MiniLeaguePage.css'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
 import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
@@ -56,6 +59,7 @@ export default function HomePage() {
   const [showTop10Lines, setShowTop10Lines] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [breakdownPlayer, setBreakdownPlayer] = useState(null)
   
   // Hooks that depend on state
   const { gameweek, gwFinished, loading: gwLoading } = useGameweekData()
@@ -655,8 +659,11 @@ export default function HomePage() {
                   ? (player) => {
                       const id = player.effective_player_id ?? player.player_id
                       if (id != null) {
-                        setSelectedPlayerId(Number(id))
-                        setSelectedPlayerName(player.player_name ?? '')
+                        setBreakdownPlayer({
+                          playerId: Number(id),
+                          playerName: player.player_name ?? '',
+                          position: player.position,
+                        })
                       }
                     }
                   : undefined
@@ -688,6 +695,21 @@ export default function HomePage() {
           )
         })}
       </div>
+      {breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
+        <PlayerBreakdownPopup
+          playerId={breakdownPlayer.playerId}
+          playerName={breakdownPlayer.playerName}
+          position={breakdownPlayer.position}
+          gameweek={gameweek}
+          onShowFullDetail={() => {
+            setSelectedPlayerId(breakdownPlayer.playerId)
+            setSelectedPlayerName(breakdownPlayer.playerName ?? '')
+            setBreakdownPlayer(null)
+          }}
+          onClose={() => setBreakdownPlayer(null)}
+        />,
+        document.body
+      )}
       {selectedPlayerId != null && (
         <PlayerDetailModal
           playerId={selectedPlayerId}

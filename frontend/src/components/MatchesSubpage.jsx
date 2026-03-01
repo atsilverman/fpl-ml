@@ -7,6 +7,7 @@ import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
 import { useGameweekTopPerformersByStat, TOP_PERFORMERS_STAT_KEYS } from '../hooks/useGameweekTopPerformersByStat'
 import { useGameweekMaxBps } from '../hooks/useGameweekMaxBps'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumber } from '../utils/formatNumbers'
 import BpsLeadersChart from './BpsLeadersChart'
@@ -16,6 +17,7 @@ import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import './MatchesSubpage.css'
+import './MiniLeaguePage.css'
 
 /** Same sort indicator as league standings / stats tables: filled triangle up (asc) or down (desc) */
 function SortTriangle({ direction }) {
@@ -284,8 +286,8 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                     className={`matchup-detail-td matchup-detail-td-player${onPlayerClick ? ' matchup-detail-td-player--clickable' : ''}`}
                     role={onPlayerClick ? 'button' : undefined}
                     tabIndex={onPlayerClick ? 0 : undefined}
-                    onClick={onPlayerClick ? (e) => { e.stopPropagation(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick(id, p.player_name ?? '') } : undefined}
-                    onKeyDown={onPlayerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick(id, p.player_name ?? '') } } : undefined}
+                    onClick={onPlayerClick ? (e) => { e.stopPropagation(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position }) } : undefined}
+                    onKeyDown={onPlayerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position }) } } : undefined}
                     aria-label={onPlayerClick ? `View details for ${p.player_name || 'Player'}` : undefined}
                   >
                     <div className="matchup-detail-td-player-inner">
@@ -650,6 +652,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const [performerPageIndex, setPerformerPageIndex] = useState(0)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [breakdownPlayer, setBreakdownPlayer] = useState(null)
   const firstScheduledRef = useRef(null)
   const prevShowH2HRef = useRef(false)
   const matchupGridRef = useRef(null)
@@ -841,7 +844,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 lastH2HPlayerStatsLoading={lastH2HPlayerStatsLoading}
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
-                onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
+                onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position }) }}
                 preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
@@ -850,6 +853,21 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
             </div>
           </div>
         </>
+      )}
+      {breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
+        <PlayerBreakdownPopup
+          playerId={breakdownPlayer.playerId}
+          playerName={breakdownPlayer.playerName}
+          position={breakdownPlayer.position}
+          gameweek={gameweek}
+          onShowFullDetail={() => {
+            setSelectedPlayerId(breakdownPlayer.playerId)
+            setSelectedPlayerName(breakdownPlayer.playerName ?? '')
+            setBreakdownPlayer(null)
+          }}
+          onClose={() => setBreakdownPlayer(null)}
+        />,
+        document.body
       )}
       {selectedPlayerId != null && createPortal(
         <PlayerDetailModal

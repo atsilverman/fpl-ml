@@ -714,13 +714,22 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 /* Top 10 in GW: green fill on stat/PTS cell (same size as FPL impact pill below) */
 .gw-legend-popup-top10-swatch {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 12px;
   min-width: 18px;
   min-height: 12px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--accent-green, #10b981) 38%, transparent);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.gw-legend-popup-top10-swatch::after {
+  content: '×';
 }
 
 /* Points impact (Imp): green/red bar like the Imp column */
@@ -748,7 +757,9 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 
 /* FPL points impact: hollow gold/amber pill for G, A, CS, Saves 3+, etc. */
 .gw-legend-popup-fpl-impact-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 18px;
   height: 12px;
   min-width: 18px;
@@ -757,6 +768,13 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   border: 1px solid var(--stat-pill-border, #E7AD10);
   background: transparent;
   box-sizing: border-box;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.gw-legend-popup-fpl-impact-pill::after {
+  content: '×';
 }
 
 @keyframes gw-legend-provisional-pulse {

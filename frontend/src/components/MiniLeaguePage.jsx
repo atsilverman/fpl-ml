@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
@@ -20,6 +21,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Search, X, Info, ArrowDownRight, ArrowUpRight, Minimize2, MoveDiagonal, ListOrdered, ArrowRightLeft, Sparkles, TriangleAlert } from 'lucide-react'
 import GameweekPointsView from './GameweekPointsView'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
 import { useIsMobile } from '../hooks/useIsMobile'
@@ -135,6 +137,7 @@ export default function MiniLeaguePage() {
   const [showManagerDetailLegend, setShowManagerDetailLegend] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [breakdownPlayer, setBreakdownPlayer] = useState(null)
   const [isNarrowScreen, setIsNarrowScreen] = useState(() => typeof window !== 'undefined' && window.innerWidth < MANAGER_ABBREV_MAX_WIDTH)
   const showCView = leagueViewMode === 'captain'
   const showTransfersView = leagueViewMode === 'transfers'
@@ -1348,8 +1351,11 @@ export default function MiniLeaguePage() {
                   onPlayerRowClick={(player) => {
                     const id = player.effective_player_id ?? player.player_id
                     if (id != null) {
-                      setSelectedPlayerId(Number(id))
-                      setSelectedPlayerName(player.player_name ?? '')
+                      setBreakdownPlayer({
+                        playerId: Number(id),
+                        playerName: player.player_name ?? '',
+                        position: player.position,
+                      })
                     }
                   }}
                 />
@@ -1419,6 +1425,21 @@ export default function MiniLeaguePage() {
         </div>
       )}
 
+      {breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
+        <PlayerBreakdownPopup
+          playerId={breakdownPlayer.playerId}
+          playerName={breakdownPlayer.playerName}
+          position={breakdownPlayer.position}
+          gameweek={gameweek}
+          onShowFullDetail={() => {
+            setSelectedPlayerId(breakdownPlayer.playerId)
+            setSelectedPlayerName(breakdownPlayer.playerName ?? '')
+            setBreakdownPlayer(null)
+          }}
+          onClose={() => setBreakdownPlayer(null)}
+        />,
+        document.body
+      )}
       {selectedPlayerId != null && (
         <PlayerDetailModal
           playerId={selectedPlayerId}

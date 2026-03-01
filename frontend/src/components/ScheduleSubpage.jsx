@@ -11,11 +11,13 @@ import { useGameweekData } from '../hooks/useGameweekData'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import { MatchPlayerTable } from './MatchesSubpage'
 import PlayerDetailModal from './PlayerDetailModal'
+import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './MatchesSubpage.css'
 import './StatsSubpage.css'
 import './CustomizeModal.css'
 import './ScheduleSubpage.css'
+import './MiniLeaguePage.css'
 
 function getEffectiveStrength(apiStrength, overrides, teamId) {
   const override = overrides && teamId != null ? overrides[String(teamId)] ?? overrides[teamId] : undefined
@@ -148,6 +150,7 @@ export default function ScheduleSubpage() {
   const [showBuySellInfo, setShowBuySellInfo] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [breakdownPlayer, setBreakdownPlayer] = useState(null)
   const scheduleCustomizerRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
 
@@ -897,7 +900,7 @@ export default function ScheduleSubpage() {
                         top10ByStat={null}
                         hideHeader
                         useDashForDnp
-                        onPlayerClick={(id, name) => { setSelectedPlayerId(id); setSelectedPlayerName(name ?? '') }}
+                        onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position }) }}
                       />
                     </div>
                   )}
@@ -909,13 +912,29 @@ export default function ScheduleSubpage() {
         </div>,
         document.body
       )}
-      {selectedPlayerId != null && (
+      {breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
+        <PlayerBreakdownPopup
+          playerId={breakdownPlayer.playerId}
+          playerName={breakdownPlayer.playerName}
+          position={breakdownPlayer.position}
+          gameweek={gameweek}
+          onShowFullDetail={() => {
+            setSelectedPlayerId(breakdownPlayer.playerId)
+            setSelectedPlayerName(breakdownPlayer.playerName ?? '')
+            setBreakdownPlayer(null)
+          }}
+          onClose={() => setBreakdownPlayer(null)}
+        />,
+        document.body
+      )}
+      {selectedPlayerId != null && createPortal(
         <PlayerDetailModal
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
           gameweek={gameweek}
           onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
-        />
+        />,
+        document.body
       )}
     </div>
   )

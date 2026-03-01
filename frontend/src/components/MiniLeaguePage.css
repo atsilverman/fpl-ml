@@ -2035,6 +2035,11 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   text-shadow: 0 0 12px color-mix(in srgb, var(--accent-green, #10b981) 50%, transparent);
 }
 
+/* Gameweek Points breakdown popup: above manager detail modal when opened from it */
+.player-breakdown-popup-overlay.stats-filter-overlay {
+  z-index: 1100;
+}
+
 /* Player detail modal (same layout as manager modal, stacked above when open) */
 .player-detail-modal-overlay {
   /* Above dashboard header (z 100), bottom nav (z 99), and subpage sticky toolbars (e.g. Stats z 15) */
