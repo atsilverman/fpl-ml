@@ -223,6 +223,25 @@ class RefreshOrchestrator:
         fixtures_current = [f for f in fixtures if f.get("gameweek") == current_gw["id"]]
         
         now = datetime.now(timezone.utc)
+
+        # MISMATCH RECOVERY (before live): Current GW has no successful batch and its deadline passed.
+        # Must run the deadline batch before any fixture has started. Check BEFORE live so we don't
+        # skip the batch when we'd otherwise transition to LIVE_MATCHES (e.g. first kickoff by clock
+        # but FPL hasn't set started=true yet). Gate: no fixture has started=true (authoritative).
+        current_gw_id = current_gw.get("id")
+        any_current_started = any(f.get("started") for f in fixtures_current)
+        if current_gw_id is not None and not any_current_started:
+            current_deadline_raw = current_gw.get("deadline_time")
+            if current_deadline_raw:
+                current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
+                if (now - current_deadline).total_seconds() >= 0 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
+                    self._deadline_target_gameweek_id = current_gw_id
+                    logger.info(
+                        "Deadline batch mismatch: current GW has no successful batch, entering TRANSFER_DEADLINE (before live)",
+                        extra={"target_gameweek": current_gw_id, "gameweek_name": current_gw.get("name")},
+                    )
+                    return RefreshState.TRANSFER_DEADLINE
+
         # Live = in progress: at or past scheduled kickoff and not yet provisionally finished.
         # Use kickoff_time so we enter LIVE at the exact minute kickoff happens, not when FPL API flips started.
         def _fixture_in_progress(f: Dict[str, Any]) -> bool:
@@ -311,22 +330,6 @@ class RefreshOrchestrator:
                             extra={"target_gameweek": next_gw["id"], "gameweek_name": next_gw.get("name")},
                         )
                         return RefreshState.TRANSFER_DEADLINE
-        
-        # Mismatch recovery: if current GW has no successful deadline batch, enter TRANSFER_DEADLINE
-        # so we run (or retry) the batch. Ensures we refresh when is_current has no batch (e.g. backend
-        # was down at flip, or previous run failed). No delay: proceed as soon as current's deadline has passed.
-        current_gw_id = current_gw.get("id")
-        if current_gw_id is not None:
-            current_deadline_raw = current_gw.get("deadline_time")
-            if current_deadline_raw:
-                current_deadline = datetime.fromisoformat(current_deadline_raw.replace("Z", "+00:00"))
-                if (now - current_deadline).total_seconds() >= 0 and not self.db_client.has_successful_deadline_batch_for_gameweek(current_gw_id):
-                    self._deadline_target_gameweek_id = current_gw_id
-                    logger.info(
-                        "Deadline batch mismatch: current GW has no successful batch, entering TRANSFER_DEADLINE to refresh",
-                        extra={"target_gameweek": current_gw_id, "gameweek_name": current_gw.get("name")},
-                    )
-                    return RefreshState.TRANSFER_DEADLINE
         
         return RefreshState.IDLE
     
@@ -1664,6 +1667,21 @@ class RefreshOrchestrator:
                         and current_gw["id"] == target_gw_id
                         and not self.deadline_refresh_completed
                     )
+                    if should_run:
+                        # Gate: refuse if any fixture has started (would overwrite live points with 0)
+                        try:
+                            started_fixtures = self.db_client.client.table("fixtures").select(
+                                "fpl_fixture_id"
+                            ).eq("gameweek", target_gw_id).eq("started", True).limit(1).execute().data
+                            if started_fixtures:
+                                logger.warning(
+                                    "Skipping deadline batch: fixture for GW has started (would overwrite live points)",
+                                    extra={"gameweek": target_gw_id},
+                                )
+                                should_run = False
+                        except Exception as e:
+                            logger.warning("Could not check fixture status, skipping batch", extra={"gameweek": target_gw_id, "error": str(e)})
+                            should_run = False
                     if should_run:
                         logger.info(
                             "Target gameweek is now is_current; running deadline batch (critical: this is the GW value we were watching for)",

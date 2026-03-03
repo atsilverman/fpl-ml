@@ -25,6 +25,7 @@ import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useRefreshState } from '../hooks/useRefreshState'
+import { useDeadlineBatchRuns } from '../hooks/useDeadlineBatchRuns'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import { RefreshCcw } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
@@ -92,6 +93,7 @@ export default function HomePage() {
   const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
+  const { latest: deadlineBatchLatest } = useDeadlineBatchRuns()
 
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
@@ -126,8 +128,14 @@ export default function HomePage() {
     }
   }, [nextGameweek?.deadline_time])
 
-  // Game updating banner: FPL Updating (waiting on flip) or GW Setup (our batch running before first kickoff)
-  const showGameUpdatingBanner = refreshState === 'fpl_updating' || refreshState === 'gw_setup'
+  // Game updating banner: FPL Updating (waiting on flip) or GW Setup (our batch running before first kickoff).
+  // Hide when the deadline batch for the current gameweek has completed successfully.
+  const currentGwBatchComplete =
+    deadlineBatchLatest?.gameweek === gameweek &&
+    deadlineBatchLatest?.finished_at != null &&
+    deadlineBatchLatest?.success === true
+  const showGameUpdatingBanner =
+    (refreshState === 'fpl_updating' || refreshState === 'gw_setup') && !currentGwBatchComplete
 
   // GW total from starting XI (same source as expanded table: contributedPoints with auto-subs, minus transfer cost)
   const gwPointsFromPlayers = useMemo(() => {
@@ -584,11 +592,7 @@ export default function HomePage() {
               isChips={card.isChips}
               isSettings={card.isSettings}
               isStale={
-                (cardId === 'overall-rank' || cardId === 'gw-rank') &&
-                (hasLiveGames ||
-                  (cardId === 'overall-rank' &&
-                    (managerData?.overallRankChange ?? 0) === 0 &&
-                    !gwFinished))
+                (cardId === 'overall-rank' || cardId === 'gw-rank') && hasLiveGames
               }
               isLiveUpdating={
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||

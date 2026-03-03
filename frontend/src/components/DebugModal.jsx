@@ -52,7 +52,7 @@ export default function DebugModal({ isOpen, onClose }) {
   const { state, stateLabel } = useRefreshState()
   useRefreshSnapshotLogger(isOpen)
   const { data: verifyData, loading: verifyLoading, error: verifyError, verify } = useVerifyManagerAttributes(VERIFY_MANAGER_ID)
-  const { latest: deadlineBatchLatest, latestInProgress: deadlineBatchInProgress, phaseRows: deadlinePhaseRows, failureReason: deadlineFailureReason, successRate: deadlineSuccessRate, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
+  const { latest: deadlineBatchLatest, latestInProgress: deadlineBatchInProgress, isRunForCurrentGw: deadlineBatchIsForCurrentGw, phaseRows: deadlinePhaseRows, failureReason: deadlineFailureReason, successRate: deadlineSuccessRate, isLoading: deadlineBatchLoading } = useDeadlineBatchRuns()
   const [showStateCriteria, setShowStateCriteria] = useState(false)
   const stateCriteriaRef = useRef(null)
 
@@ -243,9 +243,14 @@ export default function DebugModal({ isOpen, onClose }) {
           <section className="debug-modal-section">
             <h3 className="debug-modal-section-title">Deadline batch</h3>
             <p className="debug-modal-section-source">Source: backend (Supabase <code>refresh_duration_log</code> / deadline batch metadata).</p>
-            {deadlineBatchInProgress && deadlineBatchLatest && deadlineBatchLatest.gameweek === gwRow?.id && (
+            {deadlineBatchInProgress && deadlineBatchLatest && (
               <div className="deadline-batch-in-progress-callout" role="status" aria-live="polite">
-                Orchestrator running: setting up GW {deadlineBatchLatest.gameweek ?? '—'} (picks, baselines, whitelist, MVs). Started {deadlineBatchLatest.started_at ? formatDeadlineGw(deadlineBatchLatest.started_at) : '—'}.
+                Orchestrator running: setting up GW {deadlineBatchLatest.gameweek ?? '—'} (picks, transfers, baselines, whitelist, MVs). Started {deadlineBatchLatest.started_at ? formatDeadlineGw(deadlineBatchLatest.started_at) : '—'}.
+              </div>
+            )}
+            {!deadlineBatchIsForCurrentGw && deadlineBatchLatest && gwRow?.id != null && (
+              <div className="deadline-batch-no-current-callout" role="status">
+                No batch for GW {gwRow.id} yet. Showing last run below.
               </div>
             )}
             {deadlineBatchLoading ? (
@@ -289,12 +294,20 @@ export default function DebugModal({ isOpen, onClose }) {
                       <span>{deadlineBatchLatest.league_count}</span>
                     </div>
                   )}
-                  {deadlineBatchLatest.success != null && (
-                    <div className="deadline-batch-meta-row">
-                      <span className="deadline-batch-label">Success</span>
-                      <span><GwDebugBadge value={deadlineBatchLatest.success} /></span>
-                    </div>
-                  )}
+                  <div className="deadline-batch-meta-row">
+                    <span className="deadline-batch-label">Status</span>
+                    <span>
+                      {deadlineBatchInProgress ? (
+                        <span className="deadline-batch-status-running">Running</span>
+                      ) : deadlineBatchLatest.success === true ? (
+                        <span className="deadline-batch-status-complete">Complete</span>
+                      ) : deadlineBatchLatest.success === false ? (
+                        <span className="deadline-batch-status-failed">Failed</span>
+                      ) : (
+                        '—'
+                      )}
+                    </span>
+                  </div>
                   {deadlineBatchLatest.success === false && deadlineFailureReason && (
                     <div className="deadline-batch-meta-row">
                       <span className="deadline-batch-label">Failure reason</span>

@@ -259,6 +259,42 @@ html[data-theme="dark"] .debug-modal-verify-button {
 }
 
 /* Deadline batch (debug) */
+.deadline-batch-in-progress-callout {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: rgba(139, 92, 246, 0.15);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.deadline-batch-no-current-callout {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.deadline-batch-status-running {
+  font-weight: 600;
+  color: #8b5cf6;
+}
+
+.deadline-batch-status-complete {
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.deadline-batch-status-failed {
+  font-weight: 600;
+  color: #ef4444;
+}
+
 .deadline-batch-debug {
   display: flex;
   flex-direction: column;

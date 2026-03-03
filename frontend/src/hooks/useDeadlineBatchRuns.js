@@ -36,15 +36,14 @@ export function useDeadlineBatchRuns() {
     refetchInterval: refreshState === 'gw_setup' ? 10_000 : 30_000,
   })
 
-  // Always prefer the run for the current gameweek (is_current = true): in-progress first, then any run for current GW, then fallbacks
-  const activeRun =
+  // Prefer run for current gameweek: in-progress first, then completed. Fall back to most recent (previous GW) only when no run for current.
+  const runForCurrentGw =
     runs.find((r) => r.finished_at == null && r.gameweek === currentGameweek) ??
     runs.find((r) => r.gameweek === currentGameweek) ??
-    runs.find((r) => r.finished_at == null) ??
-    runs[0] ??
     null
-  const latest = activeRun
+  const latest = runForCurrentGw ?? runs[0] ?? null
   const latestInProgress = latest?.finished_at == null
+  const isRunForCurrentGw = latest?.gameweek === currentGameweek
   const phaseRows = latest?.phase_breakdown && typeof latest.phase_breakdown === 'object'
     ? Object.entries(latest.phase_breakdown)
         .filter(([key, sec]) => key !== 'failure_reason' && key !== 'success_rate' && sec != null && typeof sec === 'number')
@@ -61,6 +60,7 @@ export function useDeadlineBatchRuns() {
     runs,
     latest,
     latestInProgress,
+    isRunForCurrentGw,
     phaseRows,
     failureReason,
     successRate,
