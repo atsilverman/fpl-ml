@@ -110,7 +110,22 @@ class SupabaseClient:
         result = self.client.rpc("refresh_league_transfer_aggregation").execute()
         logger.debug("League transfer aggregation refreshed")
         return result
-    
+
+    def calculate_mini_league_ranks(self, league_id: int, gameweek: int) -> int:
+        """
+        Calculate and update mini_league_rank and mini_league_rank_change for all managers in a league.
+        Batched SQL (1 round trip per league) - replaces N+1 Python loop.
+        Returns number of rows updated.
+        """
+        result = self.client.rpc(
+            "calculate_mini_league_ranks",
+            {"p_league_id": league_id, "p_gameweek": gameweek},
+        ).execute()
+        data = result.data
+        count = data if isinstance(data, int) else (data[0] if isinstance(data, list) and data else 0)
+        logger.debug("League ranks calculated", extra={"league_id": league_id, "gameweek": gameweek, "updated": count})
+        return count
+
     # Table access methods (using Supabase client)
     
     def get_gameweeks(

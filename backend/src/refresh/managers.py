@@ -1210,86 +1210,10 @@ class ManagerDataRefresher:
             gameweek: Gameweek number
         """
         try:
-            # Get all managers in league with their totals
-            managers = self.db_client.client.table("mini_league_managers").select(
-                "manager_id"
-            ).eq("league_id", league_id).execute().data
-            
-            # Get previous gameweek for rank change calculation
-            previous_gw = gameweek - 1
-            
-            manager_totals = []
-            for manager in managers:
-                manager_id = manager["manager_id"]
-                
-                # Get current gameweek data
-                history = self.db_client.client.table("manager_gameweek_history").select(
-                    "total_points, mini_league_rank"
-                ).eq("manager_id", manager_id).eq("gameweek", gameweek).execute().data
-                
-                if not history:
-                    continue
-                
-                # Get previous rank from baseline column (preserved at deadline)
-                previous_rank = history[0].get("previous_mini_league_rank")
-                
-                # Fallback: if baseline not set, try to get from previous gameweek
-                if previous_rank is None:
-                    previous_history = self.db_client.client.table("manager_gameweek_history").select(
-                        "mini_league_rank"
-                    ).eq("manager_id", manager_id).eq("gameweek", previous_gw).execute().data
-                    previous_rank = previous_history[0]["mini_league_rank"] if previous_history else None
-                
-                manager_totals.append({
-                    "manager_id": manager_id,
-                    "total_points": history[0]["total_points"],
-                    "previous_rank": previous_rank,
-                    "existing_rank": history[0].get("mini_league_rank")  # Current stored rank
-                })
-            
-            # Sort by total points descending, then manager_id ascending (matches mv_mini_league_standings tie-break)
-            manager_totals.sort(key=lambda x: (-x["total_points"], x["manager_id"]))
-            
-            # Update ranks with proper tie handling
-            # When managers have the same total_points, they get the same rank
-            # The next rank after a tie skips accordingly (e.g., if 2 managers tied for rank 1, next is rank 3)
-            current_rank = 1
-            previous_points = None
-            
-            for i, manager_data in enumerate(manager_totals):
-                total_points = manager_data["total_points"]
-                
-                # If this manager has different points than previous, assign rank based on position
-                # If same points as previous, they get the same rank (tied)
-                if previous_points is not None and total_points != previous_points:
-                    # Points changed - use position in list (1-indexed)
-                    current_rank = i + 1
-                elif previous_points is None:
-                    # First manager - rank 1
-                    current_rank = 1
-                # else: same points as previous - keep same rank (tied)
-                
-                # Calculate rank change: previous_rank - current_rank
-                # Positive = moved up (better rank, lower number)
-                # Negative = moved down (worse rank, higher number)
-                rank_change = None
-                if manager_data["previous_rank"] is not None:
-                    rank_change = manager_data["previous_rank"] - current_rank
-                
-                # Calculate rank change from baseline (previous_rank is from baseline column)
-                # Only update if we have a valid previous_rank to calculate from
-                # CRITICAL: previous_mini_league_rank is preserved at deadline, never overwritten
-                
-                self.db_client.client.table("manager_gameweek_history").update({
-                    "mini_league_rank": current_rank,
-                    "mini_league_rank_change": rank_change  # Calculated from baseline
-                }).eq("manager_id", manager_data["manager_id"]).eq(
-                    "gameweek", gameweek
-                ).execute()
-                
-                previous_points = total_points
-            
-            logger.info("League ranks updated", extra={"league_id": league_id, "gameweek": gameweek, "count": len(manager_totals)})
-            
+            updated = self.db_client.calculate_mini_league_ranks(league_id, gameweek)
+            logger.info(
+                "League ranks updated",
+                extra={"league_id": league_id, "gameweek": gameweek, "count": updated},
+            )
         except Exception as e:
             logger.error("League ranks failed", extra={"league_id": league_id, "gameweek": gameweek, "error": str(e)}, exc_info=True)

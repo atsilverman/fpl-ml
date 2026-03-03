@@ -55,7 +55,7 @@ function getFixtureStatus(fixture, _dataChecked = false) {
   return 'scheduled'
 }
 
-/** Format kickoff in device local time for scheduled match status, e.g. "Sat 15:00". Returns null if invalid. */
+/** Format kickoff in device local 12hr AM/PM for scheduled match status. Returns null if invalid. */
 function formatKickoffLocal(isoString) {
   if (!isoString) return null
   try {

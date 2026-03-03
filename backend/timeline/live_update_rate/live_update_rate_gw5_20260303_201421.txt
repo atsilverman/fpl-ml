@@ -1,0 +1,8 @@
+FPL event-live update rate monitor – GW5
+============================================================
+
+Poll interval: 3s
+Polls: 375, Changes: 0
+
+
+Changes:

@@ -1,0 +1,11 @@
+{
+  "gameweek": 5,
+  "poll_interval_sec": 3,
+  "poll_count": 375,
+  "changes_count": 0,
+  "start_time_utc": "2026-03-03T19:54:20.955946+00:00",
+  "end_time_utc": "2026-03-03T20:14:21.726812+00:00",
+  "intervals_seconds": null,
+  "recommended_fast_loop_interval_live": null,
+  "changes": []
+}

@@ -34,6 +34,20 @@ export default function LivePage() {
     return 'UNKNOWN'
   }
 
+  /** Format kickoff in device local 12hr AM/PM, e.g. "Sat 3:00 PM". Returns null if invalid. */
+  const formatKickoffLocal = (isoString) => {
+    if (!isoString) return null
+    try {
+      const d = new Date(isoString)
+      if (Number.isNaN(d.getTime())) return null
+      const day = d.toLocaleDateString(undefined, { weekday: 'short' })
+      const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+      return `${day} ${time}`
+    } catch {
+      return null
+    }
+  }
+
   // Filter fixtures by status
   const finalFixtures = fixtures.filter(f => getFixtureStatus(f) === 'FINAL')
   const provisionalFixtures = fixtures.filter(f => getFixtureStatus(f) === 'PROVISIONAL')
@@ -114,7 +128,7 @@ export default function LivePage() {
                       <span className="vs">vs</span>
                       <span>—</span>
                     </div>
-                    <div className="fixture-status">SCHEDULED</div>
+                    <div className="fixture-status">{formatKickoffLocal(fixture.kickoff_time) ?? 'Scheduled'}</div>
                   </div>
                 ))}
               </div>
