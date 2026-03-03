@@ -34,7 +34,7 @@ export default function PlayerBreakdownPopup({ playerId, playerName, position, g
                 {events.map((ev, i) => (
                   <div
                     key={i}
-                    className={`player-detail-points-impact-row${ev.provisional ? ' player-detail-points-impact-row--provisional' : ''}`}
+                    className={`player-detail-points-impact-row${ev.provisional ? ' player-detail-points-impact-row--provisional' : ''}${ev.feint ? ' player-detail-points-impact-row--feint' : ''}`}
                   >
                     <span className="player-detail-points-impact-label">
                       {ev.icon === 'yc' && (
@@ -45,7 +45,7 @@ export default function PlayerBreakdownPopup({ playerId, playerName, position, g
                       )}
                       {ev.label}
                     </span>
-                    <span className={`player-detail-points-impact-pts ${ev.pts >= 0 ? 'positive' : 'negative'}`}>
+                    <span className={`player-detail-points-impact-pts ${ev.pts >= 0 ? 'positive' : 'negative'}${ev.feint ? ' player-detail-points-impact-pts--feint' : ''}`}>
                       {ev.pts >= 0 ? '+' : ''}{ev.pts}
                     </span>
                   </div>

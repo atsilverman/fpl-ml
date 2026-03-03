@@ -8,11 +8,17 @@
 
 .player-gw-chart-container {
   width: 100%;
-  min-height: 180px;
-  height: 220px;
+  flex: 1 1 auto;
+  min-height: 120px;
   position: relative;
   overflow: hidden;
-  flex: 0 0 auto;
+}
+/* Scale to fit bento; higher minimum on desktop for readability */
+@media (min-width: 769px) {
+  .player-detail-chart-wrap .player-gw-chart-container,
+  .team-detail-modal-body .player-gw-chart-container {
+    min-height: 160px;
+  }
 }
 
 .player-gw-chart-filter-controls {
@@ -94,6 +100,11 @@
   stroke: var(--border-color, #e2e8f0);
   stroke-width: 1;
   opacity: 0.25;
+}
+
+/* Opponent badge above value pill */
+.player-gw-chart-opponent-badge {
+  pointer-events: none;
 }
 
 /* Bar value label: pill background (same width as bar), subtle fill to promote the value */

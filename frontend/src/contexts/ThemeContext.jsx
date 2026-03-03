@@ -2,100 +2,71 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
-// Helper function to detect system-level dark/light mode preference
+const CYCLE_MODES = ['light', 'dark', 'system', 'ocean']
+
 function getSystemThemePreference() {
   if (typeof window === 'undefined') return 'dark'
-  
-  // Check if prefers-color-scheme is supported
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
     return 'dark'
   }
-  
-  // Default to light if system prefers light, or dark as fallback
   if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
     return 'light'
   }
-  
-  // Fallback to dark if media query is not supported
   return 'dark'
+}
+
+function getActualDataTheme(mode) {
+  if (mode === 'system') return getSystemThemePreference()
+  if (mode === 'ocean') return 'light-ocean'
+  return mode
 }
 
 export function ThemeProvider({ children }) {
   const [themeMode, setThemeMode] = useState(() => {
-    // Get from localStorage first (user's manual preference takes priority)
     const saved = localStorage.getItem('fpl-theme-mode')
-    if (saved && ['light', 'dark', 'system'].includes(saved)) {
-      return saved
+    let mode = (saved && CYCLE_MODES.includes(saved)) ? saved : null
+    if (!mode) {
+      const legacy = localStorage.getItem('fpl-theme')
+      if (legacy === 'dark' || legacy === 'light') mode = legacy
+      else if (legacy === 'light-ocean') mode = 'ocean'
+      else mode = 'system'
     }
-    
-    // Default to system if no preference saved
-    return 'system'
-  })
-
-  // Get the actual theme to apply (resolves 'system' to actual theme)
-  const getActualTheme = (mode) => {
-    if (mode === 'system') {
-      return getSystemThemePreference()
+    const resolved = getActualDataTheme(mode)
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-theme', resolved)
     }
     return mode
-  }
-
-  const [actualTheme, setActualTheme] = useState(() => {
-    const saved = localStorage.getItem('fpl-theme-mode')
-    const mode = (saved && ['light', 'dark', 'system'].includes(saved)) ? saved : 'system'
-    const theme = getActualTheme(mode)
-    // Apply immediately to avoid flash
-    if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', theme)
-    }
-    return theme
   })
 
-  // Update actual theme when mode changes
-  useEffect(() => {
-    const theme = getActualTheme(themeMode)
-    setActualTheme(theme)
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('fpl-theme-mode', themeMode)
-  }, [themeMode])
+  const actualTheme = getActualDataTheme(themeMode)
 
-  // Listen for system theme changes when in system mode
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', actualTheme)
+    localStorage.setItem('fpl-theme-mode', themeMode)
+    if (localStorage.getItem('fpl-theme')) {
+      localStorage.removeItem('fpl-theme')
+    }
+  }, [themeMode, actualTheme])
+
   useEffect(() => {
     if (themeMode !== 'system' || !window.matchMedia) return
-    
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    
-    const handleSystemThemeChange = (e) => {
-      // Only update if we're in system mode
-      if (themeMode === 'system') {
-        const newTheme = e.matches ? 'dark' : 'light'
-        setActualTheme(newTheme)
-        document.documentElement.setAttribute('data-theme', newTheme)
-      }
+    const handleChange = () => {
+      document.documentElement.setAttribute('data-theme', getSystemThemePreference())
     }
-    
-    // Modern browsers
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener('change', handleSystemThemeChange)
-      return () => mediaQuery.removeEventListener('change', handleSystemThemeChange)
-    }
-    // Legacy browsers
-    else if (mediaQuery.addListener) {
-      mediaQuery.addListener(handleSystemThemeChange)
-      return () => mediaQuery.removeListener(handleSystemThemeChange)
-    }
+    mediaQuery.addEventListener('change', handleChange)
+    return () => mediaQuery.removeEventListener('change', handleChange)
   }, [themeMode])
 
   const cycleTheme = () => {
-    setThemeMode(prev => {
-      if (prev === 'light') return 'dark'
-      if (prev === 'dark') return 'system'
-      return 'light'
+    setThemeMode((prev) => {
+      const i = CYCLE_MODES.indexOf(prev)
+      return CYCLE_MODES[(i + 1) % CYCLE_MODES.length]
     })
   }
 
   return (
-    <ThemeContext.Provider value={{ theme: actualTheme, themeMode, cycleTheme }}>
+    <ThemeContext.Provider value={{ themeMode, actualTheme, cycleTheme }}>
       {children}
     </ThemeContext.Provider>
   )

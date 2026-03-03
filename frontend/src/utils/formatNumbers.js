@@ -12,9 +12,21 @@ export function formatLastRefreshed(dataUpdatedAtMs) {
 }
 
 /**
- * Format a number with K (thousands) or M (millions) suffix and commas
+ * Format a number with thousand separators (commas). Use for points, counts, league rank, etc.
  * @param {number} num - The number to format
- * @returns {string} Formatted number (e.g., "1.2K", "3.5M", "1,234")
+ * @returns {string} Formatted number (e.g., "1,234", "12,345")
+ */
+export function formatNumberWithCommas(num) {
+  if (num === null || num === undefined || isNaN(num)) {
+    return '—'
+  }
+  return Number(num).toLocaleString('en-GB')
+}
+
+/**
+ * Format a number with K (thousands) or M (millions) suffix. Use for global ranks only.
+ * @param {number} num - The number to format
+ * @returns {string} Formatted number (e.g., "1.2K", "3.5M", "999")
  */
 export function formatNumber(num) {
   if (num === null || num === undefined || isNaN(num)) {

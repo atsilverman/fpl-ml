@@ -34,7 +34,7 @@ import PlayerDetailModal from './PlayerDetailModal'
 import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import './MiniLeaguePage.css'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
-import { formatNumber, formatNumberWithTwoDecimals, formatPrice } from '../utils/formatNumbers'
+import { formatNumber, formatNumberWithTwoDecimals, formatNumberWithCommas, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
 export default function HomePage() {
@@ -248,8 +248,8 @@ export default function HomePage() {
       value: showGameUpdatingBanner
         ? '—'
         : gwPointsFromPlayers != null
-          ? formatNumber(gwPointsFromPlayers)
-          : formatNumber(managerData?.gameweekPoints),
+          ? formatNumberWithCommas(gwPointsFromPlayers)
+          : formatNumberWithCommas(managerData?.gameweekPoints),
       subtext: `Gameweek ${gameweek}`,
       size: '1x1'
     },
@@ -290,7 +290,7 @@ export default function HomePage() {
       id: 'league-rank',
       label: 'League Rank',
       value: managerData?.leagueRank != null 
-        ? formatNumber(managerData.leagueRank)
+        ? formatNumberWithCommas(managerData.leagueRank)
         : '—',
       change: managerData?.leagueRank != null ? (managerData?.leagueRankChange || 0) : undefined,
       size: '1x1'

@@ -26,11 +26,25 @@
   margin: 0;
 }
 
+/* Embedded in collapsible: no card chrome, parent body provides padding */
+.schedule-opponent-stats-table--embedded {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
 .schedule-opponent-stats-table-scroll {
   width: 100%;
   min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+.schedule-opponent-stats-table--embedded .schedule-opponent-stats-table-scroll {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
 }
 
 .schedule-opponent-stats-table-grid {
@@ -97,14 +111,16 @@
   border-left: 1px solid var(--border-color);
 }
 
-/* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); text color + subtle fill */
+/* Rank 1–6 = green (top 6), rank 15–20 = red (last 6); text color + subtle fill + heavier weight */
 .schedule-opponent-stats-td-stat--rank-green {
   color: var(--accent-green, #10b981);
   background: color-mix(in srgb, var(--accent-green, #10b981) 8%, var(--bg-card));
+  font-weight: 700;
 }
 .schedule-opponent-stats-td-stat--rank-red {
   color: var(--accent-red, #ef4444);
   background: color-mix(in srgb, var(--accent-red, #ef4444) 8%, var(--bg-card));
+  font-weight: 700;
 }
 
 .schedule-opponent-stats-opponent-cell {
@@ -137,6 +153,50 @@
   font-weight: 600;
 }
 
+/* Mobile: abbreviation (CHE); desktop: full name (Chelsea) */
+.schedule-opponent-stats-name--full {
+  display: none;
+}
+@media (min-width: 769px) {
+  .schedule-opponent-stats-name--abbr {
+    display: none;
+  }
+  .schedule-opponent-stats-name--full {
+    display: inline;
+  }
+}
+
 .schedule-opponent-stats-table .schedule-bento-home-icon {
   flex-shrink: 0;
+}
+
+.schedule-opponent-stats-show-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+@media (hover: hover) {
+  .schedule-opponent-stats-show-all-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
+  }
+}
+.schedule-opponent-stats-show-all-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }

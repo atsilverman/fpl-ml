@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { formatNumber } from '../utils/formatNumbers'
+import { formatNumberWithCommas } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
 import './PlayerPerformanceChart.css'
 
@@ -148,13 +148,13 @@ export default function PlayerPerformanceChart({
                   <div
                     className="total-points-chart__fill"
                     style={{ width: `${widthPct}%` }}
-                    title={`${player.player_name}: ${formatNumber(points)} pts`}
+                    title={`${player.player_name}: ${formatNumberWithCommas(points)} pts`}
                   />
                   <span
                     className={`total-points-chart__value ${valueOnBar ? 'total-points-chart__value--on-bar' : 'total-points-chart__value--after-bar'}`}
                     style={valueStyle}
                   >
-                    {formatNumber(points)}
+                    {formatNumberWithCommas(points)}
                   </span>
                 </div>
               </div>

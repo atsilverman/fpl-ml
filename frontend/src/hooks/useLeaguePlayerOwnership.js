@@ -1,33 +1,53 @@
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 /**
- * Returns manager_ids that own the given player in the given gameweek
- * (from manager_picks). Used to filter league standings to "managers who own this player".
+ * Returns manager_ids that own the given player in the given gameweek (from manager_picks).
+ * - managerIdsStartingPlayer: managers with player in starting XI (position 1–11)
+ * - managerIdsOwningPlayerBench: managers with player on bench only (position 12–15)
  */
 export function useLeaguePlayerOwnership(playerId, gameweek) {
-  const { data: managerIds = [], isLoading, error } = useQuery({
+  const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ['league-player-ownership', playerId, gameweek],
     queryFn: async () => {
       if (playerId == null || !gameweek) return []
 
       const { data, error: err } = await supabase
         .from('manager_picks')
-        .select('manager_id')
+        .select('manager_id, position')
         .eq('player_id', playerId)
         .eq('gameweek', gameweek)
-        .lte('position', 11)
 
       if (err) throw err
 
-      const ids = (data || []).map((r) => r.manager_id)
-      return [...new Set(ids)]
+      return data || []
     },
     enabled: playerId != null && !!gameweek,
     staleTime: 60000
   })
 
-  return { managerIdsOwningPlayer: managerIds, loading: isLoading, error }
+  const { managerIdsStartingPlayer, managerIdsOwningPlayerBench } = useMemo(() => {
+    const starters = []
+    const bench = []
+    for (const r of rows) {
+      const pos = r.position != null ? Number(r.position) : 0
+      if (pos <= 11) starters.push(r.manager_id)
+      else bench.push(r.manager_id)
+    }
+    return {
+      managerIdsStartingPlayer: [...new Set(starters)],
+      managerIdsOwningPlayerBench: [...new Set(bench)]
+    }
+  }, [rows])
+
+  return {
+    managerIdsStartingPlayer,
+    managerIdsOwningPlayerBench,
+    managerIdsOwningPlayer: [...new Set([...managerIdsStartingPlayer, ...managerIdsOwningPlayerBench])],
+    loading: isLoading,
+    error
+  }
 }
 
 /**
@@ -51,7 +71,6 @@ export function useLeaguePlayerOwnershipMultiple(playerIds, gameweek, leagueMana
         .select('manager_id, player_id')
         .in('player_id', ids)
         .eq('gameweek', gameweek)
-        .lte('position', 11)
       if (leagueIds.length > 0) {
         query = query.in('manager_id', leagueIds)
       }

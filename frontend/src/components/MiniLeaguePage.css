@@ -302,6 +302,22 @@
   font-size: 9px;
 }
 
+/* Selected top transfer item when filtering by who made that transfer */
+.league-page-transfers-summary .transfers-summary-column-item {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.league-page-transfers-summary .transfers-summary-column-item:hover {
+  background: color-mix(in srgb, var(--accent-blue) 12%, var(--bg-card));
+}
+
+.league-page-transfers-summary .transfers-summary-column-item--selected {
+  background: color-mix(in srgb, var(--accent-blue) 18%, var(--bg-card));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue) 40%, transparent);
+}
+
 /* League ownership search: bar above table */
 .league-standings-toolbar .league-ownership-search-container {
   margin-bottom: 0;
@@ -645,7 +661,7 @@
 }
 
 .standings-table .negative {
-  color: #ef4444;
+  color: var(--accent-red);
   font-weight: 600;
 }
 
@@ -660,7 +676,7 @@
 }
 
 .error-state {
-  color: #ef4444;
+  color: var(--accent-red);
 }
 
 /* League page table: fill container; allow horizontal scroll when table is wider than viewport */
@@ -819,6 +835,10 @@
   }
   .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
+  }
+  .manager-detail-modal-overlay {
+    --bento-unit-height: 120px;
+    --bento-gap: 12px;
   }
   .manager-detail-modal-body {
     scrollbar-width: thin;
@@ -984,7 +1004,9 @@
 }
 .league-standings-chips-table .league-standings-chips-badge-played {
   display: inline-block;
-  min-width: 24px;
+  min-width: 28px;
+  padding: 4px 8px;
+  font-size: 12px;
 }
 .league-standings-chips-loading {
   text-align: center;
@@ -1120,6 +1142,14 @@
   background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
 }
 
+/* Visually demote managers who did not make the selected top transfer (when a player in OUT/IN is tapped) */
+.league-transfers-table .league-transfers-row--didnt-make-selected-transfer td {
+  opacity: 0.5;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
+  font-weight: 400;
+}
+
 .league-transfers-cell-manager {
   position: sticky;
   left: 0;
@@ -1225,7 +1255,7 @@
 }
 
 .league-transfers-table .bento-card-transfer-delta.negative {
-  color: var(--accent-red, #ef4444);
+  color: var(--accent-red);
   background: transparent;
 }
 
@@ -1239,10 +1269,6 @@ html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.posit
   background: transparent;
 }
 
-html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.negative {
-  color: var(--accent-red, #dc2626);
-  background: transparent;
-}
 
 html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
@@ -1261,9 +1287,9 @@ html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.neutr
 }
 
 .league-transfers-net-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.7));
   margin-right: auto;
 }
 
@@ -1285,7 +1311,7 @@ html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.neutr
 
 .league-transfers-net-badge--negative {
   color: #fff;
-  background: var(--accent-red, #ef4444);
+  background: var(--accent-red);
   border-color: #b91c1c;
 }
 
@@ -1301,7 +1327,6 @@ html[data-theme="dark"] .league-transfers-net-badge--positive {
 }
 
 html[data-theme="dark"] .league-transfers-net-badge--negative {
-  background: var(--accent-red, #dc2626);
   border-color: #991b1b;
 }
 
@@ -1487,7 +1512,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 }
 .league-standings-page .league-standings-bento-change-badge.negative {
   background: rgba(239, 68, 68, 0.18);
-  color: var(--accent-red, #ef4444);
+  color: var(--accent-red);
   padding: 2px 5px;
   border-radius: 4px;
 }
@@ -1758,129 +1783,195 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   }
 }
 
-/* Player detail modal: League Ownership bento — fixed height scroll, same ownership/demoted styling */
-.player-detail-league-ownership-table-wrapper {
-  max-height: 660px;
-  overflow-y: auto;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-primary);
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
-  width: 100%;
-  min-width: 100%;
-}
-.player-detail-league-ownership-table-wrapper::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--border-color) 70%, transparent);
-  border-radius: 4px;
-}
-.player-detail-league-ownership-table-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover, rgba(0, 0, 0, 0.25));
-}
+/* Player detail modal: League Ownership — list of managers with ownership highlight */
 .player-detail-league-ownership-empty {
   font-size: 12px;
   color: var(--text-secondary);
   padding: 8px 0;
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table {
+.player-detail-league-ownership-fractions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-color);
+}
+.player-detail-league-ownership-fraction {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+.player-detail-league-ownership-fraction-value {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.player-detail-league-ownership-fraction-label {
+  font-size: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+.player-detail-league-ownership-fraction--owned {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 35%, transparent);
+}
+.player-detail-league-ownership-fraction--bench {
+  background: color-mix(in srgb, var(--accent-teal, #0d9488) 10%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--accent-teal, #0d9488) 30%, transparent);
+}
+.player-detail-league-ownership-fraction--top5 {
+  background: color-mix(in srgb, var(--stat-pill-border, #E7AD10) 14%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--stat-pill-border, #E7AD10) 35%, transparent);
+}
+
+.player-detail-ownership-table-wrapper {
+  max-height: 400px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  scrollbar-width: thin;
+}
+/* Show all: expand bento to full length, no internal scrolling */
+.player-detail-ownership-table-wrapper--show-all {
+  max-height: none;
+  overflow: visible;
+}
+
+.player-detail-ownership-table-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+.player-detail-ownership-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.player-detail-ownership-table-wrapper::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius: 3px;
+}
+
+.player-detail-ownership-table-wrapper .league-standings-bento-table.player-detail-ownership-table {
   width: 100%;
-  min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 12px;
 }
-.player-detail-league-ownership-table-wrapper .player-detail-league-ownership-table col.player-detail-league-ownership-col-rank {
-  width: 40px;
-}
-.player-detail-league-ownership-table-wrapper .player-detail-league-ownership-table col.player-detail-league-ownership-col-manager {
-  width: auto;
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table th.league-standings-bento-rank,
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table td.league-standings-bento-rank {
-  width: 40px;
-  max-width: 40px;
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table th.league-standings-bento-team,
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table.player-detail-league-ownership-table td.league-standings-bento-team {
-  min-width: 0;
-  overflow: hidden;
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table thead th {
+
+.player-detail-ownership-table-wrapper .league-standings-bento-table thead th {
   padding: 6px 8px;
   text-align: left;
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
-  white-space: nowrap;
+  vertical-align: middle;
+  box-sizing: border-box;
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody td {
-  padding: 6px 8px;
+
+.player-detail-ownership-table-wrapper .league-standings-bento-table tbody tr {
   border-bottom: 1px solid var(--border-color);
+}
+.player-detail-ownership-table-wrapper .league-standings-bento-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.player-detail-ownership-table-wrapper .league-standings-bento-table tbody td {
+  padding: 6px 8px;
   color: var(--text-primary);
+  vertical-align: middle;
+  box-sizing: border-box;
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team {
-  min-width: 0;
-  overflow: hidden;
+
+.player-detail-ownership-table-wrapper .league-standings-bento-table th.league-standings-bento-rank,
+.player-detail-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-rank {
+  width: 44px;
+  font-variant-numeric: tabular-nums;
+  border-right: 1px solid var(--border-color);
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-cell-inner {
+
+/* Same structure as standings subpage: league-standings-bento-team + team-name + you-badge */
+.player-detail-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team {
   display: flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+
+/* Row highlight: manager starts this player */
+.player-detail-ownership-row--owns td {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-primary));
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr:last-child td {
-  border-bottom: none;
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-rank-inner {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-change-badge.positive {
-  background: rgba(16, 185, 129, 0.18);
-  color: var(--accent-green, #10b981);
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-change-badge.negative {
-  background: rgba(239, 68, 68, 0.18);
-  color: var(--accent-red, #ef4444);
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td {
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 10%, var(--bg-primary));
-}
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
+.player-detail-ownership-row--owns td:first-child {
   border-left: 3px solid var(--accent-blue, #3b82f6);
 }
-.player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--demoted td {
-  background: var(--bg-secondary);
-  opacity: 0.5;
+
+/* Row highlight: manager owns this player but has them on bench */
+.player-detail-ownership-row--owns-bench td {
+  background: color-mix(in srgb, var(--accent-teal, #0d9488) 10%, var(--bg-primary));
+}
+.player-detail-ownership-row--owns-bench td:first-child {
+  border-left: 3px solid var(--accent-teal, #0d9488);
+}
+
+/* Row demotion: manager does not own this player */
+.player-detail-ownership-row--no-owns td {
+  opacity: 0.38;
+  color: var(--text-tertiary, color-mix(in srgb, var(--text-secondary) 45%, var(--bg-primary)));
+  font-size: 0.9em;
+}
+.player-detail-ownership-row--no-owns td .league-standings-bento-team-name {
+  font-weight: 400;
+}
+
+.player-detail-league-ownership-show-all-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
 }
 @media (hover: hover) {
-  .player-detail-league-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
-    opacity: 0.75;
+  .player-detail-league-ownership-show-all-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-card);
+    border-color: var(--accent-blue);
   }
+}
+.player-detail-league-ownership-show-all-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
 }
 
 /* Manager detail modal: same layout and UI as GW Points expanded card */
 .manager-detail-modal-overlay {
+  --bento-unit-height: 150px;
+  --bento-gap: 16px;
   position: fixed;
   top: 0;
   left: 0;
@@ -2045,7 +2136,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   margin-top: 12px;
 }
 
-/* Bento-style container for Transfers made (matches home bento cards) */
+/* Bento-style container for Transfers made (2x4: 4 rows tall, matches home bento cards); list scrolls when overflowing */
 .manager-detail-transfers-bento {
   width: 100%;
   min-width: 0;
@@ -2056,9 +2147,12 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* 2x4 bento height: 4 rows + 3 gaps (150*4 + 16*3 = 648px; mobile 120*4 + 12*3 = 516px) */
+  min-height: calc(var(--bento-unit-height, 150px) * 4 + var(--bento-gap, 16px) * 3);
+  max-height: calc(var(--bento-unit-height, 150px) * 4 + var(--bento-gap, 16px) * 3);
+  overflow: hidden;
   /* Override home grid bento styles when used inside modal */
-  height: auto;
-  min-height: 0;
+  flex-shrink: 0;
   grid-column: unset;
   grid-row: unset;
   opacity: 1;
@@ -2107,54 +2201,75 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 .manager-detail-transfers-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   width: 100%;
   min-width: 0;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
+}
+
+.manager-detail-transfers-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.manager-detail-transfers-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.manager-detail-transfers-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--border-color) 70%, transparent);
+  border-radius: 4px;
+}
+
+.manager-detail-transfers-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, var(--border-color));
 }
 
 .manager-detail-transfers-list .bento-card-transfer-item {
-  padding: 2px 0;
+  padding: 3px 0;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
-/* Individual transfer deltas in manager modal: text-only green/red, no badge fill */
+/* Transfer delta pills in manager modal: larger pill with badge fill */
 .manager-detail-transfers-list .bento-card-transfer-delta {
-  padding: 0;
-  min-width: 0;
-  background: transparent;
-  border-radius: 0;
+  padding: 4px 10px;
+  min-width: 2.25em;
+  font-size: 12px;
 }
 
 .manager-detail-transfers-list .bento-card-transfer-delta.positive {
-  color: var(--accent-green, #10b981);
-  background: transparent;
+  color: #fff;
+  background: var(--accent-green, #10b981);
 }
 
 .manager-detail-transfers-list .bento-card-transfer-delta.negative {
-  color: var(--accent-red, #ef4444);
-  background: transparent;
+  color: #fff;
+  background: var(--accent-red);
 }
 
 .manager-detail-transfers-list .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
-  background: transparent;
+  background: var(--bg-tertiary, #e5e7eb);
 }
 
 html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.positive {
-  color: var(--accent-green, #059669);
-  background: transparent;
+  color: #fff;
+  background: var(--accent-green, #059669);
 }
 
 html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.negative {
-  color: var(--accent-red, #dc2626);
-  background: transparent;
+  color: #fff;
+  background: var(--accent-red, #dc2626);
 }
 
 html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
-  background: transparent;
+  background: var(--bg-tertiary, #374151);
 }
 
 /* Legend: "Name" (green) = Owned by you – match table player name size/weight */
@@ -2168,6 +2283,9 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 /* Gameweek Points breakdown popup: above manager detail modal when opened from it */
 .player-breakdown-popup-overlay.stats-filter-overlay {
   z-index: 1100;
+  align-items: center;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* Player detail modal (same layout as manager modal, stacked above when open) */
@@ -2188,6 +2306,22 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   }
   .player-detail-modal-overlay .player-detail-modal-content {
     max-height: 100%;
+  }
+  /* Bento dimensions: 1×1, 1×3, 1×2, 1×1, 1×3, 1×4 */
+  /* Player details (first bento-1x1): fit to content on mobile too */
+  .player-detail-modal-body .player-detail-bento-collapsible--bento-1x1.player-detail-bento-collapsible--expanded:first-of-type {
+    min-height: min-content;
+  }
+  /* Schedule, Gameweek Points, Opponent stats, League ownership: fit to content on mobile */
+  .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--schedule).player-detail-bento-collapsible--expanded,
+  .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--points-impact).player-detail-bento-collapsible--expanded,
+  .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--opponent-stats).player-detail-bento-collapsible--expanded,
+  .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper).player-detail-bento-collapsible--expanded {
+    min-height: min-content;
+  }
+  /* Chart bento (1x2) keeps fixed height on mobile */
+  .player-detail-modal-body .player-detail-bento-collapsible--bento-1x2.player-detail-bento-collapsible--expanded {
+    min-height: calc(var(--bento-unit-height, 150px) * 2 + var(--bento-gap, 16px) * 1);
   }
 }
 
@@ -2224,11 +2358,11 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   -webkit-overflow-scrolling: touch;
 }
 
-/* Player detail collapsible bentos – same pattern as .gw-top-points-card (league transfers) */
+/* Player detail collapsible bentos – match team detail bentos (height, padding) */
 .player-detail-modal-body .player-detail-bento-collapsible {
   width: 100%;
   min-width: 0;
-  flex-shrink: 0;
+  min-height: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -2237,16 +2371,39 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   flex-direction: column;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
+/* Collapsed: match Top Performers card height (46px) so header row is visible, not a line */
+.player-detail-modal-body .player-detail-bento-collapsible--collapsed {
+  min-height: 46px;
+}
+/* Expanded: match team bento min-height so player/team popups feel consistent */
+.player-detail-modal-body .player-detail-bento-collapsible--expanded {
+  min-height: var(--bento-unit-height, 150px);
+}
+/* Player details bento: fit to content (min-content prevents collapse, content visible) */
+.player-detail-modal-body .player-detail-bento-collapsible--bento-1x1.player-detail-bento-collapsible--expanded:first-of-type {
+  min-height: min-content;
+}
+/* Gameweek Points bento: fit to content (points-impact list varies by player) */
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--points-impact).player-detail-bento-collapsible--expanded {
+  min-height: min-content;
+}
+/* Schedule, Opponent stats, League ownership: fit to content */
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--schedule).player-detail-bento-collapsible--expanded,
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--opponent-stats).player-detail-bento-collapsible--expanded,
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper).player-detail-bento-collapsible--expanded {
+  min-height: min-content;
+}
 @media (hover: hover) {
   .player-detail-modal-body .player-detail-bento-collapsible:hover {
     border-color: var(--border-hover, rgba(0, 0, 0, 0.12));
     box-shadow: var(--shadow-card, 0 2px 10px rgba(0, 0, 0, 0.04));
   }
 }
+/* Consistent padding in collapsed and expanded – title and icon stay in same position */
 .player-detail-modal-body .player-detail-bento-collapsible-content {
   flex: 1 1 auto;
   min-height: 0;
-  padding: 12px 14px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2258,8 +2415,8 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   justify-content: space-between;
   gap: 8px;
   cursor: pointer;
-  padding: 2px 0;
-  margin: -2px 0;
+  padding: 0;
+  margin: 0;
   border-radius: 4px;
   transition: background 0.15s ease;
 }
@@ -2312,8 +2469,138 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   min-width: 0;
   flex: 1 1 auto;
 }
-/* League Ownership body: prevent shrink so table/wrapper fill full width */
-.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-league-ownership-table-wrapper) .player-detail-bento-collapsible-body {
+/* Details + points-impact + chart: match team bento-card padding (20px) */
+.player-detail-modal-body .player-detail-bento-collapsible-body--details,
+.player-detail-modal-body .player-detail-bento-collapsible-body--points-impact,
+.player-detail-modal-body .player-detail-bento-collapsible-body--chart {
+  padding: 20px;
+}
+/* Player details body: size to content; less padding around stat area */
+.player-detail-modal-body .player-detail-bento-collapsible-body--details {
+  flex: 0 0 auto;
+  min-height: min-content;
+  padding: 12px;
+}
+/* Gameweek Points body: size to content */
+.player-detail-modal-body .player-detail-bento-collapsible-body--points-impact {
+  flex: 0 0 auto;
+  min-height: min-content;
+}
+/* Schedule body: size to content */
+.player-detail-modal-body .player-detail-bento-collapsible-body--schedule {
+  flex: 0 0 auto;
+  min-height: min-content;
+}
+/* Opponent stats body: size to content */
+.player-detail-modal-body .player-detail-bento-collapsible-body--opponent-stats {
+  flex: 0 0 auto;
+  min-height: min-content;
+}
+/* League Ownership body: size to content; extra top padding for space between title and content */
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper) .player-detail-bento-collapsible-body {
+  flex: 0 0 auto;
+  min-height: min-content;
+  padding: 12px 0 0 0;
+}
+/* Schedule: no horizontal padding; extra top padding for space between title and timeline */
+.player-detail-modal-body .player-detail-bento-collapsible-body--schedule {
+  padding: 12px 0 0 0;
+}
+/* Opponent stats: extra top padding for space between title and table */
+.player-detail-modal-body .player-detail-bento-collapsible-body--opponent-stats {
+  padding: 12px 0 0 0;
+}
+/* League Ownership header: info button + legend + collapse */
+.player-detail-league-ownership-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.player-detail-league-ownership-header-actions > div:first-child {
+  position: relative;
+}
+.player-detail-league-ownership-info-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
+  opacity: 0.6;
+  border-radius: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (hover: hover) {
+  .player-detail-league-ownership-info-btn:hover {
+    opacity: 1;
+    color: var(--text-primary);
+  }
+}
+/* Match collapse button chrome when section is expanded */
+.player-detail-modal-body .player-detail-bento-collapsible--expanded .player-detail-league-ownership-info-btn {
+  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
+  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
+  opacity: 0.85;
+}
+@media (hover: hover) {
+  .player-detail-modal-body .player-detail-bento-collapsible--expanded .player-detail-league-ownership-info-btn:hover {
+    border-color: var(--collapse-icon-color, #64748b);
+    opacity: 1;
+  }
+}
+.player-detail-league-ownership-info-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+.player-detail-league-ownership-legend {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  padding: 8px 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.player-detail-league-ownership-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-detail-league-ownership-legend-swatch {
+  flex-shrink: 0;
+  width: 20px;
+  height: 10px;
+  border-radius: 2px;
+}
+.player-detail-league-ownership-legend-item--no-owns .player-detail-league-ownership-legend-swatch {
+  background: color-mix(in srgb, var(--text-secondary) 25%, var(--bg-primary));
+  opacity: 0.6;
+}
+.player-detail-league-ownership-legend-item--bench .player-detail-league-ownership-legend-swatch {
+  background: color-mix(in srgb, var(--accent-teal, #0d9488) 10%, var(--bg-primary));
+  border-left: 3px solid var(--accent-teal, #0d9488);
+}
+.player-detail-league-ownership-legend-item--started .player-detail-league-ownership-legend-swatch {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-primary));
+  border-left: 3px solid var(--accent-blue, #3b82f6);
+}
+
+/* League Ownership body: prevent shrink so table fills width */
+.player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper) .player-detail-bento-collapsible-body {
   min-width: 100%;
 }
 .player-detail-modal-body .player-detail-bento-collapsible-header.player-detail-chart-bento-header {
@@ -2362,30 +2649,21 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
-/* Player detail bentos: scope under modal body so we beat .bento-card (HomePage.css) fixed height; size to content, body scrolls */
-.player-detail-modal-body .player-detail-details-bento,
-.player-detail-modal-body .player-detail-chart-bento,
-.player-detail-modal-body .player-detail-points-impact-bento {
+/* Chart body: no padding around chart area */
+.player-detail-modal-body .player-detail-bento-collapsible-body--chart {
+  padding: 0;
+}
+/* Chart: content in collapsible body; wrap scales to fit bento */
+.player-detail-modal-body .player-detail-bento-collapsible-body--chart .player-detail-chart-wrap {
   width: 100%;
   min-width: 0;
-  padding: 12px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  overflow: visible;
-  flex-shrink: 0;
-  height: auto;
-  min-height: min-content;
-  max-height: none;
-  grid-column: unset;
-  grid-row: unset;
-  opacity: 1;
-  animation: none;
+  overflow: hidden;
 }
-.player-detail-details-bento .bento-card-label,
 .player-detail-chart-bento .bento-card-label {
   display: block;
   font-size: 11px;
@@ -2399,7 +2677,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 .player-detail-details-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px 16px;
+  gap: 12px 16px;
   flex-shrink: 0;
   min-height: min-content;
 }
@@ -2414,22 +2692,12 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   color: var(--text-secondary);
 }
 .player-detail-detail-value {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
 }
 
-/* Points impact bento: event list + total */
-.player-detail-points-impact-bento .bento-card-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  flex-shrink: 0;
-}
+/* Points impact: event list + total (content in collapsible body, no bento wrapper) */
 .player-detail-points-impact-empty {
   font-size: 13px;
   color: var(--text-secondary);
@@ -2466,13 +2734,10 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   color: #eab308;
 }
 .player-detail-points-impact-icon--rc {
-  color: #dc2626;
+  color: var(--accent-red);
 }
 html[data-theme="dark"] .player-detail-points-impact-icon--yc {
   color: #facc15;
-}
-html[data-theme="dark"] .player-detail-points-impact-icon--rc {
-  color: #ef4444;
 }
 .player-detail-points-impact-pts {
   font-size: 12px;
@@ -2501,6 +2766,15 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
 .player-detail-points-impact-row--provisional .player-detail-points-impact-label {
   font-style: italic;
   color: var(--text-secondary);
+}
+/* Feint +0: near-miss for saves/DEFCON, shows how close player was */
+.player-detail-points-impact-row--feint .player-detail-points-impact-label {
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.7));
+}
+.player-detail-points-impact-pts--feint {
+  opacity: 0.6;
+  color: var(--text-tertiary, rgba(128, 128, 128, 0.7)) !important;
+  background: transparent !important;
 }
 .player-detail-points-impact-total-provisional-hint {
   font-size: 10px;
@@ -2569,21 +2843,23 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   padding: 0;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--collapse-badge-border, rgba(0, 0, 0, 0.08));
   border-radius: 6px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
+  background: var(--collapse-badge-bg, rgba(0, 0, 0, 0.06));
+  color: color-mix(in srgb, var(--text-secondary) 70%, var(--text-primary));
   cursor: pointer;
   transition: color 0.2s, background 0.2s, border-color 0.2s;
+  opacity: 0.85;
 }
 @media (hover: hover) {
   .player-detail-chart-stat-btn:hover {
     background: var(--bg-card);
-    border-color: var(--text-secondary);
+    border-color: var(--collapse-icon-color, #64748b);
     color: var(--text-primary);
+    opacity: 1;
   }
 }
 /* Player detail chart stat popup: filters (stat + range) sized to content */
@@ -2727,21 +3003,20 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   outline-offset: 2px;
 }
 
-/* Chart bento: height fits chart + gameweek filter; size to content so nothing is cropped, modal body scrolls */
+/* Chart bento: chart scales to fit container; fills available bento space on mobile and desktop */
 .player-detail-chart-wrap {
   width: 100%;
-  min-height: min-content;
-  flex-shrink: 0;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: visible;
+  overflow: hidden;
 }
-/* Chart wrapper must not shrink so the bar chart and filters are fully visible; modal body scrolls instead */
 .player-detail-chart-wrap .player-gw-chart-wrapper {
-  flex: 0 0 auto;
-  flex-shrink: 0;
-  min-height: min-content;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Schedule bento inside player modal: beat .bento-card fixed height, size to content */
@@ -2752,6 +3027,19 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   max-height: none;
   overflow: visible;
   flex-shrink: 0;
+}
+
+/* Team detail bentos: match player presentation – min-height, allow chart/schedule to grow */
+.team-detail-modal-body .player-detail-details-bento,
+.team-detail-modal-body .player-detail-chart-bento,
+.team-detail-modal-body .schedule-bento,
+.team-detail-modal-body .schedule-opponent-stats-table {
+  height: auto;
+  min-height: var(--bento-unit-height, 150px);
+  max-height: none;
+  overflow: visible;
+  flex-shrink: 0;
+  padding: 20px;
 }
 
 /* Team detail modal (same layout and styling as player detail modal) */

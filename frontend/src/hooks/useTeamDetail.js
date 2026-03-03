@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
 /**
- * Fetches team detail for the team detail modal: team info, season points,
- * and gameweek-by-gameweek aggregated stats (sum of all players for that team)
- * in the same shape as usePlayerDetail's gameweekPoints for the chart.
- * Rank is not computed here; pass pointsRank from the table (StatsSubpage).
+ * Fetches team detail for the team detail modal: team info,
+ * gameweek-by-gameweek aggregated stats (sum of all players for that team)
+ * in the same shape as usePlayerDetail's gameweekPoints for the chart,
+ * and league rankings (PL table position, goals/xG/GC/xGC ranks 1-20).
  */
 export function useTeamDetail(teamId, gameweek) {
   const main = useQuery({
@@ -44,7 +44,7 @@ export function useTeamDetail(teamId, gameweek) {
       const historyRes = await supabase
         .from('player_gameweek_stats')
         .select(
-          'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded'
+          'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, opponent_team_id, opponent_team:teams!fk_pgws_opponent(short_name)'
         )
         .eq('team_id', resolvedTeamId)
         .lte('gameweek', gameweek)
@@ -70,6 +70,7 @@ export function useTeamDetail(teamId, gameweek) {
           expected_assists: 0,
           expected_goal_involvements: 0,
           expected_goals_conceded: 0,
+          opponent_short_name: r.opponent_team?.short_name ?? null,
         }
         cur.points += r.total_points ?? 0
         cur.goals += r.goals_scored ?? 0
@@ -106,6 +107,7 @@ export function useTeamDetail(teamId, gameweek) {
           expected_assists: cur.expected_assists,
           expected_goal_involvements: cur.expected_goal_involvements,
           expected_goals_conceded: cur.expected_goals_conceded,
+          opponent_short_name: cur.opponent_short_name ?? null,
         }))
         .sort((a, b) => a.gameweek - b.gameweek)
 
@@ -113,6 +115,31 @@ export function useTeamDetail(teamId, gameweek) {
       gameweekPoints.forEach((row) => {
         seasonPoints += row.points ?? 0
       })
+
+      // Fetch league rankings (table position, goals/xG/GC/xGC ranks) for team details bento
+      let tablePosition = null
+      let rankGoals = null
+      let rankXg = null
+      let rankGoalsConceded = null
+      let rankXgc = null
+      try {
+        const { data: rankingsData } = await supabase.rpc('get_team_league_rankings', {
+          p_gw_filter: 'all',
+          p_location: 'all'
+        })
+        if (rankingsData?.length) {
+          const row = rankingsData.find((r) => Number(r.team_id) === resolvedTeamId)
+          if (row) {
+            tablePosition = row.table_position != null ? Number(row.table_position) : null
+            rankGoals = row.rank_goals != null ? Number(row.rank_goals) : null
+            rankXg = row.rank_xg != null ? Number(row.rank_xg) : null
+            rankGoalsConceded = row.rank_goals_conceded != null ? Number(row.rank_goals_conceded) : null
+            rankXgc = row.rank_xgc != null ? Number(row.rank_xgc) : null
+          }
+        }
+      } catch (e) {
+        console.error('[useTeamDetail] get_team_league_rankings failed:', e)
+      }
 
       return {
         team: teamInfo
@@ -124,6 +151,11 @@ export function useTeamDetail(teamId, gameweek) {
           : { team_id: resolvedTeamId, short_name: null, team_name: '—' },
         seasonPoints,
         gameweekPoints,
+        tablePosition,
+        rankGoals,
+        rankXg,
+        rankGoalsConceded,
+        rankXgc,
       }
     },
     enabled: teamId != null && !!gameweek,

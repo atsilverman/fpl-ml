@@ -71,7 +71,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
         supabase
           .from('player_gameweek_stats')
           .select(
-            'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, minutes, match_finished, match_finished_provisional'
+            'gameweek, total_points, goals_scored, assists, clean_sheets, saves, bps, bonus, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, minutes, match_finished, match_finished_provisional, opponent_team_id, opponent_team:teams!fk_pgws_opponent(short_name)'
           )
           .eq('player_id', playerId)
           .order('gameweek', { ascending: true }),
@@ -126,6 +126,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           expected_goals_conceded: 0,
           minutes: 0,
           match_played: false,
+          opponent_short_name: r.opponent_team?.short_name ?? null,
         }
         const finished = r.match_finished === true || r.match_finished === 'true'
         const finishedProv = r.match_finished_provisional === true || r.match_finished_provisional === 'true'
@@ -167,6 +168,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           expected_goals_conceded: cur.expected_goals_conceded,
           minutes: cur.minutes,
           match_played: cur.match_played,
+          opponent_short_name: cur.opponent_short_name ?? null,
         }))
         .sort((a, b) => a.gameweek - b.gameweek)
 

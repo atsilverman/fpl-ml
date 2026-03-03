@@ -21,6 +21,7 @@ html[data-theme="dark"] {
   --text-secondary: #a0aec0;
   --accent-blue: #3b82f6;
   --accent-green: #10b981;
+  --accent-red: #ef4444;
   --accent-yellow: #f59e0b;
   --accent-orange: #f97316;
   --border-color: #2d3748;
@@ -70,6 +71,7 @@ html[data-theme="light"] {
   --text-secondary: #64748b;
   --accent-blue: #2563eb;
   --accent-green: #059669;
+  --accent-red: #dc2626;
   --accent-yellow: #d97706;
   --accent-orange: #ea580c;
   --border-color: #e2e8f0;
@@ -108,6 +110,182 @@ html[data-theme="light"] {
   --hover-card-border: rgba(0, 0, 0, 0.08);
 }
 
+/* dark-forest: minimal dark with subtle sage hint; bolder green only for key highlights */
+html[data-theme="dark-forest"] {
+  --bg-primary: #141a18;
+  --bg-secondary: #1c2321;
+  --bg-card: #222b28;
+  --bg-input: #222b28;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --accent-blue: #5fa88a;
+  --accent-green: #4a9b7a;
+  --accent-red: #c25b5b;
+  --accent-yellow: #7a9b6a;
+  --accent-orange: #6b9b7a;
+  --border-color: #2d3734;
+  --progress-bg: #2d3734;
+  --progress-fill: #5fa88a;
+  --progress-complete: #4a9b7a;
+  --scrollbar-thumb-hover: #3d4845;
+  --shadow-accent-blue: rgba(95, 168, 138, 0.08);
+  --shadow-accent-blue-subtle: rgba(95, 168, 138, 0.05);
+  --gw-bench-fill: rgba(255, 255, 255, 0.03);
+  --gw-autosub-out-bg: rgba(194, 91, 91, 0.12);
+  --gw-autosub-in-bg: rgba(74, 155, 122, 0.12);
+  --gw-bench-fill-solid: #121816;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #c25b5b 12%, var(--bg-primary) 88%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #4a9b7a 12%, var(--bg-primary) 88%);
+  --collapse-icon-color: #94a3b8;
+  --collapse-badge-bg: rgba(255, 255, 255, 0.05);
+  --collapse-badge-border: rgba(255, 255, 255, 0.08);
+  --bonus-1st: #5fa88a;
+  --bonus-1st-fg: #141a18;
+  --bonus-2nd: #7ab89a;
+  --bonus-2nd-fg: #141a18;
+  --bonus-3rd: color-mix(in srgb, #5fa88a 30%, var(--bg-secondary));
+  --bonus-3rd-fg: #e2e8f0;
+  --bps-value-on-bar-dark: #141a18;
+  --bps-value-on-bar-light: #fff;
+  --chart-expected-line: #6ab5a8;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(255, 255, 255, 0.06);
+}
+
+/* dark-amber: minimal dark with subtle warm hint; bolder amber only for key highlights */
+html[data-theme="dark-amber"] {
+  --bg-primary: #1a1816;
+  --bg-secondary: #23201c;
+  --bg-card: #2a2723;
+  --bg-input: #2a2723;
+  --text-primary: #e7e5e4;
+  --text-secondary: #a8a29e;
+  --accent-blue: #c4a574;
+  --accent-green: #7a9b6a;
+  --accent-red: #c25b5b;
+  --accent-yellow: #b8a078;
+  --accent-orange: #c49b6a;
+  --border-color: #3f3b38;
+  --progress-bg: #3f3b38;
+  --progress-fill: #c4a574;
+  --progress-complete: #7a9b6a;
+  --scrollbar-thumb-hover: #57534e;
+  --shadow-accent-blue: rgba(196, 165, 116, 0.08);
+  --shadow-accent-blue-subtle: rgba(196, 165, 116, 0.05);
+  --gw-bench-fill: rgba(255, 255, 255, 0.03);
+  --gw-autosub-out-bg: rgba(194, 91, 91, 0.12);
+  --gw-autosub-in-bg: rgba(122, 155, 106, 0.12);
+  --gw-bench-fill-solid: #161412;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #c25b5b 12%, var(--bg-primary) 88%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #7a9b6a 12%, var(--bg-primary) 88%);
+  --collapse-icon-color: #a8a29e;
+  --collapse-badge-bg: rgba(255, 255, 255, 0.05);
+  --collapse-badge-border: rgba(255, 255, 255, 0.08);
+  --bonus-1st: #c4a574;
+  --bonus-1st-fg: #1a1816;
+  --bonus-2nd: #d4b58a;
+  --bonus-2nd-fg: #1a1816;
+  --bonus-3rd: color-mix(in srgb, #c4a574 30%, var(--bg-secondary));
+  --bonus-3rd-fg: #e7e5e4;
+  --bps-value-on-bar-dark: #1a1816;
+  --bps-value-on-bar-light: #fff;
+  --chart-expected-line: #8ab5a8;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(255, 255, 255, 0.06);
+}
+
+/* light-dawn: minimal warm white; subtle terracotta accent for key highlights */
+html[data-theme="light-dawn"] {
+  --bg-primary: #fcfbf9;
+  --bg-secondary: #f8f6f3;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --text-primary: #1c1917;
+  --text-secondary: #78716c;
+  --accent-blue: #b08050;
+  --accent-green: #4a7c59;
+  --accent-red: #b85555;
+  --accent-yellow: #9a7b4a;
+  --accent-orange: #a8754a;
+  --border-color: #e7e5e4;
+  --progress-bg: #e7e5e4;
+  --progress-fill: #b08050;
+  --progress-complete: #4a7c59;
+  --scrollbar-thumb-hover: #d6d3d1;
+  --shadow-accent-blue: rgba(176, 128, 80, 0.08);
+  --shadow-accent-blue-subtle: rgba(176, 128, 80, 0.05);
+  --gw-bench-fill: rgba(0, 0, 0, 0.03);
+  --gw-autosub-out-bg: rgba(184, 85, 85, 0.1);
+  --gw-autosub-in-bg: rgba(74, 124, 89, 0.1);
+  --gw-bench-fill-solid: #f8f6f3;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #b85555 10%, var(--bg-primary) 90%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #4a7c59 10%, var(--bg-primary) 90%);
+  --collapse-icon-color: #78716c;
+  --collapse-badge-bg: rgba(0, 0, 0, 0.05);
+  --collapse-badge-border: rgba(0, 0, 0, 0.08);
+  --bonus-1st: #b08050;
+  --bonus-1st-fg: #1c1917;
+  --bonus-2nd: #c4956a;
+  --bonus-2nd-fg: #1c1917;
+  --bonus-3rd: color-mix(in srgb, #b08050 28%, var(--bg-secondary));
+  --bonus-3rd-fg: #1c1917;
+  --bps-value-on-bar-dark: #1c1917;
+  --bps-value-on-bar-light: #fff;
+  --chart-expected-line: #7a9b8a;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(0, 0, 0, 0.06);
+}
+
+/* light-ocean: minimal cool white; subtle teal accent for key highlights */
+html[data-theme="light-ocean"] {
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --accent-blue: #5a9a9a;
+  --accent-green: #4a7c59;
+  --accent-red: #b85555;
+  --accent-yellow: #5a9a8a;
+  --accent-orange: #6a9a8a;
+  --border-color: #e2e8f0;
+  --progress-bg: #e2e8f0;
+  --progress-fill: #5a9a9a;
+  --progress-complete: #4a7c59;
+  --scrollbar-thumb-hover: #cbd5e1;
+  --shadow-accent-blue: rgba(90, 154, 154, 0.08);
+  --shadow-accent-blue-subtle: rgba(90, 154, 154, 0.05);
+  --gw-bench-fill: rgba(0, 0, 0, 0.03);
+  --gw-autosub-out-bg: rgba(184, 85, 85, 0.1);
+  --gw-autosub-in-bg: rgba(74, 124, 89, 0.1);
+  --gw-bench-fill-solid: #f4f8f8;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #b85555 10%, var(--bg-primary) 90%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #4a7c59 10%, var(--bg-primary) 90%);
+  --collapse-icon-color: #64748b;
+  --collapse-badge-bg: rgba(0, 0, 0, 0.05);
+  --collapse-badge-border: rgba(0, 0, 0, 0.08);
+  --bonus-1st: #5a9a9a;
+  --bonus-1st-fg: #0f172a;
+  --bonus-2nd: #6aabab;
+  --bonus-2nd-fg: #0f172a;
+  --bonus-3rd: color-mix(in srgb, #5a9a9a 28%, var(--bg-secondary));
+  --bonus-3rd-fg: #0f172a;
+  --bps-value-on-bar-dark: #0f172a;
+  --bps-value-on-bar-light: #fff;
+  --chart-expected-line: #7a9b9a;
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(0, 0, 0, 0.06);
+}
+
 /* Desktop only: slightly stronger hover feedback (mobile keeps no hover via @media (hover: hover)) */
 @media (hover: hover) and (min-width: 769px) {
   html:not([data-theme]),
@@ -117,6 +295,18 @@ html[data-theme="light"] {
     --hover-card-border: rgba(255, 255, 255, 0.12);
   }
   html[data-theme="light"] {
+    --bg-hover: color-mix(in srgb, var(--border-color) 14%, var(--bg-secondary));
+    --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
+    --hover-card-border: rgba(0, 0, 0, 0.12);
+  }
+  html[data-theme="dark-forest"],
+  html[data-theme="dark-amber"] {
+    --bg-hover: color-mix(in srgb, var(--border-color) 20%, var(--bg-secondary));
+    --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.06);
+    --hover-card-border: rgba(255, 255, 255, 0.12);
+  }
+  html[data-theme="light-dawn"],
+  html[data-theme="light-ocean"] {
     --bg-hover: color-mix(in srgb, var(--border-color) 14%, var(--bg-secondary));
     --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.08);
     --hover-card-border: rgba(0, 0, 0, 0.12);

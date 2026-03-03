@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { X, Filter, Minimize2, MoveDiagonal, RectangleVertical } from 'lucide-react'
+import { X, Filter, Minimize2, MoveDiagonal, RectangleVertical, ChevronDown, ChevronUp } from 'lucide-react'
+import { formatNumber, formatNumberWithCommas } from '../utils/formatNumbers'
 import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
 import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
@@ -44,11 +45,19 @@ export function getPointsImpactEvents(stats, position) {
     })
   }
   const defconThreshold = DEFCON_THRESHOLDS[pos] ?? 999
-  if (n(stats.defensive_contribution) >= defconThreshold) {
+  const defcon = n(stats.defensive_contribution)
+  if (defcon >= defconThreshold) {
     events.push({
-      label: `${stats.defensive_contribution} def. contributions`,
+      label: `DEFCON ${stats.defensive_contribution}/${defconThreshold}`,
       value: stats.defensive_contribution,
       pts: 2,
+    })
+  } else if (defcon > 0 && defconThreshold < 999) {
+    events.push({
+      label: `DEFCON ${stats.defensive_contribution}/${defconThreshold}`,
+      value: stats.defensive_contribution,
+      pts: 0,
+      feint: true,
     })
   }
   if (n(stats.yellow_cards) > 0) {
@@ -91,12 +100,20 @@ export function getPointsImpactEvents(stats, position) {
       pts,
     })
   }
-  const savePts = Math.floor(n(stats.saves) / 3)
+  const savesCount = n(stats.saves)
+  const savePts = Math.floor(savesCount / 3)
   if (savePts > 0) {
     events.push({
       label: `${stats.saves} saves`,
       value: stats.saves,
       pts: savePts,
+    })
+  } else if (pos === 1 && n(stats.minutes) >= 1) {
+    events.push({
+      label: savesCount === 1 ? '1 save' : `${stats.saves} saves`,
+      value: stats.saves,
+      pts: 0,
+      feint: true,
     })
   }
   if (n(stats.own_goals) > 0) {
@@ -161,7 +178,10 @@ export default function PlayerDetailModal({
   onClose,
 }) {
   const [selectedPlayerStat, setSelectedPlayerStat] = useState('points')
-  const [chartRangeFilter, setChartRangeFilter] = useState('last6')
+  const [chartRangeFilter, setChartRangeFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'gw20plus'
+    return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'gw20plus'
+  })
   const [showPlayerStatPopup, setShowPlayerStatPopup] = useState(false)
   const [detailsExpanded, setDetailsExpanded] = useState(true)
   const [pointsImpactExpanded, setPointsImpactExpanded] = useState(true)
@@ -169,6 +189,7 @@ export default function PlayerDetailModal({
   const [scheduleExpanded, setScheduleExpanded] = useState(true)
   const [opponentStatsExpanded, setOpponentStatsExpanded] = useState(true)
   const [leagueOwnershipExpanded, setLeagueOwnershipExpanded] = useState(true)
+  const [showAllLeagueOwnership, setShowAllLeagueOwnership] = useState(false)
   const playerStatPopupRef = useRef(null)
   const filterPopupPanelRef = useRef(null)
 
@@ -193,12 +214,16 @@ export default function PlayerDetailModal({
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
   const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
-  const { managerIdsOwningPlayer, loading: ownershipLoading } = useLeaguePlayerOwnership(playerId, gameweek)
-  const managerIdsOwningPlayerSet = useMemo(
-    () => new Set((managerIdsOwningPlayer ?? []).map((id) => Number(id))),
-    [managerIdsOwningPlayer]
+  const { managerIdsStartingPlayer, managerIdsOwningPlayerBench, loading: ownershipLoading } = useLeaguePlayerOwnership(playerId, gameweek)
+  const managerIdsStartingPlayerSet = useMemo(
+    () => new Set((managerIdsStartingPlayer ?? []).map((id) => Number(id))),
+    [managerIdsStartingPlayer]
   )
-  const config = useConfiguration()
+  const managerIdsOwningPlayerBenchSet = useMemo(
+    () => new Set((managerIdsOwningPlayerBench ?? []).map((id) => Number(id))),
+    [managerIdsOwningPlayerBench]
+  )
+  const { config } = useConfiguration()
   const currentManagerId = config?.managerId ?? null
   const difficultyOverridesByDimension = useMemo(
     () => ({
@@ -294,7 +319,7 @@ export default function PlayerDetailModal({
           </button>
         </div>
         <div className="manager-detail-modal-body player-detail-modal-body">
-          <div className={`player-detail-bento-collapsible ${detailsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x1 ${detailsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header"
@@ -311,12 +336,11 @@ export default function PlayerDetailModal({
                 </span>
               </div>
               {detailsExpanded && (
-                <div className="player-detail-bento-collapsible-body">
-                  <div className="player-detail-details-bento bento-card bento-card-animate">
-                    {playerDetailLoading ? (
-                      <div className="bento-card-value loading">...</div>
-                    ) : (
-                      <div className="player-detail-details-grid">
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--details">
+                  {playerDetailLoading ? (
+                    <div className="bento-card-value loading">...</div>
+                  ) : (
+                    <div className="player-detail-details-grid">
                         <div className="player-detail-detail-row">
                           <span className="player-detail-detail-label">Current price</span>
                           <span className="player-detail-detail-value">
@@ -325,15 +349,15 @@ export default function PlayerDetailModal({
                         </div>
                         <div className="player-detail-detail-row">
                           <span className="player-detail-detail-label">Position rank (Pts)</span>
-                          <span className="player-detail-detail-value">{positionRank != null ? positionRank : '—'}</span>
+                          <span className="player-detail-detail-value">{positionRank != null ? formatNumberWithCommas(positionRank) : '—'}</span>
                         </div>
                         <div className="player-detail-detail-row">
                           <span className="player-detail-detail-label">Overall rank (Pts)</span>
-                          <span className="player-detail-detail-value">{overallRank != null ? overallRank : '—'}</span>
+                          <span className="player-detail-detail-value">{overallRank != null ? formatNumber(overallRank) : '—'}</span>
                         </div>
                         <div className="player-detail-detail-row">
                           <span className="player-detail-detail-label">Total Pts</span>
-                          <span className="player-detail-detail-value">{seasonPoints ?? '—'}</span>
+                          <span className="player-detail-detail-value">{seasonPoints != null ? formatNumberWithCommas(seasonPoints) : '—'}</span>
                         </div>
                         <div className="player-detail-detail-row">
                           <span className="player-detail-detail-label">Ownership (League)</span>
@@ -349,12 +373,11 @@ export default function PlayerDetailModal({
                         </div>
                       </div>
                     )}
-                  </div>
                 </div>
               )}
             </div>
           </div>
-          <div className={`player-detail-bento-collapsible ${pointsImpactExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x3 ${pointsImpactExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header"
@@ -378,19 +401,18 @@ export default function PlayerDetailModal({
                 </span>
               </div>
               {pointsImpactExpanded && (
-                <div className="player-detail-bento-collapsible-body">
-                  <div className="player-detail-points-impact-bento bento-card bento-card-animate">
-                    {gwStatsLoading ? (
-                      <div className="bento-card-value loading">...</div>
-                    ) : pointsImpactEvents.length === 0 && gwTotalPts === 0 ? (
-                      <div className="player-detail-points-impact-empty">No points this gameweek</div>
-                    ) : (
-                      <>
-                        <div className="player-detail-points-impact-list">
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--points-impact">
+                  {gwStatsLoading ? (
+                    <div className="bento-card-value loading">...</div>
+                  ) : pointsImpactEvents.length === 0 && gwTotalPts === 0 ? (
+                    <div className="player-detail-points-impact-empty">No points this gameweek</div>
+                  ) : (
+                    <>
+                      <div className="player-detail-points-impact-list">
                           {pointsImpactEvents.map((ev, i) => (
                             <div
                               key={i}
-                              className={`player-detail-points-impact-row${ev.provisional ? ' player-detail-points-impact-row--provisional' : ''}`}
+                              className={`player-detail-points-impact-row${ev.provisional ? ' player-detail-points-impact-row--provisional' : ''}${ev.feint ? ' player-detail-points-impact-row--feint' : ''}`}
                             >
                               <span className="player-detail-points-impact-label">
                                 {ev.icon === 'yc' && (
@@ -401,29 +423,28 @@ export default function PlayerDetailModal({
                                 )}
                                 {ev.label}
                               </span>
-                              <span className={`player-detail-points-impact-pts ${ev.pts >= 0 ? 'positive' : 'negative'}`}>
+                              <span className={`player-detail-points-impact-pts ${ev.pts >= 0 ? 'positive' : 'negative'}${ev.feint ? ' player-detail-points-impact-pts--feint' : ''}`}>
                                 {ev.pts >= 0 ? '+' : ''}{ev.pts}
                               </span>
                             </div>
                           ))}
                         </div>
-                        <div className="player-detail-points-impact-total">
-                          <span className="player-detail-points-impact-total-label">
-                            Total points
-                            {gwStats?.bonus_status === 'provisional' && (gwStats?.provisional_bonus ?? 0) > 0 ? (
-                              <span className="player-detail-points-impact-total-provisional-hint"> (incl. provisional bonus)</span>
-                            ) : null}
-                          </span>
-                          <span className="player-detail-points-impact-total-value">{gwTotalPts}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      <div className="player-detail-points-impact-total">
+                        <span className="player-detail-points-impact-total-label">
+                          Total points
+                          {gwStats?.bonus_status === 'provisional' && (gwStats?.provisional_bonus ?? 0) > 0 ? (
+                            <span className="player-detail-points-impact-total-provisional-hint"> (incl. provisional bonus)</span>
+                          ) : null}
+                        </span>
+                        <span className="player-detail-points-impact-total-value">{gwTotalPts}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
-          <div className={`player-detail-bento-collapsible ${chartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x2 ${chartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header player-detail-chart-bento-header"
@@ -454,7 +475,7 @@ export default function PlayerDetailModal({
                         aria-haspopup="dialog"
                         title="Filters"
                       >
-                        <Filter size={14} strokeWidth={2} aria-hidden />
+                        <Filter size={11} strokeWidth={1.5} aria-hidden />
                       </button>
                     </div>
                   )}
@@ -464,10 +485,9 @@ export default function PlayerDetailModal({
                 </span>
               </div>
               {chartExpanded && (
-                <div className="player-detail-bento-collapsible-body">
-                  <div className="player-detail-chart-bento bento-card bento-card-animate">
-                    <div className="player-detail-chart-wrap">
-                      <PlayerGameweekPointsChart
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--chart">
+                  <div className="player-detail-chart-wrap">
+                    <PlayerGameweekPointsChart
                         key={`player-chart-${selectedPlayerStat}-${chartRangeFilter}`}
                         data={gameweekPoints}
                         loading={playerDetailLoading}
@@ -476,13 +496,12 @@ export default function PlayerDetailModal({
                         filter={chartRangeFilter}
                         onFilterChange={setChartRangeFilter}
                       />
-                    </div>
                   </div>
                 </div>
               )}
             </div>
           </div>
-          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--schedule ${scheduleExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--schedule player-detail-bento-collapsible--bento-1x1 ${scheduleExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header"
@@ -499,8 +518,9 @@ export default function PlayerDetailModal({
                 </span>
               </div>
               {scheduleExpanded && (
-                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label">
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label player-detail-bento-collapsible-body--schedule">
                   <ScheduleBento
+                    embedded
                     teamId={playerDetailPlayer?.team_id}
                     opponentStatsByTeamId={teamLast6ByTeamId}
                     opponentStatsLoading={teamLast6Loading}
@@ -511,7 +531,7 @@ export default function PlayerDetailModal({
               )}
             </div>
           </div>
-          <div className={`player-detail-bento-collapsible ${opponentStatsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x3 ${opponentStatsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header"
@@ -528,8 +548,9 @@ export default function PlayerDetailModal({
                 </span>
               </div>
               {opponentStatsExpanded && (
-                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label">
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label player-detail-bento-collapsible-body--opponent-stats">
                   <ScheduleOpponentStatsTable
+                    embedded
                     teamId={playerDetailPlayer?.team_id}
                     opponentStatsByTeamId={teamLast6ByTeamId}
                     opponentStatsLoading={teamLast6Loading}
@@ -538,7 +559,7 @@ export default function PlayerDetailModal({
               )}
             </div>
           </div>
-          <div className={`player-detail-bento-collapsible ${leagueOwnershipExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x4 ${leagueOwnershipExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
                 className="player-detail-bento-collapsible-header"
@@ -550,9 +571,11 @@ export default function PlayerDetailModal({
                 aria-label={leagueOwnershipExpanded ? 'Collapse League Ownership' : 'Expand League Ownership'}
               >
                 <span className="player-detail-bento-collapsible-title">League Ownership</span>
-                <span className="player-detail-bento-collapsible-expand-icon" title={leagueOwnershipExpanded ? 'Collapse' : 'Expand'} aria-hidden>
-                  {leagueOwnershipExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
-                </span>
+                <div className="player-detail-league-ownership-header-actions">
+                  <span className="player-detail-bento-collapsible-expand-icon" title={leagueOwnershipExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                    {leagueOwnershipExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                  </span>
+                </div>
               </div>
               {leagueOwnershipExpanded && (
                 <div className="player-detail-bento-collapsible-body">
@@ -561,49 +584,90 @@ export default function PlayerDetailModal({
                   ) : !leagueStandings?.length ? (
                     <div className="player-detail-league-ownership-empty">No league configured or no standings</div>
                   ) : (
-                    <div className="player-detail-league-ownership-table-wrapper">
-                        <table className="league-standings-bento-table player-detail-league-ownership-table">
-                          <colgroup>
-                            <col className="player-detail-league-ownership-col-rank" />
-                            <col className="player-detail-league-ownership-col-manager" />
-                          </colgroup>
-                          <thead>
-                            <tr>
-                              <th className="league-standings-bento-rank">Rank</th>
-                              <th className="league-standings-bento-team">Manager</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {leagueStandings.map((s, index) => {
-                              const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
-                              const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
-                              const ownsPlayer = !ownershipLoading && managerIdsOwningPlayerSet.has(Number(s.manager_id))
-                              const isDemoted = !ownershipLoading && !ownsPlayer
-                              const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
-                              return (
-                                <tr
-                                  key={s.manager_id}
-                                  className={`league-standings-bento-row ${ownsPlayer ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
-                                >
-                                  <td className="league-standings-bento-rank">
-                                    <span className="league-standings-bento-rank-inner">
-                                      <span className="league-standings-bento-rank-value">{rank}</span>
-                                    </span>
-                                  </td>
-                                  <td className="league-standings-bento-team" title={displayName}>
-                                    <div className="league-standings-bento-team-cell-inner">
-                                      <span className="league-standings-bento-team-name">{displayName}</span>
-                                      {isCurrentUser && (
-                                        <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
-                                      )}
-                                    </div>
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
+                    <>
+                      <div className="player-detail-league-ownership-fractions">
+                        <div className="player-detail-league-ownership-fraction player-detail-league-ownership-fraction--owned" title="Effective ownership: managers who own this player">
+                          <span className="player-detail-league-ownership-fraction-value">
+                            {!ownershipLoading ? managerIdsStartingPlayerSet.size + managerIdsOwningPlayerBenchSet.size : '—'}/{leagueStandings.length}
+                          </span>
+                          <span className="player-detail-league-ownership-fraction-label">Eff. Own</span>
+                        </div>
+                        <div className="player-detail-league-ownership-fraction player-detail-league-ownership-fraction--bench" title="Managers who own but started on bench">
+                          <span className="player-detail-league-ownership-fraction-value">
+                            {!ownershipLoading ? managerIdsOwningPlayerBenchSet.size : '—'}/{leagueStandings.length}
+                          </span>
+                          <span className="player-detail-league-ownership-fraction-label">bench</span>
+                        </div>
+                        <div className="player-detail-league-ownership-fraction player-detail-league-ownership-fraction--top5" title="Top 5 in league who own this player">
+                          <span className="player-detail-league-ownership-fraction-value">
+                            {!ownershipLoading
+                              ? leagueStandings
+                                  .slice(0, 5)
+                                  .filter((s) => managerIdsStartingPlayerSet.has(Number(s.manager_id)) || managerIdsOwningPlayerBenchSet.has(Number(s.manager_id)))
+                                  .length
+                              : '—'}
+                            /{Math.min(5, leagueStandings.length)}
+                          </span>
+                          <span className="player-detail-league-ownership-fraction-label">top 5</span>
+                        </div>
+                      </div>
+                      <div className={`player-detail-ownership-table-wrapper${showAllLeagueOwnership ? ' player-detail-ownership-table-wrapper--show-all' : ''}`}>
+                      <table className="league-standings-bento-table player-detail-ownership-table" role="grid" aria-label="League managers and ownership">
+                        <thead>
+                          <tr>
+                            <th className="league-standings-bento-rank">Rank</th>
+                            <th className="league-standings-bento-team">Manager</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(showAllLeagueOwnership ? leagueStandings : leagueStandings.slice(0, 10)).map((s, index) => {
+                            const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
+                            const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
+                            const mid = Number(s.manager_id)
+                            const ownsAsStarter = !ownershipLoading && managerIdsStartingPlayerSet.has(mid)
+                            const ownsAsBench = !ownershipLoading && managerIdsOwningPlayerBenchSet.has(mid)
+                            const isCurrentUser = currentManagerId != null && mid === Number(currentManagerId)
+                            const ownershipClass = ownsAsStarter ? 'player-detail-ownership-row--owns' : ownsAsBench ? 'player-detail-ownership-row--owns-bench' : !ownershipLoading ? 'player-detail-ownership-row--no-owns' : ''
+                            const ownershipTitle = ownsAsStarter ? `${displayName} starts this player` : ownsAsBench ? `${displayName} owns this player (on bench)` : undefined
+                            return (
+                              <tr
+                                key={s.manager_id}
+                                className={`league-standings-bento-row ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${ownershipClass}`}
+                                title={ownershipTitle}
+                              >
+                                <td className="league-standings-bento-rank">{rank}</td>
+                                <td className="league-standings-bento-team" title={displayName}>
+                                  <span className="league-standings-bento-team-name">{displayName}</span>
+                                  {isCurrentUser && (
+                                    <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
                     </div>
+                    {leagueStandings.length > 10 && (
+                      <button
+                        type="button"
+                        className="player-detail-league-ownership-show-all-btn"
+                        onClick={() => setShowAllLeagueOwnership((v) => !v)}
+                      >
+                        {showAllLeagueOwnership ? (
+                          <>
+                            <ChevronUp size={12} strokeWidth={2} aria-hidden />
+                            Show top 10
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown size={12} strokeWidth={2} aria-hidden />
+                            Show all
+                          </>
+                        )}
+                      </button>
+                    )}
+                    </>
                   )}
                 </div>
               )}

@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useScheduleData } from '../hooks/useScheduleData'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import './ScheduleSubpage.css'
 import './ScheduleBento.css'
 import './ScheduleOpponentStatsTable.css'
@@ -26,6 +27,7 @@ export default function ScheduleOpponentStatsTable({
   teamId,
   opponentStatsByTeamId = null,
   opponentStatsLoading = false,
+  embedded = false,
 }) {
   const { scheduleMatrix, gameweeks, loading } = useScheduleData()
 
@@ -41,9 +43,16 @@ export default function ScheduleOpponentStatsTable({
     return out
   }, [teamId, scheduleMatrix, gameweeks])
 
+  const [showAllGameweeks, setShowAllGameweeks] = useState(false)
+  const uniqueGwIds = useMemo(() => [...new Set(rows.map((r) => r.gw.id))], [rows])
+  const next6GwIds = useMemo(() => new Set(uniqueGwIds.slice(0, 6)), [uniqueGwIds])
+  const displayedRows = embedded && !showAllGameweeks ? rows.filter((r) => next6GwIds.has(r.gw.id)) : rows
+  const hasMore = uniqueGwIds.length > 6
+
+  const rootClass = `schedule-opponent-stats-table${embedded ? ' schedule-opponent-stats-table--embedded' : ' bento-card bento-card-animate'}`
   if (loading) {
     return (
-      <div className="schedule-opponent-stats-table bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Opponent form (last 6 GW)</span>
         <div className="schedule-bento-loading">Loading…</div>
       </div>
@@ -52,7 +61,7 @@ export default function ScheduleOpponentStatsTable({
 
   if (teamId == null) {
     return (
-      <div className="schedule-opponent-stats-table bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Opponent form (last 6 GW)</span>
         <div className="schedule-bento-empty">No team selected.</div>
       </div>
@@ -61,7 +70,7 @@ export default function ScheduleOpponentStatsTable({
 
   if (rows.length === 0) {
     return (
-      <div className="schedule-opponent-stats-table bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Opponent form (last 6 GW)</span>
         <div className="schedule-bento-empty">No upcoming gameweeks.</div>
       </div>
@@ -69,7 +78,7 @@ export default function ScheduleOpponentStatsTable({
   }
 
   return (
-    <div className="schedule-opponent-stats-table bento-card bento-card-animate">
+    <div className={rootClass}>
       <span className="bento-card-label schedule-bento-label">Opponent form (last 6 GW)</span>
       <div className="schedule-opponent-stats-table-scroll">
         <table className="schedule-opponent-stats-table-grid">
@@ -85,9 +94,10 @@ export default function ScheduleOpponentStatsTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map(({ key, gw, opp }) => {
+            {displayedRows.map(({ key, gw, opp }) => {
               const short = opp.short_name ?? '?'
               const display = opp.isHome ? (short || '?').toUpperCase() : (short || '?').toLowerCase()
+              const fullName = opp.team_name ?? short
               const stats = opponentStatsByTeamId?.[opp.team_id] ?? null
               return (
                 <tr key={key}>
@@ -107,7 +117,8 @@ export default function ScheduleOpponentStatsTable({
                         )}
                       </span>
                       <span className="schedule-bento-abbr-row">
-                        <span className={`schedule-cell-abbr-display ${opp.isHome ? 'schedule-cell-home' : 'schedule-cell-away'}`}>{display}</span>
+                        <span className={`schedule-cell-abbr-display schedule-opponent-stats-name--abbr ${opp.isHome ? 'schedule-cell-home' : 'schedule-cell-away'}`}>{display}</span>
+                        <span className="schedule-opponent-stats-name--full">{fullName}</span>
                         {opp.isHome && (
                           <svg className="schedule-cell-home-indicator schedule-bento-home-icon" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
                             <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
@@ -137,6 +148,25 @@ export default function ScheduleOpponentStatsTable({
           </tbody>
         </table>
       </div>
+      {embedded && hasMore && (
+        <button
+          type="button"
+          className="schedule-opponent-stats-show-all-btn"
+          onClick={() => setShowAllGameweeks((v) => !v)}
+        >
+          {showAllGameweeks ? (
+            <>
+              <ChevronUp size={12} strokeWidth={2} aria-hidden />
+              Show next 6
+            </>
+          ) : (
+            <>
+              <ChevronDown size={12} strokeWidth={2} aria-hidden />
+              Show all
+            </>
+          )}
+        </button>
+      )}
     </div>
   )
 }

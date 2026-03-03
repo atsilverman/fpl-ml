@@ -13,7 +13,8 @@ const MV_TABLE_BY_GW = {
   last12: 'mv_research_player_stats_last_12'
 }
 
-const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
+const MV_SELECT = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, games_played'
+const MV_SELECT_LEGACY = 'player_id, location, minutes, effective_total_points, goals_scored, assists, clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
 
 /**
  * Aggregate per-fixture rows into one row per player (sum stats across DGW fixtures).
@@ -57,7 +58,8 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
         expected_assists: Number(row.expected_assists) || 0,
         expected_goal_involvements: Number(row.expected_goal_involvements) || 0,
         expected_goals_conceded: Number(row.expected_goals_conceded) || 0,
-        goals_conceded: row.goals_conceded ?? 0
+        goals_conceded: row.goals_conceded ?? 0,
+        games_played: 1
       })
     } else {
       existing.total_points += totalPoints
@@ -65,6 +67,7 @@ function aggregateByPlayer(rows, locationFilter = 'all') {
       existing.provisional_bonus += provisionalBonus
       existing.effective_total_points += effective
       existing.minutes += minutes
+      existing.games_played += 1
       existing.goals_scored += Number(row.goals_scored) || 0
       existing.assists += Number(row.assists) || 0
       existing.clean_sheets += Number(row.clean_sheets) || 0
@@ -96,6 +99,7 @@ function mapRowToPlayer(row, playerMap) {
     selected_by_percent: info.selected_by_percent != null ? Number(info.selected_by_percent) : null,
     points: row.effective_total_points ?? 0,
     minutes: row.minutes ?? 0,
+    games_played: row.games_played ?? 0,
     goals_scored: row.goals_scored ?? 0,
     assists: row.assists ?? 0,
     clean_sheets: row.clean_sheets ?? 0,
@@ -169,6 +173,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           if (!res.ok) return null
           const team_goals = {}
           const team_goals_conceded = {}
+          const team_games_played = {}
           if (data.team_goals && typeof data.team_goals === 'object') {
             for (const [k, v] of Object.entries(data.team_goals)) {
               team_goals[Number(k)] = Number(v) ?? 0
@@ -179,11 +184,17 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
               team_goals_conceded[Number(k)] = Number(v) ?? 0
             }
           }
+          if (data.team_games_played && typeof data.team_games_played === 'object') {
+            for (const [k, v] of Object.entries(data.team_games_played)) {
+              team_games_played[Number(k)] = Number(v) ?? 0
+            }
+          }
           return {
             source: 'api',
             players: data.players ?? [],
             team_goals,
             team_goals_conceded,
+            team_games_played,
             team_expected_goals_conceded: data.team_expected_goals_conceded ?? {},
             total_count: data.total_count ?? (data.players ?? []).length,
             page: data.page ?? apiPage,
@@ -197,11 +208,19 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       }
 
       const mvTable = MV_TABLE_BY_GW[gwFilter]
-      const { data: mvRows, error: mvError } = await supabase
-        .from(mvTable)
-        .select(MV_SELECT)
-        .eq('location', locationFilter)
-
+      let mvRows = null
+      let mvError = null
+      let mvSelect = MV_SELECT
+      const mvResult = await supabase.from(mvTable).select(mvSelect).eq('location', locationFilter)
+      mvRows = mvResult.data
+      mvError = mvResult.error
+      if (mvError && (mvError.code === '42703' || mvError.message?.includes('games_played') || mvError.code === 'PGRST116')) {
+        const legacyResult = await supabase.from(mvTable).select(MV_SELECT_LEGACY).eq('location', locationFilter)
+        if (!legacyResult.error && legacyResult.data) {
+          mvRows = legacyResult.data.map((r) => ({ ...r, games_played: 0 }))
+          mvError = null
+        }
+      }
       if (!mvError && mvRows != null) {
         const playerIds = [...new Set((mvRows || []).map((r) => r.player_id).filter(Boolean))]
         if (playerIds.length === 0) return { source: 'mv', rows: [], playerMap: {} }
@@ -253,19 +272,26 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       let team_goals = {}
       let team_goals_conceded = {}
       let team_expected_goals_conceded = {}
+      let team_games_played = {}
       try {
-        const { data: fixturesData } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
-        if (fixturesData?.length) {
+        const { data: fixturesData, error: fixturesError } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (fixturesError) {
+          console.error('[Stats] get_team_goals_from_fixtures failed:', fixturesError.message || fixturesError)
+        } else if (fixturesData?.length) {
           for (const item of fixturesData) {
             const tid = item?.team_id
             if (tid != null) {
               const key = Number(tid)
               team_goals[key] = Number(item.goals) ?? 0
               team_goals_conceded[key] = Number(item.goals_conceded) ?? 0
+              team_games_played[key] = item?.games_played != null ? Number(item.games_played) : 0
             }
           }
         }
-        const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (rpcError) {
+          console.error('[Stats] get_team_goals_conceded_bulk failed:', rpcError.message || rpcError)
+        }
         if (rpcData?.length) {
           for (const item of rpcData) {
             const tid = item?.team_id
@@ -279,7 +305,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       } catch (e) {
         console.error('[Stats] get_team_goals_from_fixtures / get_team_goals_conceded_bulk failed:', e)
       }
-      return { source: 'mv', rows: mvRows || [], playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded }
+      return { source: 'mv', rows: mvRows || [], playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded, team_games_played }
       }
 
       // Fallback: raw fetch + aggregate
@@ -356,19 +382,26 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       let team_goals = {}
       let team_goals_conceded = {}
       let team_expected_goals_conceded = {}
+      let team_games_played = {}
       try {
-        const { data: fixturesData } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
-        if (fixturesData?.length) {
+        const { data: fixturesData, error: fixturesError } = await supabase.rpc('get_team_goals_from_fixtures', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (fixturesError) {
+          console.error('[Stats] get_team_goals_from_fixtures failed:', fixturesError.message || fixturesError)
+        } else if (fixturesData?.length) {
           for (const item of fixturesData) {
             const tid = item?.team_id
             if (tid != null) {
               const key = Number(tid)
               team_goals[key] = Number(item.goals) ?? 0
               team_goals_conceded[key] = Number(item.goals_conceded) ?? 0
+              team_games_played[key] = item?.games_played != null ? Number(item.games_played) : 0
             }
           }
         }
-        const { data: rpcData } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        const { data: rpcData, error: rpcError } = await supabase.rpc('get_team_goals_conceded_bulk', { p_gw_filter: gwFilter, p_location: locationFilter })
+        if (rpcError) {
+          console.error('[Stats] get_team_goals_conceded_bulk failed:', rpcError.message || rpcError)
+        }
         if (rpcData?.length) {
           for (const item of rpcData) {
             const tid = item?.team_id
@@ -382,7 +415,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
       } catch (e) {
         console.error('[Stats] get_team_goals_from_fixtures / get_team_goals_conceded_bulk failed:', e)
       }
-      return { source: 'raw', rawStats: stats, playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded }
+      return { source: 'raw', rawStats: stats, playerMap, team_goals, team_goals_conceded, team_expected_goals_conceded, team_games_played }
     },
     enabled: !!gameweek && !gwLoading,
     staleTime: isLive ? 25 * 1000 : 2 * 60 * 1000,
@@ -403,6 +436,11 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
   const teamExpectedGoalsConceded = useMemo(() => {
     if (!cache) return {}
     return cache.team_expected_goals_conceded ?? {}
+  }, [cache])
+
+  const teamGamesPlayed = useMemo(() => {
+    if (!cache) return {}
+    return cache.team_games_played ?? {}
   }, [cache])
 
   const players = useMemo(() => {
@@ -436,6 +474,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
           selected_by_percent: info.selected_by_percent != null ? Number(info.selected_by_percent) : null,
           points: s.effective_total_points ?? s.total_points ?? 0,
           minutes: s.minutes ?? 0,
+          games_played: s.games_played ?? 0,
           goals_scored: s.goals_scored ?? 0,
           assists: s.assists ?? 0,
           clean_sheets: s.clean_sheets ?? 0,
@@ -507,6 +546,7 @@ export function useAllPlayersGameweekStats(gwFilter = 'all', locationFilter = 'a
     players,
     teamGoals,
     teamGoalsConceded,
+    teamGamesPlayed,
     teamExpectedGoalsConceded,
     totalCount,
     pagination,

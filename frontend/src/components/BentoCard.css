@@ -118,7 +118,7 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   justify-content: center;
 }
 
-/* 2x1 settings bento: 2 columns, 2 rows — wider buttons, [Theme|Customize] [Debug|empty] */
+/* 2x1 settings bento: 2 columns, 2 rows — wider buttons, [Customize|Debug] */
 .bento-card-large .settings-bento-content {
   flex-direction: row;
   display: grid;
@@ -129,6 +129,10 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
 .bento-card-large .settings-bento-button {
   width: 100%;
   min-width: 0;
+}
+
+.settings-bento-theme {
+  grid-column: 1 / -1;
 }
 
 .settings-bento-button {
@@ -236,6 +240,13 @@ html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
   align-items: center;
   gap: 6px;
   z-index: 10;
+}
+
+/* Info icon: match collapse button width */
+.bento-card-expand-icons .bento-card-info-icon {
+  width: 28px;
+  min-width: 28px;
+  flex-shrink: 0;
 }
 
 /* Overall rank expanded: All / Last 12 / Last 6 + Compare + collapse; match expand/collapse button height (24px) */
@@ -1892,6 +1903,28 @@ html[data-theme="dark"] .transfers-summary-column-count {
 /* More specific than .league-standings-bento-table td (font-weight: 400) so team names stay 600 */
 .league-standings-bento-table td.league-standings-bento-team {
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+  min-width: 0;
+}
+.league-standings-bento-table td.league-standings-bento-team .league-standings-bento-team-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.league-standings-bento-table td.league-standings-bento-team .league-standings-bento-you-badge {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent-blue, #3b82f6);
 }
 
 /* Vertical line separating manager/team name from stats (Total, GW) – same as other data tables */

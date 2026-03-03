@@ -1,14 +1,14 @@
 import './BentoCard.css'
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useTheme } from '../contexts/ThemeContext'
 import { createPortal } from 'react-dom'
-import { formatNumber } from '../utils/formatNumbers'
+import { formatNumberWithCommas } from '../utils/formatNumbers'
 import PerformanceChart from './PerformanceChart'
 import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
-import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Laptop, Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X } from 'lucide-react'
+import { Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X, Sun, Moon, Laptop, Waves } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -70,6 +70,43 @@ function getPopupPosition(anchorRect, popupWidth, popupHeight) {
   if (top + popupHeight > vh - POPUP_PAD) top = anchorRect.top - POPUP_GAP - popupHeight
   if (top < POPUP_PAD) top = POPUP_PAD
   return { top, left }
+}
+
+function SettingsBentoContent({ onConfigureClick, onDebugClick }) {
+  const { themeMode, cycleTheme } = useTheme()
+  const getThemeCycleIcon = () => {
+    if (themeMode === 'light') return Sun
+    if (themeMode === 'dark') return Moon
+    if (themeMode === 'ocean') return Waves
+    return Laptop
+  }
+  return (
+    <div className="settings-bento-content">
+      <button className="settings-bento-button configure-bento-button" onClick={onConfigureClick}>
+        <Settings className="settings-icon" size={11} strokeWidth={1.5} />
+        Customize
+      </button>
+      {onDebugClick && (
+        <button className="settings-bento-button" onClick={onDebugClick} title="Debug" aria-label="Debug">
+          <Bug className="settings-icon" size={11} strokeWidth={1.5} />
+          Debug
+        </button>
+      )}
+      <button
+        type="button"
+        className="settings-bento-button settings-bento-theme"
+        aria-label={`Theme: ${themeMode}`}
+        title={`Theme: ${themeMode}`}
+        onClick={cycleTheme}
+      >
+        {(() => {
+          const Icon = getThemeCycleIcon()
+          return <Icon className="settings-icon" size={11} strokeWidth={1.5} aria-hidden />
+        })()}
+        Theme
+      </button>
+    </div>
+  )
 }
 
 export default function BentoCard({
@@ -158,6 +195,9 @@ export default function BentoCard({
   const gwExpandIconsRef = useRef(null)
   const stateDebugPopupRef = useRef(null)
   const stateDebugPopupContentRef = useRef(null)
+  const prevIsExpandedRef = useRef(isExpanded)
+  const collapseTimeoutRef = useRef(null)
+  const [isCollapsing, setIsCollapsing] = useState(false)
   const [showGwLegendPopup, setShowGwLegendPopup] = useState(false)
   const [showStateDebugPopup, setShowStateDebugPopup] = useState(false)
   const [stateDebugPopupPosition, setStateDebugPopupPosition] = useState(null)
@@ -198,6 +238,23 @@ export default function BentoCard({
     const h = popup.offsetHeight
     setGwLegendPopupPosition(getPopupPosition(anchorRect, w, h))
   }, [showGwLegendPopup, id])
+
+  /* Detect collapse to run proportional scale-down animation */
+  useEffect(() => {
+    const wasExpanded = prevIsExpandedRef.current
+    prevIsExpandedRef.current = isExpanded
+    if (wasExpanded && !isExpanded && onCollapseClick) {
+      setIsCollapsing(true)
+      if (collapseTimeoutRef.current) clearTimeout(collapseTimeoutRef.current)
+      collapseTimeoutRef.current = setTimeout(() => {
+        setIsCollapsing(false)
+        collapseTimeoutRef.current = null
+      }, 320)
+    }
+    return () => {
+      if (collapseTimeoutRef.current) clearTimeout(collapseTimeoutRef.current)
+    }
+  }, [isExpanded, onCollapseClick])
 
   useEffect(() => {
     if (id === 'gw-points' && !isExpanded) {
@@ -264,7 +321,6 @@ export default function BentoCard({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showTeamValueFilterPopup, id])
 
-  const { themeMode, cycleTheme } = useTheme()
   const isTransfersExpanded = id === 'transfers' && isExpanded
   const overallRankBorderClass =
     id === 'overall-rank'
@@ -295,25 +351,9 @@ export default function BentoCard({
     gwRankBorderClass,
     id === 'transfers' && 'bento-card-id-transfers',
     isExpanded && 'bento-card-expanded',
-    isTransfersExpanded && 'bento-card-transfers-compact'
+    isTransfersExpanded && 'bento-card-transfers-compact',
+    isCollapsing && 'bento-card-collapsing'
   ].filter(Boolean).join(' ')
-
-  const getThemeValueLabel = () => {
-    if (themeMode === 'light') return 'light'
-    if (themeMode === 'dark') return 'dark'
-    return 'system'
-  }
-
-  const getThemeIcon = () => {
-    if (themeMode === 'light') {
-      return <Sun className="settings-icon" size={11} strokeWidth={1.5} />
-    }
-    if (themeMode === 'dark') {
-      return <Moon className="settings-icon" size={11} strokeWidth={1.5} />
-    }
-    // System/auto icon
-    return <Laptop className="settings-icon" size={11} strokeWidth={1.5} />
-  }
 
   const handleIconClick = (e) => {
     e.stopPropagation()
@@ -948,7 +988,7 @@ export default function BentoCard({
                       <span className="bento-card-transfer-in">{t.playerInName}</span>
                       {t.pointImpact != null && (
                         <span className={`bento-card-transfer-delta ${t.pointImpact > 0 ? 'positive' : t.pointImpact < 0 ? 'negative' : 'neutral'}`}>
-                          {t.pointImpact >= 0 ? '+' : ''}{t.pointImpact}
+                          {t.pointImpact >= 0 ? '+' : ''}{formatNumberWithCommas(t.pointImpact)}
                         </span>
                       )}
                     </div>
@@ -991,13 +1031,13 @@ export default function BentoCard({
           )}
           {id !== 'league-rank' && change !== undefined && change !== 0 && (
             <div className={`bento-card-change ${change > 0 ? 'positive' : 'negative'}`}>
-              {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumber(Math.abs(change))}
+              {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumberWithCommas(Math.abs(change))}
             </div>
           )}
           {id === 'league-rank' && !isExpanded && change !== undefined && change !== 0 && (
             <div className="bento-card-change-in-subtext">
               <span className={`bento-card-change-inline ${change > 0 ? 'positive' : 'negative'}`}>
-                {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumber(Math.abs(change))}
+                {change > 0 ? <CircleArrowUp size={14} /> : <CircleArrowDown size={14} />} {formatNumberWithCommas(Math.abs(change))}
               </span>
             </div>
           )}
@@ -1156,7 +1196,7 @@ export default function BentoCard({
                     // Use calculated_rank_change from MV (per-league); mini_league_rank_change can be from another league
                     const change = s.calculated_rank_change != null ? s.calculated_rank_change : (s.mini_league_rank_change != null ? s.mini_league_rank_change : null)
                     const displayName = (s.manager_team_name && s.manager_team_name.trim()) ? s.manager_team_name : (s.manager_name || `Manager ${s.manager_id}`)
-                    const isCurrentUser = currentManagerId != null && s.manager_id === currentManagerId
+                    const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
                     const gwDisplay = isCurrentUser && currentManagerGwPoints != null ? currentManagerGwPoints : s.gameweek_points
                     const totalDisplay = isCurrentUser && currentManagerTotalPoints != null ? currentManagerTotalPoints : s.total_points
                     return (
@@ -1174,7 +1214,12 @@ export default function BentoCard({
                             ) : null}
                           </span>
                         </td>
-                        <td className="league-standings-bento-team" title={displayName}>{displayName}</td>
+                        <td className="league-standings-bento-team" title={displayName}>
+                          <span className="league-standings-bento-team-name">{displayName}</span>
+                          {isCurrentUser && (
+                            <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                          )}
+                        </td>
                         <td className={`league-standings-bento-total ${(totalDisplay ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{totalDisplay ?? '—'}</td>
                         <td className={`league-standings-bento-gw ${(gwDisplay ?? null) === 0 ? 'league-standings-bento-cell-muted' : ''}`}>{gwDisplay ?? '—'}</td>
                       </tr>
@@ -1214,11 +1259,16 @@ export default function BentoCard({
                 </thead>
                 <tbody>
                   {leagueCaptainData.map((row) => {
-                    const isCurrentUser = currentManagerId != null && row.manager_id === currentManagerId
+                    const isCurrentUser = currentManagerId != null && Number(row.manager_id) === Number(currentManagerId)
                     return (
                       <tr key={row.manager_id} className={isCurrentUser ? 'league-standings-bento-row-you' : ''}>
                         <td className="league-standings-bento-rank">{row.rank ?? '—'}</td>
-                        <td className="league-standings-bento-team" title={row.manager_team_name}>{row.manager_team_name}</td>
+                        <td className="league-standings-bento-team" title={row.manager_team_name}>
+                          <span className="league-standings-bento-team-name">{row.manager_team_name}</span>
+                          {isCurrentUser && (
+                            <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                          )}
+                        </td>
                         <td className="captain-standings-bento-captain" title={row.captain_name}>
                           <span className="captain-standings-bento-player-cell">
                             {row.captain_team_short_name && (
@@ -1256,22 +1306,10 @@ export default function BentoCard({
       )}
       
       {isSettings && (
-        <div className="settings-bento-content">
-          <button className="settings-bento-button" onClick={cycleTheme} title={`Theme: ${getThemeValueLabel()}`}>
-            {getThemeIcon()}
-            Theme
-          </button>
-          <button className="settings-bento-button configure-bento-button" onClick={onConfigureClick}>
-            <Settings className="settings-icon" size={11} strokeWidth={1.5} />
-            Customize
-          </button>
-          {onDebugClick && (
-            <button className="settings-bento-button" onClick={onDebugClick} title="Debug" aria-label="Debug">
-              <Bug className="settings-icon" size={11} strokeWidth={1.5} />
-              Debug
-            </button>
-          )}
-        </div>
+        <SettingsBentoContent
+          onConfigureClick={onConfigureClick}
+          onDebugClick={onDebugClick}
+        />
       )}
     </div>
   )

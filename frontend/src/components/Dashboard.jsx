@@ -78,7 +78,6 @@ export default function Dashboard() {
   const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false)
   const leagueDropdownRef = useRef(null)
   const leagueCloseTimeoutRef = useRef(null)
-
   const hasHover = () => typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches
   const HOVER_LEAVE_MS = 180
 
@@ -190,7 +189,7 @@ export default function Dashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [leagueDropdownOpen])
 
-  const { data: managerRow } = useQuery({
+  const { data: managerRow, isLoading: managerLoading } = useQuery({
     queryKey: ['manager-name', managerId],
     queryFn: async () => {
       if (!managerId) return null
@@ -200,7 +199,7 @@ export default function Dashboard() {
     enabled: !!managerId,
     staleTime: 5 * 60 * 1000,
   })
-  const { data: leagueRow } = useQuery({
+  const { data: leagueRow, isLoading: leagueLoading } = useQuery({
     queryKey: ['league', leagueId],
     queryFn: async () => {
       if (!leagueId) return null
@@ -210,8 +209,8 @@ export default function Dashboard() {
     enabled: !!leagueId,
     staleTime: 5 * 60 * 1000,
   })
-  const managerDisplayName = managerRow?.manager_team_name || managerRow?.manager_name || (managerId ? `Manager ${managerId}` : null)
-  const leagueName = leagueRow?.league_name || (leagueId ? `League ${leagueId}` : null)
+  const managerDisplayName = managerRow?.manager_team_name || managerRow?.manager_name || (!managerLoading && managerId ? `Manager ${managerId}` : null)
+  const leagueName = leagueRow?.league_name || (!leagueLoading && leagueId ? `League ${leagueId}` : null)
   const subtitle = [managerDisplayName, leagueName].filter(Boolean).join(' · ') || null
 
   const pages = [

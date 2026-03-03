@@ -106,7 +106,7 @@
 }
 .bento-card.bento-card-overall-rank-border-negative {
   border-width: 1px;
-  border-color: #ef4444;
+  border-color: var(--accent-red);
 }
 
 /* League rank bento: same green/red as rank and value delta */
@@ -116,7 +116,7 @@
 }
 .bento-card.bento-card-league-rank-border-negative {
   border-width: 1px;
-  border-color: #ef4444;
+  border-color: var(--accent-red);
 }
 
 /* Overall/league rank when stale: yellow border to match ! indicator */
@@ -133,6 +133,30 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1) translateZ(0);
+  }
+}
+
+/* Proportional collapse: scale down from top-left so both dimensions shrink in sync (fixes fast-horizontal, slow-vertical) */
+.bento-card-collapsing {
+  transform-origin: top left;
+  animation: bentoCardCollapseScale 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes bentoCardCollapseScale {
+  0% {
+    transform: scale(1) translateZ(0);
+  }
+  50% {
+    transform: scale(0.5) translateZ(0);
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bento-card-collapsing {
+    animation-duration: 0.05s;
   }
 }
 
@@ -331,7 +355,7 @@
 }
 
 .bento-card-change-inline.negative {
-  color: #ef4444;
+  color: var(--accent-red);
 }
 
 .bento-card-subtext {
@@ -370,7 +394,7 @@
 }
 
 .bento-card-change.negative {
-  color: #ef4444;
+  color: var(--accent-red);
 }
 
 @media (max-width: 768px) {

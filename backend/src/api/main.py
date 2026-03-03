@@ -48,7 +48,7 @@ MV_TABLE_BY_GW = {
 MV_SELECT = (
     "player_id, location, minutes, effective_total_points, goals_scored, assists, "
     "clean_sheets, saves, bps, defensive_contribution, yellow_cards, red_cards, "
-    "expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded"
+    "expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded, games_played"
 )
 
 
@@ -158,6 +158,7 @@ def get_stats(
             "expected_goal_involvements": float(row.get("expected_goal_involvements") or 0),
             "expected_goals_conceded": float(row.get("expected_goals_conceded") or 0),
             "goals_conceded": row.get("goals_conceded") or 0,
+            "games_played": row.get("games_played") or 0,
         })
     # Filter by position
     if position is not None and 1 <= position <= 4:
@@ -208,9 +209,10 @@ def get_stats(
     # Paginate
     start = (page - 1) * page_size
     players = players[start : start + page_size]
-    # Team G and GC from fixtures table (source of truth); xGC from DEF/GK RPC
+    # Team G, GC, games_played from fixtures table (source of truth); xGC from DEF/GK RPC
     team_goals = {}
     team_goals_conceded = {}
+    team_games_played = {}
     team_expected_goals_conceded = {}
     try:
         rpc_fixtures = db.client.rpc("get_team_goals_from_fixtures", {"p_gw_filter": gw_filter, "p_location": location})
@@ -220,6 +222,7 @@ def get_stats(
                 if tid is not None:
                     team_goals[int(tid)] = int(item.get("goals") or 0)
                     team_goals_conceded[int(tid)] = int(item.get("goals_conceded") or 0)
+                    team_games_played[int(tid)] = int(item.get("games_played") or 0)
     except Exception:
         pass
     try:
@@ -239,6 +242,7 @@ def get_stats(
         "page_size": page_size,
         "team_goals": team_goals,
         "team_goals_conceded": team_goals_conceded,
+        "team_games_played": team_games_played,
         "team_expected_goals_conceded": team_expected_goals_conceded,
         "top_10_player_ids_by_field": top_10_player_ids_by_field,
         "top_20_player_ids_by_field": top_20_player_ids_by_field,

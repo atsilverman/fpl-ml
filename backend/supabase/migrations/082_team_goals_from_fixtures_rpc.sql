@@ -35,40 +35,28 @@ BEGIN
       AND f.gameweek >= v_min_gw
       AND f.gameweek <= v_current_gw
   ),
-  home_rows AS (
-    SELECT
-      gameweek,
-      home_team_id AS team_id,
-      home_score AS goals,
-      away_score AS goals_conceded,
-      true AS was_home
-    FROM finished_fixtures
-  ),
-  away_rows AS (
-    SELECT
-      gameweek,
-      away_team_id AS team_id,
-      away_score AS goals,
-      home_score AS goals_conceded,
-      false AS was_home
-    FROM finished_fixtures
-  ),
   filtered AS (
-    SELECT team_id, goals, goals_conceded
-    FROM home_rows
-    WHERE (p_location = 'all') OR (p_location = 'home' AND was_home)
+    SELECT hr.t_id, hr.g, hr.gc
+    FROM (SELECT home_team_id AS t_id, home_score AS g, away_score AS gc, true AS was_home FROM finished_fixtures) hr
+    WHERE (p_location = 'all') OR (p_location = 'home' AND hr.was_home)
     UNION ALL
-    SELECT team_id, goals, goals_conceded
-    FROM away_rows
-    WHERE (p_location = 'all') OR (p_location = 'away' AND NOT was_home)
+    SELECT ar.t_id, ar.g, ar.gc
+    FROM (SELECT away_team_id AS t_id, away_score AS g, home_score AS gc, false AS was_home FROM finished_fixtures) ar
+    WHERE (p_location = 'all') OR (p_location = 'away' AND NOT ar.was_home)
+  ),
+  agg AS (
+    SELECT
+      f.t_id,
+      COALESCE(SUM(f.g), 0)::INT AS sum_g,
+      COALESCE(SUM(f.gc), 0)::INT AS sum_gc
+    FROM filtered f
+    GROUP BY f.t_id
   )
-  SELECT
-    filtered.team_id::INT,
-    COALESCE(SUM(filtered.goals), 0)::INT AS goals,
-    COALESCE(SUM(filtered.goals_conceded), 0)::INT AS goals_conceded
-  FROM filtered
-  GROUP BY filtered.team_id;
+  SELECT agg.t_id::INT, agg.sum_g, agg.sum_gc
+  FROM agg;
 END;
 $$;
 
 COMMENT ON FUNCTION get_team_goals_from_fixtures(TEXT, TEXT) IS 'Team G and GC from fixtures table only (source of truth). gw_filter: all|last6|last12, location: all|home|away.';
+
+GRANT EXECUTE ON FUNCTION get_team_goals_from_fixtures(TEXT, TEXT) TO anon, authenticated;

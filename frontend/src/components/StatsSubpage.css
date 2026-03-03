@@ -561,6 +561,20 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   border-color: var(--accent-yellow, #eab308);
 }
 
+.research-stats-compare-legend-swatch--top6 {
+  background: color-mix(in srgb, var(--accent-green, #10b981) 38%, transparent);
+  border-color: var(--accent-green, #10b981);
+}
+
+.research-stats-compare-legend-swatch--bottom6 {
+  background: color-mix(in srgb, var(--accent-red, #ef4444) 38%, transparent);
+  border-color: var(--accent-red, #ef4444);
+}
+
+.research-stats-topbottom6-legend {
+  margin-bottom: 4px;
+}
+
 .research-stats-compare-legend-swatch--blue-yellow .research-stats-compare-legend-x {
   font-size: 10px;
   font-weight: 800;

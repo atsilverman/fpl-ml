@@ -9,7 +9,7 @@ import { useGameweekMaxBps } from '../hooks/useGameweekMaxBps'
 import PlayerDetailModal from './PlayerDetailModal'
 import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
-import { formatNumber } from '../utils/formatNumbers'
+import { formatNumberWithCommas } from '../utils/formatNumbers'
 import BpsLeadersChart from './BpsLeadersChart'
 import { CardStatLabel } from './CardStatLabel'
 import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp } from 'lucide-react'
@@ -180,6 +180,14 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     const showDefconBadge = isDefColumn && !isZero && isDefconAchieved
     const showSavesBadge = isSavesColumn && isGk && !isZero && value >= 3
     const showBadge = showDefconBadge || showSavesBadge || isProvisionalBonus
+    /** True when this stat contributes to FPL points (same as GW points bento); used for hollow orange/yellow pill. */
+    const isImpactPill = (() => {
+      if (key === 'goals' || key === 'assists' || key === 'clean_sheets') return numVal >= 1
+      if (key === 'saves') return isGk && numVal >= 3
+      if (key === 'defensive_contribution') return isDefconAchieved && numVal >= 1
+      if (key === 'bonus') return numVal >= 1
+      return false
+    })()
     /* Green pill only for stats that are "top 10 in gameweek"; never for Bonus (B) column – that is derived from BPS. */
     const isTop10 = key !== 'bonus' && STAT_KEYS_TOP10_FILL.includes(key) && isTop10ForStat(player, key)
     const displayVal = EXPECTED_STAT_KEYS.includes(key) ? formatExpected(value) : value
@@ -199,11 +207,14 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
     else if (showDefconBadge) title = 'Defcon achieved (DEF ≥ position threshold)'
     else if (showSavesBadge) title = 'Saves achieved (3+ saves = 1 pt per 3)'
     else if (isTop10) title = 'Top 10 in GW for this stat'
+    else if (isImpactPill) title = 'Contributes to points total'
     else title = undefined
     return (
-      <td key={key} className={`matchup-detail-td matchup-detail-td-stat${isProvisionalBonus ? ' matchup-detail-cell-provisional' : ''}${isTop10 ? ' matchup-detail-td-stat--top10' : ''}`}>
+      <td key={key} className={`matchup-detail-td matchup-detail-td-stat${isProvisionalBonus ? ' matchup-detail-cell-provisional' : ''}${isImpactPill ? ' matchup-detail-cell--impact-pill' : ''}${isTop10 ? ' matchup-detail-td-stat--top10' : ''}`}>
         {showBadge || isProvisionalBonus ? (
           <span className={badgeClass} title={title}>{displayVal}</span>
+        ) : isImpactPill ? (
+          <span className="matchup-detail-impact-pill-wrap" title={title}>{displayVal}</span>
         ) : isTop10 ? (
           <span className="matchup-detail-stat-top10-pill" title={title}>{displayVal}</span>
         ) : (
@@ -302,7 +313,7 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                     title={ptsIncludesProvisional ? 'Includes provisional bonus (from BPS rank)' : isTop10Pts(p) ? 'Top 10 points in GW' : undefined}
                   >
                     <span className="matchup-detail-pts-badge">
-                      {formatNumber(p.points)}
+                      {formatNumberWithCommas(p.points)}
                     </span>
                   </td>
                   <td className={`matchup-detail-td matchup-detail-td-mins ${(isDnp || (isLive && (p.minutes == null || Number(p.minutes) === 0))) ? 'matchup-detail-cell-muted' : ''}`}>
@@ -807,7 +818,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                               </span>
                             </div>
                           </div>
-                          <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumber(row.value)}</span>
+                          <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumberWithCommas(row.value)}</span>
                         </div>
                       ))}
                     </div>

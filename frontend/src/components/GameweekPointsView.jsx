@@ -1,7 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import './GameweekPointsView.css'
-import { formatNumber } from '../utils/formatNumbers'
+import { formatNumberWithCommas } from '../utils/formatNumbers'
 import { ArrowDownRight, ArrowUpRight, HelpCircle, ArrowDown, ArrowUp } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import { useGameweekDebugData } from '../hooks/useGameweekDebugData'
@@ -424,7 +424,7 @@ export default function GameweekPointsView({ data = [], loading = false, topScor
             ) : (
               <AnimatedValue value={ptsDisplay}>
                 <span className={`gameweek-points-player-points-badge${ptsDisplay === 0 ? ' gameweek-points-player-points-badge--zero' : ''}`}>
-                  {formatNumber(ptsDisplay)}
+                  {formatNumberWithCommas(ptsDisplay)}
                 </span>
               </AnimatedValue>
             )}

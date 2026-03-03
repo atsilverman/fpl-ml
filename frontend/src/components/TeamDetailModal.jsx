@@ -32,19 +32,25 @@ export default function TeamDetailModal({
   teamId,
   teamName,
   gameweek,
-  pointsRank = null,
   onClose,
 }) {
   const [selectedStat, setSelectedStat] = useState('points')
-  const [chartRangeFilter, setChartRangeFilter] = useState('last6')
+  const [chartRangeFilter, setChartRangeFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'gw20plus'
+    return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'gw20plus'
+  })
   const [showStatPopup, setShowStatPopup] = useState(false)
   const statPopupRef = useRef(null)
   const filterPopupLayerRef = useRef(null)
 
   const {
     team,
-    seasonPoints,
     gameweekPoints = [],
+    tablePosition,
+    rankGoals,
+    rankXg,
+    rankGoalsConceded,
+    rankXgc,
     loading: teamDetailLoading,
   } = useTeamDetail(teamId, gameweek)
 
@@ -142,12 +148,24 @@ export default function TeamDetailModal({
             ) : (
               <div className="player-detail-details-grid">
                 <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Rank (Pts)</span>
-                  <span className="player-detail-detail-value">{pointsRank != null ? pointsRank : '—'}</span>
+                  <span className="player-detail-detail-label">Table (PL)</span>
+                  <span className="player-detail-detail-value">{tablePosition != null ? tablePosition : '—'}</span>
                 </div>
                 <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Total Pts</span>
-                  <span className="player-detail-detail-value">{seasonPoints ?? '—'}</span>
+                  <span className="player-detail-detail-label">Goals rank</span>
+                  <span className="player-detail-detail-value">{rankGoals != null ? `${rankGoals}/20` : '—'}</span>
+                </div>
+                <div className="player-detail-detail-row">
+                  <span className="player-detail-detail-label">xG rank</span>
+                  <span className="player-detail-detail-value">{rankXg != null ? `${rankXg}/20` : '—'}</span>
+                </div>
+                <div className="player-detail-detail-row">
+                  <span className="player-detail-detail-label">GC rank</span>
+                  <span className="player-detail-detail-value">{rankGoalsConceded != null ? `${rankGoalsConceded}/20` : '—'}</span>
+                </div>
+                <div className="player-detail-detail-row">
+                  <span className="player-detail-detail-label">xGC rank</span>
+                  <span className="player-detail-detail-value">{rankXgc != null ? `${rankXgc}/20` : '—'}</span>
                 </div>
               </div>
             )}
@@ -170,7 +188,7 @@ export default function TeamDetailModal({
                   aria-haspopup="dialog"
                   title="Filters"
                 >
-                  <Filter size={14} strokeWidth={2} aria-hidden />
+                  <Filter size={11} strokeWidth={1.5} aria-hidden />
                 </button>
               </div>
             </div>

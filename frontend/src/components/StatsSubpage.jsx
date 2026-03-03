@@ -5,6 +5,7 @@ import { CardStatLabel } from './CardStatLabel'
 import html2canvas from 'html2canvas'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import PlayerDetailModal from './PlayerDetailModal'
@@ -104,14 +105,25 @@ function SortTriangle({ direction }) {
   )
 }
 
-function formatStatValue(value, field, displayMode, minutes, costTenths, showPerM) {
+function formatStatValue(value, field, displayMode, minutes, costTenths, showPerM, gamesPlayed) {
   if (field === 'selected_by_percent') {
     const v = value != null ? Number(value) : NaN
     return { main: !Number.isNaN(v) ? v.toFixed(1) : '—', sub: null }
   }
   const num = Number(value)
   const isDecimal = ['expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded'].includes(field)
-  const displayRaw = isDecimal ? (num === 0 ? '0' : num.toFixed(1)) : String(Math.round(num))
+  const displayRaw = isDecimal ? (num === 0 ? '0' : num.toFixed(1)) : Math.round(num).toLocaleString('en-GB')
+
+  if (displayMode === 'perMatch' && gamesPlayed != null && gamesPlayed > 0) {
+    const perMatch = num / gamesPlayed
+    const perMatchStr = isDecimal ? (perMatch === 0 ? '0' : perMatch.toFixed(1)) : perMatch.toFixed(1)
+    if (showPerM && costTenths != null && costTenths > 0) {
+      const perM = (num * 10) / costTenths
+      const perMStr = perM.toFixed(1)
+      return { main: perMatchStr, sub: `£${perMStr}/M` }
+    }
+    return { main: perMatchStr, sub: null }
+  }
 
   if (displayMode === 'per90' && minutes != null && minutes > 0) {
     const per90 = (num * 90) / minutes
@@ -135,13 +147,18 @@ function formatStatValue(value, field, displayMode, minutes, costTenths, showPer
 export default function StatsSubpage() {
   const { gameweek } = useGameweekData()
   const { statsMinMinutesPercent } = useBentoOrder()
-  const [gwFilter, setGwFilter] = useState('all')
+  const isMobile = useIsMobile()
+  const defaultGwFilter = isMobile ? 'last6' : 'all'
+  const [gwFilter, setGwFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'all'
+    return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'all'
+  })
   const [locationFilter, setLocationFilter] = useState('all')
   const [statCategory, setStatCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showFilters, setShowFilters] = useState(false)
   const [teamView, setTeamView] = useState(false)
-  /** Single selection: 'total' | 'per90' | 'perM' (Denominator section). Total is default. */
+  /** Single selection: 'total' | 'per90' | 'perM' | 'perMatch' (Denominator section). Total is default. */
   const [denominatorMode, setDenominatorMode] = useState('total')
   /** 6 | 12 | null - which top-N highlight is on (Display section; only one at a time) */
   const [topHighlightMode, setTopHighlightMode] = useState(null)
@@ -149,7 +166,7 @@ export default function StatsSubpage() {
   const [topFillMode, setTopFillMode] = useState(10)
   /** null | 'topBottom6' - team view Display: None or Top/Bottom 6 green/red highlight. Default on for team mode. */
   const [teamDisplayMode, setTeamDisplayMode] = useState('topBottom6')
-  const displayMode = denominatorMode === 'per90' ? 'per90' : 'total'
+  const displayMode = denominatorMode === 'per90' ? 'per90' : denominatorMode === 'perMatch' ? 'perMatch' : 'total'
   const showPerM = denominatorMode === 'perM'
   const [positionFilter, setPositionFilter] = useState('all')
   const [ownershipFilter, setOwnershipFilter] = useState('all')
@@ -167,7 +184,6 @@ export default function StatsSubpage() {
   const [breakdownForPlayer, setBreakdownForPlayer] = useState(null)
   const [selectedTeamId, setSelectedTeamId] = useState(null)
   const [selectedTeamName, setSelectedTeamName] = useState('')
-  const [selectedTeamPointsRank, setSelectedTeamPointsRank] = useState(null)
   /** When true, show modal with transposed compare table (vertical stat-by-stat view) */
   const [showCompareDetailsModal, setShowCompareDetailsModal] = useState(false)
   const compareDetailsModalRef = useRef(null)
@@ -236,7 +252,7 @@ export default function StatsSubpage() {
     })
   }, [])
 
-  const { players, teamGoals, teamGoalsConceded, teamExpectedGoalsConceded, totalCount, pagination, top10PlayerIdsByField, top20PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
+  const { players, teamGoals, teamGoalsConceded, teamGamesPlayed, teamExpectedGoalsConceded, totalCount, pagination, top10PlayerIdsByField, top20PlayerIdsByField, loading } = useAllPlayersGameweekStats(gwFilter, locationFilter, {
     page: statsPage,
     sortBy: mainSort.column,
     sortDir: mainSort.dir,
@@ -340,10 +356,11 @@ export default function StatsSubpage() {
         ...t,
         goals_scored: tid != null && teamGoals[tid] != null ? teamGoals[tid] : (t.goals_scored ?? 0),
         goals_conceded: tid != null && teamGoalsConceded[tid] != null ? teamGoalsConceded[tid] : (t.goals_conceded ?? 0),
-        expected_goals_conceded: tid != null && teamExpectedGoalsConceded[tid] != null ? teamExpectedGoalsConceded[tid] : (t.expected_goals_conceded ?? 0)
+        expected_goals_conceded: tid != null && teamExpectedGoalsConceded[tid] != null ? teamExpectedGoalsConceded[tid] : (t.expected_goals_conceded ?? 0),
+        games_played: tid != null && teamGamesPlayed[tid] != null ? teamGamesPlayed[tid] : 0
       }
     })
-  }, [playersAboveMinMinutes, teamGoals, teamGoalsConceded, teamExpectedGoalsConceded])
+  }, [playersAboveMinMinutes, teamGoals, teamGoalsConceded, teamExpectedGoalsConceded, teamGamesPlayed])
 
   const filteredTeams = useMemo(() => {
     if (!teamStats.length) return []
@@ -401,7 +418,10 @@ export default function StatsSubpage() {
   /** Rank per stat field over ALL teams (before search). Used for Top/Bottom 6 highlight only. */
   const rankByFieldTeamsAll = useMemo(() => {
     const out = {}
-    const key = (t) => t.team_id ?? t.team_short_name
+    const key = (t) => {
+      const k = t.team_id ?? t.team_short_name
+      return k != null ? String(k) : null
+    }
     TEAM_VIEW_RANK_FIELDS.forEach((field) => {
       const lowerBetter = ['expected_goals_conceded', 'goals_conceded', 'yellow_cards', 'red_cards'].includes(field)
       const sorted = [...teamStats].sort((a, b) => {
@@ -410,7 +430,10 @@ export default function StatsSubpage() {
         return lowerBetter ? av - bv : bv - av
       })
       const rankMap = {}
-      sorted.forEach((t, i) => { rankMap[key(t)] = i + 1 })
+      sorted.forEach((t, i) => {
+        const k = key(t)
+        if (k != null) rankMap[k] = i + 1
+      })
       out[field] = rankMap
     })
     return out
@@ -509,6 +532,7 @@ export default function StatsSubpage() {
   }, [])
 
   const getTeamKey = useCallback((t) => t.team_id ?? t.team_short_name, [])
+  const normalizeTeamKey = useCallback((k) => (k != null ? String(k) : null), [])
   const compareSelectedSet = useMemo(() => new Set(compareSelectedIds), [compareSelectedIds])
   const compareSelectedTeamKeySet = useMemo(() => new Set(compareSelectedTeamKeys), [compareSelectedTeamKeys])
   const compareSelectedPlayers = useMemo(() => {
@@ -706,6 +730,23 @@ export default function StatsSubpage() {
     }
   }, [teamView])
 
+  /** Default Top/Bottom 6 on when switching to team view if display is None */
+  useEffect(() => {
+    if (teamView && teamDisplayMode == null) {
+      setTeamDisplayMode('topBottom6')
+    }
+  }, [teamView, teamDisplayMode])
+
+  /** Per match denominator is team-mode only. Reset when switching views. */
+  useEffect(() => {
+    if (teamView && (denominatorMode === 'per90' || denominatorMode === 'perM')) {
+      setDenominatorMode('total')
+    }
+    if (!teamView && denominatorMode === 'perMatch') {
+      setDenominatorMode('total')
+    }
+  }, [teamView, denominatorMode])
+
   useEffect(() => {
     const hasCompare = teamView ? compareSelectedTeamKeys.length > 0 : compareSelectedPlayers.length > 0
     if (!hasCompare) return
@@ -721,7 +762,7 @@ export default function StatsSubpage() {
   const filtersHaveChanged = useMemo(() => {
     return (
       teamView ||
-      gwFilter !== 'all' ||
+      gwFilter !== defaultGwFilter ||
       locationFilter !== 'all' ||
       positionFilter !== 'all' ||
       ownershipFilter !== 'all' ||
@@ -731,11 +772,11 @@ export default function StatsSubpage() {
       topHighlightMode != null ||
       (teamView && teamDisplayMode != null)
     )
-  }, [teamView, gwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, topFillMode, topHighlightMode, teamDisplayMode])
+  }, [teamView, gwFilter, defaultGwFilter, locationFilter, positionFilter, ownershipFilter, statCategory, denominatorMode, topFillMode, topHighlightMode, teamDisplayMode])
 
   const handleResetFilters = useCallback(() => {
     setTeamView(false)
-    setGwFilter('all')
+    setGwFilter(defaultGwFilter)
     setLocationFilter('all')
     setPositionFilter('all')
     setOwnershipFilter('all')
@@ -744,7 +785,7 @@ export default function StatsSubpage() {
     setTopFillMode(10)
     setTopHighlightMode(null)
     setTeamDisplayMode(null)
-  }, [])
+  }, [defaultGwFilter])
 
   return (
     <div className="research-stats-subpage research-stats-page league-standings-page">
@@ -995,30 +1036,53 @@ export default function StatsSubpage() {
                     </div>
                   </div>
                   {teamView && (
-                    <div className="stats-filter-section">
-                      <div className="stats-filter-section-title">Display</div>
-                      <div className="stats-filter-buttons">
-                        <button
-                          type="button"
-                          className={`stats-filter-option-btn ${teamDisplayMode === null ? 'stats-filter-option-btn--active' : ''}`}
-                          onClick={() => setTeamDisplayMode(null)}
-                          aria-pressed={teamDisplayMode === null}
-                          title="No highlight"
-                        >
-                          None
-                        </button>
-                        <button
-                          type="button"
-                          className={`stats-filter-option-btn ${teamDisplayMode === 'topBottom6' ? 'stats-filter-option-btn--active' : ''}`}
-                          onClick={() => setTeamDisplayMode('topBottom6')}
-                          aria-pressed={teamDisplayMode === 'topBottom6'}
-                          title="Highlight top 6 green and bottom 6 red per stat"
-                        >
-                          <ArrowUpFromDot size={14} strokeWidth={2} className="stats-filter-option-icon" aria-hidden />
-                          Top/Bottom 6
-                        </button>
+                    <>
+                      <div className="stats-filter-section">
+                        <div className="stats-filter-section-title">Display</div>
+                        <div className="stats-filter-buttons">
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${teamDisplayMode === null ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setTeamDisplayMode(null)}
+                            aria-pressed={teamDisplayMode === null}
+                            title="No highlight"
+                          >
+                            None
+                          </button>
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${teamDisplayMode === 'topBottom6' ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setTeamDisplayMode('topBottom6')}
+                            aria-pressed={teamDisplayMode === 'topBottom6'}
+                            title="Highlight top 6 green and bottom 6 red per stat"
+                          >
+                            <ArrowUpFromDot size={14} strokeWidth={2} className="stats-filter-option-icon" aria-hidden />
+                            Top/Bottom 6
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                      <div className="stats-filter-section">
+                        <div className="stats-filter-section-title">Denominator</div>
+                        <div className="stats-filter-buttons">
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${denominatorMode === 'total' ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setDenominatorMode('total')}
+                            aria-pressed={denominatorMode === 'total'}
+                          >
+                            Total
+                          </button>
+                          <button
+                            type="button"
+                            className={`stats-filter-option-btn ${denominatorMode === 'perMatch' ? 'stats-filter-option-btn--active' : ''}`}
+                            onClick={() => setDenominatorMode('perMatch')}
+                            aria-pressed={denominatorMode === 'perMatch'}
+                          >
+                            Per match
+                          </button>
+                        </div>
+                      </div>
+                    </>
                   )}
                   {!teamView && (
                     <>
@@ -1188,7 +1252,7 @@ export default function StatsSubpage() {
                             </td>
                             {visibleColumns.map(({ key, label, field }) => {
                               const value = t[field] ?? 0
-                              const { main, sub } = formatStatValue(value, field, 'total', t.minutes, null, false)
+                              const { main, sub } = formatStatValue(value, field, displayMode, t.minutes, null, false, t.games_played)
                               const isZero = value == null || Number(value) === 0
                               const fieldRank = rankByFieldTeams[field]?.[teamKey] ?? null
                               const N = null /* no top styling in team mode */
@@ -1196,8 +1260,8 @@ export default function StatsSubpage() {
                               const isDemoted = N != null && fieldRank != null && fieldRank > N
                               const demotedOpacity = isDemoted ? Math.max(0.35, 0.6 - (fieldRank - N) * 0.02) : null
                               const totalTeams = teamStats.length
-                              const fieldRankAll = rankByFieldTeamsAll[field]?.[teamKey] ?? null
-                              const isTopBottom6 = teamDisplayMode === 'topBottom6' && fieldRankAll != null && totalTeams > 0 && compareSelectedTeams.length < 2
+                              const fieldRankAll = rankByFieldTeamsAll[field]?.[normalizeTeamKey(teamKey)] ?? null
+                              const isTopBottom6 = teamDisplayMode === 'topBottom6' && fieldRankAll != null && totalTeams > 0
                               const isTop6 = isTopBottom6 && fieldRankAll <= 6
                               const isBottom6 = isTopBottom6 && totalTeams > 6 && fieldRankAll >= totalTeams - 5
                               const topStrength = isTop6 ? (7 - fieldRankAll) / 6 : null
@@ -1256,9 +1320,35 @@ export default function StatsSubpage() {
                         <span className="research-stats-compare-legend-swatch" aria-hidden />
                         <span className="research-stats-compare-legend-text">Stat leader</span>
                       </span>
+                      {teamDisplayMode === 'topBottom6' && (
+                        <>
+                          <span className="research-stats-compare-legend-item">
+                            <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--top6" aria-hidden />
+                            <span className="research-stats-compare-legend-text">Top 6</span>
+                          </span>
+                          <span className="research-stats-compare-legend-item">
+                            <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--bottom6" aria-hidden />
+                            <span className="research-stats-compare-legend-text">Bottom 6</span>
+                          </span>
+                        </>
+                      )}
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+            {teamView && teamDisplayMode === 'topBottom6' && mainTableTeams.length > 0 && (
+              <div className="research-stats-compare-legend-wrap research-stats-topbottom6-legend">
+                <span className="research-stats-compare-legend" aria-hidden>
+                  <span className="research-stats-compare-legend-item">
+                    <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--top6" aria-hidden />
+                    <span className="research-stats-compare-legend-text">Top 6 per stat</span>
+                  </span>
+                  <span className="research-stats-compare-legend-item">
+                    <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--bottom6" aria-hidden />
+                    <span className="research-stats-compare-legend-text">Bottom 6 per stat</span>
+                  </span>
+                </span>
               </div>
             )}
             <div
@@ -1318,7 +1408,6 @@ export default function StatsSubpage() {
                   ) : (
                     mainTableTeams.map((t, index) => {
                       const teamKey = getTeamKey(t)
-                      const pointsRank = rankByFieldTeams.points?.[teamKey] ?? sortedRankByTeamId[teamKey] ?? null
                       return (
                         <tr
                           key={`${teamKey}-${mainSort.column}-${mainSort.dir}`}
@@ -1329,7 +1418,6 @@ export default function StatsSubpage() {
                             else {
                               setSelectedTeamId(t.team_id ?? teamKey)
                               setSelectedTeamName(t.team_name || t.team_short_name || '')
-                              setSelectedTeamPointsRank(pointsRank)
                             }
                           }}
                           role="button"
@@ -1341,7 +1429,6 @@ export default function StatsSubpage() {
                               else {
                                 setSelectedTeamId(t.team_id ?? teamKey)
                                 setSelectedTeamName(t.team_name || t.team_short_name || '')
-                                setSelectedTeamPointsRank(pointsRank)
                               }
                             }
                           }}
@@ -1367,7 +1454,7 @@ export default function StatsSubpage() {
                         </td>
                         {visibleColumns.map(({ key, label, field }) => {
                           const value = t[field] ?? 0
-                              const { main, sub } = formatStatValue(value, field, 'total', t.minutes, null, false)
+                              const { main, sub } = formatStatValue(value, field, displayMode, t.minutes, null, false, t.games_played)
                               const isZero = value == null || Number(value) === 0
                               const fieldRank = rankByFieldTeams[field]?.[teamKey] ?? null
                               const N = null /* no top styling in team mode */
@@ -1377,8 +1464,8 @@ export default function StatsSubpage() {
                             ? Math.max(0.35, 0.6 - (fieldRank - N) * 0.02)
                             : null
                           const totalTeams = teamStats.length
-                          const fieldRankAll = rankByFieldTeamsAll[field]?.[teamKey] ?? null
-                          const isTopBottom6 = teamDisplayMode === 'topBottom6' && fieldRankAll != null && totalTeams > 0 && compareSelectedTeams.length < 2
+                          const fieldRankAll = rankByFieldTeamsAll[field]?.[normalizeTeamKey(teamKey)] ?? null
+                          const isTopBottom6 = teamDisplayMode === 'topBottom6' && fieldRankAll != null && totalTeams > 0
                           const isTop6 = isTopBottom6 && fieldRankAll <= 6
                           const isBottom6 = isTopBottom6 && totalTeams > 6 && fieldRankAll >= totalTeams - 5
                           const topStrength = isTop6 ? (7 - fieldRankAll) / 6 : null
@@ -1533,7 +1620,7 @@ export default function StatsSubpage() {
                             </td>
                             {visibleColumns.map(({ key, label, field }) => {
                               const value = p[field] ?? 0
-                              const { main, sub } = formatStatValue(value, field, displayMode, p.minutes, p.cost_tenths, showPerM)
+                              const { main, sub } = formatStatValue(value, field, displayMode, p.minutes, p.cost_tenths, showPerM, p.games_played)
                               const isZero = value == null || Number(value) === 0
                               const fieldRank = rankByFieldAllPlayers[field]?.[p.player_id] ?? null
                               const N = topHighlightMode
@@ -1759,7 +1846,7 @@ export default function StatsSubpage() {
                         </td>
                         {visibleColumns.map(({ key, label, field }) => {
                           const value = p[field] ?? 0
-                          const { main, sub } = formatStatValue(value, field, displayMode, p.minutes, p.cost_tenths, showPerM)
+                          const { main, sub } = formatStatValue(value, field, displayMode, p.minutes, p.cost_tenths, showPerM, p.games_played)
                           const isZero = value == null || Number(value) === 0
                           const rank = rankByFieldAllPlayers[field]?.[p.player_id] ?? null
                           const N = topHighlightMode
@@ -1978,8 +2065,8 @@ export default function StatsSubpage() {
                                 const entityKey = teamView ? getTeamKey(entity) : entity.player_id
                                 const value = entity[field] ?? 0
                                 const { main, sub } = teamView
-                                  ? formatStatValue(value, field, 'total', entity.minutes, null, false)
-                                  : formatStatValue(value, field, displayMode, entity.minutes, entity.cost_tenths, showPerM)
+                                  ? formatStatValue(value, field, displayMode, entity.minutes, null, false, entity.games_played)
+                                  : formatStatValue(value, field, displayMode, entity.minutes, entity.cost_tenths, showPerM, entity.games_played)
                                 const isBest = entityKey === bestKey && entities.length > 1
                                 return (
                                   <td key={entityKey} className="research-stats-compare-details-td-value">
@@ -2034,11 +2121,9 @@ export default function StatsSubpage() {
           teamId={selectedTeamId}
           teamName={selectedTeamName}
           gameweek={gameweek}
-          pointsRank={selectedTeamPointsRank}
           onClose={() => {
             setSelectedTeamId(null)
             setSelectedTeamName('')
-            setSelectedTeamPointsRank(null)
           }}
         />,
         document.body

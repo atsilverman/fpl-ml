@@ -105,8 +105,8 @@ export function formatStatValue(key, value, options = {}) {
 
   if (key === 'minutes') {
     if (perMillion) return '—'
-    if (per90) return String(Math.round(num))
-    return String(Math.round(num))
+    const rounded = Math.round(num)
+    return per90 ? String(rounded) : rounded.toLocaleString('en-GB')
   }
   if (perMillion && priceTenths != null && priceTenths > 0) {
     const priceMillions = priceTenths / 10
@@ -121,7 +121,7 @@ export function formatStatValue(key, value, options = {}) {
   if (DECIMAL_STAT_KEYS.includes(key)) {
     return num === 0 ? '0' : num.toFixed(2)
   }
-  return String(Math.round(num))
+  return Math.round(num).toLocaleString('en-GB')
 }
 
 /**

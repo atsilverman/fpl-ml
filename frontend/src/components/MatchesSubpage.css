@@ -394,7 +394,7 @@ html[data-theme="dark"] .gw-top-points-pill {
     gap: 6px;
   }
   .matchup-card-headline {
-    gap: 8px 24px;
+    gap: 8px 12px;
   }
   .matchup-card-badge {
     width: 26px;
@@ -613,7 +613,7 @@ html[data-theme="dark"] .gw-top-points-pill {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 8px 40px;
+  gap: 8px 16px;
   line-height: 1.25;
   width: 100%;
 }
@@ -621,7 +621,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-card-home {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
   justify-self: end;
   justify-content: flex-end;
@@ -630,7 +630,7 @@ html[data-theme="dark"] .gw-top-points-pill {
 .matchup-card-away {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
   flex-direction: row-reverse;
   justify-self: start;
@@ -1318,4 +1318,24 @@ html[data-theme="dark"] .matchup-detail-td-stat--top10 .matchup-detail-stat-top1
   font-weight: 500;
   font-size: 11px;
 }
+
+/* Hollow orange/yellow pill for stats that contribute to points (G, A, CS, Saves 3+, DEFCON, B) – like GW points bento */
+.matchup-detail-cell--impact-pill .matchup-detail-impact-pill-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 20px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--stat-pill-border, #E7AD10);
+  background: transparent;
+  box-sizing: border-box;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.matchup-detail-cell--impact-pill .matchup-detail-impact-pill-wrap {
+  --stat-pill-border: #E7AD10;
+}
+
 

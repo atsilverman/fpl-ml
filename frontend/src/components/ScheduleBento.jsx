@@ -107,6 +107,7 @@ export default function ScheduleBento({
   opponentStatsLoading = false,
   difficultyOverridesByDimension = null,
   useCustomDifficulty = false,
+  embedded = false,
 }) {
   const { scheduleMatrix, gameweeks, loading } = useScheduleData()
   const scrollRef = useRef(null)
@@ -114,9 +115,10 @@ export default function ScheduleBento({
   const showOpponentStats = opponentStatsByTeamId != null
   const overallOverrides = difficultyOverridesByDimension?.overall ?? null
 
+  const rootClass = `schedule-bento${embedded ? ' schedule-bento--embedded' : ' bento-card bento-card-animate'}${showOpponentStats ? ' schedule-bento--with-opponent-stats' : ''}`
   if (loading) {
     return (
-      <div className="schedule-bento bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Schedule</span>
         <div className="schedule-bento-loading">Loading schedule…</div>
       </div>
@@ -125,7 +127,7 @@ export default function ScheduleBento({
 
   if (teamId == null) {
     return (
-      <div className="schedule-bento bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Schedule</span>
         <div className="schedule-bento-empty">No team selected.</div>
       </div>
@@ -136,7 +138,7 @@ export default function ScheduleBento({
   const hasAny = gameweeks.some((gw) => (getOpponents(teamId, gw.id) ?? []).length > 0)
   if (!hasAny) {
     return (
-      <div className="schedule-bento bento-card bento-card-animate">
+      <div className={rootClass}>
         <span className="bento-card-label schedule-bento-label">Schedule</span>
         <div className="schedule-bento-empty">No upcoming gameweeks.</div>
       </div>
@@ -144,7 +146,7 @@ export default function ScheduleBento({
   }
 
   return (
-    <div className={`schedule-bento bento-card bento-card-animate${showOpponentStats ? ' schedule-bento--with-opponent-stats' : ''}`}>
+    <div className={rootClass}>
       <span className="bento-card-label schedule-bento-label">Schedule</span>
       <div ref={scrollRef} className="schedule-bento-scroll">
         <div className="schedule-bento-timeline">
