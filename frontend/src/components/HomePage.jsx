@@ -338,10 +338,11 @@ export default function HomePage() {
     }
     
     // Transfers card: 2x1 when there's something to show (transfers, wildcard/free hit, or list from picks diff); else 1x1 (no expand)
+    // During GW setup we clear the transfer list (data in flux), so don't count it for size
     if (id === 'transfers') {
       const hasTransfers = (managerData?.transfersMade ?? 0) > 0
       const usedWildcardOrFreeHit = managerData?.activeChip === 'wildcard' || managerData?.activeChip === 'freehit'
-      const hasTransferList = (transferImpacts?.length ?? 0) > 0
+      const hasTransferList = refreshState !== 'gw_setup' && (transferImpacts?.length ?? 0) > 0
       return (hasTransfers || usedWildcardOrFreeHit || hasTransferList) ? 'bento-card-large' : 'bento-card'
     }
 
@@ -631,7 +632,7 @@ export default function HomePage() {
               transfersSummary={card.isTransfers ? {
                 used: managerData?.transfersMade ?? 0,
                 available: managerData?.freeTransfersAvailable ?? 0,
-                transfers: transferImpacts ?? [],
+                transfers: refreshState === 'gw_setup' ? [] : (transferImpacts ?? []),
                 activeChip: managerData?.activeChip ?? null,
               } : null}
               leagueTopTransfersOut={cardId === 'transfers' ? leagueTopTransfersOut : undefined}

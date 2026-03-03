@@ -836,10 +836,6 @@
   .mini-league-page .league-standings-bento.league-standings-page::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-thumb-hover);
   }
-  .manager-detail-modal-overlay {
-    --bento-unit-height: 120px;
-    --bento-gap: 12px;
-  }
   .manager-detail-modal-body {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--border-color) 70%, transparent) transparent;
@@ -2296,6 +2292,10 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 
 /* Mobile: keep overlay and content between top header and bottom nav */
 @media (max-width: 768px) {
+  .manager-detail-modal-overlay {
+    --bento-unit-height: 120px;
+    --bento-gap: 12px;
+  }
   .player-detail-modal-overlay {
     top: var(--dashboard-header-height, 0);
     bottom: var(--dashboard-nav-height, 0);
@@ -2375,23 +2375,27 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 .player-detail-modal-body .player-detail-bento-collapsible--collapsed {
   min-height: 46px;
 }
-/* Expanded: match team bento min-height so player/team popups feel consistent */
+/* Expanded: match team bento min-height so player/team popups feel consistent; flex-shrink: 0 avoids Safari squashing */
 .player-detail-modal-body .player-detail-bento-collapsible--expanded {
   min-height: var(--bento-unit-height, 150px);
+  flex-shrink: 0;
 }
 /* Player details bento: fit to content (min-content prevents collapse, content visible) */
 .player-detail-modal-body .player-detail-bento-collapsible--bento-1x1.player-detail-bento-collapsible--expanded:first-of-type {
   min-height: min-content;
+  flex-shrink: 0;
 }
 /* Gameweek Points bento: fit to content (points-impact list varies by player) */
 .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--points-impact).player-detail-bento-collapsible--expanded {
   min-height: min-content;
+  flex-shrink: 0;
 }
 /* Schedule, Opponent stats, League ownership: fit to content */
 .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--schedule).player-detail-bento-collapsible--expanded,
 .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-bento-collapsible-body--opponent-stats).player-detail-bento-collapsible--expanded,
 .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper).player-detail-bento-collapsible--expanded {
   min-height: min-content;
+  flex-shrink: 0;
 }
 @media (hover: hover) {
   .player-detail-modal-body .player-detail-bento-collapsible:hover {
