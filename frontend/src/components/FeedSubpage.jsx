@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Filter, HelpCircle, X } from 'lucide-react'
+import { Filter, HelpCircle, X, Activity } from 'lucide-react'
 import { useFixtures } from '../hooks/useFixtures'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useRefreshState } from '../hooks/useRefreshState'
@@ -844,7 +844,10 @@ export default function FeedSubpage({ isActive = true }) {
         </>
       )}
       {sortedEvents.length === 0 ? (
-        <div className="feed-subpage-empty">No events yet. Events appear during live gameweeks.</div>
+        <div className="feed-subpage-empty feed-subpage-empty--no-events">
+          <Activity className="feed-subpage-empty__icon" size={32} strokeWidth={1.5} aria-hidden />
+          <p className="feed-subpage-empty__title">No events yet</p>
+        </div>
       ) : sortedFilteredEvents.length === 0 ? (
         <div className="feed-subpage-empty">
           {scopeFilter === 'owned' && ownedPlayerIdSet.size === 0 && (managerId != null && managerId !== '')

@@ -24,11 +24,42 @@
   box-sizing: border-box;
 }
 
-.feed-subpage-loading,
-.feed-subpage-empty {
+.feed-subpage-loading {
   color: var(--text-secondary);
   font-size: 0.875rem;
   padding: 16px 0;
+}
+
+.feed-subpage-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px 24px;
+  margin: 12px 0;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.feed-subpage-empty--no-events {
+  gap: 8px;
+  min-height: 96px;
+}
+
+.feed-subpage-empty__icon {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.feed-subpage-empty__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
 /* Feed list header uses shared .gameweek-list-header (GameweekPage.css); only Impact button styles here */
