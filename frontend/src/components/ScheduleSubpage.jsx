@@ -13,6 +13,7 @@ import { abbreviateTeamName } from '../utils/formatDisplay'
 import { MatchPlayerTable } from './MatchesSubpage'
 import PlayerDetailModal from './PlayerDetailModal'
 import PlayerBreakdownPopup from './PlayerBreakdownPopup'
+import TeamDetailModal from './TeamDetailModal'
 import ScheduleDifficultyCustomizer from './ScheduleDifficultyCustomizer'
 import './MatchesSubpage.css'
 import './StatsSubpage.css'
@@ -154,6 +155,8 @@ export default function ScheduleSubpage() {
   const [showBuySellInfo, setShowBuySellInfo] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
+  const [selectedTeamId, setSelectedTeamId] = useState(null)
+  const [selectedTeamName, setSelectedTeamName] = useState('')
   const [breakdownPlayer, setBreakdownPlayer] = useState(null)
   const scheduleCustomizerRef = useRef(null)
   const useCustomDifficulty = difficultySource === 'custom'
@@ -767,7 +770,24 @@ export default function ScheduleSubpage() {
                   className="schedule-row schedule-row-animate"
                   style={{ '--schedule-row-delay': `${rowIndex * 48}ms` }}
                 >
-                  <td className="schedule-cell schedule-cell-team schedule-cell-sticky">
+                  <td
+                    className="schedule-cell schedule-cell-team schedule-cell-sticky schedule-cell-clickable"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      setSelectedTeamId(teamId)
+                      setSelectedTeamName(teamName || short || '')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setSelectedTeamId(teamId)
+                        setSelectedTeamName(teamName || short || '')
+                      }
+                    }}
+                    aria-label={`View stats for ${teamName || short || 'Team'}`}
+                    title={`View stats for ${teamName || short || 'Team'}`}
+                  >
                     <span className="schedule-cell-opponent">
                       <span className="schedule-cell-badge-slot">
                         {short && short !== '?' ? (
@@ -940,6 +960,15 @@ export default function ScheduleSubpage() {
           leagueManagerCount={leagueManagerCount}
           leagueManagerIds={leagueManagerIds}
           onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
+        />,
+        document.body
+      )}
+      {selectedTeamId != null && createPortal(
+        <TeamDetailModal
+          teamId={selectedTeamId}
+          teamName={selectedTeamName}
+          gameweek={gameweek}
+          onClose={() => { setSelectedTeamId(null); setSelectedTeamName('') }}
         />,
         document.body
       )}

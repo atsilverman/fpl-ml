@@ -216,7 +216,7 @@ export default function PlayerDetailModal({
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
   const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
-  const { managerIdsStartingPlayer, managerIdsOwningPlayerBench, loading: ownershipLoading } = useLeaguePlayerOwnership(playerId, gameweek)
+  const { managerIdsStartingPlayer, managerIdsOwningPlayerBench, effectiveOwnershipSum, loading: ownershipLoading } = useLeaguePlayerOwnership(playerId, gameweek, leagueManagerIds)
   const managerIdsStartingPlayerSet = useMemo(
     () => new Set((managerIdsStartingPlayer ?? []).map((id) => Number(id))),
     [managerIdsStartingPlayer]
@@ -622,9 +622,9 @@ export default function PlayerDetailModal({
                   ) : (
                     <>
                       <div className="player-detail-league-ownership-fractions">
-                        <div className="player-detail-league-ownership-fraction player-detail-league-ownership-fraction--owned" title="Effective ownership: managers who own this player">
+                        <div className="player-detail-league-ownership-fraction player-detail-league-ownership-fraction--owned" title="Effective ownership: 1 per starter, 2 if captained, 3 if triple captained (excludes benched)">
                           <span className="player-detail-league-ownership-fraction-value">
-                            {!ownershipLoading ? managerIdsStartingPlayerSet.size + managerIdsOwningPlayerBenchSet.size : '—'}/{leagueStandings.length}
+                            {!ownershipLoading ? effectiveOwnershipSum : '—'}/{leagueStandings.length}
                           </span>
                           <span className="player-detail-league-ownership-fraction-label">Eff. Own</span>
                         </div>
