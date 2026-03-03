@@ -55,6 +55,20 @@ function getFixtureStatus(fixture, _dataChecked = false) {
   return 'scheduled'
 }
 
+/** Format kickoff in device local time for scheduled match status, e.g. "Sat 15:00". Returns null if invalid. */
+function formatKickoffLocal(isoString) {
+  if (!isoString) return null
+  try {
+    const d = new Date(isoString)
+    if (Number.isNaN(d.getTime())) return null
+    const day = d.toLocaleDateString(undefined, { weekday: 'short' })
+    const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
+    return `${day} ${time}`
+  } catch {
+    return null
+  }
+}
+
 /** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). Bonus (B) excluded – green pill is only for raw stats; BPS = top 10 BPS across all players in the gameweek. */
 const STAT_KEYS_TOP10_FILL = ['bps', 'defensive_contribution', 'expected_goals', 'expected_assists', 'expected_goal_involvements']
 
@@ -460,7 +474,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   const headlineRightTeam = showH2HScore ? (lastH2H.home_team_id === home_team_id ? awayTeam : homeTeam) : awayTeam
   const headlineLeftScore = showH2HScore ? (lastH2H.home_score ?? '—') : scoreHome
   const headlineRightScore = showH2HScore ? (lastH2H.away_score ?? '—') : scoreAway
-  const statusLabel = status === 'live' ? 'Live' : status === 'final' ? 'Final' : status === 'provisional' ? 'Finished' : 'Scheduled'
+  const statusLabel = status === 'live' ? 'Live' : status === 'final' ? 'Final' : status === 'provisional' ? 'Finished' : (formatKickoffLocal(kickoff_time) ?? 'Scheduled')
   const isScheduledWithH2H = status === 'scheduled' && isSecondHalf && lastH2H
   const expandLabelCollapsed = showBonusChart ? 'Show more' : (isScheduledWithH2H ? 'View Last H2H' : 'Show Details')
   const expandLabelExpanded = showBonusChart ? 'Show less' : (isScheduledWithH2H ? 'Hide Last H2H' : 'Hide details')
