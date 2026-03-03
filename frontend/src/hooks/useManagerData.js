@@ -87,8 +87,10 @@ export function useManagerData() {
       const overallRankChange = history?.overall_rank_change ?? 0
 
       logRefreshFetchDuration('Manager', performance.now() - start, state)
+      // Use previous GW rank when current GW has none (e.g. during deadline/batch before refresh)
+      const overallRank = history?.overall_rank ?? prevHistory?.overall_rank ?? null
       return {
-        overallRank: history?.overall_rank ?? null,
+        overallRank,
         overallRankChange,
         gameweekRank: history?.gameweek_rank ?? null,
         totalPoints: history?.total_points || 0,
