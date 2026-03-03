@@ -2284,6 +2284,52 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   padding-bottom: 0;
 }
 
+/* Player breakdown popup: 2-row header – player badge + name + position pill, then Gameweek Points subtitle */
+.player-breakdown-popup-header.stats-filter-overlay-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 12px 14px;
+}
+.player-breakdown-popup-header .player-breakdown-popup-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.player-breakdown-popup-header .player-breakdown-popup-player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.player-breakdown-popup-badge {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+.player-breakdown-popup-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-breakdown-popup-position-pill {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
 /* Player detail modal (same layout as manager modal, stacked above when open) */
 .player-detail-modal-overlay {
   /* Above dashboard header (z 100), bottom nav (z 99), and subpage sticky toolbars (e.g. Stats z 15) */
@@ -2747,9 +2793,11 @@ html[data-theme="dark"] .player-detail-points-impact-icon--yc {
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
+  min-width: 40px;
   padding: 2px 8px;
   border-radius: 999px;
   display: inline-block;
+  text-align: center;
 }
 .player-detail-points-impact-pts.positive {
   color: #166534;
@@ -2807,6 +2855,9 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   font-size: 15px;
   font-weight: 700;
   color: var(--text-primary);
+  min-width: 40px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 /* Chart bento header: label left, eye (stat filter) button right */

@@ -4,24 +4,42 @@ import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
 import { getPointsImpactEvents } from './PlayerDetailModal'
 import './MiniLeaguePage.css'
 
+const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
+
 /**
  * Popup: Gameweek points breakdown + "Show Player Details" button.
  * Use before opening full PlayerDetailModal (e.g. from home GW points table, manager detail table, Stats subpage).
  */
-export default function PlayerBreakdownPopup({ playerId, playerName, position, gameweek, onShowFullDetail, onClose }) {
+export default function PlayerBreakdownPopup({ playerId, playerName, position, gameweek, teamShortName, onShowFullDetail, onClose }) {
   const { stats: gwStats, loading } = usePlayerGameweekStats(playerId, gameweek)
   const events = useMemo(() => getPointsImpactEvents(gwStats, position), [gwStats, position])
   const total = gwStats != null ? (gwStats.effective_points ?? gwStats.points ?? 0) : events.reduce((s, e) => s + e.pts, 0)
+  const positionLabel = position != null ? (POSITION_LABELS[position] ?? '—') : null
 
   return (
-    <div className="stats-filter-overlay player-breakdown-popup-overlay" role="dialog" aria-modal="true" aria-label="Gameweek Points">
+    <div className="stats-filter-overlay player-breakdown-popup-overlay" role="dialog" aria-modal="true" aria-label={playerName ? `${playerName} – Gameweek Points` : 'Gameweek Points'}>
       <div className="stats-filter-overlay-backdrop" onClick={onClose} aria-hidden />
       <div className="stats-filter-overlay-panel stats-player-breakdown-panel">
-        <div className="stats-filter-overlay-header">
-          <span className="stats-filter-overlay-title">Gameweek Points</span>
-          <button type="button" className="stats-filter-overlay-close" onClick={onClose} aria-label="Close">
-            <X size={20} strokeWidth={2} />
-          </button>
+        <div className="stats-filter-overlay-header player-breakdown-popup-header">
+          <div className="player-breakdown-popup-header-top">
+            <div className="player-breakdown-popup-player-row">
+              {teamShortName && (
+                <img
+                  src={`/badges/${teamShortName}.svg`}
+                  alt=""
+                  className="player-breakdown-popup-badge"
+                  onError={(e) => { e.target.style.display = 'none' }}
+                />
+              )}
+              <span className="player-breakdown-popup-name">{playerName || 'Player'}</span>
+              {positionLabel && (
+                <span className="player-breakdown-popup-position-pill">{positionLabel}</span>
+              )}
+            </div>
+            <button type="button" className="stats-filter-overlay-close" onClick={onClose} aria-label="Close">
+              <X size={20} strokeWidth={2} />
+            </button>
+          </div>
         </div>
         <div className="stats-filter-overlay-body">
           {loading ? (

@@ -900,7 +900,7 @@ export default function ScheduleSubpage() {
                         top10ByStat={null}
                         hideHeader
                         useDashForDnp
-                        onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position }) }}
+                        onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position, teamShortName: player.teamShortName ?? null }) }}
                       />
                     </div>
                   )}
@@ -918,6 +918,7 @@ export default function ScheduleSubpage() {
           playerName={breakdownPlayer.playerName}
           position={breakdownPlayer.position}
           gameweek={gameweek}
+          teamShortName={breakdownPlayer.teamShortName}
           onShowFullDetail={() => {
             setSelectedPlayerId(breakdownPlayer.playerId)
             setSelectedPlayerName(breakdownPlayer.playerName ?? '')

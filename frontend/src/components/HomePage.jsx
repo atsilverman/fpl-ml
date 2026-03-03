@@ -663,7 +663,8 @@ export default function HomePage() {
                         setBreakdownPlayer({
                           playerId: Number(id),
                           playerName: player.player_name ?? '',
-                          position: player.position,
+                          position: player.player_position ?? player.position,
+                          teamShortName: player.player_team_short_name ?? null,
                         })
                       }
                     }
@@ -702,6 +703,7 @@ export default function HomePage() {
           playerName={breakdownPlayer.playerName}
           position={breakdownPlayer.position}
           gameweek={gameweek}
+          teamShortName={breakdownPlayer.teamShortName}
           onShowFullDetail={() => {
             setSelectedPlayerId(breakdownPlayer.playerId)
             setSelectedPlayerName(breakdownPlayer.playerName ?? '')

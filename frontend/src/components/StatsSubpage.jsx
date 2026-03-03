@@ -1790,6 +1790,7 @@ export default function StatsSubpage() {
                               playerId: p.player_id,
                               playerName: p.web_name ?? '',
                               position: p.position ?? 0,
+                              teamShortName: p.team_short_name ?? null,
                             })
                           }
                         }}
@@ -2098,6 +2099,7 @@ export default function StatsSubpage() {
           playerName={breakdownForPlayer.playerName}
           position={breakdownForPlayer.position}
           gameweek={gameweek}
+          teamShortName={breakdownForPlayer.teamShortName}
           onShowFullDetail={() => {
             setSelectedPlayerId(breakdownForPlayer.playerId)
             setSelectedPlayerName(breakdownForPlayer.playerName)

@@ -297,8 +297,8 @@ export function MatchPlayerTable({ players, teamShortName, teamName, top10ByStat
                     className={`matchup-detail-td matchup-detail-td-player${onPlayerClick ? ' matchup-detail-td-player--clickable' : ''}`}
                     role={onPlayerClick ? 'button' : undefined}
                     tabIndex={onPlayerClick ? 0 : undefined}
-                    onClick={onPlayerClick ? (e) => { e.stopPropagation(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position }) } : undefined}
-                    onKeyDown={onPlayerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position }) } } : undefined}
+                    onClick={onPlayerClick ? (e) => { e.stopPropagation(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position, teamShortName: p.player_team_short_name ?? null }) } : undefined}
+                    onKeyDown={onPlayerClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const id = p.player_id != null ? Number(p.player_id) : null; if (id != null) onPlayerClick({ playerId: id, playerName: p.player_name ?? '', position: p.position, teamShortName: p.player_team_short_name ?? null }) } } : undefined}
                     aria-label={onPlayerClick ? `View details for ${p.player_name || 'Player'}` : undefined}
                   >
                     <div className="matchup-detail-td-player-inner">
@@ -855,7 +855,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 lastH2HPlayerStatsLoading={lastH2HPlayerStatsLoading}
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
-                onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position }) }}
+                onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position, teamShortName: player.teamShortName ?? null }) }}
                 preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
@@ -871,6 +871,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
           playerName={breakdownPlayer.playerName}
           position={breakdownPlayer.position}
           gameweek={gameweek}
+          teamShortName={breakdownPlayer.teamShortName}
           onShowFullDetail={() => {
             setSelectedPlayerId(breakdownPlayer.playerId)
             setSelectedPlayerName(breakdownPlayer.playerName ?? '')
