@@ -314,3 +314,51 @@ html[data-theme="dark"] .schedule-bento-home-icon {
   color: var(--text-secondary);
   padding: 12px 0;
 }
+
+/* Embedded in player/team detail modal: scale down opponent pills to fit */
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-gw-column {
+  min-width: 52px;
+  max-width: 52px;
+}
+.player-detail-modal-body .schedule-bento--embedded.schedule-bento--with-opponent-stats .schedule-bento-gw-column {
+  width: 62px;
+  min-width: 62px;
+  max-width: 62px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-pill {
+  width: 52px;
+  height: 58px;
+  min-width: 52px;
+  min-height: 58px;
+  max-width: 52px;
+  max-height: 58px;
+}
+.player-detail-modal-body .schedule-bento--embedded.schedule-bento--with-opponent-stats .schedule-bento-opponent-pill {
+  width: 62px;
+  min-width: 62px;
+  max-width: 62px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-pill .schedule-bento-pill-badge-slot,
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-pill .schedule-bento-pill-badge,
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-pill .schedule-bento-pill-badge-placeholder {
+  width: 24px;
+  height: 24px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-pill .schedule-cell-abbr-display {
+  font-size: 9px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-side-home .schedule-cell-abbr-display,
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-side-away .schedule-cell-abbr-display {
+  font-size: 9px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-gw-heading {
+  font-size: 10px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-blank {
+  min-height: 58px;
+  font-size: 12px;
+}
+.player-detail-modal-body .schedule-bento--embedded .schedule-bento-opponent-stats {
+  padding: 3px 4px;
+  font-size: 8px;
+}

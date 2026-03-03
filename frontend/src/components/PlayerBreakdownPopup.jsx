@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { X, RectangleVertical } from 'lucide-react'
+import { X, RectangleVertical, Clock } from 'lucide-react'
 import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
+import { usePlayerFixtureForGameweek } from '../hooks/usePlayerFixtureForGameweek'
 import { getPointsImpactEvents } from './PlayerDetailModal'
 import './MiniLeaguePage.css'
 
@@ -12,9 +13,21 @@ const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
  */
 export default function PlayerBreakdownPopup({ playerId, playerName, position, gameweek, teamShortName, onShowFullDetail, onClose }) {
   const { stats: gwStats, loading } = usePlayerGameweekStats(playerId, gameweek)
+  const { fixture: playerFixture, loading: fixtureLoading } = usePlayerFixtureForGameweek(null, gameweek, playerId)
   const events = useMemo(() => getPointsImpactEvents(gwStats, position), [gwStats, position])
   const total = gwStats != null ? (gwStats.effective_points ?? gwStats.points ?? 0) : events.reduce((s, e) => s + e.pts, 0)
   const positionLabel = position != null ? (POSITION_LABELS[position] ?? '—') : null
+
+  const formatKickoff = (iso) => {
+    if (!iso) return null
+    try {
+      const d = new Date(iso)
+      if (Number.isNaN(d.getTime())) return null
+      const day = d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase().slice(0, 3)
+      const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: false })
+      return `${day} ${time}`
+    } catch { return null }
+  }
 
   return (
     <div className="stats-filter-overlay player-breakdown-popup-overlay" role="dialog" aria-modal="true" aria-label={playerName ? `${playerName} – Gameweek Points` : 'Gameweek Points'}>
@@ -43,9 +56,37 @@ export default function PlayerBreakdownPopup({ playerId, playerName, position, g
         </div>
         <div className="stats-filter-overlay-body">
           {loading ? (
-            <div className="player-detail-points-impact-empty">Loading…</div>
+            <div className="player-breakdown-popup-empty-wrap">
+              <div className="player-detail-points-impact-empty">Loading…</div>
+            </div>
           ) : events.length === 0 ? (
-            <div className="player-detail-points-impact-empty">No points this gameweek</div>
+            <div className="player-breakdown-popup-empty-wrap">
+            {(() => {
+              const matchStarted = playerFixture?.started === true || playerFixture?.started === 'true'
+              const matchFinished = playerFixture?.finished === true || playerFixture?.finished === 'true' || playerFixture?.finished_provisional === true || playerFixture?.finished_provisional === 'true'
+              const mins = gwStats?.minutes != null ? Number(gwStats.minutes) : null
+              const isDnp = matchFinished && mins === 0
+              const kickoffStr = !fixtureLoading && playerFixture && !matchStarted ? formatKickoff(playerFixture.kickoff_time) : null
+              if (kickoffStr) {
+                return (
+                  <div className="player-detail-points-impact-empty player-detail-points-impact-empty--kickoff" title={`Kickoff ${kickoffStr} (local)`}>
+                    <Clock className="player-detail-points-impact-kickoff-icon" size={14} strokeWidth={2} aria-hidden />
+                    <span className="player-detail-points-impact-kickoff-label">Kickoff</span>
+                    <span className="player-detail-points-impact-kickoff-time">{kickoffStr}</span>
+                  </div>
+                )
+              }
+              if (isDnp) {
+                return (
+                  <div className="player-detail-points-impact-empty player-detail-points-impact-empty--dnp" title="Did not play">
+                    <span className="player-detail-points-impact-dnp-badge" aria-hidden>!</span>
+                    <span className="player-detail-points-impact-dnp-text">Did not play</span>
+                  </div>
+                )
+              }
+              return <div className="player-detail-points-impact-empty">No points this gameweek</div>
+            })()}
+            </div>
           ) : (
             <>
               <div className="player-detail-points-impact-list">

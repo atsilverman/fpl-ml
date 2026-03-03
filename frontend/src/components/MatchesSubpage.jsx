@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useGameweekData } from '../hooks/useGameweekData'
+import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useFixturesWithTeams } from '../hooks/useFixturesWithTeams'
 import { useFixturePlayerStats } from '../hooks/useFixturePlayerStats'
 import { useGameweekTop10ByStat } from '../hooks/useGameweekTop10ByStat'
@@ -661,6 +662,9 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 
 export default function MatchesSubpage({ simulateStatuses = false, toggleBonus = false, showH2H = false, bonusAnimationKey = 0, animationKey = 0 } = {}) {
   const { gameweek, loading: gwLoading, dataChecked } = useGameweekData('current')
+  const { standings: leagueStandings } = useMiniLeagueStandings(gameweek ?? undefined)
+  const leagueManagerCount = leagueStandings?.length ?? 0
+  const leagueManagerIds = useMemo(() => (leagueStandings ?? []).map((s) => s.manager_id), [leagueStandings])
   const { fixtures, loading: fixturesLoading, playerStatsByFixture } = useFixturesWithTeams(gameweek, { simulateStatuses })
   const { lastH2HMap, isSecondHalf } = useLastH2H(gameweek)
   const { lastH2HPlayerStatsByFixture, loading: lastH2HPlayerStatsLoading } = useLastH2HPlayerStats(gameweek, showH2H && isSecondHalf)
@@ -900,6 +904,8 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
           gameweek={gameweek}
+          leagueManagerCount={leagueManagerCount}
+          leagueManagerIds={leagueManagerIds}
           onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
         />,
         document.body

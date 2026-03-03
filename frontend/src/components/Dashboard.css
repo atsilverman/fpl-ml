@@ -24,7 +24,6 @@
   left: 0;
   right: 0;
   z-index: 100;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07);
 }
 
 .header-content {

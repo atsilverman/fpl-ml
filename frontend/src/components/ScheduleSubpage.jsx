@@ -8,6 +8,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useFixturePlayerStats } from '../hooks/useFixturePlayerStats'
 import { useToast } from '../contexts/ToastContext'
 import { useGameweekData } from '../hooks/useGameweekData'
+import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { abbreviateTeamName } from '../utils/formatDisplay'
 import { MatchPlayerTable } from './MatchesSubpage'
 import PlayerDetailModal from './PlayerDetailModal'
@@ -127,6 +128,9 @@ function OpponentCell({ rowTeamId, opponent, lastH2H, showReverseScores, onMatch
 export default function ScheduleSubpage() {
   const { scheduleMatrix, gameweeks, loading, teamMap, nextGwId } = useScheduleData()
   const { gameweek } = useGameweekData('current')
+  const { standings: leagueStandings } = useMiniLeagueStandings(gameweek ?? undefined)
+  const leagueManagerCount = leagueStandings?.length ?? 0
+  const leagueManagerIds = useMemo(() => (leagueStandings ?? []).map((s) => s.manager_id), [leagueStandings])
   const { config, saveTeamStrengthOverrides, saveTeamAttackOverrides, saveTeamDefenceOverrides, resetTeamStrengthOverrides, resetTeamAttackOverrides, resetTeamDefenceOverrides } = useConfiguration()
   const { teamIds, getOpponents, getOpponent, slotsPerGw } = scheduleMatrix
   const mapForRow = teamMap || {}
@@ -933,6 +937,8 @@ export default function ScheduleSubpage() {
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
           gameweek={gameweek}
+          leagueManagerCount={leagueManagerCount}
+          leagueManagerIds={leagueManagerIds}
           onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
         />,
         document.body

@@ -5,6 +5,7 @@ import { CardStatLabel } from './CardStatLabel'
 import html2canvas from 'html2canvas'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
+import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
@@ -146,6 +147,9 @@ function formatStatValue(value, field, displayMode, minutes, costTenths, showPer
 
 export default function StatsSubpage() {
   const { gameweek } = useGameweekData()
+  const { standings: leagueStandings } = useMiniLeagueStandings(gameweek ?? undefined)
+  const leagueManagerCount = leagueStandings?.length ?? 0
+  const leagueManagerIds = useMemo(() => (leagueStandings ?? []).map((s) => s.manager_id), [leagueStandings])
   const { statsMinMinutesPercent } = useBentoOrder()
   const isMobile = useIsMobile()
   const defaultGwFilter = isMobile ? 'last6' : 'all'
@@ -1168,6 +1172,12 @@ export default function StatsSubpage() {
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
                   <div className="research-stats-compare-header-actions">
+                    {compareSelectedTeamKeys.length > 1 && (
+                      <span className="research-stats-compare-legend-item research-stats-compare-legend-item--header">
+                        <span className="research-stats-compare-legend-swatch" aria-hidden />
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
+                      </span>
+                    )}
                     <button
                       type="button"
                       className="research-stats-compare-details"
@@ -1313,42 +1323,6 @@ export default function StatsSubpage() {
                     </tbody>
                   </table>
                 </div>
-                {compareSelectedTeams.length > 1 && (
-                  <div className="research-stats-compare-legend-wrap">
-                    <span className="research-stats-compare-legend" aria-hidden>
-                      <span className="research-stats-compare-legend-item">
-                        <span className="research-stats-compare-legend-swatch" aria-hidden />
-                        <span className="research-stats-compare-legend-text">Stat leader</span>
-                      </span>
-                      {teamDisplayMode === 'topBottom6' && (
-                        <>
-                          <span className="research-stats-compare-legend-item">
-                            <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--top6" aria-hidden />
-                            <span className="research-stats-compare-legend-text">Top 6</span>
-                          </span>
-                          <span className="research-stats-compare-legend-item">
-                            <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--bottom6" aria-hidden />
-                            <span className="research-stats-compare-legend-text">Bottom 6</span>
-                          </span>
-                        </>
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-            {teamView && teamDisplayMode === 'topBottom6' && mainTableTeams.length > 0 && (
-              <div className="research-stats-compare-legend-wrap research-stats-topbottom6-legend">
-                <span className="research-stats-compare-legend" aria-hidden>
-                  <span className="research-stats-compare-legend-item">
-                    <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--top6" aria-hidden />
-                    <span className="research-stats-compare-legend-text">Top 6 per stat</span>
-                  </span>
-                  <span className="research-stats-compare-legend-item">
-                    <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--bottom6" aria-hidden />
-                    <span className="research-stats-compare-legend-text">Bottom 6 per stat</span>
-                  </span>
-                </span>
               </div>
             )}
             <div
@@ -1521,6 +1495,12 @@ export default function StatsSubpage() {
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
                   <div className="research-stats-compare-header-actions">
+                    {compareSelectedPlayers.length > 1 && (
+                      <span className="research-stats-compare-legend-item research-stats-compare-legend-item--header">
+                        <span className="research-stats-compare-legend-swatch" aria-hidden />
+                        <span className="research-stats-compare-legend-text">Stat leader</span>
+                      </span>
+                    )}
                     <button
                       type="button"
                       className="research-stats-compare-details"
@@ -1700,26 +1680,6 @@ export default function StatsSubpage() {
                     </tbody>
                   </table>
                 </div>
-                {compareSelectedPlayers.length > 1 && (
-                  <div className="research-stats-compare-legend-wrap">
-                    <span className="research-stats-compare-legend" aria-hidden>
-                      <span className="research-stats-compare-legend-item">
-                        <span className="research-stats-compare-legend-swatch" aria-hidden />
-                        <span className="research-stats-compare-legend-text">Stat leader</span>
-                      </span>
-                      {(topHighlightMode === 6 || topHighlightMode === 12) && (
-                        <span className="research-stats-compare-legend-item">
-                          <span className="research-stats-compare-legend-swatch research-stats-compare-legend-swatch--blue-yellow">
-                            <span className="research-stats-compare-legend-x" aria-hidden>×</span>
-                          </span>
-                          <span className="research-stats-compare-legend-text">
-                            {topHighlightMode === 6 ? 'Stat leader + Top 6' : 'Stat leader + Top 12'}
-                          </span>
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
             <div
@@ -2114,6 +2074,8 @@ export default function StatsSubpage() {
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
           gameweek={gameweek}
+          leagueManagerCount={leagueManagerCount}
+          leagueManagerIds={leagueManagerIds}
           onClose={() => { setSelectedPlayerId(null); setSelectedPlayerName('') }}
         />,
         document.body

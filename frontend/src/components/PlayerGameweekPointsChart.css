@@ -9,15 +9,15 @@
 .player-gw-chart-container {
   width: 100%;
   flex: 1 1 auto;
-  min-height: 120px;
+  min-height: 220px;
   position: relative;
   overflow: hidden;
 }
-/* Scale to fit bento; higher minimum on desktop for readability */
+/* Scale to fit bento; taller Y axis for bar chart readability in player/team popups */
 @media (min-width: 769px) {
   .player-detail-chart-wrap .player-gw-chart-container,
   .team-detail-modal-body .player-gw-chart-container {
-    min-height: 160px;
+    min-height: 320px;
   }
 }
 
@@ -65,6 +65,7 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
+  position: relative;
 }
 
 .player-gw-chart-container--loading,
@@ -76,7 +77,7 @@
 
 .player-gw-chart-skeleton {
   width: 100%;
-  height: 160px;
+  height: 320px;
   background: var(--bg-secondary);
   border-radius: 6px;
   animation: player-gw-chart-pulse 1.2s ease-in-out infinite;
@@ -102,14 +103,22 @@
   opacity: 0.25;
 }
 
-/* Opponent badge above value pill */
-.player-gw-chart-opponent-badge {
+/* Bar labels and badges: above expected line */
+.player-gw-chart-bar-label-wrap {
+  isolation: isolate;
+  z-index: 2;
+}
+
+/* Opponent badge: previously above value pill; now below GW on x-axis */
+.player-gw-chart-opponent-badge,
+.player-gw-chart-x-axis-badge {
   pointer-events: none;
 }
 
-/* Bar value label: pill background (same width as bar), subtle fill to promote the value */
+/* Bar value label: pill background (same width as bar), subtle fill with transparency so expected line shows through */
 .player-gw-chart-bar-label-pill {
   fill: color-mix(in srgb, var(--text-secondary, #64748b) 10%, var(--bg-card, #ffffff));
+  fill-opacity: 0.75;
   pointer-events: none;
 }
 
@@ -158,21 +167,35 @@
 
 /* DEFCON/Saves: solid = threshold achieved, hashed = below threshold (fill set in D3) */
 .player-gw-chart-bar--achieved {
-  fill: var(--accent-green, #10b981);
+  fill: var(--chart-bar-fill, #5a9b7a);
 }
 .player-gw-chart-bar--hashed {
   fill: url(#player-gw-chart-hash-muted);
 }
 
+/* Expected line layer: above bars, below labels */
+.player-gw-chart-expected-layer {
+  isolation: isolate;
+  z-index: 1;
+}
+
 /* Expected stat: smooth dashed line (e.g. xG when viewing Goals); forecast color */
 .player-gw-chart-expected-line {
-  stroke: var(--chart-expected-line, #22d3ee);
+  stroke: var(--chart-expected-line, #f59e0b);
   stroke-width: 1.25;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 6 4;
   pointer-events: none;
   opacity: 0.9;
+}
+/* Expected stat: point at each gameweek */
+.player-gw-chart-expected-dot {
+  fill: var(--chart-expected-line, #f59e0b);
+  stroke: var(--bg-card, #1e293b);
+  stroke-width: 1.5;
+  pointer-events: none;
+  opacity: 0.95;
 }
 
 /* Threshold / reference lines: dashed grey in background, no labels */
@@ -182,6 +205,28 @@
   stroke-dasharray: 4 4;
   opacity: 0.4;
   pointer-events: none;
+}
+
+/* Legend: expected line label, above bar chart */
+.player-gw-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  flex-shrink: 0;
+}
+.player-gw-chart-legend-line {
+  display: inline-block;
+  width: 24px;
+  height: 0;
+  border-bottom: 2px dashed var(--chart-expected-line, #f59e0b);
+  border-radius: 1px;
+}
+.player-gw-chart-legend-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+  text-transform: lowercase;
 }
 
 /* Saves: lines at 6, 9, 12, … (dashed grey) */

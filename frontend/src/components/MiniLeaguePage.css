@@ -2284,6 +2284,14 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   padding-bottom: 0;
 }
 
+.player-breakdown-popup-empty-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+}
+
 /* Player breakdown popup: 2-row header – player badge + name + position pill, then Gameweek Points subtitle */
 .player-breakdown-popup-header.stats-filter-overlay-header {
   flex-direction: column;
@@ -2365,10 +2373,6 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper).player-detail-bento-collapsible--expanded {
     min-height: min-content;
   }
-  /* Chart bento (1x2) keeps fixed height on mobile */
-  .player-detail-modal-body .player-detail-bento-collapsible--bento-1x2.player-detail-bento-collapsible--expanded {
-    min-height: calc(var(--bento-unit-height, 150px) * 2 + var(--bento-gap, 16px) * 1);
-  }
 }
 
 .player-detail-modal-content {
@@ -2442,6 +2446,10 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 .player-detail-modal-body .player-detail-bento-collapsible:has(.player-detail-ownership-table-wrapper).player-detail-bento-collapsible--expanded {
   min-height: min-content;
   flex-shrink: 0;
+}
+/* Chart bento (1x2) – taller when expanded for better bar visibility (desktop: 2.5 units) */
+.player-detail-modal-body .player-detail-bento-collapsible--bento-1x2.player-detail-bento-collapsible--expanded {
+  min-height: calc(var(--bento-unit-height, 150px) * 2.5 + var(--bento-gap, 16px) * 1.5);
 }
 @media (hover: hover) {
   .player-detail-modal-body .player-detail-bento-collapsible:hover {
@@ -2750,6 +2758,59 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 /* Points impact: event list + total (content in collapsible body, no bento wrapper) */
 .player-detail-points-impact-empty {
   font-size: 13px;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-empty--kickoff {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  align-self: stretch;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 18%, var(--border-color));
+  border-radius: 6px;
+}
+.player-detail-points-impact-empty--kickoff .player-detail-points-impact-kickoff-icon {
+  flex-shrink: 0;
+  color: var(--accent-blue, #3b82f6);
+  opacity: 0.85;
+}
+.player-detail-points-impact-empty--kickoff .player-detail-points-impact-kickoff-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.player-detail-points-impact-empty--kickoff .player-detail-points-impact-kickoff-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.player-detail-points-impact-empty--dnp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-detail-points-impact-dnp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent-red);
+  border-radius: 50%;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.player-detail-points-impact-dnp-text {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--text-secondary);
 }
 .player-detail-points-impact-list {
@@ -3084,17 +3145,111 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   flex-shrink: 0;
 }
 
-/* Team detail bentos: match player presentation – min-height, allow chart/schedule to grow */
-.team-detail-modal-body .player-detail-details-bento,
-.team-detail-modal-body .player-detail-chart-bento,
-.team-detail-modal-body .schedule-bento,
-.team-detail-modal-body .schedule-opponent-stats-table {
-  height: auto;
-  min-height: var(--bento-unit-height, 150px);
-  max-height: none;
-  overflow: visible;
+/* Team detail modal: uses same player-detail-bento-collapsible structure as player modal; shared styles apply via .player-detail-modal-body */
+
+/* Team details bento: compact stat grid (distinct from player details) */
+.team-details-bento-body {
+  padding: 32px 0 0;
+}
+.team-details-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px 12px;
+  align-items: center;
+}
+.team-details-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.team-details-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-align: center;
+}
+.team-details-stat-value-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.team-details-stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.team-details-stat-value-wrap .team-details-rank-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 4px;
+  font-size: 9px;
+  font-weight: 600;
+}
+.team-details-stat-value-wrap .team-details-rank-change svg {
+  width: 8px;
+  height: 8px;
   flex-shrink: 0;
-  padding: 20px;
+}
+/* Team details header: info button left of collapse */
+.team-details-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.team-details-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.team-details-info-btn:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+}
+.team-details-info-btn:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 1px;
+}
+.team-details-rank-info-msg {
+  margin: 0 0 10px 0;
+  padding: 8px 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 8%, var(--bg-card));
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 20%, var(--border-color));
+}
+
+/* Placeholder for alignment when no rank change */
+.team-details-rank-change-placeholder {
+  display: block;
+  min-height: 18px;
+  min-width: 1px;
+}
+
+/* Team detail: Stats by gameweek bento – taller for bar chart readability (matches player chart) */
+.team-detail-modal-body .player-detail-bento-collapsible--bento-1x2.player-detail-bento-collapsible--expanded {
+  min-height: calc(var(--bento-unit-height, 150px) * 2.5 + var(--bento-gap, 16px) * 1.5);
 }
 
 /* Team detail modal (same layout and styling as player detail modal) */
@@ -3112,6 +3267,9 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   }
   .team-detail-modal-overlay .team-detail-modal-content {
     max-height: 100%;
+  }
+  .team-detail-modal-body .player-detail-bento-collapsible--bento-1x2.player-detail-bento-collapsible--expanded {
+    min-height: calc(var(--bento-unit-height, 120px) * 2 + var(--bento-gap, 12px) * 1);
   }
 }
 .team-detail-modal-overlay .manager-detail-modal-header-title-wrap.player-detail-modal-header-row {

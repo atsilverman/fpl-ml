@@ -1,6 +1,13 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Filter } from 'lucide-react'
+import { X, Filter, Minimize2, MoveDiagonal, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, Info } from 'lucide-react'
+
+function ordinal(n) {
+  if (n == null || n < 1) return '—'
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
 import { CardStatLabel } from './CardStatLabel'
 import { useTeamDetail } from '../hooks/useTeamDetail'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
@@ -25,6 +32,7 @@ const ALL_TEAM_STAT_OPTIONS = [
   { key: 'expected_goals', label: 'xG' },
   { key: 'expected_assists', label: 'xA' },
   { key: 'expected_goal_involvements', label: 'xGI' },
+  { key: 'goals_conceded', label: 'GC' },
   { key: 'expected_goals_conceded', label: 'xGC' },
 ]
 
@@ -34,14 +42,21 @@ export default function TeamDetailModal({
   gameweek,
   onClose,
 }) {
-  const [selectedStat, setSelectedStat] = useState('points')
+  const [selectedStat, setSelectedStat] = useState('goals')
   const [chartRangeFilter, setChartRangeFilter] = useState(() => {
     if (typeof window === 'undefined') return 'gw20plus'
     return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'gw20plus'
   })
   const [showStatPopup, setShowStatPopup] = useState(false)
+  const [detailsExpanded, setDetailsExpanded] = useState(true)
+  const [chartExpanded, setChartExpanded] = useState(true)
+  const [scheduleExpanded, setScheduleExpanded] = useState(true)
+  const [opponentStatsExpanded, setOpponentStatsExpanded] = useState(true)
+  const [showDetailsRankInfo, setShowDetailsRankInfo] = useState(false)
   const statPopupRef = useRef(null)
   const filterPopupLayerRef = useRef(null)
+  const detailsRankInfoRef = useRef(null)
+  const detailsRankInfoMsgRef = useRef(null)
 
   const {
     team,
@@ -51,6 +66,11 @@ export default function TeamDetailModal({
     rankXg,
     rankGoalsConceded,
     rankXgc,
+    tablePositionChange,
+    rankGoalsChange,
+    rankXgChange,
+    rankGoalsConcededChange,
+    rankXgcChange,
     loading: teamDetailLoading,
   } = useTeamDetail(teamId, gameweek)
 
@@ -76,7 +96,7 @@ export default function TeamDetailModal({
 
   useEffect(() => {
     if (!ALL_TEAM_STAT_OPTIONS.some((o) => o.key === selectedStat)) {
-      setSelectedStat('points')
+      setSelectedStat('goals')
     }
   }, [selectedStat])
 
@@ -90,6 +110,17 @@ export default function TeamDetailModal({
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [showStatPopup])
+
+  useEffect(() => {
+    if (!showDetailsRankInfo) return
+    const handleClickOutside = (e) => {
+      const inBtn = detailsRankInfoRef.current?.contains(e.target)
+      const inMsg = detailsRankInfoMsgRef.current?.contains(e.target)
+      if (!inBtn && !inMsg) setShowDetailsRankInfo(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showDetailsRankInfo])
 
   useEffect(() => {
     if (teamId == null) return
@@ -141,84 +172,240 @@ export default function TeamDetailModal({
           </button>
         </div>
         <div className="manager-detail-modal-body player-detail-modal-body team-detail-modal-body">
-          <div className="player-detail-details-bento bento-card bento-card-animate">
-            <span className="bento-card-label">Team details</span>
-            {teamDetailLoading ? (
-              <div className="bento-card-value loading">...</div>
-            ) : (
-              <div className="player-detail-details-grid">
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Table (PL)</span>
-                  <span className="player-detail-detail-value">{tablePosition != null ? tablePosition : '—'}</span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">Goals rank</span>
-                  <span className="player-detail-detail-value">{rankGoals != null ? `${rankGoals}/20` : '—'}</span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">xG rank</span>
-                  <span className="player-detail-detail-value">{rankXg != null ? `${rankXg}/20` : '—'}</span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">GC rank</span>
-                  <span className="player-detail-detail-value">{rankGoalsConceded != null ? `${rankGoalsConceded}/20` : '—'}</span>
-                </div>
-                <div className="player-detail-detail-row">
-                  <span className="player-detail-detail-label">xGC rank</span>
-                  <span className="player-detail-detail-value">{rankXgc != null ? `${rankXgc}/20` : '—'}</span>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x1 team-details-bento ${detailsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setDetailsExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailsExpanded((v) => !v); } }}
+                aria-expanded={detailsExpanded}
+                aria-label={detailsExpanded ? 'Collapse Team details' : 'Expand Team details'}
+              >
+                <span className="player-detail-bento-collapsible-title">Team details</span>
+                <div className="team-details-header-actions" ref={detailsRankInfoRef}>
+                  <button
+                    type="button"
+                    className="team-details-info-btn"
+                    onClick={(e) => { e.stopPropagation(); setShowDetailsRankInfo((v) => !v); }}
+                    aria-label={showDetailsRankInfo ? 'Hide rank change explanation' : 'What do the rank changes mean?'}
+                    aria-expanded={showDetailsRankInfo}
+                    title="Rank change explanation"
+                  >
+                    <Info size={11} strokeWidth={1.5} aria-hidden />
+                  </button>
+                  <span className="player-detail-bento-collapsible-expand-icon" title={detailsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                    {detailsExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                  </span>
                 </div>
               </div>
-            )}
+              {detailsExpanded && (
+                <div className="player-detail-bento-collapsible-body team-details-bento-body">
+                  {showDetailsRankInfo && (
+                    <p ref={detailsRankInfoMsgRef} className="team-details-rank-info-msg">
+                      Rank changes show how each stat has moved compared to last gameweek. Green ↑ = improved position, red ↓ = dropped.
+                    </p>
+                  )}
+                  {teamDetailLoading ? (
+                    <div className="bento-card-value loading">...</div>
+                  ) : (
+                    <div className="team-details-stats">
+                      <div className="team-details-stat">
+                        <span className="team-details-stat-label">Table</span>
+                        <div className="team-details-stat-value-wrap">
+                          <span className="team-details-stat-value">{tablePosition != null ? ordinal(tablePosition) : '—'}</span>
+                          {tablePositionChange != null && tablePositionChange !== 0 ? (
+                            <span className={`team-details-rank-change league-standings-bento-change-badge ${tablePositionChange > 0 ? 'positive' : 'negative'}`} title={`${tablePositionChange > 0 ? '+' : ''}${tablePositionChange} since last gameweek`}>
+                              {Math.abs(tablePositionChange) >= 2 ? (tablePositionChange > 0 ? <ChevronsUp size={10} /> : <ChevronsDown size={10} />) : (tablePositionChange > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}{' '}
+                              {Math.abs(tablePositionChange)}
+                            </span>
+                          ) : (
+                            <span className="team-details-rank-change-placeholder" aria-hidden />
+                          )}
+                        </div>
+                      </div>
+                      <div className="team-details-stat">
+                        <span className="team-details-stat-label">Goals</span>
+                        <div className="team-details-stat-value-wrap">
+                          <span className="team-details-stat-value">{rankGoals != null ? ordinal(rankGoals) : '—'}</span>
+                          {rankGoalsChange != null && rankGoalsChange !== 0 ? (
+                            <span className={`team-details-rank-change league-standings-bento-change-badge ${rankGoalsChange > 0 ? 'positive' : 'negative'}`} title={`${rankGoalsChange > 0 ? '+' : ''}${rankGoalsChange} since last gameweek`}>
+                              {Math.abs(rankGoalsChange) >= 2 ? (rankGoalsChange > 0 ? <ChevronsUp size={10} /> : <ChevronsDown size={10} />) : (rankGoalsChange > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}{' '}
+                              {Math.abs(rankGoalsChange)}
+                            </span>
+                          ) : (
+                            <span className="team-details-rank-change-placeholder" aria-hidden />
+                          )}
+                        </div>
+                      </div>
+                      <div className="team-details-stat">
+                        <span className="team-details-stat-label">xG</span>
+                        <div className="team-details-stat-value-wrap">
+                          <span className="team-details-stat-value">{rankXg != null ? ordinal(rankXg) : '—'}</span>
+                          {rankXgChange != null && rankXgChange !== 0 ? (
+                            <span className={`team-details-rank-change league-standings-bento-change-badge ${rankXgChange > 0 ? 'positive' : 'negative'}`} title={`${rankXgChange > 0 ? '+' : ''}${rankXgChange} since last gameweek`}>
+                              {Math.abs(rankXgChange) >= 2 ? (rankXgChange > 0 ? <ChevronsUp size={10} /> : <ChevronsDown size={10} />) : (rankXgChange > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}{' '}
+                              {Math.abs(rankXgChange)}
+                            </span>
+                          ) : (
+                            <span className="team-details-rank-change-placeholder" aria-hidden />
+                          )}
+                        </div>
+                      </div>
+                      <div className="team-details-stat">
+                        <span className="team-details-stat-label">GC</span>
+                        <div className="team-details-stat-value-wrap">
+                          <span className="team-details-stat-value">{rankGoalsConceded != null ? ordinal(rankGoalsConceded) : '—'}</span>
+                          {rankGoalsConcededChange != null && rankGoalsConcededChange !== 0 ? (
+                            <span className={`team-details-rank-change league-standings-bento-change-badge ${rankGoalsConcededChange > 0 ? 'positive' : 'negative'}`} title="Lower GC rank is better (fewer goals conceded); positive = improved">
+                              {Math.abs(rankGoalsConcededChange) >= 2 ? (rankGoalsConcededChange > 0 ? <ChevronsUp size={10} /> : <ChevronsDown size={10} />) : (rankGoalsConcededChange > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}{' '}
+                              {Math.abs(rankGoalsConcededChange)}
+                            </span>
+                          ) : (
+                            <span className="team-details-rank-change-placeholder" aria-hidden />
+                          )}
+                        </div>
+                      </div>
+                      <div className="team-details-stat">
+                        <span className="team-details-stat-label">xGC</span>
+                        <div className="team-details-stat-value-wrap">
+                          <span className="team-details-stat-value">{rankXgc != null ? ordinal(rankXgc) : '—'}</span>
+                          {rankXgcChange != null && rankXgcChange !== 0 ? (
+                            <span className={`team-details-rank-change league-standings-bento-change-badge ${rankXgcChange > 0 ? 'positive' : 'negative'}`} title="Lower xGC rank is better; positive = improved">
+                              {Math.abs(rankXgcChange) >= 2 ? (rankXgcChange > 0 ? <ChevronsUp size={10} /> : <ChevronsDown size={10} />) : (rankXgcChange > 0 ? <ChevronUp size={10} /> : <ChevronDown size={10} />)}{' '}
+                              {Math.abs(rankXgcChange)}
+                            </span>
+                          ) : (
+                            <span className="team-details-rank-change-placeholder" aria-hidden />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="player-detail-chart-bento bento-card bento-card-animate">
-            <div className="player-detail-chart-bento-header" ref={statPopupRef}>
-              <span className="bento-card-label player-detail-chart-bento-label">
-                Stats by gameweek
-                <span className="bento-card-label-suffix">
-                  | {(() => { const o = ALL_TEAM_STAT_OPTIONS.find((opt) => opt.key === selectedStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x2 ${chartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header player-detail-chart-bento-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setChartExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setChartExpanded((v) => !v); } }}
+                aria-expanded={chartExpanded}
+                aria-label={chartExpanded ? 'Collapse Stats by gameweek' : 'Expand Stats by gameweek'}
+              >
+                <div className="player-detail-chart-bento-header-inner" ref={statPopupRef} onClick={(e) => e.stopPropagation()}>
+                  <span className="bento-card-label player-detail-chart-bento-label">
+                    Stats by gameweek
+                    {chartExpanded && (
+                      <span className="bento-card-label-suffix">
+                        | {(() => { const o = ALL_TEAM_STAT_OPTIONS.find((opt) => opt.key === selectedStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
+                      </span>
+                    )}
+                  </span>
+                  {chartExpanded && (
+                    <div className="player-detail-chart-bento-actions">
+                      <button
+                        type="button"
+                        className="player-detail-chart-stat-btn"
+                        onClick={() => setShowStatPopup((v) => !v)}
+                        aria-label="Filters: stat and GW range"
+                        aria-expanded={showStatPopup}
+                        aria-haspopup="dialog"
+                        title="Filters"
+                      >
+                        <Filter size={11} strokeWidth={1.5} aria-hidden />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="player-detail-bento-collapsible-expand-icon" title={chartExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {chartExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
                 </span>
-              </span>
-              <div className="player-detail-chart-bento-actions">
-                <button
-                  type="button"
-                  className="player-detail-chart-stat-btn"
-                  onClick={() => setShowStatPopup((v) => !v)}
-                  aria-label="Filters: stat and GW range"
-                  aria-expanded={showStatPopup}
-                  aria-haspopup="dialog"
-                  title="Filters"
-                >
-                  <Filter size={11} strokeWidth={1.5} aria-hidden />
-                </button>
               </div>
-            </div>
-            <div className="player-detail-chart-wrap">
-              <PlayerGameweekPointsChart
-                key={`team-chart-${selectedStat}-${chartRangeFilter}`}
-                data={gameweekPoints}
-                loading={teamDetailLoading}
-                statKey={selectedStat}
-                position={null}
-                filter={chartRangeFilter}
-                onFilterChange={setChartRangeFilter}
-              />
+              {chartExpanded && (
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--chart">
+                  <div className="player-detail-chart-wrap">
+                    <PlayerGameweekPointsChart
+                      key={`team-chart-${selectedStat}-${chartRangeFilter}`}
+                      data={gameweekPoints}
+                      loading={teamDetailLoading}
+                      statKey={selectedStat}
+                      position={null}
+                      filter={chartRangeFilter}
+                      onFilterChange={setChartRangeFilter}
+                      compactBars
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-          <ScheduleBento
-            teamId={resolvedTeamId}
-            opponentStatsByTeamId={teamLast6ByTeamId}
-            opponentStatsLoading={teamLast6Loading}
-            difficultyOverridesByDimension={difficultyOverridesByDimension}
-            useCustomDifficulty={useCustomDifficulty}
-          />
-          <ScheduleOpponentStatsTable
-            teamId={resolvedTeamId}
-            opponentStatsByTeamId={teamLast6ByTeamId}
-            opponentStatsLoading={teamLast6Loading}
-          />
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--schedule player-detail-bento-collapsible--bento-1x1 ${scheduleExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setScheduleExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setScheduleExpanded((v) => !v); } }}
+                aria-expanded={scheduleExpanded}
+                aria-label={scheduleExpanded ? 'Collapse Schedule' : 'Expand Schedule'}
+              >
+                <span className="player-detail-bento-collapsible-title">Schedule</span>
+                <span className="player-detail-bento-collapsible-expand-icon" title={scheduleExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {scheduleExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                </span>
+              </div>
+              {scheduleExpanded && (
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label player-detail-bento-collapsible-body--schedule">
+                  <ScheduleBento
+                    embedded
+                    teamId={resolvedTeamId}
+                    opponentStatsByTeamId={teamLast6ByTeamId}
+                    opponentStatsLoading={teamLast6Loading}
+                    difficultyOverridesByDimension={difficultyOverridesByDimension}
+                    useCustomDifficulty={useCustomDifficulty}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x3 ${opponentStatsExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setOpponentStatsExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpponentStatsExpanded((v) => !v); } }}
+                aria-expanded={opponentStatsExpanded}
+                aria-label={opponentStatsExpanded ? 'Collapse Opponent Statistic Rank (Last 6 GW)' : 'Expand Opponent Statistic Rank (Last 6 GW)'}
+              >
+                <span className="player-detail-bento-collapsible-title">Opponent Statistic Rank (Last 6 GW)</span>
+                <span className="player-detail-bento-collapsible-expand-icon" title={opponentStatsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {opponentStatsExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                </span>
+              </div>
+              {opponentStatsExpanded && (
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--hide-label player-detail-bento-collapsible-body--opponent-stats">
+                  <ScheduleOpponentStatsTable
+                    embedded
+                    teamId={resolvedTeamId}
+                    opponentStatsByTeamId={teamLast6ByTeamId}
+                    opponentStatsLoading={teamLast6Loading}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         {showStatPopup && typeof document !== 'undefined' && createPortal(
-          <div ref={filterPopupLayerRef} className="team-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'none' }}>
+          <div ref={filterPopupLayerRef} className="player-detail-filter-popup-layer" style={{ position: 'fixed', inset: 0, zIndex: 1200, pointerEvents: 'auto' }}>
             <div
               className="player-detail-filter-backdrop"
               style={{ position: 'absolute', inset: 0, pointerEvents: 'auto' }}

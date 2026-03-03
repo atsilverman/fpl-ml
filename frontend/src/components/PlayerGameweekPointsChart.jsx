@@ -20,6 +20,7 @@ const STAT_TO_EXPECTED = {
   goals: 'expected_goals',
   assists: 'expected_assists',
   goal_involvements: 'expected_goal_involvements',
+  goals_conceded: 'expected_goals_conceded',
 }
 
 function getStatValue(d, statKey) {
@@ -30,15 +31,15 @@ function getStatValue(d, statKey) {
 function formatStatLabel(value, statKey) {
   if (EXPECTED_STAT_KEYS.includes(statKey)) {
     const n = Number(value)
-    return n === 0 ? '0' : n.toFixed(2)
+    return n === 0 ? '0' : n.toFixed(1)
   }
   return String(value)
 }
 
-/** Bar fill: green for positive, red for negative (red bar drawn in positive direction with negative label). */
+/** Bar fill: subtle green for positive, red for negative (red bar drawn in positive direction with negative label). */
 function getBarFill(d, getVal) {
   const v = getVal(d)
-  return v < 0 ? 'var(--accent-red, #dc2626)' : 'var(--accent-green, #10b981)'
+  return v < 0 ? 'var(--accent-red, #dc2626)' : 'var(--chart-bar-fill, #5a9b7a)'
 }
 
 /** Whether we're showing DEFCON/Saves threshold styling (hashed vs solid). */
@@ -71,7 +72,7 @@ const DNP_LABEL_OFFSET_Y = 10
  */
 function formatAverageForDisplay(value, statKey) {
   if (value == null || Number.isNaN(value)) return null
-  if (EXPECTED_STAT_KEYS.includes(statKey)) return Number(value).toFixed(2)
+  if (EXPECTED_STAT_KEYS.includes(statKey)) return Number(value).toFixed(1)
   return value % 1 === 0 ? Number(value).toLocaleString('en-GB') : value.toFixed(1)
 }
 
@@ -83,10 +84,11 @@ export default function PlayerGameweekPointsChart({
   onAverageChange = null,
   filter: filterProp = null,
   onFilterChange = null,
+  compactBars = false,
 }) {
   const svgRef = useRef(null)
   const containerRef = useRef(null)
-  const [dimensions, setDimensions] = useState({ width: 400, height: 220 })
+  const [dimensions, setDimensions] = useState({ width: 400, height: 280 })
   const [internalFilter, setInternalFilter] = useState(() => {
     if (typeof window === 'undefined') return 'gw20plus'
     return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'gw20plus'
@@ -102,6 +104,8 @@ export default function PlayerGameweekPointsChart({
     if (filter === 'gw20plus') return data.filter((d) => (d.gameweek ?? 0) >= 20)
     return data
   }, [data, filter])
+
+  const showExpectedLegend = !!STAT_TO_EXPECTED[statKey] && filteredData.length >= 2
 
   const avgValForReport = useMemo(() => {
     if (!filteredData.length) return null
@@ -124,7 +128,7 @@ export default function PlayerGameweekPointsChart({
       if (!containerRef.current) return
       const el = containerRef.current
       const w = Math.max(200, el.clientWidth || 400)
-      const h = Math.max(100, el.clientHeight || 180)
+      const h = Math.max(180, el.clientHeight || 280)
       setDimensions((prev) => {
         if (Math.abs(prev.width - w) < 2 && Math.abs(prev.height - h) < 2) return prev
         return { width: w, height: h }
@@ -173,16 +177,18 @@ export default function PlayerGameweekPointsChart({
       .scaleBand()
       .domain(filteredData.map((d) => String(d.gameweek)))
       .range([padding.left, width - padding.right])
-      .padding(0.25)
+      .padding(compactBars ? 0.37 : 0.25)
 
     const bandWidth = xScale.bandwidth()
     const barLabelFontSize = filter === 'last6' ? 11 : filter === 'last12' ? 10 : 9
     const pillHeight = barLabelFontSize + 8
     const barLabelGap = 6
-    const badgeGap = 3
-    const badgeSize = Math.min(bandWidth, 32)
-    const labelSpaceAboveBar = barLabelGap + pillHeight + badgeGap + badgeSize
+    const xAxisBadgeSize = Math.min(bandWidth, 24)
+    const xAxisLabelToBadgeGap = 2
+    const xAxisLabelGap = 18
+    const labelSpaceAboveBar = barLabelGap + pillHeight
     padding.top = Math.max(20, Math.ceil(labelSpaceAboveBar))
+    padding.bottom = xAxisLabelGap + 10 + xAxisLabelToBadgeGap + xAxisBadgeSize
 
     const yScale = d3
       .scaleLinear()
@@ -214,7 +220,7 @@ export default function PlayerGameweekPointsChart({
       if (!useThresholdStyling) return getBarFillFor(d)
       const v = getVal(d)
       if (v < 0) return 'var(--accent-red, #dc2626)'
-      return hitThreshold(d, getVal, thresholdLine) ? 'var(--accent-green, #10b981)' : 'url(#player-gw-chart-hash-muted)'
+      return hitThreshold(d, getVal, thresholdLine) ? 'var(--chart-bar-fill, #5a9b7a)' : 'url(#player-gw-chart-hash-muted)'
     }
 
     // DEFCON/Saves hash pattern: parallel diagonals only (no crossing), subdued for "not achieved"
@@ -301,7 +307,7 @@ export default function PlayerGameweekPointsChart({
     // Y-axis labels
     const yLabelFontSize = 10
     const yAxisLabelFormat = (v) =>
-      EXPECTED_STAT_KEYS.includes(statKey) ? Number(v).toFixed(2) : String(v)
+      EXPECTED_STAT_KEYS.includes(statKey) ? Number(v).toFixed(1) : String(v)
     g.selectAll('.player-gw-chart-y-label')
       .data(yTicks)
       .join('text')
@@ -313,20 +319,43 @@ export default function PlayerGameweekPointsChart({
       .attr('fill', 'var(--text-secondary)')
       .text(yAxisLabelFormat)
 
-    // X-axis labels: all gameweeks
+    // X-axis labels: gameweek number + opponent badge below
     const xLabelFontSize = 10
-    filteredData.forEach((d) => {
-      const gw = d.gameweek
-      const x = xScale(String(gw)) + xScale.bandwidth() / 2
-      g.append('text')
-        .attr('class', 'player-gw-chart-x-label')
-        .attr('x', x)
-        .attr('y', height - padding.bottom + 14)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', xLabelFontSize)
-        .attr('fill', 'var(--text-secondary)')
-        .text(String(gw))
-    })
+    const xLabelY = height - padding.bottom + xAxisLabelGap
+    const xBadgeY = xLabelY + 10 + xAxisLabelToBadgeGap
+    g.selectAll('.player-gw-chart-x-label-wrap')
+      .data(filteredData, (d) => d.gameweek)
+      .join('g')
+      .attr('class', 'player-gw-chart-x-label-wrap')
+      .attr('transform', (d) => {
+        const x = xScale(String(d.gameweek)) + xScale.bandwidth() / 2
+        return `translate(${x}, 0)`
+      })
+      .each(function (d) {
+        const el = d3.select(this)
+        el.selectAll('.player-gw-chart-x-label').remove()
+        el.selectAll('.player-gw-chart-x-axis-badge').remove()
+        el.append('text')
+          .attr('class', 'player-gw-chart-x-label')
+          .attr('x', 0)
+          .attr('y', xLabelY)
+          .attr('text-anchor', 'middle')
+          .attr('font-size', xLabelFontSize)
+          .attr('fill', 'var(--text-secondary)')
+          .text(String(d.gameweek))
+        const oppShort = d.opponent_short_name
+        if (oppShort) {
+          el.append('image')
+            .attr('class', 'player-gw-chart-x-axis-badge')
+            .attr('href', `/badges/${oppShort}.svg`)
+            .attr('x', -xAxisBadgeSize / 2)
+            .attr('y', xBadgeY)
+            .attr('width', xAxisBadgeSize)
+            .attr('height', xAxisBadgeSize)
+            .attr('preserveAspectRatio', 'xMidYMid meet')
+            .attr('aria-hidden', 'true')
+        }
+      })
 
     const barTransition = d3.transition().duration(350).ease(d3.easeCubicOut)
     const barLabelDelay = 350
@@ -366,31 +395,50 @@ export default function PlayerGameweekPointsChart({
         (exit) => exit.remove()
       )
 
-    // Expected stat line (e.g. xG when viewing Goals): draw before bar labels so labels stay on top
+    // Expected stat line (e.g. xG when viewing Goals): dashed line + dots per gameweek; above bars, below labels (DOM order: bars → expected → labels)
     if (expectedKey && getExpectedVal) {
-      g.selectAll('.player-gw-chart-expected-dot').remove()
       const expectedData = filteredData.filter((d) => {
         const v = getExpectedVal(d)
         return v != null && !Number.isNaN(v) && Number.isFinite(v)
       })
-      if (expectedData.length >= 2) {
-        const lineGen = d3
-          .line()
-          .x((d) => xScale(String(d.gameweek)) + xScale.bandwidth() / 2)
-          .y((d) => yScale(getExpectedVal(d)))
-          .curve(d3.curveMonotoneX)
-        g.selectAll('.player-gw-chart-expected-line')
-          .data([expectedData])
-          .join('path')
-          .attr('class', 'player-gw-chart-expected-line')
-          .attr('d', lineGen)
-          .attr('fill', 'none')
+      if (expectedData.length >= 1) {
+        let expectedLayer = g.select('.player-gw-chart-expected-layer')
+        if (expectedLayer.empty()) {
+          expectedLayer = g.append('g').attr('class', 'player-gw-chart-expected-layer')
+        }
+        const centerX = (d) => xScale(String(d.gameweek)) + xScale.bandwidth() / 2
+        const getY = (d) => yScale(getExpectedVal(d))
+        if (expectedData.length >= 2) {
+          const lineGen = d3
+            .line()
+            .x(centerX)
+            .y(getY)
+            .curve(d3.curveMonotoneX)
+          expectedLayer.selectAll('.player-gw-chart-expected-line')
+            .data([expectedData])
+            .join('path')
+            .attr('class', 'player-gw-chart-expected-line')
+            .attr('d', lineGen)
+            .attr('fill', 'none')
+        } else {
+          expectedLayer.selectAll('.player-gw-chart-expected-line').remove()
+        }
+        expectedLayer
+          .selectAll('.player-gw-chart-expected-dot')
+          .data(expectedData, (d) => d.gameweek)
+          .join('circle')
+          .attr('class', 'player-gw-chart-expected-dot')
+          .attr('cx', (d) => centerX(d))
+          .attr('cy', (d) => getY(d))
+          .attr('r', 3)
       } else {
-        g.selectAll('.player-gw-chart-expected-line').remove()
+        g.selectAll('.player-gw-chart-expected-layer').remove()
       }
+    } else {
+      g.selectAll('.player-gw-chart-expected-layer').remove()
     }
 
-    // Bar value labels: opponent badge (above) + pill (bar-width) + text; theme-aware background. Gap between pill and bar top. Drawn last so always on top.
+    // Bar value labels: pill (bar-width) + text; opponent badge is below GW on x-axis. Drawn last so always on top.
     const pillRx = 4
     const labelData = filteredData.filter((d) => getVal(d) !== 0)
     g.selectAll('.player-gw-chart-bar-label-wrap')
@@ -404,18 +452,6 @@ export default function PlayerGameweekPointsChart({
             const labelY = getLabelY(d, pillHeight, barLabelGap)
             const textStr = formatStatLabel(getVal(d), statKey)
             const negative = getVal(d) < 0
-            const oppShort = d.opponent_short_name
-            if (oppShort) {
-              el.append('image')
-                .attr('class', 'player-gw-chart-opponent-badge')
-                .attr('href', `/badges/${oppShort}.svg`)
-                .attr('x', -badgeSize / 2)
-                .attr('y', -pillHeight / 2 - badgeGap - badgeSize)
-                .attr('width', badgeSize)
-                .attr('height', badgeSize)
-                .attr('preserveAspectRatio', 'xMidYMid meet')
-                .attr('aria-hidden', 'true')
-            }
             el.append('rect')
               .attr('class', 'player-gw-chart-bar-label-pill')
               .attr('x', -bandWidth / 2)
@@ -445,24 +481,6 @@ export default function PlayerGameweekPointsChart({
             const labelY = getLabelY(d, pillHeight, barLabelGap)
             const textStr = formatStatLabel(getVal(d), statKey)
             const negative = getVal(d) < 0
-            const oppShort = d.opponent_short_name
-            let badge = el.select('.player-gw-chart-opponent-badge')
-            if (oppShort) {
-              if (badge.empty()) {
-                el.insert('image', ':first-child')
-                  .attr('class', 'player-gw-chart-opponent-badge')
-                  .attr('href', `/badges/${oppShort}.svg`)
-                  .attr('x', -badgeSize / 2)
-                  .attr('y', -pillHeight / 2 - badgeGap - badgeSize)
-                  .attr('width', badgeSize)
-                  .attr('height', badgeSize)
-                  .attr('preserveAspectRatio', 'xMidYMid meet')
-              } else {
-                badge.attr('href', `/badges/${oppShort}.svg`)
-              }
-            } else {
-              badge.remove()
-            }
             el.select('.player-gw-chart-bar-label-pill')
               .attr('x', -bandWidth / 2)
               .attr('y', -pillHeight / 2)
@@ -541,6 +559,12 @@ export default function PlayerGameweekPointsChart({
 
   return (
     <div className="player-gw-chart-wrapper">
+      {showExpectedLegend && (
+        <div className="player-gw-chart-legend">
+          <span className="player-gw-chart-legend-line" aria-hidden />
+          <span className="player-gw-chart-legend-label">expected</span>
+        </div>
+      )}
       <div ref={containerRef} className="player-gw-chart-container">
         <svg
           ref={svgRef}
@@ -550,8 +574,8 @@ export default function PlayerGameweekPointsChart({
           preserveAspectRatio="xMidYMid meet"
           className="player-gw-chart-svg"
           aria-label={`${(statKey || 'points').replace(/_/g, ' ')} by gameweek`}
-        />
-      </div>
+          />
+        </div>
       {!isControlled && (
         <div className="player-gw-chart-filter-controls">
           {CHART_RANGE_FILTERS.map(({ key, label }) => (

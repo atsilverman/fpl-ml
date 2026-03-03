@@ -1,9 +1,10 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { X, Filter, Minimize2, MoveDiagonal, RectangleVertical, ChevronDown, ChevronUp } from 'lucide-react'
+import { X, Filter, Minimize2, MoveDiagonal, RectangleVertical, ChevronDown, ChevronUp, Clock } from 'lucide-react'
 import { formatNumber, formatNumberWithCommas } from '../utils/formatNumbers'
 import { CardStatLabel } from './CardStatLabel'
 import { usePlayerDetail } from '../hooks/usePlayerDetail'
 import { usePlayerGameweekStats } from '../hooks/usePlayerGameweekStats'
+import { usePlayerFixtureForGameweek } from '../hooks/usePlayerFixtureForGameweek'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
 import { useLeaguePlayerOwnership } from '../hooks/useLeaguePlayerOwnership'
@@ -206,6 +207,7 @@ export default function PlayerDetailModal({
   } = usePlayerDetail(playerId, gameweek, leagueManagerCount, leagueManagerIds)
 
   const { stats: gwStats, loading: gwStatsLoading } = usePlayerGameweekStats(playerId, gameweek)
+  const { fixture: playerFixture, loading: fixtureLoading } = usePlayerFixtureForGameweek(playerDetailPlayer?.team_id ?? null, gameweek)
   const pointsImpactEvents = useMemo(
     () => getPointsImpactEvents(gwStats, playerDetailPlayer?.position),
     [gwStats, playerDetailPlayer?.position]
@@ -405,7 +407,41 @@ export default function PlayerDetailModal({
                   {gwStatsLoading ? (
                     <div className="bento-card-value loading">...</div>
                   ) : pointsImpactEvents.length === 0 && gwTotalPts === 0 ? (
-                    <div className="player-detail-points-impact-empty">No points this gameweek</div>
+                    (() => {
+                      const matchStarted = playerFixture?.started === true || playerFixture?.started === 'true'
+                      const matchFinished = playerFixture?.finished === true || playerFixture?.finished === 'true' || playerFixture?.finished_provisional === true || playerFixture?.finished_provisional === 'true'
+                      const mins = gwStats?.minutes != null ? Number(gwStats.minutes) : null
+                      const isDnp = matchFinished && mins === 0
+                      const formatKickoff = (iso) => {
+                        if (!iso) return null
+                        try {
+                          const d = new Date(iso)
+                          if (Number.isNaN(d.getTime())) return null
+                          const day = d.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase().slice(0, 3)
+                          const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: false })
+                          return `${day} ${time}`
+                        } catch { return null }
+                      }
+                      const kickoffStr = !fixtureLoading && playerFixture && !matchStarted ? formatKickoff(playerFixture.kickoff_time) : null
+                      if (kickoffStr) {
+                        return (
+                          <div className="player-detail-points-impact-empty player-detail-points-impact-empty--kickoff" title={`Kickoff ${kickoffStr} (local)`}>
+                            <Clock className="player-detail-points-impact-kickoff-icon" size={14} strokeWidth={2} aria-hidden />
+                            <span className="player-detail-points-impact-kickoff-label">Kickoff</span>
+                            <span className="player-detail-points-impact-kickoff-time">{kickoffStr}</span>
+                          </div>
+                        )
+                      }
+                      if (isDnp) {
+                        return (
+                          <div className="player-detail-points-impact-empty player-detail-points-impact-empty--dnp" title="Did not play">
+                            <span className="player-detail-points-impact-dnp-badge" aria-hidden>!</span>
+                            <span className="player-detail-points-impact-dnp-text">Did not play</span>
+                          </div>
+                        )
+                      }
+                      return <div className="player-detail-points-impact-empty">No points this gameweek</div>
+                    })()
                   ) : (
                     <>
                       <div className="player-detail-points-impact-list">
@@ -540,9 +576,9 @@ export default function PlayerDetailModal({
                 onClick={() => setOpponentStatsExpanded((v) => !v)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpponentStatsExpanded((v) => !v); } }}
                 aria-expanded={opponentStatsExpanded}
-                aria-label={opponentStatsExpanded ? 'Collapse Opponent stat rankings' : 'Expand Opponent stat rankings'}
+                aria-label={opponentStatsExpanded ? 'Collapse Opponent Statistic Rank (Last 6 GW)' : 'Expand Opponent Statistic Rank (Last 6 GW)'}
               >
-                <span className="player-detail-bento-collapsible-title">Opponent stat rankings</span>
+                <span className="player-detail-bento-collapsible-title">Opponent Statistic Rank (Last 6 GW)</span>
                 <span className="player-detail-bento-collapsible-expand-icon" title={opponentStatsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
                   {opponentStatsExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
                 </span>
