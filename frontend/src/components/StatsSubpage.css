@@ -43,7 +43,7 @@
   font-weight: 600;
 }
 
-/* Top 6/12 pill: same blue for all ranks 1–6/12, consistent */
+/* Top 6/12 pill: same blue for all ranks 1–6/12, consistent. Border darker to match theme. */
 .research-stats-pts-pill {
   position: relative;
   z-index: 1;
@@ -56,7 +56,7 @@
   padding: 4px 4px;
   border-radius: 5px;
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 16%, var(--bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 42%, var(--border-color));
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
   box-sizing: border-box;
 }
 .research-stats-pts-pill .research-stats-cell-main {
@@ -382,7 +382,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   transition: border-color 0.15s, color 0.15s;
 }
 
-/* Compare button: allow width for label on all viewports; orange/yellow accent with subtle fill */
+/* Compare button: allow width for label on all viewports; orange accent with subtle fill */
 /* Min-width so Compare vs Exit doesn't resize button and cause gap on mobile */
 .stats-compare-btn {
   width: auto;
@@ -390,9 +390,9 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   padding-left: 14px;
   padding-right: 14px;
   gap: 8px;
-  color: #c2410c;
-  border-color: rgba(234, 179, 8, 0.6);
-  background: rgba(234, 179, 8, 0.06);
+  color: var(--accent-orange, #f97316);
+  border-color: color-mix(in srgb, var(--accent-orange, #f97316) 55%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-orange, #f97316) 8%, var(--bg-card));
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .stats-compare-btn .stats-toolbar-btn-label {
@@ -429,21 +429,21 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 }
 
 .stats-compare-btn--active {
-  color: #c2410c;
-  border-color: rgba(234, 179, 8, 0.8);
-  background: rgba(234, 179, 8, 0.1);
+  color: var(--accent-orange, #f97316);
+  border-color: color-mix(in srgb, var(--accent-orange, #f97316) 70%, var(--border-color));
+  background: color-mix(in srgb, var(--accent-orange, #f97316) 12%, var(--bg-card));
 }
 
 @media (hover: hover) {
   .stats-compare-btn:not(.stats-compare-btn--exit-mode):hover {
-    color: #b45309;
-    border-color: rgba(234, 179, 8, 0.9);
-    background: rgba(234, 179, 8, 0.12);
+    color: var(--accent-orange, #f97316);
+    border-color: color-mix(in srgb, var(--accent-orange, #f97316) 75%, var(--border-color));
+    background: color-mix(in srgb, var(--accent-orange, #f97316) 14%, var(--bg-card));
   }
   .stats-compare-btn--active:not(.stats-compare-btn--exit-mode):hover {
-    color: #b45309;
-    border-color: rgba(234, 179, 8, 0.9);
-    background: rgba(234, 179, 8, 0.15);
+    color: var(--accent-orange, #f97316);
+    border-color: color-mix(in srgb, var(--accent-orange, #f97316) 80%, var(--border-color));
+    background: color-mix(in srgb, var(--accent-orange, #f97316) 18%, var(--bg-card));
   }
 }
 
@@ -834,7 +834,7 @@ html[data-theme="dark"] .research-stats-compare-details-tr--section-header:first
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
   color: var(--text-primary);
 }
 .research-stats-compare-details-pill--leader {
@@ -1299,12 +1299,26 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 .research-stats-page .research-stats-table.league-standings-bento-table thead th.league-standings-bento-team {
   font-size: 10px !important;
   padding: 4px 8px;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
 }
 .research-stats-page .research-stats-table.league-standings-bento-table td {
   font-size: 12px !important;
   font-weight: 600 !important;
   line-height: 1.2;
+  border-bottom-color: color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
+}
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-gw,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total,
+.research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-gw {
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
+}
+.research-stats-page .research-stats-table.league-standings-bento-table thead th.league-standings-bento-total:last-of-type,
+.research-stats-page .research-stats-table.league-standings-bento-table thead th.league-standings-bento-gw:last-of-type {
+  border-right: none;
+}
+.research-stats-page .research-stats-table.league-standings-bento-table tbody tr td:last-child {
+  border-right: none;
 }
 .research-stats-page .research-stats-table tbody tr {
   min-height: 46px;
@@ -1320,7 +1334,8 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   top: 0;
   z-index: 15;
   background: var(--bg-secondary);
-  box-shadow: 0 1px 0 var(--border-color);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead tr {
   position: sticky;
@@ -1343,7 +1358,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   left: 0;
   z-index: 20;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
   box-sizing: border-box;
   transform: translateZ(0);
   -webkit-backface-visibility: hidden;
@@ -1352,7 +1367,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 }
 .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th.league-standings-bento-team {
   z-index: 20;
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
 }
 .research-stats-page .research-stats-table.league-standings-bento-table thead th:not(.league-standings-bento-team) {
   position: sticky;
@@ -1365,7 +1380,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   left: 0;
   z-index: 10;
   background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
+  border-right: 1px solid color-mix(in srgb, var(--border-color) 55%, var(--bg-primary));
   box-shadow: none;
   box-sizing: border-box;
   transform: translateZ(0);
@@ -1394,6 +1409,10 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 }
 
 /* Sortable stat header: make the whole th (background container) tappable, not just the label */
+/* Triangle slot only rendered when sorted – no reserved empty space */
+.research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total .league-standings-sort-triangle-slot {
+  margin-left: 2px;
+}
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total .league-standings-sort-header {
   position: absolute;
   inset: 0;
@@ -1402,7 +1421,6 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
   padding: 4px;
   box-sizing: border-box;
   border: none;

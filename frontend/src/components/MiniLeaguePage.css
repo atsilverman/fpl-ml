@@ -2289,7 +2289,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   justify-content: center;
   align-items: center;
   width: 100%;
-  min-height: 60px;
+  min-height: 44px;
 }
 
 /* Player breakdown popup: 2-row header – player badge + name + position pill, then Gameweek Points subtitle */
@@ -2766,7 +2766,8 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   justify-content: center;
   gap: 8px;
   align-self: stretch;
-  padding: 8px 10px;
+  width: 100%;
+  padding: 5px 12px;
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
   border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 18%, var(--border-color));
   border-radius: 6px;
@@ -2854,9 +2855,11 @@ html[data-theme="dark"] .player-detail-points-impact-icon--yc {
   font-size: 12px;
   font-weight: 600;
   flex-shrink: 0;
-  min-width: 40px;
-  padding: 2px 8px;
-  border-radius: 999px;
+  width: 44px;
+  min-width: 44px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border-radius: 8px;
   display: inline-block;
   text-align: center;
 }
@@ -2880,14 +2883,11 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   font-style: italic;
   color: var(--text-secondary);
 }
-/* Feint +0: near-miss for saves/DEFCON, shows how close player was */
-.player-detail-points-impact-row--feint .player-detail-points-impact-label {
-  color: var(--text-tertiary, rgba(128, 128, 128, 0.7));
-}
+/* Feint +0: near-miss for saves/DEFCON; label matches other rows, value stays greyed out */
 .player-detail-points-impact-pts--feint {
   opacity: 0.6;
   color: var(--text-tertiary, rgba(128, 128, 128, 0.7)) !important;
-  background: transparent !important;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.08)) !important;
 }
 .player-detail-points-impact-total-provisional-hint {
   font-size: 10px;
@@ -2902,7 +2902,9 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
-  padding-top: 8px;
+  padding: 6px 12px 6px 12px;
+  border-radius: 8px;
+  background: var(--bg-tertiary, rgba(0, 0, 0, 0.08));
   border-top: 1px solid var(--border-color);
 }
 .player-detail-points-impact-total-label {
@@ -2932,6 +2934,18 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
 }
 .player-detail-chart-bento-label {
   margin-bottom: 0;
+}
+.player-detail-chart-bento-title-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+.player-detail-chart-bento-subtitle {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
 }
 .player-detail-chart-bento-label .bento-card-label-suffix,
 .player-detail-bento-collapsible-title .bento-card-label-suffix {
@@ -3147,57 +3161,81 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
 
 /* Team detail modal: uses same player-detail-bento-collapsible structure as player modal; shared styles apply via .player-detail-modal-body */
 
-/* Team details bento: compact stat grid (distinct from player details) */
+/* Team details bento: compact stat grid (distinct from player details) – half height */
 .team-details-bento-body {
-  padding: 32px 0 0;
+  padding: 16px 0 0;
 }
 .team-details-stats {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px 12px;
-  align-items: center;
+  grid-template-rows: auto;
+  gap: 4px 8px;
+  align-items: stretch;
 }
 .team-details-stat {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
   align-items: center;
   justify-content: center;
   text-align: center;
+  padding: 6px 6px;
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+.team-details-stat--table {
+  grid-column: 1;
+}
+.team-details-stat--positive {
+  border-color: var(--accent-green, #10b981);
+}
+.team-details-stat--negative {
+  border-color: var(--accent-red, #ef4444);
 }
 .team-details-stat-label {
   font-size: 9px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.05em;
   color: var(--text-secondary);
   white-space: nowrap;
   text-align: center;
+  line-height: 1.2;
 }
 .team-details-stat-value-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 2px;
+  min-height: 20px;
 }
 .team-details-stat-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.2;
 }
-.team-details-stat-value-wrap .team-details-rank-change {
+.team-details-stat-value-wrap .team-details-rank-change,
+.team-details-stat-value-wrap .team-details-rank-change-placeholder {
   display: inline-flex;
   align-items: center;
-  gap: 1px;
-  padding: 2px 4px;
-  font-size: 9px;
+  justify-content: center;
+  min-height: 14px;
+  min-width: 22px;
+  padding: 0 2px;
+}
+.team-details-stat-value-wrap .team-details-rank-change {
+  gap: 0;
+  padding: 1px 5px;
+  min-width: 22px;
+  font-size: 8px;
   font-weight: 600;
 }
 .team-details-stat-value-wrap .team-details-rank-change svg {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   flex-shrink: 0;
 }
 /* Team details header: info button left of collapse */
@@ -3230,20 +3268,18 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   outline-offset: 1px;
 }
 .team-details-rank-info-msg {
-  margin: 0 0 10px 0;
-  padding: 8px 10px;
-  font-size: 11px;
-  line-height: 1.4;
+  margin: 0 0 6px 0;
+  padding: 6px 8px;
+  font-size: 10px;
+  line-height: 1.35;
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--accent-blue, #3b82f6) 8%, var(--bg-card));
   border-radius: 6px;
   border: 1px solid color-mix(in srgb, var(--accent-blue, #3b82f6) 20%, var(--border-color));
 }
 
-/* Placeholder for alignment when no rank change */
+/* Placeholder for alignment when no rank change (matches rank badge height) */
 .team-details-rank-change-placeholder {
-  display: block;
-  min-height: 18px;
   min-width: 1px;
 }
 

@@ -2,7 +2,7 @@
 -- Used by team detail modal "stats by gameweek" chart.
 
 CREATE OR REPLACE FUNCTION get_team_gc_xgc_per_gameweek(p_team_id INT, p_max_gw INT, p_location TEXT DEFAULT 'all')
-RETURNS TABLE(gameweek INT, goals_conceded INT, expected_goals_conceded NUMERIC)
+RETURNS TABLE(gameweek INT, goals_conceded INT, expected_goals_conceded NUMERIC, clean_sheets INT)
 LANGUAGE plpgsql
 STABLE
 AS $$
@@ -26,13 +26,14 @@ BEGIN
   SELECT
     d.gameweek::INT,
     COALESCE(SUM(d.gc), 0)::INTEGER AS goals_conceded,
-    COALESCE(SUM(d.xgc), 0)::NUMERIC AS expected_goals_conceded
+    COALESCE(SUM(d.xgc), 0)::NUMERIC AS expected_goals_conceded,
+    COALESCE(SUM(CASE WHEN d.gc = 0 THEN 1 ELSE 0 END), 0)::INTEGER AS clean_sheets
   FROM def_gk_fixture d
   GROUP BY d.gameweek
   ORDER BY d.gameweek;
 END;
 $$;
 
-COMMENT ON FUNCTION get_team_gc_xgc_per_gameweek(INT, INT, TEXT) IS 'Per-gameweek GC and xGC for team detail chart. MAX per (team, gameweek, fixture) from def/GK only, then SUM across fixtures (DGW). p_max_gw: include gameweeks 1..p_max_gw.';
+COMMENT ON FUNCTION get_team_gc_xgc_per_gameweek(INT, INT, TEXT) IS 'Per-gameweek GC, xGC and clean_sheets for team detail chart. MAX per (team, gameweek, fixture) from def/GK only; clean_sheets = count of fixtures with 0 goals conceded. p_max_gw: include gameweeks 1..p_max_gw.';
 
 GRANT EXECUTE ON FUNCTION get_team_gc_xgc_per_gameweek(INT, INT, TEXT) TO anon, authenticated;

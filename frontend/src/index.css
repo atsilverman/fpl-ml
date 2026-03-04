@@ -51,10 +51,10 @@ html[data-theme="dark"] {
   /* BPS chart value on bar: dark text on light bars, light text on dark bars */
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
-  /* Chart expected line (xG/xA etc.): amber so it reads as forecast, distinct from actual green bars */
+  /* Chart expected line (xG/xA etc.): amber so it reads as forecast, distinct from actual bars */
   --chart-expected-line: #f59e0b;
-  /* Chart bar fill: subtle green (less saturated than accent-green) */
-  --chart-bar-fill: #5a9b7a;
+  /* Chart bar fill: use theme accent so bars fit with the set theme */
+  --chart-bar-fill: var(--accent-blue);
   /* Card shadow: on dark bg use stronger black + subtle light ring so edges read */
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.04);
   /* Hover feedback: default (mobile has no hover via @media (hover: hover)) */
@@ -105,7 +105,7 @@ html[data-theme="light"] {
   --bps-value-on-bar-light: #fff;
   /* Chart expected line (xG/xA etc.): amber so it reads as forecast */
   --chart-expected-line: #d97706;
-  --chart-bar-fill: #4a8c6a;
+  --chart-bar-fill: var(--accent-blue);
   /* Card shadow: soft dark shadow for lift */
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.04);
   --bg-hover: var(--bg-secondary);
@@ -151,7 +151,7 @@ html[data-theme="dark-forest"] {
   --bps-value-on-bar-dark: #141a18;
   --bps-value-on-bar-light: #fff;
   --chart-expected-line: #c9a86c;
-  --chart-bar-fill: #5a9b7a;
+  --chart-bar-fill: var(--accent-blue);
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
@@ -196,7 +196,7 @@ html[data-theme="dark-amber"] {
   --bps-value-on-bar-dark: #1a1816;
   --bps-value-on-bar-light: #fff;
   --chart-expected-line: #e5b872;
-  --chart-bar-fill: #6b9b7a;
+  --chart-bar-fill: var(--accent-blue);
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.03);
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
@@ -241,7 +241,7 @@ html[data-theme="light-dawn"] {
   --bps-value-on-bar-dark: #1c1917;
   --bps-value-on-bar-light: #fff;
   --chart-expected-line: #b08050;
-  --chart-bar-fill: #5a8c6a;
+  --chart-bar-fill: var(--accent-blue);
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
@@ -286,7 +286,7 @@ html[data-theme="light-ocean"] {
   --bps-value-on-bar-dark: #0f172a;
   --bps-value-on-bar-light: #fff;
   --chart-expected-line: #c49b6a;
-  --chart-bar-fill: #5a8c6a;
+  --chart-bar-fill: var(--accent-blue);
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.03);
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);

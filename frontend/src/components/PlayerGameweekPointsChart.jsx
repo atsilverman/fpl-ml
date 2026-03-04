@@ -39,7 +39,7 @@ function formatStatLabel(value, statKey) {
 /** Bar fill: subtle green for positive, red for negative (red bar drawn in positive direction with negative label). */
 function getBarFill(d, getVal) {
   const v = getVal(d)
-  return v < 0 ? 'var(--accent-red, #dc2626)' : 'var(--chart-bar-fill, #5a9b7a)'
+  return v < 0 ? 'var(--accent-red, #dc2626)' : 'var(--chart-bar-fill, var(--accent-blue, #3b82f6))'
 }
 
 /** Whether we're showing DEFCON/Saves threshold styling (hashed vs solid). */
@@ -104,8 +104,6 @@ export default function PlayerGameweekPointsChart({
     if (filter === 'gw20plus') return data.filter((d) => (d.gameweek ?? 0) >= 20)
     return data
   }, [data, filter])
-
-  const showExpectedLegend = !!STAT_TO_EXPECTED[statKey] && filteredData.length >= 2
 
   const avgValForReport = useMemo(() => {
     if (!filteredData.length) return null
@@ -220,7 +218,7 @@ export default function PlayerGameweekPointsChart({
       if (!useThresholdStyling) return getBarFillFor(d)
       const v = getVal(d)
       if (v < 0) return 'var(--accent-red, #dc2626)'
-      return hitThreshold(d, getVal, thresholdLine) ? 'var(--chart-bar-fill, #5a9b7a)' : 'url(#player-gw-chart-hash-muted)'
+      return hitThreshold(d, getVal, thresholdLine) ? 'var(--chart-bar-fill, var(--accent-blue, #3b82f6))' : 'url(#player-gw-chart-hash-muted)'
     }
 
     // DEFCON/Saves hash pattern: parallel diagonals only (no crossing), subdued for "not achieved"
@@ -559,12 +557,6 @@ export default function PlayerGameweekPointsChart({
 
   return (
     <div className="player-gw-chart-wrapper">
-      {showExpectedLegend && (
-        <div className="player-gw-chart-legend">
-          <span className="player-gw-chart-legend-line" aria-hidden />
-          <span className="player-gw-chart-legend-label">expected</span>
-        </div>
-      )}
       <div ref={containerRef} className="player-gw-chart-container">
         <svg
           ref={svgRef}

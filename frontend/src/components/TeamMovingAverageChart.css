@@ -1,0 +1,125 @@
+.team-ma-chart-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.team-ma-chart-container {
+  flex: 1 1 auto;
+  min-height: 160px;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.team-ma-chart-container--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-ma-chart-container--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.team-ma-chart-skeleton {
+  width: 100%;
+  height: 80%;
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-elevated) 50%, var(--border-color) 75%);
+  background-size: 200% 100%;
+  animation: team-ma-chart-skeleton-pulse 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes team-ma-chart-skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.team-ma-chart-empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.team-ma-chart-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.team-ma-chart-grid {
+  stroke: var(--border-color);
+  stroke-opacity: 0.4;
+  stroke-width: 0.5;
+  stroke-dasharray: 2, 3;
+}
+
+.team-ma-chart-axis {
+  stroke: var(--border-color);
+  stroke-width: 1;
+}
+
+.team-ma-chart-line--focused {
+  stroke-width: 2.5;
+}
+
+.team-ma-chart-line--demoted {
+  stroke-width: 1;
+}
+
+.team-ma-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.team-ma-chart-legend-line {
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.team-ma-chart-legend-line--focused {
+  background: var(--accent-green);
+}
+
+.team-ma-chart-legend-line--demoted {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.team-ma-chart-legend-badge {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.team-ma-chart-legend-label {
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+
+.team-ma-chart-legend-sep {
+  font-size: 10px;
+  color: var(--text-tertiary, rgba(148, 163, 184, 0.6));
+  margin: 0 2px;
+}
+
+/* Chart line badge (SVG image) */
+.team-ma-chart-line-badge {
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.4));
+}
+

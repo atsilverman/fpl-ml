@@ -1221,7 +1221,7 @@ export default function StatsSubpage() {
                                 aria-sort={compareSort.column === field ? (compareSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                               >
                                 <CardStatLabel statKey={key} label={label} />
-                                <span className="league-standings-sort-triangle-slot">{compareSort.column === field ? <SortTriangle direction={compareSort.dir} /> : null}</span>
+                                {compareSort.column === field ? <span className="league-standings-sort-triangle-slot"><SortTriangle direction={compareSort.dir} /></span> : null}
                               </button>
                             ) : (
                               <CardStatLabel statKey={key} label={label} />
@@ -1351,7 +1351,7 @@ export default function StatsSubpage() {
                             aria-sort={mainSort.column === field ? (mainSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                           >
                             <CardStatLabel statKey={key} label={label} />
-                            <span className="league-standings-sort-triangle-slot">{mainSort.column === field ? <SortTriangle direction={mainSort.dir} /> : null}</span>
+                            {mainSort.column === field ? <span className="league-standings-sort-triangle-slot"><SortTriangle direction={mainSort.dir} /></span> : null}
                           </button>
                         ) : (
                           <CardStatLabel statKey={key} label={label} />
@@ -1546,7 +1546,7 @@ export default function StatsSubpage() {
                                 aria-sort={compareSort.column === field ? (compareSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                               >
                                 <CardStatLabel statKey={key} label={label} />
-                                <span className="league-standings-sort-triangle-slot">{compareSort.column === field ? <SortTriangle direction={compareSort.dir} /> : null}</span>
+                                {compareSort.column === field ? <span className="league-standings-sort-triangle-slot"><SortTriangle direction={compareSort.dir} /></span> : null}
                               </button>
                             ) : (
                               <CardStatLabel statKey={key} label={label} />
@@ -1710,7 +1710,7 @@ export default function StatsSubpage() {
                             aria-sort={mainSort.column === field ? (mainSort.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                           >
                             <CardStatLabel statKey={key} label={label} />
-                            <span className="league-standings-sort-triangle-slot">{mainSort.column === field ? <SortTriangle direction={mainSort.dir} /> : null}</span>
+                            {mainSort.column === field ? <span className="league-standings-sort-triangle-slot"><SortTriangle direction={mainSort.dir} /></span> : null}
                           </button>
                         ) : (
                           <CardStatLabel statKey={key} label={label} />

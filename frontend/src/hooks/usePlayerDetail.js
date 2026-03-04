@@ -15,8 +15,10 @@ const POSITION_LABELS = { 1: 'GK', 2: 'DEF', 3: 'MID', 4: 'FWD' }
  */
 export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, leagueManagerIds = null) {
   const leagueIds = Array.isArray(leagueManagerIds) ? leagueManagerIds : []
+  const sortedLeagueIds = leagueIds.length ? leagueIds.slice().sort((a, b) => Number(a) - Number(b)) : null
+  const numericGw = Number(gameweek) || 0
   const { data: managerIdsOwningPlayer = [], loading: ownershipLoading } = useQuery({
-    queryKey: ['league-player-ownership', playerId, gameweek, leagueIds.length ? leagueIds.slice().sort((a, b) => Number(a) - Number(b)) : null],
+    queryKey: ['league-player-ownership', playerId, gameweek, sortedLeagueIds],
     queryFn: async () => {
       if (playerId == null || !gameweek) return []
       let query = supabase
@@ -36,6 +38,28 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
     staleTime: 60000,
   })
 
+  const { data: managerIdsOwningPlayerPrev = [] } = useQuery({
+    queryKey: ['league-player-ownership', playerId, numericGw > 1 ? numericGw - 1 : null, sortedLeagueIds],
+    queryFn: async () => {
+      if (playerId == null || numericGw < 2) return []
+      const prevGw = numericGw - 1
+      let query = supabase
+        .from('manager_picks')
+        .select('manager_id')
+        .eq('player_id', playerId)
+        .eq('gameweek', prevGw)
+        .lte('position', 11)
+      if (leagueIds.length > 0) {
+        query = query.in('manager_id', leagueIds)
+      }
+      const { data, error } = await query
+      if (error) throw error
+      return [...new Set((data || []).map((r) => r.manager_id))]
+    },
+    enabled: playerId != null && numericGw > 1 && (leagueManagerIds == null || leagueIds.length > 0),
+    staleTime: 60000,
+  })
+
   const leagueOwnershipPct =
     leagueManagerCount != null &&
     leagueManagerCount > 0 &&
@@ -43,12 +67,28 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
       ? Math.round((managerIdsOwningPlayer.length / leagueManagerCount) * 1000) / 10
       : null
 
+  const prevLeagueOwnershipPct =
+    leagueManagerCount != null &&
+    leagueManagerCount > 0 &&
+    numericGw > 1 &&
+    managerIdsOwningPlayerPrev.length >= 0
+      ? Math.round((managerIdsOwningPlayerPrev.length / leagueManagerCount) * 1000) / 10
+      : null
+
+  const leagueOwnershipChange =
+    leagueOwnershipPct != null && prevLeagueOwnershipPct != null
+      ? Math.round((leagueOwnershipPct - prevLeagueOwnershipPct) * 10) / 10
+      : null
+
   const main = useQuery({
     queryKey: ['player-detail', playerId, gameweek],
     queryFn: async () => {
       if (!playerId || !gameweek) return null
 
-      const [playerRes, priceRes, ranksRes, statsRes, historyRes] = await Promise.all([
+      const numericGameweek = Number(gameweek) || 0
+      const prevGw = numericGameweek > 1 ? numericGameweek - 1 : null
+
+      const baseFetches = [
         supabase
           .from('players')
           .select('fpl_player_id, web_name, position, team_id, teams!fk_players_team(short_name), selected_by_percent, cost_tenths')
@@ -75,6 +115,26 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           )
           .eq('player_id', playerId)
           .order('gameweek', { ascending: true }),
+      ]
+
+      const prevFetches =
+        prevGw == null
+          ? []
+          : [
+              supabase
+                .from('player_prices')
+                .select('price_tenths')
+                .eq('player_id', playerId)
+                .eq('gameweek', prevGw)
+                .order('recorded_at', { ascending: false })
+                .limit(1)
+                .maybeSingle(),
+              supabase.rpc('get_player_season_ranks', { p_player_id: playerId, p_gameweek: prevGw }).maybeSingle(),
+            ]
+
+      const [playerRes, priceRes, ranksRes, statsRes, historyRes, prevPriceRes, prevRanksRes] = await Promise.all([
+        ...baseFetches,
+        ...(prevFetches.length ? prevFetches : [Promise.resolve({ data: null }), Promise.resolve({ data: null })]),
       ])
 
       if (playerRes.error) throw playerRes.error
@@ -98,8 +158,23 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
       }
       const currentPrice = priceTenths != null ? priceTenths / 10 : null
 
+      let prevPrice = null
+      if (prevPriceRes?.data?.price_tenths != null) {
+        prevPrice = prevPriceRes.data.price_tenths / 10
+      }
+      const priceChange =
+        currentPrice != null && prevPrice != null && currentPrice !== prevPrice ? Math.round((currentPrice - prevPrice) * 10) / 10 : null
+
       const overallRank = ranksRes.data?.overall_rank ?? null
       const positionRank = ranksRes.data?.position_rank ?? null
+      const prevOverallRank = prevRanksRes?.data?.overall_rank != null ? Number(prevRanksRes.data.overall_rank) : null
+      const prevPositionRank = prevRanksRes?.data?.position_rank != null ? Number(prevRanksRes.data.position_rank) : null
+      const positionRankChange =
+        positionRank != null && prevPositionRank != null && prevPositionRank !== positionRank
+          ? prevPositionRank - positionRank
+          : null
+      const overallRankChange =
+        overallRank != null && prevOverallRank != null && prevOverallRank !== overallRank ? prevOverallRank - overallRank : null
 
       let seasonPoints = 0
       ;(statsRes.data || []).forEach((r) => {
@@ -184,9 +259,12 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
           team_short_name: player.teams?.short_name ?? null,
         },
         currentPrice,
+        priceChange,
         seasonPoints,
         overallRank: overallRank != null ? Number(overallRank) : null,
         positionRank: positionRank != null ? Number(positionRank) : null,
+        positionRankChange,
+        overallRankChange,
         gameweekPoints,
         overallOwnershipPct,
       }
@@ -201,6 +279,7 @@ export function usePlayerDetail(playerId, gameweek, leagueManagerCount = null, l
   return {
     ...detail,
     leagueOwnershipPct,
+    leagueOwnershipChange,
     leagueManagerCount: leagueManagerCount ?? null,
     loading,
     error: main.error,

@@ -66,7 +66,8 @@ export function useTeamDetail(teamId, gameweek) {
               row.gameweek,
               {
                 goals_conceded: row.goals_conceded ?? 0,
-                expected_goals_conceded: Number(row.expected_goals_conceded) ?? 0
+                expected_goals_conceded: Number(row.expected_goals_conceded) ?? 0,
+                clean_sheets: row.clean_sheets ?? 0
               }
             ])
           )
@@ -82,7 +83,6 @@ export function useTeamDetail(teamId, gameweek) {
           points: 0,
           goals: 0,
           assists: 0,
-          clean_sheets: 0,
           saves: 0,
           bps: 0,
           bonus: 0,
@@ -97,7 +97,7 @@ export function useTeamDetail(teamId, gameweek) {
         cur.points += r.total_points ?? 0
         cur.goals += r.goals_scored ?? 0
         cur.assists += r.assists ?? 0
-        cur.clean_sheets += r.clean_sheets ?? 0
+        // clean_sheets: use team-level from RPC (not summed player stats – each DEF/GK gets 1)
         cur.saves += r.saves ?? 0
         cur.bps += r.bps ?? 0
         cur.bonus += r.bonus ?? 0
@@ -112,14 +112,14 @@ export function useTeamDetail(teamId, gameweek) {
 
       const gameweekPoints = Array.from(byGw.entries())
         .map(([gw, cur]) => {
-          const gcXgc = gcXgcByGw[gw] ?? { goals_conceded: 0, expected_goals_conceded: 0 }
+          const gcXgc = gcXgcByGw[gw] ?? { goals_conceded: 0, expected_goals_conceded: 0, clean_sheets: 0 }
           return {
             gameweek: gw,
             points: cur.points,
             goals: cur.goals,
             assists: cur.assists,
             goal_involvements: cur.goals + cur.assists,
-            clean_sheets: cur.clean_sheets,
+            clean_sheets: gcXgc.clean_sheets ?? 0,
             saves: cur.saves,
             bps: cur.bps,
             bonus: cur.bonus,

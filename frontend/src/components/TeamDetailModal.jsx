@@ -11,11 +11,16 @@ function ordinal(n) {
 import { CardStatLabel } from './CardStatLabel'
 import { useTeamDetail } from '../hooks/useTeamDetail'
 import { useTeamLast6Stats } from '../hooks/useTeamLast6Stats'
+import { useAllTeamsStatsPerGameweek } from '../hooks/useAllTeamsStatsPerGameweek'
+import { useTeamsEverRank1 } from '../hooks/useTeamsEverRank1'
 import { useConfiguration } from '../contexts/ConfigurationContext'
 import PlayerGameweekPointsChart, { CHART_RANGE_FILTERS } from './PlayerGameweekPointsChart'
+import TeamMovingAverageChart from './TeamMovingAverageChart'
 import ScheduleBento from './ScheduleBento'
 import ScheduleOpponentStatsTable from './ScheduleOpponentStatsTable'
 import './MiniLeaguePage.css'
+
+const MA_STAT_LABELS = { goals: 'G', expected_goals: 'xG', goals_conceded: 'GC', expected_goals_conceded: 'xGC' }
 
 const ALL_TEAM_STAT_OPTIONS = [
   { key: 'points', label: 'Points' },
@@ -52,6 +57,14 @@ export default function TeamDetailModal({
   const [chartExpanded, setChartExpanded] = useState(true)
   const [scheduleExpanded, setScheduleExpanded] = useState(true)
   const [opponentStatsExpanded, setOpponentStatsExpanded] = useState(true)
+  const [maChartExpanded, setMaChartExpanded] = useState(true)
+  const [showMaFilterPopup, setShowMaFilterPopup] = useState(false)
+  const [maStatKey, setMaStatKey] = useState('expected_goals')
+  const [maWindow, setMaWindow] = useState(3)
+  const [maFilter, setMaFilter] = useState(() => {
+    if (typeof window === 'undefined') return 'gw20plus'
+    return window.matchMedia('(max-width: 768px)').matches ? 'last6' : 'gw20plus'
+  })
   const [showDetailsRankInfo, setShowDetailsRankInfo] = useState(false)
   const statPopupRef = useRef(null)
   const filterPopupLayerRef = useRef(null)
@@ -75,6 +88,11 @@ export default function TeamDetailModal({
   } = useTeamDetail(teamId, gameweek)
 
   const { byTeamId: teamLast6ByTeamId, loading: teamLast6Loading } = useTeamLast6Stats()
+  const { byTeamId: allTeamsPerGwByTeamId, teamShortNameById, loading: allTeamsPerGwLoading } = useAllTeamsStatsPerGameweek(
+    Number(gameweek) || 38,
+    teamId != null
+  )
+  const { rank1TeamIds } = useTeamsEverRank1(Number(gameweek) || 38, teamId != null)
   const config = useConfiguration()
   const difficultyOverridesByDimension = useMemo(
     () => ({
@@ -181,9 +199,9 @@ export default function TeamDetailModal({
                 onClick={() => setDetailsExpanded((v) => !v)}
                 onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDetailsExpanded((v) => !v); } }}
                 aria-expanded={detailsExpanded}
-                aria-label={detailsExpanded ? 'Collapse Team details' : 'Expand Team details'}
+                aria-label={detailsExpanded ? 'Collapse Team rankings' : 'Expand Team rankings'}
               >
-                <span className="player-detail-bento-collapsible-title">Team details</span>
+                <span className="player-detail-bento-collapsible-title">Team rankings</span>
                 <div className="team-details-header-actions" ref={detailsRankInfoRef}>
                   <button
                     type="button"
@@ -211,7 +229,7 @@ export default function TeamDetailModal({
                     <div className="bento-card-value loading">...</div>
                   ) : (
                     <div className="team-details-stats">
-                      <div className="team-details-stat">
+                      <div className={`team-details-stat team-details-stat--table${tablePositionChange != null && tablePositionChange !== 0 ? ` team-details-stat--${tablePositionChange > 0 ? 'positive' : 'negative'}` : ''}`}>
                         <span className="team-details-stat-label">Table</span>
                         <div className="team-details-stat-value-wrap">
                           <span className="team-details-stat-value">{tablePosition != null ? ordinal(tablePosition) : '—'}</span>
@@ -225,7 +243,7 @@ export default function TeamDetailModal({
                           )}
                         </div>
                       </div>
-                      <div className="team-details-stat">
+                      <div className={`team-details-stat${rankGoalsChange != null && rankGoalsChange !== 0 ? ` team-details-stat--${rankGoalsChange > 0 ? 'positive' : 'negative'}` : ''}`}>
                         <span className="team-details-stat-label">Goals</span>
                         <div className="team-details-stat-value-wrap">
                           <span className="team-details-stat-value">{rankGoals != null ? ordinal(rankGoals) : '—'}</span>
@@ -239,7 +257,7 @@ export default function TeamDetailModal({
                           )}
                         </div>
                       </div>
-                      <div className="team-details-stat">
+                      <div className={`team-details-stat${rankXgChange != null && rankXgChange !== 0 ? ` team-details-stat--${rankXgChange > 0 ? 'positive' : 'negative'}` : ''}`}>
                         <span className="team-details-stat-label">xG</span>
                         <div className="team-details-stat-value-wrap">
                           <span className="team-details-stat-value">{rankXg != null ? ordinal(rankXg) : '—'}</span>
@@ -253,7 +271,7 @@ export default function TeamDetailModal({
                           )}
                         </div>
                       </div>
-                      <div className="team-details-stat">
+                      <div className={`team-details-stat${rankGoalsConcededChange != null && rankGoalsConcededChange !== 0 ? ` team-details-stat--${rankGoalsConcededChange > 0 ? 'positive' : 'negative'}` : ''}`}>
                         <span className="team-details-stat-label">GC</span>
                         <div className="team-details-stat-value-wrap">
                           <span className="team-details-stat-value">{rankGoalsConceded != null ? ordinal(rankGoalsConceded) : '—'}</span>
@@ -267,7 +285,7 @@ export default function TeamDetailModal({
                           )}
                         </div>
                       </div>
-                      <div className="team-details-stat">
+                      <div className={`team-details-stat${rankXgcChange != null && rankXgcChange !== 0 ? ` team-details-stat--${rankXgcChange > 0 ? 'positive' : 'negative'}` : ''}`}>
                         <span className="team-details-stat-label">xGC</span>
                         <div className="team-details-stat-value-wrap">
                           <span className="team-details-stat-value">{rankXgc != null ? ordinal(rankXgc) : '—'}</span>
@@ -339,6 +357,71 @@ export default function TeamDetailModal({
                       filter={chartRangeFilter}
                       onFilterChange={setChartRangeFilter}
                       compactBars
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x2 player-detail-bento-collapsible--ma-chart ${maChartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header player-detail-chart-bento-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setMaChartExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setMaChartExpanded((v) => !v); } }}
+                aria-expanded={maChartExpanded}
+                aria-label={maChartExpanded ? 'Collapse Team moving average' : 'Expand Team moving average'}
+              >
+                <div className="player-detail-chart-bento-header-inner" onClick={(e) => e.stopPropagation()}>
+                  <span className="bento-card-label player-detail-chart-bento-label">
+                    Team moving average
+                    {maChartExpanded && (
+                      <span className="bento-card-label-suffix">
+                        | {MA_STAT_LABELS[maStatKey] ?? maStatKey}
+                      </span>
+                    )}
+                  </span>
+                  {maChartExpanded && (
+                    <div className="player-detail-chart-bento-actions">
+                      <button
+                        type="button"
+                        className="player-detail-chart-stat-btn"
+                        onClick={() => setShowMaFilterPopup((v) => !v)}
+                        aria-label="Filters"
+                        aria-expanded={showMaFilterPopup}
+                        aria-haspopup="dialog"
+                        title="Filters"
+                      >
+                        <Filter size={11} strokeWidth={1.5} aria-hidden />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="player-detail-bento-collapsible-expand-icon" title={maChartExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {maChartExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                </span>
+              </div>
+              {maChartExpanded && (
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--chart player-detail-bento-collapsible-body--ma-chart">
+                  <div className="player-detail-chart-wrap">
+                    <TeamMovingAverageChart
+                      byTeamId={allTeamsPerGwByTeamId}
+                      teamShortNameById={teamShortNameById}
+                      focusedTeamDisplayName={displayName}
+                      focusedTeamBadgeShortName={badgeShortName}
+                      focusedTeamId={resolvedTeamId}
+                      rank1TeamIds={rank1TeamIds}
+                      statKey={maStatKey}
+                      windowSize={maWindow}
+                      filter={maFilter}
+                      filterPopupOpen={showMaFilterPopup}
+                      onFilterPopupOpenChange={setShowMaFilterPopup}
+                      onFilterChange={setMaFilter}
+                      onStatChange={setMaStatKey}
+                      onWindowChange={setMaWindow}
+                      loading={allTeamsPerGwLoading}
                     />
                   </div>
                 </div>

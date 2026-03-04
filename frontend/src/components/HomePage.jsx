@@ -379,7 +379,7 @@ export default function HomePage() {
   }
 
   const handleExpandClick = () => {
-    setChartFilter('all') // Default to "All" when expanding
+    setChartFilter('last12') // Default to "Last 12" when expanding overall rank
     setIsPerformanceExpanded(true)
   }
 

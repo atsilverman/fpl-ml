@@ -167,7 +167,7 @@
 
 /* DEFCON/Saves: solid = threshold achieved, hashed = below threshold (fill set in D3) */
 .player-gw-chart-bar--achieved {
-  fill: var(--chart-bar-fill, #5a9b7a);
+  fill: var(--chart-bar-fill, var(--accent-blue, #3b82f6));
 }
 .player-gw-chart-bar--hashed {
   fill: url(#player-gw-chart-hash-muted);

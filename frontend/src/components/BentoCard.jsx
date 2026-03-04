@@ -384,7 +384,7 @@ export default function BentoCard({
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
-  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'total-points' || id === 'gw-points'
+  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'gw-points'
   const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
 
   const handleStateDebugClick = (e) => {
