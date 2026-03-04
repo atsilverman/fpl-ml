@@ -1178,15 +1178,17 @@ export default function StatsSubpage() {
                         <span className="research-stats-compare-legend-text">Stat leader</span>
                       </span>
                     )}
-                    <button
-                      type="button"
-                      className="research-stats-compare-details"
-                      onClick={() => setShowCompareDetailsModal(true)}
-                      aria-label="View compare details"
-                    >
-                      <RotateCcwSquare size={14} strokeWidth={2} />
-                      Details
-                    </button>
+                    {compareTableTeams.length > 1 && (
+                      <button
+                        type="button"
+                        className="research-stats-compare-details"
+                        onClick={() => setShowCompareDetailsModal(true)}
+                        aria-label="View compare details"
+                      >
+                        <RotateCcwSquare size={14} strokeWidth={2} />
+                        Details
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="research-stats-compare-clear"
@@ -1501,15 +1503,17 @@ export default function StatsSubpage() {
                         <span className="research-stats-compare-legend-text">Stat leader</span>
                       </span>
                     )}
-                    <button
-                      type="button"
-                      className="research-stats-compare-details"
-                      onClick={() => setShowCompareDetailsModal(true)}
-                      aria-label="View compare details"
-                    >
-                      <RotateCcwSquare size={14} strokeWidth={2} />
-                      Details
-                    </button>
+                    {compareTablePlayers.length > 1 && (
+                      <button
+                        type="button"
+                        className="research-stats-compare-details"
+                        onClick={() => setShowCompareDetailsModal(true)}
+                        aria-label="View compare details"
+                      >
+                        <RotateCcwSquare size={14} strokeWidth={2} />
+                        Details
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="research-stats-compare-clear"
