@@ -134,9 +134,6 @@ const ScheduleDifficultyCustomizer = forwardRef(function ScheduleDifficultyCusto
   }, [hasAnyOverrides, onHasOverridesChange])
 
   const handleResetAll = () => {
-    onResetStat?.('strength')
-    onResetStat?.('attack')
-    onResetStat?.('defence')
     setDraftByStat({
       strength: {},
       attack: {},

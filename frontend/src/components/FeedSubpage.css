@@ -6,13 +6,13 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + list header stay fixed; event list scrolls under. Match Defcon spacing. */
+/* Sticky: search bar + filter + list header stay fixed; event list scrolls under. Match league subpage nav spacing. */
 .feed-subpage-sticky-header {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding: 8px 0 2px;
+  padding: 4px 0 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -376,7 +376,7 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .feed-search-wrap {
@@ -403,13 +403,14 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
 
 .feed-search-input {
   width: 100%;
-  min-height: 28px;
-  padding: 4px 8px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
   box-sizing: border-box;
   font-size: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-primary);
   outline: none;
 }
@@ -491,13 +492,13 @@ html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__imp
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;

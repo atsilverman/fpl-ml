@@ -42,7 +42,7 @@
   }
 }
 
-/* Schedule Target / Avoid bento – expand/collapse like Top Performers */
+/* Schedule Target / Avoid bento – expand/collapse like Top Performers; when collapsed only toolbar shows */
 .schedule-recommendations-bento {
   margin-top: 8px;
   margin-bottom: 0;
@@ -53,6 +53,12 @@
   display: flex;
   flex-direction: column;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.schedule-recommendations-bento--collapsed {
+  display: none;
+}
+.schedule-recommendations-bento--expanded {
+  display: flex;
 }
 
 @media (hover: hover) {
@@ -314,9 +320,62 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 0;
   margin-bottom: 0;
+  min-height: 34px;
   flex-shrink: 0;
+}
+
+/* Fixture Summary trigger: inline with Customize/Filter, same 34px height */
+.schedule-fixture-summary-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary, #555);
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.schedule-fixture-summary-trigger:hover {
+  background: var(--bg-secondary, rgba(0, 0, 0, 0.05));
+  border-color: var(--text-secondary);
+}
+.schedule-fixture-summary-trigger:focus-visible {
+  outline: 2px solid var(--focus-ring, #3b82f6);
+  outline-offset: 2px;
+}
+.schedule-fixture-summary-trigger-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  text-align: left;
+}
+.schedule-fixture-summary-trigger-expand-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+.schedule-fixture-summary-trigger-expand-icon-svg {
+  flex-shrink: 0;
+  opacity: 0.8;
 }
 
 /* Legend left-aligned; filter button right-aligned */
@@ -328,15 +387,16 @@
   flex-shrink: 0;
 }
 .research-schedule-toolbar .schedule-header-icon-group--right {
-  margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-/* Match Statistics toolbar buttons: same color, border-radius, background (override .schedule-filter-btn) */
+/* Match Statistics toolbar buttons: 34px height, same color, border-radius, background (override .schedule-filter-btn) */
 .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn {
-  border-radius: 5px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 6px;
   background: var(--bg-card);
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
@@ -436,22 +496,26 @@
   text-transform: none;
 }
 .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 34px;
+  min-width: 34px;
   padding: 0;
 }
 .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) .stats-toolbar-btn-label {
   display: none;
 }
+.research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn.stats-compare-btn {
+  min-width: 34px;
+  padding-left: 12px;
+  padding-right: 12px;
+  gap: 6px;
+}
 @media (min-width: 769px) {
   .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) {
     width: auto;
-    min-width: 28px;
-    padding-left: 14px;
-    padding-right: 14px;
-    gap: 8px;
+    min-width: 34px;
+    padding-left: 12px;
+    padding-right: 12px;
+    gap: 6px;
   }
   .research-schedule-toolbar .schedule-header-icon-group--right .stats-filter-btn:not(.stats-compare-btn) .stats-toolbar-btn-label {
     display: inline;
@@ -618,12 +682,12 @@
   flex-shrink: 0;
 }
 
-/* Customize difficulty overlay: fill more of screen like Defcon filter popup (wider, taller) */
-.stats-filter-overlay-panel--customize {
+/* Customize difficulty overlay: same width as Schedule filter panel (--schedule); !important to override base .stats-filter-overlay-panel from other CSS files */
+.stats-filter-overlay-panel.stats-filter-overlay-panel--customize {
   flex: 0 0 auto;
-  width: calc(100vw - 24px);
-  min-width: 280px;
-  max-width: min(480px, calc(100vw - 24px));
+  width: min(395px, calc(100vw - 24px)) !important;
+  min-width: 280px !important;
+  max-width: min(420px, calc(100vw - 24px)) !important;
   max-height: calc(100vh - 24px);
   min-height: min(420px, calc(100vh - 48px));
   display: flex;
@@ -668,14 +732,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
   flex-shrink: 0;
 }
-.stats-filter-overlay-footer--customize .stats-filter-overlay-done {
-  display: block;
-  width: 100%;
+.stats-filter-overlay-footer--customize .stats-filter-overlay-save {
   padding: 10px 16px;
   font-size: 14px;
   font-weight: 600;
+  color: var(--text-inverse, #fff);
+  background: var(--accent-blue, #3b82f6);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+.stats-filter-overlay-footer--customize .stats-filter-overlay-save:hover {
+  filter: brightness(1.08);
+}
+.stats-filter-overlay-footer--customize .stats-filter-overlay-save--saved {
+  background: var(--accent-green, #10b981);
+  color: var(--text-inverse, #fff);
+  cursor: default;
+  filter: none;
+}
+.stats-filter-overlay-footer--customize .stats-filter-overlay-save--saved:hover {
+  filter: none;
+}
+.stats-filter-overlay-footer--customize .stats-filter-overlay-done {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.stats-filter-overlay-footer--customize:has(.stats-filter-overlay-save) .stats-filter-overlay-done {
+  flex: 0 1 auto;
 }
 
 /* Toolbar right: Reset + legend info (i) button */
@@ -757,13 +849,14 @@
   height: 24px;
   border-radius: 4px;
 }
-/* Difficulty value pill: match .schedule-cell-difficulty-pill in table */
+/* Difficulty value pill: square, match .schedule-cell-difficulty-pill in table */
 .stats-filter-overlay-body--customize .customize-difficulty-pill {
-  width: 50px;
-  min-width: 50px;
-  max-width: 50px;
-  min-height: 26px;
-  padding: 4px 6px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
   font-size: 11px;
   font-weight: 700;
   border-width: 1px;

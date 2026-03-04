@@ -197,7 +197,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   /* Full-bleed background so scrolling content doesn’t show through at edges; shadow extends opaque block below */
-  padding-top: 2px;
+  padding-top: 0;
   /* Extend opaque block up (above header/tabs) and down so scrolling content doesn’t show through */
   box-shadow: 0 -80px 0 var(--bg-primary, #fff);
 }
@@ -209,7 +209,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 0;
   margin-bottom: 0;
   flex-shrink: 0;
 }
@@ -300,13 +300,14 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 
 .research-stats-search-input {
   width: 100%;
-  min-height: 28px;
-  padding: 6px 10px 6px 32px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px 0 32px;
   box-sizing: border-box;
   font-size: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-primary);
   outline: none;
 }
@@ -370,13 +371,13 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -386,7 +387,9 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 /* Min-width so Compare vs Exit doesn't resize button and cause gap on mobile */
 .stats-compare-btn {
   width: auto;
-  min-width: 28px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding-left: 14px;
   padding-right: 14px;
   gap: 8px;
@@ -410,7 +413,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   }
   .stats-filter-btn {
     width: auto;
-    min-width: 28px;
+    min-width: 34px;
     padding-left: 14px;
     padding-right: 14px;
     gap: 8px;

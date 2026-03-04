@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { createPortal } from 'react-dom'
-import { Filter, X, SlidersHorizontal, Minimize2, MoveDiagonal, Info } from 'lucide-react'
+import { Filter, X, SlidersHorizontal, Minimize2, MoveDiagonal } from 'lucide-react'
 import { useScheduleData } from '../hooks/useScheduleData'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useConfiguration } from '../contexts/ConfigurationContext'
@@ -151,8 +151,8 @@ export default function ScheduleSubpage() {
   const [hiddenDifficultyValues, setHiddenDifficultyValues] = useState(() => new Set())
   const [hasCustomizerChanges, setHasCustomizerChanges] = useState(false)
   const [hasCustomizerOverrides, setHasCustomizerOverrides] = useState(false)
+  const [customizerSaveState, setCustomizerSaveState] = useState('idle') // 'idle' | 'saved'
   const [recommendationsExpanded, setRecommendationsExpanded] = useState(false)
-  const [showBuySellInfo, setShowBuySellInfo] = useState(false)
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
   const [selectedTeamId, setSelectedTeamId] = useState(null)
@@ -162,7 +162,10 @@ export default function ScheduleSubpage() {
   const useCustomDifficulty = difficultySource === 'custom'
 
   useEffect(() => {
-    if (customizePopoverOpen) setHasCustomizerChanges(false)
+    if (customizePopoverOpen) {
+      setHasCustomizerChanges(false)
+      setCustomizerSaveState('idle')
+    }
   }, [customizePopoverOpen])
 
   const popupLastH2H = popupCell ? lastH2HMap[pairKey(popupCell.rowTeamId, popupCell.opponentTeamId)] ?? null : null
@@ -410,6 +413,22 @@ export default function ScheduleSubpage() {
     <div className="research-schedule-subpage">
       <div className="research-schedule-sticky-header">
         <div className="research-schedule-toolbar">
+          <button
+            type="button"
+            className="schedule-fixture-summary-trigger"
+            onClick={() => setRecommendationsExpanded((v) => !v)}
+            aria-expanded={recommendationsExpanded}
+            aria-label={recommendationsExpanded ? 'Collapse Fixture Summary' : 'Expand Fixture Summary'}
+          >
+            <span className="schedule-fixture-summary-trigger-label">Fixture Summary</span>
+            <span className="schedule-fixture-summary-trigger-expand-icon" title={recommendationsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+              {recommendationsExpanded ? (
+                <Minimize2 className="schedule-fixture-summary-trigger-expand-icon-svg" size={11} strokeWidth={1.5} />
+              ) : (
+                <MoveDiagonal className="schedule-fixture-summary-trigger-expand-icon-svg" size={11} strokeWidth={1.5} />
+              )}
+            </span>
+          </button>
           <div className="schedule-header-icon-group schedule-header-icon-group--right">
             <button
               type="button"
@@ -438,37 +457,7 @@ export default function ScheduleSubpage() {
       </div>
       <div className={`schedule-recommendations-bento ${recommendationsExpanded ? 'schedule-recommendations-bento--expanded' : 'schedule-recommendations-bento--collapsed'}`}>
         <div className="schedule-recommendations-bento-content">
-          <div
-            className="schedule-recommendations-bento-header"
-            role="button"
-            tabIndex={0}
-            onClick={() => setRecommendationsExpanded((v) => !v)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setRecommendationsExpanded((v) => !v); } }}
-            aria-expanded={recommendationsExpanded}
-            aria-label={recommendationsExpanded ? 'Collapse Fixture Summary' : 'Expand Fixture Summary'}
-          >
-            <span className="schedule-recommendations-bento-title">Fixture Summary</span>
-            <span className="schedule-recommendations-bento-header-icons">
-              <button
-                type="button"
-                className="schedule-recommendations-bento-info-btn"
-                onClick={(e) => { e.stopPropagation(); setShowBuySellInfo((v) => !v); }}
-                aria-label={showBuySellInfo ? 'Hide formula description' : 'How Easy / Hard is calculated'}
-                aria-expanded={showBuySellInfo}
-                title="How this is calculated"
-              >
-                <Info className="schedule-recommendations-bento-info-icon" size={14} strokeWidth={2} />
-              </button>
-              <span className="schedule-recommendations-bento-expand-icon" title={recommendationsExpanded ? 'Collapse' : 'Expand'} aria-hidden>
-                {recommendationsExpanded ? (
-                  <Minimize2 className="schedule-recommendations-bento-expand-icon-svg" size={11} strokeWidth={1.5} />
-                ) : (
-                  <MoveDiagonal className="schedule-recommendations-bento-expand-icon-svg" size={11} strokeWidth={1.5} />
-                )}
-              </span>
-            </span>
-          </div>
-          {showBuySellInfo && recommendationsExpanded && (
+          {recommendationsExpanded && (
             <p className="schedule-recommendations-bento-formula-desc">
               Average Opponent Category (1–5) over the next 4 or 10 gameweeks. Easy = lowest avg (easiest run). Hard = highest avg (hardest run).
             </p>
@@ -584,8 +573,10 @@ export default function ScheduleSubpage() {
                       if (strength != null) saveTeamStrengthOverrides(strength)
                       if (attack != null) saveTeamAttackOverrides(attack)
                       if (defence != null) saveTeamDefenceOverrides(defence)
-                      toast('Custom difficulty saved')
+                      toast('Settings saved')
                       setHasCustomizerChanges(false)
+                      setCustomizerSaveState('saved')
+                      setTimeout(() => setCustomizerSaveState('idle'), 2000)
                     }}
                     onResetStat={(statId) => {
                       if (statId === 'strength') resetTeamStrengthOverrides()
@@ -596,6 +587,19 @@ export default function ScheduleSubpage() {
                 )}
               </div>
               <div className="stats-filter-overlay-footer stats-filter-overlay-footer--customize">
+                {(hasCustomizerChanges || customizerSaveState === 'saved') && (
+                  <button
+                    type="button"
+                    className={`stats-filter-overlay-save ${customizerSaveState === 'saved' ? 'stats-filter-overlay-save--saved' : ''}`}
+                    onClick={() => {
+                      if (customizerSaveState === 'idle' && scheduleCustomizerRef.current?.save) scheduleCustomizerRef.current.save()
+                    }}
+                    aria-label={customizerSaveState === 'saved' ? 'Settings saved' : 'Save changes'}
+                    disabled={customizerSaveState === 'saved'}
+                  >
+                    {customizerSaveState === 'saved' ? 'Saved' : 'Save'}
+                  </button>
+                )}
                 <button
                   type="button"
                   className="stats-filter-overlay-done"

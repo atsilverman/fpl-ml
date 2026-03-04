@@ -9,13 +9,13 @@
   padding: 0 4px;
 }
 
-/* Sticky: search bar + filter + list header stay fixed; player list scrolls under. Match Feed spacing. */
+/* Sticky: search bar + filter + list header stay fixed; player list scrolls under. Match league subpage nav spacing. */
 .defcon-subpage-sticky-header {
   position: sticky;
   top: 0;
   z-index: 5;
   background: var(--bg-primary);
-  padding: 8px 0 2px;
+  padding: 4px 0 2px;
   flex-shrink: 0;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 8px;
   width: 100%;
-  margin-top: 4px;
+  margin-top: 0;
 }
 
 .defcon-search-wrap {
@@ -65,13 +65,14 @@
 
 .defcon-search-input {
   width: 100%;
-  min-height: 28px;
-  padding: 4px 8px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
   box-sizing: border-box;
   font-size: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-primary);
   outline: none;
 }
@@ -276,13 +277,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 5px;
+  border-radius: 6px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s;
@@ -779,8 +780,6 @@ html[data-theme="dark"] .defcon-position-badge {
   }
 
   .defcon-search-input {
-    min-height: 32px;
-    padding: 6px 10px;
     font-size: 14px;
   }
 
@@ -848,9 +847,4 @@ html[data-theme="dark"] .defcon-position-badge {
     border-radius: 4px 0 0 4px;
   }
 
-  .defcon-filter-btn {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-  }
 }
