@@ -379,6 +379,63 @@ export default function PlayerDetailModal({
               )}
             </div>
           </div>
+          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x2 ${chartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
+            <div className="player-detail-bento-collapsible-content">
+              <div
+                className="player-detail-bento-collapsible-header player-detail-chart-bento-header"
+                role="button"
+                tabIndex={0}
+                onClick={() => setChartExpanded((v) => !v)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setChartExpanded((v) => !v); } }}
+                aria-expanded={chartExpanded}
+                aria-label={chartExpanded ? 'Collapse Stats by gameweek' : 'Expand Stats by gameweek'}
+              >
+                <div className="player-detail-chart-bento-header-inner" ref={playerStatPopupRef} onClick={(e) => e.stopPropagation()}>
+                  <span className="bento-card-label player-detail-chart-bento-label">
+                    Stats by gameweek
+                    {chartExpanded && (
+                      <span className="bento-card-label-suffix">
+                        | {(() => { const o = playerStatOptions.find((opt) => opt.key === selectedPlayerStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
+                      </span>
+                    )}
+                  </span>
+                  {chartExpanded && (
+                    <div className="player-detail-chart-bento-actions">
+                      <button
+                        type="button"
+                        className="player-detail-chart-stat-btn"
+                        onClick={() => setShowPlayerStatPopup((v) => !v)}
+                        aria-label="Filters: stat and GW range"
+                        aria-expanded={showPlayerStatPopup}
+                        aria-haspopup="dialog"
+                        title="Filters"
+                      >
+                        <Filter size={11} strokeWidth={1.5} aria-hidden />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                <span className="player-detail-bento-collapsible-expand-icon" title={chartExpanded ? 'Collapse' : 'Expand'} aria-hidden>
+                  {chartExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
+                </span>
+              </div>
+              {chartExpanded && (
+                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--chart">
+                  <div className="player-detail-chart-wrap">
+                    <PlayerGameweekPointsChart
+                        key={`player-chart-${selectedPlayerStat}-${chartRangeFilter}`}
+                        data={gameweekPoints}
+                        loading={playerDetailLoading}
+                        statKey={selectedPlayerStat}
+                        position={playerDetailPlayer?.position}
+                        filter={chartRangeFilter}
+                        onFilterChange={setChartRangeFilter}
+                      />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x3 ${pointsImpactExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
             <div className="player-detail-bento-collapsible-content">
               <div
@@ -476,63 +533,6 @@ export default function PlayerDetailModal({
                       </div>
                     </>
                   )}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={`player-detail-bento-collapsible player-detail-bento-collapsible--bento-1x2 ${chartExpanded ? 'player-detail-bento-collapsible--expanded' : 'player-detail-bento-collapsible--collapsed'}`}>
-            <div className="player-detail-bento-collapsible-content">
-              <div
-                className="player-detail-bento-collapsible-header player-detail-chart-bento-header"
-                role="button"
-                tabIndex={0}
-                onClick={() => setChartExpanded((v) => !v)}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setChartExpanded((v) => !v); } }}
-                aria-expanded={chartExpanded}
-                aria-label={chartExpanded ? 'Collapse Stats by gameweek' : 'Expand Stats by gameweek'}
-              >
-                <div className="player-detail-chart-bento-header-inner" ref={playerStatPopupRef} onClick={(e) => e.stopPropagation()}>
-                  <span className="bento-card-label player-detail-chart-bento-label">
-                    Stats by gameweek
-                    {chartExpanded && (
-                      <span className="bento-card-label-suffix">
-                        | {(() => { const o = playerStatOptions.find((opt) => opt.key === selectedPlayerStat); return o ? <CardStatLabel statKey={o.key} label={o.label} /> : 'Points'; })()}
-                      </span>
-                    )}
-                  </span>
-                  {chartExpanded && (
-                    <div className="player-detail-chart-bento-actions">
-                      <button
-                        type="button"
-                        className="player-detail-chart-stat-btn"
-                        onClick={() => setShowPlayerStatPopup((v) => !v)}
-                        aria-label="Filters: stat and GW range"
-                        aria-expanded={showPlayerStatPopup}
-                        aria-haspopup="dialog"
-                        title="Filters"
-                      >
-                        <Filter size={11} strokeWidth={1.5} aria-hidden />
-                      </button>
-                    </div>
-                  )}
-                </div>
-                <span className="player-detail-bento-collapsible-expand-icon" title={chartExpanded ? 'Collapse' : 'Expand'} aria-hidden>
-                  {chartExpanded ? <Minimize2 size={11} strokeWidth={1.5} /> : <MoveDiagonal size={11} strokeWidth={1.5} />}
-                </span>
-              </div>
-              {chartExpanded && (
-                <div className="player-detail-bento-collapsible-body player-detail-bento-collapsible-body--chart">
-                  <div className="player-detail-chart-wrap">
-                    <PlayerGameweekPointsChart
-                        key={`player-chart-${selectedPlayerStat}-${chartRangeFilter}`}
-                        data={gameweekPoints}
-                        loading={playerDetailLoading}
-                        statKey={selectedPlayerStat}
-                        position={playerDetailPlayer?.position}
-                        filter={chartRangeFilter}
-                        onFilterChange={setChartRangeFilter}
-                      />
-                  </div>
                 </div>
               )}
             </div>

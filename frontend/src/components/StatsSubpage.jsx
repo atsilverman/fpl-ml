@@ -1172,12 +1172,6 @@ export default function StatsSubpage() {
                 <div className="research-stats-compare-table-header-wrap">
                   <span className="research-stats-compare-title">Compare</span>
                   <div className="research-stats-compare-header-actions">
-                    {compareSelectedTeamKeys.length > 1 && (
-                      <span className="research-stats-compare-legend-item research-stats-compare-legend-item--header">
-                        <span className="research-stats-compare-legend-swatch" aria-hidden />
-                        <span className="research-stats-compare-legend-text">Stat leader</span>
-                      </span>
-                    )}
                     {compareTableTeams.length > 1 && (
                       <button
                         type="button"
@@ -1287,9 +1281,9 @@ export default function StatsSubpage() {
                               const showLeaderFilled = !topOn && isCompareBest
                               const showLeaderBorderOnBlue = topOn && showPill && isCompareBest
                               const pillStrength = showPill && fieldRank != null && N != null ? Math.max(0.35, 1 - (fieldRank - 1) / N * 0.65) : undefined
-                              const topBottomFillClass = isTop6 ? ' research-stats-cell--top6-fill' : isBottom6 ? ' research-stats-cell--bottom6-fill' : ''
-                              const topBottomFillStyle = (isTop6 && topStrength != null) ? { '--team-top-strength': topStrength } : (isBottom6 && bottomStrength != null) ? { '--team-bottom-strength': bottomStrength } : undefined
-                              const showRankOrCompare = !isTop6 && !isBottom6
+                              const topBottomFillClass = '' /* compare table: no Top/Bottom 6 fill so stat leader pill is visible */
+                              const topBottomFillStyle = undefined
+                              const showRankOrCompare = true
                               return (
                                 <td key={key} className={`league-standings-bento-total${topBottomFillClass}`} style={topBottomFillStyle}>
                                   {showRankOrCompare && showBluePill ? (
