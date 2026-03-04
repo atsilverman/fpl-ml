@@ -1328,13 +1328,89 @@ export default function StatsSubpage() {
               aria-busy={loading}
               aria-live="polite"
             >
-              <table
-                className="research-stats-table league-standings-bento-table"
-                style={{ width: 'auto', minWidth: 0 }}
-              >
+              <div className="research-stats-table-inner research-stats-table-inner--sticky-clone">
+                <div className="research-stats-sticky-clone-column" aria-hidden="true">
+                  <table className="research-stats-table league-standings-bento-table research-stats-sticky-clone-table">
+                    <thead>
+                      <tr>
+                        <th className="league-standings-bento-team">TEAM</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        Array.from({ length: 12 }, (_, i) => (
+                          <tr key={`skeleton-clone-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
+                            <td className="league-standings-bento-team">
+                              <div className="research-stats-sticky-cell-inner">
+                                <div className="research-stats-player-cell">
+                                  <span className="skeleton-text research-stats-skeleton-badge" />
+                                  <div className="research-stats-player-cell-lines">
+                                    <span className="skeleton-text research-stats-skeleton-name" />
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        mainTableTeams.map((t, index) => {
+                          const teamKey = getTeamKey(t)
+                          return (
+                            <tr
+                              key={`clone-${teamKey}`}
+                              className="league-standings-bento-row research-stats-row-animate"
+                              style={{ animationDelay: `${index * 24}ms` }}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => {
+                                if (compareModeActive) toggleCompareSelectionTeam(teamKey)
+                                else {
+                                  setSelectedTeamId(t.team_id ?? teamKey)
+                                  setSelectedTeamName(t.team_name || t.team_short_name || '')
+                                }
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  if (compareModeActive) toggleCompareSelectionTeam(teamKey)
+                                  else {
+                                    setSelectedTeamId(t.team_id ?? teamKey)
+                                    setSelectedTeamName(t.team_name || t.team_short_name || '')
+                                  }
+                                }
+                              }}
+                            >
+                              <td className="league-standings-bento-team">
+                                <div className="research-stats-sticky-cell-inner">
+                                  <div className="research-stats-player-cell research-stats-team-cell">
+                                    {t.team_short_name && (
+                                      <img
+                                        src={`/badges/${t.team_short_name}.svg`}
+                                        alt=""
+                                        className="research-stats-badge"
+                                      />
+                                    )}
+                                    <div className="research-stats-player-cell-lines">
+                                      <span className="league-standings-bento-team-name" title={t.team_name}>
+                                        {t.team_name || t.team_short_name || '—'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <table
+                  className="research-stats-table league-standings-bento-table"
+                  style={{ width: 'auto', minWidth: 0 }}
+                >
                 <thead>
                   <tr>
-                    <th className="league-standings-bento-team">TEAM</th>
                     {visibleColumns.map(({ key, label, field }) => (
                       <th key={key} className="league-standings-bento-total">
                         {isSortableColumn(field) ? (
@@ -1358,16 +1434,6 @@ export default function StatsSubpage() {
                   {loading ? (
                     Array.from({ length: 12 }, (_, i) => (
                       <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
-                        <td className="league-standings-bento-team">
-                          <div className="research-stats-sticky-cell-inner">
-                            <div className="research-stats-player-cell">
-                              <span className="skeleton-text research-stats-skeleton-badge" />
-                              <div className="research-stats-player-cell-lines">
-                                <span className="skeleton-text research-stats-skeleton-name" />
-                              </div>
-                            </div>
-                          </div>
-                        </td>
                         {visibleColumns.map(({ key }) => (
                           <td key={key} className="league-standings-bento-total">
                             <span className="skeleton-text research-stats-skeleton-cell" />
@@ -1404,24 +1470,6 @@ export default function StatsSubpage() {
                           }}
                           aria-label={compareModeActive ? `${t.team_name || t.team_short_name || 'Team'}, add to compare` : `Open details for ${t.team_name || t.team_short_name || 'Team'}`}
                         >
-                          <td className="league-standings-bento-team">
-                          <div className="research-stats-sticky-cell-inner">
-                            <div className="research-stats-player-cell research-stats-team-cell">
-                              {t.team_short_name && (
-                                <img
-                                  src={`/badges/${t.team_short_name}.svg`}
-                                  alt=""
-                                  className="research-stats-badge"
-                                />
-                              )}
-                              <div className="research-stats-player-cell-lines">
-                                <span className="league-standings-bento-team-name" title={t.team_name}>
-                                  {t.team_name || t.team_short_name || '—'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
                         {visibleColumns.map(({ key, label, field }) => {
                           const value = t[field] ?? 0
                               const { main, sub } = formatStatValue(value, field, displayMode, t.minutes, null, false, t.games_played)
@@ -1477,6 +1525,7 @@ export default function StatsSubpage() {
                 )}
               </tbody>
             </table>
+              </div>
           </div>
             {!loading && mainTableTeams.length === 0 && (
               <div className="research-stats-empty" role="status">
@@ -1687,13 +1736,110 @@ export default function StatsSubpage() {
               aria-busy={loading}
               aria-live="polite"
             >
-              <table
-                className="research-stats-table league-standings-bento-table"
-                style={{ width: 'auto', minWidth: 0 }}
-              >
+              <div className="research-stats-table-inner research-stats-table-inner--sticky-clone">
+                <div className="research-stats-sticky-clone-column" aria-hidden="true">
+                  <table className="research-stats-table league-standings-bento-table research-stats-sticky-clone-table">
+                    <thead>
+                      <tr>
+                        <th className="league-standings-bento-team">Player</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {loading ? (
+                        Array.from({ length: 12 }, (_, i) => (
+                          <tr key={`skeleton-clone-p-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
+                            <td className="league-standings-bento-team">
+                              <div className="research-stats-sticky-cell-inner">
+                                <div className="research-stats-player-cell">
+                                  <span className="skeleton-text research-stats-skeleton-badge" />
+                                  <div className="research-stats-player-cell-lines">
+                                    <span className="skeleton-text research-stats-skeleton-name" />
+                                    <span className="skeleton-text research-stats-skeleton-meta" />
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        paginatedMainTablePlayers.map((p, index) => (
+                          <tr
+                            key={`clone-p-${p.player_id}`}
+                            className="league-standings-bento-row research-stats-row-animate"
+                            style={{ animationDelay: `${index * 24}ms` }}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              if (compareModeActive) toggleCompareSelection(p.player_id)
+                              else {
+                                setBreakdownForPlayer({
+                                  playerId: p.player_id,
+                                  playerName: p.web_name ?? '',
+                                  position: p.position ?? 0,
+                                  teamShortName: p.team_short_name ?? null,
+                                })
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                if (compareModeActive) toggleCompareSelection(p.player_id)
+                                else {
+                                  setBreakdownForPlayer({
+                                    playerId: p.player_id,
+                                    playerName: p.web_name ?? '',
+                                    position: p.position ?? 0,
+                                  })
+                                }
+                              }
+                            }}
+                          >
+                            <td className="league-standings-bento-team">
+                              <div className={`research-stats-sticky-cell-inner${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-sticky-cell-inner--owned' : ''}`}>
+                                <div className="research-stats-player-cell">
+                                  {p.team_short_name && (
+                                    <img
+                                      src={`/badges/${p.team_short_name}.svg`}
+                                      alt=""
+                                      className="research-stats-badge"
+                                    />
+                                  )}
+                                  <div className="research-stats-player-cell-lines">
+                                    <span
+                                      className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
+                                      title={p.web_name}
+                                    >
+                                      {p.web_name && p.web_name.length > 10 ? p.web_name.slice(0, 10) + '…' : (p.web_name || '')}
+                                    </span>
+                                    <div className="research-stats-meta-line">
+                                      {p.position != null && (
+                                        <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
+                                          {POSITION_LABELS[p.position] ?? '—'}
+                                        </span>
+                                      )}
+                                      {p.cost_tenths != null && (
+                                        <>
+                                          <span className="research-stats-meta-dot">|</span>
+                                          <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                <table
+                  className="research-stats-table league-standings-bento-table"
+                  style={{ width: 'auto', minWidth: 0 }}
+                >
                 <thead>
                   <tr>
-                    <th className="league-standings-bento-team">Player</th>
                     {visibleColumns.map(({ key, label, field }) => (
                       <th key={key} className="league-standings-bento-total">
                         {isSortableColumn(field) ? (
@@ -1717,17 +1863,6 @@ export default function StatsSubpage() {
                   {loading ? (
                     Array.from({ length: 12 }, (_, i) => (
                       <tr key={`skeleton-${i}`} className="league-standings-bento-row research-stats-row-skeleton">
-                        <td className="league-standings-bento-team">
-                          <div className="research-stats-sticky-cell-inner">
-                            <div className="research-stats-player-cell">
-                              <span className="skeleton-text research-stats-skeleton-badge" />
-                              <div className="research-stats-player-cell-lines">
-                                <span className="skeleton-text research-stats-skeleton-name" />
-                                <span className="skeleton-text research-stats-skeleton-meta" />
-                              </div>
-                            </div>
-                          </div>
-                        </td>
                         {visibleColumns.map(({ key }) => (
                           <td key={key} className="league-standings-bento-total">
                             <span className="skeleton-text research-stats-skeleton-cell" />
@@ -1769,40 +1904,6 @@ export default function StatsSubpage() {
                         }}
                         aria-label={compareModeActive ? `${p.web_name || 'Player'}, add to compare` : `Points breakdown for ${p.web_name || 'Player'}`}
                       >
-                        <td className="league-standings-bento-team">
-                          <div className={`research-stats-sticky-cell-inner${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-sticky-cell-inner--owned' : ''}`}>
-                            <div className="research-stats-player-cell">
-                              {p.team_short_name && (
-                                <img
-                                  src={`/badges/${p.team_short_name}.svg`}
-                                  alt=""
-                                  className="research-stats-badge"
-                                />
-                              )}
-                              <div className="research-stats-player-cell-lines">
-                                <span
-                                  className={`league-standings-bento-team-name${ownedPlayerIds != null && p.player_id != null && ownedPlayerIds.has(Number(p.player_id)) ? ' research-stats-player-name--owned' : ''}`}
-                                  title={p.web_name}
-                                >
-                                  {p.web_name && p.web_name.length > 10 ? p.web_name.slice(0, 10) + '…' : (p.web_name || '')}
-                                </span>
-                                <div className="research-stats-meta-line">
-                                  {p.position != null && (
-                                    <span className={`research-stats-position gw-top-points-position gw-top-points-position--${p.position}`}>
-                                      {POSITION_LABELS[p.position] ?? '—'}
-                                    </span>
-                                  )}
-                                  {p.cost_tenths != null && (
-                                    <>
-                                      <span className="research-stats-meta-dot">|</span>
-                                      <span className="research-stats-price">£{(p.cost_tenths / 10).toFixed(1)}</span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
                         {visibleColumns.map(({ key, label, field }) => {
                           const value = p[field] ?? 0
                           const { main, sub } = formatStatValue(value, field, displayMode, p.minutes, p.cost_tenths, showPerM, p.games_played)
@@ -1856,6 +1957,7 @@ export default function StatsSubpage() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
             {!loading && mainTablePlayers.length === 0 && (
               <div className="research-stats-empty" role="status">

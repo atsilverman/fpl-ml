@@ -1491,6 +1491,43 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   touch-action: pan-x pan-y;     /* allow both axes */
 }
 
+/* Sticky clone column: flex inner so we have [clone][table]; clone sticks on horizontal scroll (Safari-friendly, no sticky on td). */
+.research-stats-page .research-stats-table-inner--sticky-clone {
+  display: flex;
+  width: max-content;
+  min-width: 100%;
+}
+.research-stats-page .research-stats-sticky-clone-column {
+  position: sticky;
+  left: 0;
+  z-index: 25;
+  flex-shrink: 0;
+  width: 120px;
+  min-width: 120px;
+  background: var(--bg-secondary);
+  box-sizing: border-box;
+}
+.research-stats-page .research-stats-sticky-clone-table {
+  width: 120px;
+  min-width: 120px;
+}
+.research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
+  position: sticky;
+  top: 0;
+  z-index: 26;
+  background: var(--bg-secondary);
+}
+.research-stats-page .research-stats-sticky-clone-table tbody tr {
+  min-height: 46px;
+}
+.research-stats-page .research-stats-sticky-clone-table tbody td {
+  min-height: 46px !important;
+  height: 46px !important;
+}
+.research-stats-page .research-stats-sticky-clone-table .research-stats-sticky-cell-inner {
+  cursor: pointer;
+}
+
 /* Main table only: vertical scroll inside this container so header row and player column stay fixed. */
 .research-stats-page .league-standings-bento-table-wrapper:not(.research-stats-compare-table-wrapper) {
   overflow-y: auto;
