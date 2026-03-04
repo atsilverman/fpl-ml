@@ -681,11 +681,12 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
  */
 export function useCurrentGameweekPlayers() {
   const { config } = useConfiguration()
-  const { gameweek, loading: gwLoading } = useGameweekData()
+  const { gameweek, isCurrent: isCurrentGameweek, loading: gwLoading } = useGameweekData()
   const { state: refreshState } = useRefreshState()
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
 
-  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+  // Poll fast whenever we're on current gameweek so points (including provisional bonus) stay in sync with Bonus subpage
+  const isLive = isCurrentGameweek
   const { data: playersData, isLoading, error } = useQuery({
     queryKey: ['current-gameweek-players', MANAGER_ID, gameweek],
     queryFn: async () => {
@@ -715,16 +716,15 @@ export function useCurrentGameweekPlayers() {
  * Only runs when managerId is provided.
  */
 export function useCurrentGameweekPlayersForManager(managerId) {
-  const { gameweek, loading: gwLoading } = useGameweekData()
-  const { state: refreshState } = useRefreshState()
+  const { gameweek, isCurrent: isCurrentGameweek, loading: gwLoading } = useGameweekData()
 
-  const isLive = refreshState === 'live_matches' || refreshState === 'bonus_pending'
+  const isLive = isCurrentGameweek
   const { data: playersData, isLoading, error } = useQuery({
     queryKey: ['current-gameweek-players', managerId, gameweek],
     queryFn: () => fetchCurrentGameweekPlayersForManager(managerId, gameweek),
     enabled: !!managerId && !!gameweek && !gwLoading,
-    staleTime: 30 * 1000,
-    refetchInterval: isLive ? 25 * 1000 : 60 * 1000,
+    staleTime: isLive ? 6 * 1000 : 30 * 1000,
+    refetchInterval: isLive ? 8 * 1000 : 60 * 1000,
     refetchIntervalInBackground: true,
   })
 

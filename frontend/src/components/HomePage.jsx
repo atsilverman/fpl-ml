@@ -95,6 +95,12 @@ export default function HomePage() {
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
   const { latest: deadlineBatchLatest } = useDeadlineBatchRuns()
 
+  // Show provisional indicator when data has any provisional bonus (match Bonus subpage), not only when state is bonus_pending
+  const hasProvisionalBonusInData = useMemo(() => {
+    if (!Array.isArray(currentGameweekPlayers) || !currentGameweekPlayers.length) return false
+    return currentGameweekPlayers.some((p) => p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0)
+  }, [currentGameweekPlayers])
+
   const { data: nextGameweek } = useQuery({
     queryKey: ['gameweek', 'next'],
     queryFn: async () => {
@@ -598,7 +604,7 @@ export default function HomePage() {
                 (hasManagerPlayerInPlay && (cardId === 'gw-points' || cardId === 'total-points')) ||
                 (cardId === 'league-rank' && (hasManagerPlayerInPlay || hasAnyLeagueManagerPlayerInPlay))
               }
-              isProvisionalOnly={refreshState === 'bonus_pending'}
+              isProvisionalOnly={refreshState === 'bonus_pending' || hasProvisionalBonusInData}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
               animateEntrance={!loading}
               style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}

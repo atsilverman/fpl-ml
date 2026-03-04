@@ -593,7 +593,7 @@ class PlayerDataRefresher:
             feed_reversals: List[Dict[str, Any]] = []
             occurred_at = datetime.now(timezone.utc).isoformat()
 
-            # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (MP > 45 = second half)
+            # Build fixture_id -> list of {id, bps, minutes} for provisional bonus (show as soon as fixture has started)
             fixture_players: Dict[int, List[Dict]] = {}
             for player_id in active_player_ids:
                 team_id = players_map.get(player_id, {}).get("team", 0)
@@ -612,9 +612,9 @@ class PlayerDataRefresher:
                             "bps": st.get("bps", 0) or 0,
                             "minutes": st.get("minutes", 0) or 0,
                         })
-            fixture_past_threshold = {
-                fid: max((p["minutes"] for p in plist), default=0) > 45
-                for fid, plist in fixture_players.items()
+            fixture_started = {
+                fid: bool(fixtures_by_id.get(fid, {}).get("started"))
+                for fid in fixture_players
             }
 
             # DGW: fetch element-summary for players with 2+ fixtures for accurate per-fixture points
@@ -786,7 +786,7 @@ class PlayerDataRefresher:
                     bonus = stats.get("bonus", 0)
                     bonus_status = "confirmed" if bonus > 0 else "provisional"
                     provisional_bonus_val = 0
-                    if bonus_status == "provisional" and bonus == 0 and fixture_id and fixture_past_threshold.get(fixture_id, False):
+                    if bonus_status == "provisional" and bonus == 0 and fixture_id and fixture_started.get(fixture_id, False):
                         all_in_fixture = fixture_players.get(fixture_id, [])
                         provisional_bonus_val = self._calculate_provisional_bonus(
                             player_id,
