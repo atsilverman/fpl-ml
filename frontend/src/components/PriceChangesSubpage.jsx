@@ -55,13 +55,15 @@ function formatCapturedAt(isoString) {
 }
 
 export function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) {
+  const noDataAll = !loading && (rises?.length ?? 0) === 0 && (falls?.length ?? 0) === 0
+
   const renderList = (list) => (
     <>
       {loading ? (
         <div className="price-changes-loading">Loading...</div>
-      ) : list.length === 0 ? (
+      ) : list.length === 0 && !noDataAll ? (
         <div className="price-changes-empty">No data</div>
-      ) : (
+      ) : list.length > 0 ? (
         <div className="price-changes-column-list">
           {list.map((row, i) => {
             const badgeTeam = row.teamShortName || getTeamForPlayer(row.playerName)
@@ -91,28 +93,33 @@ export function PriceChangeColumns({ rises, falls, loading, getTeamForPlayer }) 
             )
           })}
         </div>
-      )}
+      ) : null}
     </>
   )
 
   return (
-    <div className="price-changes-columns-wrapper">
-      <div className="price-changes-column price-changes-column-rise">
-        <div className="price-changes-column-header">
-          <span className="price-changes-column-title price-changes-column-title-rise">
-            <CircleArrowUp size={12} strokeWidth={2} aria-hidden /> Rise
-          </span>
+    <div className="price-changes-columns-container">
+      <div className="price-changes-columns-wrapper">
+        <div className="price-changes-column price-changes-column-rise">
+          <div className="price-changes-column-header">
+            <span className="price-changes-column-title price-changes-column-title-rise">
+              <CircleArrowUp size={12} strokeWidth={2} aria-hidden /> Rise
+            </span>
+          </div>
+          {renderList(rises ?? [])}
         </div>
-        {renderList(rises, true)}
-      </div>
-      <div className="price-changes-column price-changes-column-fall">
-        <div className="price-changes-column-header">
-          <span className="price-changes-column-title price-changes-column-title-fall">
-            <CircleArrowDown size={12} strokeWidth={2} aria-hidden /> Fall
-          </span>
+        <div className="price-changes-column price-changes-column-fall">
+          <div className="price-changes-column-header">
+            <span className="price-changes-column-title price-changes-column-title-fall">
+              <CircleArrowDown size={12} strokeWidth={2} aria-hidden /> Fall
+            </span>
+          </div>
+          {renderList(falls ?? [])}
         </div>
-        {renderList(falls, false)}
       </div>
+      {noDataAll && (
+        <div className="price-changes-empty price-changes-empty-below">No data</div>
+      )}
     </div>
   )
 }

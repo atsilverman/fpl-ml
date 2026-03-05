@@ -1,0 +1,43 @@
+/* BPS over time line chart – Bonus subpage (when Line graph selected) */
+.bps-over-time-chart {
+  width: 100%;
+  min-height: 200px;
+}
+
+.bps-over-time-chart--loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 16px;
+}
+
+.bps-over-time-chart__skeleton {
+  width: 80%;
+  max-width: 200px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--bg-secondary, #e5e7eb);
+  animation: bps-over-time-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes bps-over-time-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.bps-over-time-chart--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  padding: 24px 16px;
+}
+
+.bps-over-time-chart__empty-message {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  max-width: 260px;
+}

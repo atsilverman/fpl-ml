@@ -53,11 +53,18 @@
 .bento-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--bento-unit-width), 1fr));
-  grid-auto-rows: var(--bento-unit-height);
-  gap: var(--bento-gap);
+  grid-auto-rows: minmax(var(--bento-unit-height), auto);
+  grid-auto-flow: row;
+  row-gap: var(--bento-gap);
+  column-gap: var(--bento-gap);
   margin-top: 0;
-  /* Improve grid animation performance */
-  contain: layout;
+  align-content: start;
+}
+
+/* When deadline bento is first, first row height matches it so gap to next row = standard bento gap */
+.bento-grid.bento-grid-first-row-deadline {
+  grid-template-rows: calc(var(--bento-unit-height) * 0.75);
+  grid-auto-rows: minmax(var(--bento-unit-height), auto);
 }
 
 .bento-card {
@@ -84,7 +91,7 @@
   opacity: 0;
   transform: translateY(12px) scale(0.98) translateZ(0);
   will-change: grid-column, grid-row, height, min-height;
-  contain: layout style;
+  contain: style;
   backface-visibility: hidden;
 }
 
@@ -167,12 +174,29 @@
   min-height: var(--bento-unit-height);
 }
 
-/* 2x2 bento (e.g. Price Changes home) */
+/* 2×0.5 bento: deadline progress strip */
+.bento-card-2x0.5 {
+  grid-column: span 2;
+  grid-row: span 1;
+  height: calc(var(--bento-unit-height) * 0.5);
+  min-height: calc(var(--bento-unit-height) * 0.5);
+}
+
+/* 2x2 bento (e.g. Price Changes home). Base: fixed 2 rows. */
 .bento-card-2x2 {
   grid-column: span 2;
   grid-row: span 2;
   height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
   min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+}
+
+/* Price Changes home: auto height to match content, override fixed 2 rows */
+.home-page .price-changes-bento-home.bento-card-2x2 {
+  grid-row: span 1;
+  height: auto;
+  min-height: var(--bento-unit-height);
+  max-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  align-self: start;
 }
 
 .bento-card-id-transfers.bento-card-large {
@@ -195,7 +219,7 @@
               min-height var(--motion-duration) var(--motion-ease),
               max-height var(--motion-duration) var(--motion-ease);
   will-change: grid-column, grid-row, height, min-height;
-  contain: layout style;
+  contain: style;
 }
 
 /* Overall rank expanded: 3 columns wide on desktop */
@@ -260,7 +284,7 @@
               height var(--motion-duration) var(--motion-ease),
               min-height var(--motion-duration) var(--motion-ease);
   will-change: grid-column, grid-row, height, min-height;
-  contain: layout style;
+  contain: style;
 }
 
 .bento-card-label {
@@ -406,7 +430,7 @@
 
   .bento-grid {
     grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: var(--bento-unit-height);
+    grid-auto-rows: minmax(var(--bento-unit-height), auto);
     gap: var(--bento-gap);
   }
 
@@ -431,6 +455,13 @@
     grid-row: span 2;
     height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
     min-height: calc(var(--bento-unit-height) * 2 + var(--bento-gap) * 1);
+  }
+
+  .bento-card-2x0.5 {
+    grid-column: span 2;
+    grid-row: span 1;
+    height: calc(var(--bento-unit-height) * 0.5);
+    min-height: calc(var(--bento-unit-height) * 0.5);
   }
 
   .bento-card-chart-large {
@@ -488,9 +519,16 @@
   }
 }
 
-/* Home page desktop only: GW points expanded bento 5 wide */
+/* Home page desktop only: GW points expanded bento 3 wide × 4 rows; height = row1 (0.75) + rows 2–4 (1 each) + 3 gaps so it aligns with 4 bentos to the left */
 @media (min-width: 769px) {
   .home-page .bento-card-chart-2x4 {
-    grid-column: span 5;
+    grid-column: span 3;
+    grid-row: span 4;
+    height: calc(var(--bento-unit-height) * 0.75 + var(--bento-gap) * 3 + var(--bento-unit-height) * 3);
+    min-height: calc(var(--bento-unit-height) * 0.75 + var(--bento-gap) * 3 + var(--bento-unit-height) * 3);
+    padding: 12px;
+  }
+  .home-page .bento-card-chart-2x4 .bento-card-chart {
+    margin-top: 0;
   }
 }

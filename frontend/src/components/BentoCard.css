@@ -102,12 +102,27 @@
   flex: 1;
 }
 
-html[data-theme="dark"] .chip-item.chip-used .chip-label {
-  color: #fff;
+/* Used chips: colors from chips page (WC/FH/BB/TC) applied via inline style in BentoCard.jsx */
+html[data-theme="dark"] .chip-item.chip-used:not(.chip-used--colored) .chip-label,
+html[data-theme="dark"] .chip-item.chip-used:not(.chip-used--colored) .chip-gameweek {
+  color: rgba(255, 255, 255, 0.95);
 }
 
-html[data-theme="dark"] .chip-item.chip-used .chip-gameweek {
-  color: rgba(255, 255, 255, 0.8);
+/* Colored variant: border + subtle fill; text inherits chip color from inline style */
+.chip-item.chip-used--colored .chip-label,
+.chip-item.chip-used--colored .chip-gameweek {
+  color: inherit;
+}
+.chip-item.chip-used--colored .chip-gameweek {
+  opacity: 0.9;
+}
+
+/* WC, GW, 1, 2 and # (gameweek num) stay white on colored used chips */
+.chip-item.chip-used--colored .chip-label-wc-gw,
+.chip-item.chip-used--colored .chip-label-digit,
+.chip-item.chip-used--colored .chip-gameweek-gw,
+.chip-item.chip-used--colored .chip-gameweek-num {
+  color: #fff;
 }
 
 .settings-bento-content {

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Pencil, ChevronDown, House, Users, FlaskConical, Construction, CalendarDays, ListOrdered, ArrowRightLeft, Sparkles, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling } from 'lucide-react'
+import { Pencil, ChevronDown, House, Users, FlaskConical, Construction, CalendarDays, ListOrdered, ArrowRightLeft, Sparkles, Swords, UserStar, ShieldCheck, Radio, CirclePoundSterling, UsersRound } from 'lucide-react'
 import DebugModal from './DebugModal'
 import UserAvatar from './UserAvatar'
 import AccountModal from './AccountModal'
@@ -21,6 +21,7 @@ const RESEARCH_VIEWS = [
   { id: 'stats', label: 'Statistics', disabled: false },
   { id: 'schedule', label: 'Schedule', disabled: false },
   { id: 'price-changes', label: 'Prices', disabled: false },
+  { id: 'teams', label: 'Teams', disabled: false },
 ]
 
 const LEAGUE_VIEWS = [
@@ -535,7 +536,7 @@ export default function Dashboard() {
                   >
                     {RESEARCH_VIEWS.map((view) => {
                       const isDisabled = view.disabled || (view.disabledOnLocalhost && typeof window !== 'undefined' && window.location.hostname === 'localhost')
-                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'stats' ? ListOrdered : view.comingSoon ? Construction : null
+                      const ResearchOptionIcon = view.id === 'price-changes' ? CirclePoundSterling : view.id === 'schedule' ? CalendarDays : view.id === 'stats' ? ListOrdered : view.id === 'teams' ? UsersRound : view.comingSoon ? Construction : null
                       return (
                         <button
                           key={view.id}

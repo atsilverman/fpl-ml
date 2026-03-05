@@ -171,6 +171,7 @@ export default function FeedSubpage({ isActive = true }) {
   const [scopeFilter, setScopeFilter] = useState('all')
   const [positionFilter, setPositionFilter] = useState('all')
   const [matchupFilter, setMatchupFilter] = useState('all')
+  const [hideNoImpact, setHideNoImpact] = useState(false)
   const [sortBy, setSortBy] = useState('time')
   const [showImpactPopup, setShowImpactPopup] = useState(false)
   const [popupPlacement, setPopupPlacement] = useState({ top: 0, left: 0, width: POPUP_MAX_WIDTH })
@@ -437,8 +438,11 @@ export default function FeedSubpage({ isActive = true }) {
       const fixtureNum = Number(matchupFilter)
       list = list.filter(e => Number(e.fixture_id) === fixtureNum)
     }
+    if (hideNoImpact && Object.keys(impactByEventId).length > 0) {
+      list = list.filter(e => Math.abs(impactByEventId[e.id] ?? 0) > 0.05)
+    }
     return list
-  }, [sortedEvents, searchQuery, scopeFilter, positionFilter, matchupFilter, managerId, ownedPlayerIdSet, playersMap, teamsMap])
+  }, [sortedEvents, searchQuery, scopeFilter, positionFilter, matchupFilter, hideNoImpact, impactByEventId, managerId, ownedPlayerIdSet, playersMap, teamsMap])
 
   const sortedFilteredEvents = useMemo(() => {
     const list = filteredEvents || []
@@ -467,6 +471,7 @@ export default function FeedSubpage({ isActive = true }) {
       setScopeFilter('all')
       setPositionFilter('all')
       setMatchupFilter('all')
+      setHideNoImpact(false)
       setSortBy('time')
     }
     prevActiveRef.current = isActive
@@ -561,7 +566,7 @@ export default function FeedSubpage({ isActive = true }) {
     )
   }
 
-  const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || sortBy !== 'time'
+  const hasActiveFilters = scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || hideNoImpact || sortBy !== 'time'
 
   return (
     <div className="feed-subpage">
@@ -684,7 +689,7 @@ export default function FeedSubpage({ isActive = true }) {
                 <div className="stats-filter-overlay-header">
                   <span className="stats-filter-overlay-title">Filters</span>
                   <div className="stats-filter-overlay-header-actions">
-                    {(scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || sortBy !== 'time') && (
+                    {(scopeFilter !== 'all' || positionFilter !== 'all' || matchupFilter !== 'all' || hideNoImpact || sortBy !== 'time') && (
                       <button
                         type="button"
                         className="stats-filter-overlay-reset"
@@ -692,6 +697,7 @@ export default function FeedSubpage({ isActive = true }) {
                           setScopeFilter('all')
                           setPositionFilter('all')
                           setMatchupFilter('all')
+                          setHideNoImpact(false)
                           setSortBy('time')
                         }}
                         aria-label="Reset all filters to default"
@@ -732,6 +738,27 @@ export default function FeedSubpage({ isActive = true }) {
                           aria-pressed={scopeFilter === 'not-owned'}
                         >
                           Not owned
+                        </button>
+                      </div>
+                    </div>
+                    <div className="feed-filter-section">
+                      <div className="feed-filter-section-title">No impact</div>
+                      <div className="feed-filter-buttons">
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${!hideNoImpact ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setHideNoImpact(false)}
+                          aria-pressed={!hideNoImpact}
+                        >
+                          Show
+                        </button>
+                        <button
+                          type="button"
+                          className={`feed-matchup-btn ${hideNoImpact ? 'feed-matchup-btn--active' : ''}`}
+                          onClick={() => setHideNoImpact(true)}
+                          aria-pressed={hideNoImpact}
+                        >
+                          Hide
                         </button>
                       </div>
                     </div>

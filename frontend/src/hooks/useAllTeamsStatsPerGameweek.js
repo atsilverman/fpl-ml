@@ -35,9 +35,11 @@ export function useAllTeamsStatsPerGameweek(maxGw, enabled = true) {
   })
 
   const { byTeamId, teams, teamShortNameById } = useMemo(() => {
+    const rowsList = Array.isArray(rows) ? rows : []
+    const teamsList = Array.isArray(teamsRows) ? teamsRows : []
     const byTeamId = {}
     const teamIds = new Set()
-    ;(rows || []).forEach((r) => {
+    rowsList.forEach((r) => {
       const tid = Number(r.team_id)
       if (!byTeamId[tid]) byTeamId[tid] = []
       teamIds.add(tid)
@@ -52,7 +54,7 @@ export function useAllTeamsStatsPerGameweek(maxGw, enabled = true) {
     Object.values(byTeamId).forEach((arr) => arr.sort((a, b) => a.gameweek - b.gameweek))
 
     const teamShortNameById = {}
-    ;(teamsRows || []).forEach((t) => {
+    teamsList.forEach((t) => {
       teamShortNameById[Number(t.team_id)] = t.short_name ?? String(t.team_id)
     })
 

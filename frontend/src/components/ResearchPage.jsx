@@ -1,18 +1,19 @@
 import { useSearchParams } from 'react-router-dom'
 import { useRef } from 'react'
-import { CirclePoundSterling, CalendarDays, ListOrdered } from 'lucide-react'
+import { CirclePoundSterling, CalendarDays, ListOrdered, UsersRound } from 'lucide-react'
 import PriceChangesSubpage from './PriceChangesSubpage'
 import ScheduleSubpage from './ScheduleSubpage'
 import StatsSubpage from './StatsSubpage'
+import TeamsSubpage from './TeamsSubpage'
 import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
 import { useIsMobile } from '../hooks/useIsMobile'
 import './HomePage.css'
 import './ResearchPage.css'
 
-const RESEARCH_VIEW_ORDER = ['stats', 'schedule', 'price-changes']
-const RESEARCH_VIEW_LABELS = { 'price-changes': 'Price Changes', schedule: 'Fixtures', stats: 'Statistics' }
-const RESEARCH_VIEW_ICONS = { 'price-changes': CirclePoundSterling, schedule: CalendarDays, stats: ListOrdered }
-const VALID_VIEWS = ['stats', 'schedule', 'price-changes']
+const RESEARCH_VIEW_ORDER = ['stats', 'schedule', 'price-changes', 'teams']
+const RESEARCH_VIEW_LABELS = { 'price-changes': 'Prices', schedule: 'Fixtures', stats: 'Statistics', teams: 'Teams' }
+const RESEARCH_VIEW_ICONS = { 'price-changes': CirclePoundSterling, schedule: CalendarDays, stats: ListOrdered, teams: UsersRound }
+const VALID_VIEWS = ['stats', 'schedule', 'price-changes', 'teams']
 
 export default function ResearchPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -37,7 +38,7 @@ export default function ResearchPage() {
           className="subpage-view-toggle"
           role="tablist"
           aria-label="Research view"
-          data-options="3"
+          data-options="4"
           style={{ '--slider-offset': viewIndex }}
         >
           <span className="subpage-view-toggle-slider" aria-hidden />
@@ -65,6 +66,7 @@ export default function ResearchPage() {
         {view === 'price-changes' && <PriceChangesSubpage />}
         {view === 'schedule' && <ScheduleSubpage />}
         {view === 'stats' && <StatsSubpage />}
+        {view === 'teams' && <TeamsSubpage />}
       </div>
     </div>
   )

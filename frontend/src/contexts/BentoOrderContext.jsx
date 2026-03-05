@@ -2,12 +2,14 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import CustomizeModal from '../components/CustomizeModal'
 
 const DEFAULT_ORDER = [
-  'gw-points',
+  'deadline-progress',
+  'gw-points-summary',
+  'team-value',
   'overall-rank',
   'total-points',
   'league-rank',
   'captain',
-  'team-value',
+  'gw-points',
   'gw-rank',
   'chips',
   'price-changes',
@@ -46,6 +48,18 @@ export function BentoOrderProvider({ children }) {
           if (priceChangesIdx !== -1 && transfersIdx !== -1 && priceChangesIdx > transfersIdx) {
             merged = merged.filter((id) => id !== 'price-changes')
             merged.splice(transfersIdx, 0, 'price-changes')
+          }
+          // Deadline progress at very top (above gw-points)
+          const dpIdx = merged.indexOf('deadline-progress')
+          if (dpIdx > 0) {
+            merged = merged.filter((id) => id !== 'deadline-progress')
+            merged.unshift('deadline-progress')
+          }
+          // gw-points-summary (desktop-only) before gw-points if missing
+          if (!merged.includes('gw-points-summary')) {
+            const gwIdx = merged.indexOf('gw-points')
+            if (gwIdx !== -1) merged.splice(gwIdx, 0, 'gw-points-summary')
+            else merged.push('gw-points-summary')
           }
           return merged
         }
@@ -99,11 +113,16 @@ export function BentoOrderProvider({ children }) {
   const openCustomizeModal = () => setCustomizeModalOpen(true)
   const closeCustomizeModal = () => setCustomizeModalOpen(false)
 
+  const resetCardOrderToDefault = () => {
+    setCardOrder([...DEFAULT_ORDER])
+  }
+
   return (
     <BentoOrderContext.Provider
       value={{
         cardOrder,
         setCardOrder,
+        resetCardOrderToDefault,
         cardVisibility,
         setCardVisible,
         isCardVisible,

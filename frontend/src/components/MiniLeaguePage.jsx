@@ -147,7 +147,7 @@ export default function MiniLeaguePage() {
   const showCView = leagueViewMode === 'captain'
   const showTransfersView = leagueViewMode === 'transfers'
   const showChipsView = leagueViewMode === 'chips'
-  const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(true)
+  const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
   const [selectedTopTransfer, setSelectedTopTransfer] = useState(null)
   const searchContainerRef = useRef(null)
   const managerDetailLegendRef = useRef(null)
@@ -1498,7 +1498,7 @@ export default function MiniLeaguePage() {
         />,
         document.body
       )}
-      {selectedPlayerId != null && (
+      {selectedPlayerId != null && typeof document !== 'undefined' && createPortal(
         <PlayerDetailModal
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
@@ -1509,7 +1509,8 @@ export default function MiniLeaguePage() {
             setSelectedPlayerId(null)
             setSelectedPlayerName('')
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   )

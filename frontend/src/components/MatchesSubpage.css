@@ -26,6 +26,32 @@
   text-align: center;
 }
 
+/* Bonus subpage: Bar vs Line selector – uses subpage-view-toggle from Dashboard.css; active slider button on-theme (bonus accent) */
+.bonus-chart-mode-wrap {
+  padding: 6px 0 10px;
+  margin-bottom: 4px;
+}
+
+.bonus-chart-mode-wrap .subpage-view-toggle {
+  max-width: 200px;
+}
+
+.bonus-chart-mode-wrap .subpage-view-toggle-slider {
+  background: var(--bonus-1st);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 8px color-mix(in srgb, var(--bonus-1st) 35%, transparent);
+}
+
+.bonus-chart-mode-wrap .subpage-view-toggle-button.active {
+  color: var(--bonus-1st-fg, #fff);
+}
+
+@media (max-width: 768px) {
+  .bonus-chart-mode-wrap .subpage-view-toggle {
+    max-width: none;
+    width: 100%;
+  }
+}
+
 /* Top FPL points – styled like expanded transfers bento (badge + name + points pill) */
 .gw-top-points-card {
   margin-top: 0;

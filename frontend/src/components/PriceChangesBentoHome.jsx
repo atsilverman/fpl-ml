@@ -146,57 +146,52 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
       style={style}
       aria-labelledby="price-changes-home-heading"
     >
+      <div className="price-changes-bento-home-info-wrap">
+        <button
+          ref={infoButtonRef}
+          type="button"
+          className="bento-card-info-icon"
+          title="About this widget"
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowInfoPopup((v) => !v)
+          }}
+          aria-expanded={showInfoPopup}
+          aria-haspopup="dialog"
+        >
+          <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+        </button>
+        {showInfoPopup &&
+          createPortal(
+            <div
+              ref={infoPopupContentRef}
+              className="gw-legend-popup gw-legend-popup-fixed price-changes-source-info-popup price-changes-bento-home-info-popup"
+              role="dialog"
+              aria-label="Price changes info"
+              style={{
+                position: 'fixed',
+                left: infoPopupPosition?.left ?? 0,
+                top: infoPopupPosition?.top ?? 0,
+                visibility: infoPopupPosition ? 'visible' : 'hidden',
+                zIndex: 9999
+              }}
+            >
+              <div className="gw-legend-popup-title">Price changes</div>
+              <p className="price-changes-source-note" style={{ margin: 0 }}>
+                Showing price change predictions (rise/fall) for <strong>owned players only</strong>. See the{' '}
+                <Link to="/research?view=price-changes" onClick={() => setShowInfoPopup(false)}>
+                  Price Changes page
+                </Link>{' '}
+                for the full list.
+              </p>
+            </div>,
+            document.body
+          )}
+      </div>
       <div className="price-changes-bento-label-row">
         <h2 id="price-changes-home-heading" className="bento-card-label">
           price predictions (owned)
         </h2>
-        <span className="price-changes-bento-header-right">
-          {capturedAt && (
-            <span className="price-changes-bento-timestamp" aria-live="polite">
-              {formatCapturedAt(capturedAt)}
-            </span>
-          )}
-          <button
-            ref={infoButtonRef}
-            type="button"
-            className="bento-card-info-icon"
-            title="About this widget"
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowInfoPopup((v) => !v)
-            }}
-            aria-expanded={showInfoPopup}
-            aria-haspopup="dialog"
-          >
-            <Info className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
-          </button>
-          {showInfoPopup &&
-            createPortal(
-              <div
-                ref={infoPopupContentRef}
-                className="gw-legend-popup gw-legend-popup-fixed price-changes-source-info-popup price-changes-bento-home-info-popup"
-                role="dialog"
-                aria-label="Price changes info"
-                style={{
-                  position: 'fixed',
-                  left: infoPopupPosition?.left ?? 0,
-                  top: infoPopupPosition?.top ?? 0,
-                  visibility: infoPopupPosition ? 'visible' : 'hidden',
-                  zIndex: 9999
-                }}
-              >
-                <div className="gw-legend-popup-title">Price changes</div>
-                <p className="price-changes-source-note" style={{ margin: 0 }}>
-                  Showing price change predictions (rise/fall) for <strong>owned players only</strong>. See the{' '}
-                  <Link to="/research?view=price-changes" onClick={() => setShowInfoPopup(false)}>
-                    Price Changes page
-                  </Link>{' '}
-                  for the full list.
-                </p>
-              </div>,
-              document.body
-            )}
-        </span>
       </div>
       <div className="price-changes-bento-body">
         <div className="price-changes-bento-scroll">
@@ -214,6 +209,13 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
         {showScrollHint && !predError && hasData && (
           <div className="price-changes-bento-scroll-hint" aria-hidden title="Scroll to view more">
             <ChevronDown size={14} strokeWidth={2} />
+          </div>
+        )}
+        {capturedAt && (
+          <div className="price-changes-bento-timestamp-row">
+            <span className="price-changes-bento-timestamp" aria-live="polite">
+              {formatCapturedAt(capturedAt)}
+            </span>
           </div>
         )}
       </div>

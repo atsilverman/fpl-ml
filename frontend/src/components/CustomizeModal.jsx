@@ -6,6 +6,8 @@ import './ConfigurationModal.css'
 import './CustomizeModal.css'
 
 const BENTO_LABELS = {
+  'deadline-progress': 'Deadline',
+  'gw-points-summary': 'GW Points (summary)',
   'overall-rank': 'Overall Rank',
   'gw-points': 'GW Points',
   'total-points': 'Total Points',
@@ -20,7 +22,7 @@ const BENTO_LABELS = {
 }
 
 export default function CustomizeModal({ isOpen, onClose }) {
-  const { cardOrder, setCardOrder, isCardVisible, setCardVisible, statsMinMinutesPercent, setStatsMinMinutesPercent } = useBentoOrder()
+  const { cardOrder, setCardOrder, resetCardOrderToDefault, isCardVisible, setCardVisible, statsMinMinutesPercent, setStatsMinMinutesPercent } = useBentoOrder()
   const { toast } = useToast()
   const [draggedId, setDraggedId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
@@ -128,6 +130,17 @@ export default function CustomizeModal({ isOpen, onClose }) {
               <p className="customize-section-subtitle">
                 Drag rows to reorder bentos on the home page. Use the switch to show or hide each card.
               </p>
+              <button
+                type="button"
+                className="customize-reset-layout"
+                onClick={() => {
+                  resetCardOrderToDefault()
+                  toast('Layout reset to default')
+                }}
+                aria-label="Reset layout to default order"
+              >
+                Reset layout
+              </button>
               <div
                 className="customize-rows"
                 onDragLeave={handleDragLeave}

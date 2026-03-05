@@ -1002,6 +1002,10 @@ class PlayerDataRefresher:
             
             if batch_stats:
                 self.db_client.upsert_player_gameweek_stats(batch_stats)
+                try:
+                    self.db_client.insert_bps_snapshots(batch_stats, occurred_at)
+                except Exception as e:
+                    logger.warning("BPS snapshots insert failed", extra={"gameweek": gameweek, "count": len(batch_stats), "error": str(e)})
             if feed_events:
                 try:
                     self.db_client.insert_feed_events(feed_events)
@@ -1192,6 +1196,10 @@ class PlayerDataRefresher:
                 
                 if batch_stats:
                     self.db_client.upsert_player_gameweek_stats(batch_stats)
+                    try:
+                        self.db_client.insert_bps_snapshots(batch_stats, occurred_at)
+                    except Exception as e:
+                        logger.warning("BPS snapshots insert failed (element-summary)", extra={"gameweek": gameweek, "count": len(batch_stats), "error": str(e)})
                 
                 # Optional delay between batches (0 to test API limits; 0.5 default for live/orchestrator)
                 if element_summary_batch_delay > 0 and i + element_summary_batch_size < len(player_list):

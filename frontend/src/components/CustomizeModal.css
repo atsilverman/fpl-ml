@@ -282,6 +282,22 @@ html[data-theme="dark"] .customize-row-slider-thumb {
   line-height: 1.4;
 }
 
+.customize-reset-layout {
+  padding: 6px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.customize-reset-layout:hover {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
 .customize-section-loading {
   font-size: 13px;
   color: var(--text-secondary);

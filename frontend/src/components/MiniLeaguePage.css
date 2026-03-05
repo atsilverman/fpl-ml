@@ -988,6 +988,16 @@
   color: var(--text-secondary);
   text-transform: uppercase;
 }
+.league-standings-page .league-standings-bento-table.league-standings-chips-table tbody tr {
+  height: 36px;
+}
+.league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-manager,
+.league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
+  height: 36px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
   text-align: center;
   vertical-align: middle;
@@ -1001,8 +1011,11 @@
 .league-standings-chips-table .league-standings-chips-badge-played {
   display: inline-block;
   min-width: 28px;
-  padding: 4px 8px;
-  font-size: 12px;
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 1.2;
+  vertical-align: middle;
+  box-sizing: border-box;
 }
 .league-standings-chips-loading {
   text-align: center;
@@ -2383,7 +2396,6 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 /* Backdrop when filter popup is open: dim everything in the modal below the popup */
@@ -3333,5 +3345,4 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }

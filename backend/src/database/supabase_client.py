@@ -481,6 +481,35 @@ class SupabaseClient:
             on_conflict="player_id,gameweek,fixture_id"
         ).execute()
         return result.data
+
+    def insert_bps_snapshots(
+        self,
+        stats_rows: List[Dict[str, Any]],
+        recorded_at: str,
+    ) -> None:
+        """
+        Append BPS snapshot rows (one per player per fixture) for BPS-over-time line graph.
+        Only includes rows with fixture_id > 0. Idempotent per refresh; no dedupe.
+        """
+        if not stats_rows or not recorded_at:
+            return
+        rows = []
+        for s in stats_rows:
+            fid = s.get("fixture_id")
+            if fid is None or int(fid) <= 0:
+                continue
+            rows.append({
+                "gameweek": s.get("gameweek"),
+                "fixture_id": int(fid),
+                "player_id": s.get("player_id"),
+                "bps": int(s.get("bps") or 0),
+                "bonus": int(s.get("bonus") or 0),
+                "provisional_bonus": int(s.get("provisional_bonus") or 0),
+                "recorded_at": recorded_at,
+            })
+        if not rows:
+            return
+        self.client.table("bps_snapshots").insert(rows).execute()
     
     def upsert_fixture(self, fixture_data: Dict[str, Any]):
         """

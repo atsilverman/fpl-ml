@@ -1,0 +1,78 @@
+/* Same grid as settings (bento-card-large): 2 columns, 1 row. Height 0.75. */
+.deadline-progress-bento.bento-card-large {
+  grid-column: span 2;
+  grid-row: span 1;
+  height: calc(var(--bento-unit-height) * 0.75);
+  min-height: calc(var(--bento-unit-height) * 0.75);
+  padding: 10px 16px;
+  gap: 6px;
+}
+
+.deadline-progress-bento-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.deadline-progress-bento-header .bento-card-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  margin: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+/* Full "Next deadline: GW 30 Mar 14…" – allow wrap, mixed case */
+.deadline-progress-bento-header .bento-card-label:not(:empty) {
+  text-transform: none;
+  word-break: break-word;
+}
+
+.deadline-progress-bento-subtext {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.deadline-progress-bento-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+}
+
+.deadline-progress-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+}
+
+.deadline-progress-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2.5px;
+  background: var(--border-color);
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+.deadline-progress-cell--filled {
+  background: var(--accent, #3b82f6);
+  opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .deadline-progress-bento.bento-card-large {
+    grid-column: span 2;
+    grid-row: span 1;
+    height: calc(var(--bento-unit-height) * 0.75);
+    min-height: calc(var(--bento-unit-height) * 0.75);
+  }
+}

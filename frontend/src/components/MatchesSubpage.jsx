@@ -12,8 +12,9 @@ import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { formatNumberWithCommas } from '../utils/formatNumbers'
 import BpsLeadersChart from './BpsLeadersChart'
+import BpsOverTimeChart from './BpsOverTimeChart'
 import { CardStatLabel } from './CardStatLabel'
-import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp } from 'lucide-react'
+import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp, ChartBarDecreasing, ChartLine } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -391,7 +392,7 @@ function truncateTeamNameMobile(name, isMobile) {
   return name.length > 10 ? name.slice(0, 10) + '..' : name
 }
 
-function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, onPlayerClick, preloadedFixtureStats = null, isMobile = false }) {
+function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, bonusChartMode = 'bar', onPlayerClick, preloadedFixtureStats = null, isMobile = false }) {
   const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
@@ -581,7 +582,16 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
           aria-label="Tap to close details"
         >
           {showBonusChart ? (
-            statsLoading ? (
+            bonusChartMode === 'line' ? (
+              <div className="bps-chart-wrap bps-chart-wrap--line">
+                <BpsOverTimeChart
+                  fixtureId={fpl_fixture_id}
+                  gameweek={gameweek}
+                  players={allBpsPlayersSorted}
+                  enabled={expanded}
+                />
+              </div>
+            ) : statsLoading ? (
               <div className="matchup-detail-loading">
                 <div className="skeleton-text" />
               </div>
@@ -688,6 +698,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
   const matchesScrollRef = useRef(null)
   const [gridColumns, setGridColumns] = useState(1)
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches)
+  const [bonusChartMode, setBonusChartMode] = useState('bar') // 'bar' | 'line'
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 768px)')
     const handler = () => setIsMobile(mql.matches)
@@ -766,6 +777,43 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
         </div>
       ) : (
         <>
+          {toggleBonus && (
+          <div className="bonus-chart-mode-wrap">
+            <nav
+              className="subpage-view-toggle"
+              role="tablist"
+              aria-label="Bonus chart type"
+              data-options="2"
+              style={{ '--slider-offset': bonusChartMode === 'line' ? 1 : 0 }}
+            >
+              <span className="subpage-view-toggle-slider" aria-hidden />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={bonusChartMode === 'bar'}
+                className={`subpage-view-toggle-button ${bonusChartMode === 'bar' ? 'active' : ''}`}
+                onClick={() => setBonusChartMode('bar')}
+                aria-label="Bar chart"
+                title="Bar chart"
+              >
+                <ChartBarDecreasing size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                <span className="subpage-view-toggle-label">Bar</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={bonusChartMode === 'line'}
+                className={`subpage-view-toggle-button ${bonusChartMode === 'line' ? 'active' : ''}`}
+                onClick={() => setBonusChartMode('line')}
+                aria-label="Line graph"
+                title="Line graph"
+              >
+                <ChartLine size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                <span className="subpage-view-toggle-label">Line</span>
+              </button>
+            </nav>
+          </div>
+          )}
           {!toggleBonus && (
           <div className={`gw-top-points-card ${isTopPerformersExpanded ? 'gw-top-points-card--expanded' : 'gw-top-points-card--collapsed'}`}>
             <div className="gw-top-points-content">
@@ -873,6 +921,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 lastH2HPlayerStatsLoading={lastH2HPlayerStatsLoading}
                 dataChecked={dataChecked ?? false}
                 bonusAnimationKey={bonusAnimationKey}
+                bonusChartMode={toggleBonus ? bonusChartMode : 'bar'}
                 onPlayerClick={(player) => { if (player?.playerId != null) setBreakdownPlayer({ playerId: player.playerId, playerName: player.playerName ?? '', position: player.position, teamShortName: player.teamShortName ?? null }) }}
                 preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />

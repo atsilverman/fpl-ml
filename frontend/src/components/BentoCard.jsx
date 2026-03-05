@@ -33,6 +33,14 @@ const CHIP_DISPLAY = {
   '3xc': { label: () => 'TC', color: '#b91c1c' } /* red-700: distinct from captain (C) orange */
 }
 
+/** Map collapsed chip column key to CHIP_DISPLAY key for color */
+const CHIP_KEY_TO_TYPE = {
+  wc1: 'wildcard', wc2: 'wildcard',
+  fh: 'freehit', fh2: 'freehit',
+  bb: 'bboost', bb2: 'bboost',
+  tc: '3xc', tc2: '3xc'
+}
+
 function getChipBadgeInfo(activeChip, gameweek) {
   const chip = typeof activeChip === 'string' ? activeChip.toLowerCase() : null
   if (!chip || !CHIP_DISPLAY[chip]) return null
@@ -144,6 +152,7 @@ export default function BentoCard({
   leagueTopTransfersLoading = false,
   transfersGameweek = null,
   isExpanded = false,
+  gwPointsDesktopDualView = false,
   onExpandClick = null,
   onCollapseClick = null,
   playerChartData = null,
@@ -365,16 +374,45 @@ export default function BentoCard({
   }
 
   const renderChipItems = (items) => {
-    return items.map(({ key, label, gameweek: gw, isSecondHalf }) => (
-      <div
-        key={key}
-        className={`chip-item ${gw ? 'chip-used' : ''}`}
-        title={gw ? `Used in Gameweek ${gw}` : 'Not used'}
-      >
-        <div className="chip-label">{label}</div>
-        {gw ? <div className="chip-gameweek">GW{gw}</div> : isSecondHalf ? <div className="chip-gameweek chip-gameweek--dash">−</div> : null}
-      </div>
-    ))
+    return items.map(({ key, label, gameweek: gw, isSecondHalf }) => {
+      const chipType = CHIP_KEY_TO_TYPE[key]
+      const chipInfo = chipType ? CHIP_DISPLAY[chipType] : null
+      const usedStyle = gw && chipInfo ? {
+        borderColor: chipInfo.color,
+        borderWidth: '1.5px',
+        backgroundColor: `${chipInfo.color}18`,
+        color: chipInfo.color
+      } : undefined
+      const labelStr = typeof label === 'string' ? label : ''
+      const labelStartsWithWc = labelStr.startsWith('WC1') || labelStr.startsWith('WC2')
+      const labelDigitPart = labelStartsWithWc ? labelStr.slice(2) : (labelStr.length === 3 && labelStr.endsWith('2') ? labelStr.slice(2) : null) // WC1/WC2 → "1"/"2"; FH2/BB2/TC2 → "2"
+      const labelPrefixPart = labelDigitPart != null ? labelStr.slice(0, -labelDigitPart.length) : null
+      return (
+        <div
+          key={key}
+          className={`chip-item ${gw ? 'chip-used' + (usedStyle ? ' chip-used--colored' : '') : ''}`}
+          title={gw ? `Used in Gameweek ${gw}` : 'Not used'}
+          style={usedStyle}
+        >
+          <div className="chip-label">
+            {labelPrefixPart != null && labelDigitPart != null ? (
+              <>
+                <span className="chip-label-wc-gw">{labelPrefixPart}</span>
+                <span className="chip-label-digit">{labelDigitPart}</span>
+              </>
+            ) : (
+              label
+            )}
+          </div>
+          {gw ? (
+            <div className="chip-gameweek">
+              <span className="chip-gameweek-gw">GW</span>
+              <span className="chip-gameweek-num">{gw}</span>
+            </div>
+          ) : isSecondHalf ? <div className="chip-gameweek chip-gameweek--dash">−</div> : null}
+        </div>
+      )
+    })
   }
 
   const handleGwLegendClick = (e) => {
@@ -384,7 +422,7 @@ export default function BentoCard({
 
   const isGwPointsExpanded = id === 'gw-points' && isExpanded
   const isTotalPointsExpanded = id === 'total-points' && isExpanded
-  const showExpandIcon = id === 'overall-rank' || id === 'team-value' || id === 'gw-points'
+  const showExpandIcon = (id === 'overall-rank' || id === 'team-value' || id === 'gw-points') && !(id === 'gw-points' && gwPointsDesktopDualView)
   const showStateDebugIcon = id === 'refresh-state' && stateDebugDefinitions?.length
 
   const handleStateDebugClick = (e) => {
@@ -851,19 +889,21 @@ export default function BentoCard({
           </div>
         )
       )}
-      <div className={id === 'gw-points' && isExpanded ? 'bento-card-label-row bento-card-label-row--gw-expanded' : 'bento-card-label'}>
-        {id === 'gw-points' && isExpanded && value !== undefined && (
-          <span className="bento-card-label-gw-value">
-            <AnimatedValue value={value}>{value}</AnimatedValue>
-          </span>
-        )}
-        <span className={id === 'gw-points' && isExpanded ? 'bento-card-label-text' : undefined}>
-          {label}
-          {id === 'gw-points' && isExpanded && subtext && (
-            <span className="bento-card-label-suffix">| {subtext}</span>
+      {!(id === 'gw-points' && gwPointsDesktopDualView) && (
+        <div className={id === 'gw-points' && isExpanded && !gwPointsDesktopDualView ? 'bento-card-label-row bento-card-label-row--gw-expanded' : 'bento-card-label'}>
+          {id === 'gw-points' && isExpanded && !gwPointsDesktopDualView && value !== undefined && (
+            <span className="bento-card-label-gw-value">
+              <AnimatedValue value={value}>{value}</AnimatedValue>
+            </span>
           )}
-        </span>
-      </div>
+          <span className={id === 'gw-points' && isExpanded && !gwPointsDesktopDualView ? 'bento-card-label-text' : undefined}>
+            {label}
+            {id === 'gw-points' && isExpanded && !gwPointsDesktopDualView && subtext && (
+              <span className="bento-card-label-suffix">| {subtext}</span>
+            )}
+          </span>
+        </div>
+      )}
       
       {loading ? (
         <div className="bento-card-value loading" aria-busy="true" />
@@ -1005,7 +1045,7 @@ export default function BentoCard({
         </div>
       ) : value !== undefined && id !== 'gw-debug' ? (
         <>
-          {!(id === 'league-rank' && isExpanded) && !(id === 'gw-points' && isExpanded) && (
+          {!(id === 'league-rank' && isExpanded) && !(id === 'gw-points' && isExpanded && !gwPointsDesktopDualView) && !(id === 'gw-points' && gwPointsDesktopDualView) && (
             <div className={`bento-card-value ${id === 'league-rank' ? 'bento-card-value-with-inline-change' : ''}`}>
               <AnimatedValue value={value}>{value}</AnimatedValue>
               {isStale && (
@@ -1044,7 +1084,7 @@ export default function BentoCard({
         </>
       ) : null}
       
-      {subtext && !(id === 'gw-points' && isExpanded) && (
+      {subtext && !(id === 'gw-points' && isExpanded && !gwPointsDesktopDualView) && !(id === 'gw-points' && gwPointsDesktopDualView) && (
         id === 'gw-points' ? (
           <div className="bento-card-subtext-row">
             <div className="bento-card-subtext">{subtext}</div>
@@ -1099,7 +1139,7 @@ export default function BentoCard({
         </div>
       )}
       
-      {isExpanded && id === 'gw-points' && (
+      {(isExpanded && id === 'gw-points') || (id === 'gw-points' && gwPointsDesktopDualView) ? (
         <div className="bento-card-chart">
           <GameweekPointsView
             data={currentGameweekPlayersData || []}
@@ -1113,7 +1153,7 @@ export default function BentoCard({
             sortable={false}
           />
         </div>
-      )}
+      ) : null}
       
       {isChips && !isExpanded && (
         <div className="chips-pages-wrapper">

@@ -476,6 +476,13 @@ html[data-theme="dark"] .gameweek-points-view .gameweek-points-td-pts--top10 .ga
 .gameweek-points-tbody-bench .gameweek-points-td-player-fixed {
   background: color-mix(in srgb, var(--bg-secondary) 32%, var(--bg-primary));
 }
+/* Bench divider row: same background as player header (thead with stat labels) */
+.gameweek-points-tr-bench-divider .gameweek-points-td {
+  background: var(--bg-secondary);
+}
+.gameweek-points-tr-bench-divider .gameweek-points-td-bench-divider-fixed {
+  background: color-mix(in srgb, var(--bg-secondary) 85%, var(--bg-primary));
+}
 
 /* Bench divider row label – sticky top (below thead) and sticky left (like player column) */
 .gameweek-points-tr-bench-divider {

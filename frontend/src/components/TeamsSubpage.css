@@ -1,0 +1,98 @@
+/* Teams subpage: collage of team bentos, 3 columns */
+
+.research-teams-subpage {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--text-primary);
+  height: 100%;
+  min-height: 0;
+}
+
+.research-teams-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.research-teams-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.research-teams-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.research-teams-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.research-teams-bento {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  min-height: 100px;
+  text-align: center;
+}
+
+@media (hover: hover) {
+  .research-teams-bento:hover {
+    background: var(--bg-hover, color-mix(in srgb, var(--bg-card) 90%, var(--text-primary)));
+    border-color: var(--accent-blue);
+  }
+}
+
+.research-teams-bento:active {
+  transform: scale(0.98);
+}
+
+.research-teams-bento:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+.research-teams-bento-badge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+
+.research-teams-bento-badge {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.research-teams-bento-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}

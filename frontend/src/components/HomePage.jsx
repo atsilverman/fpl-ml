@@ -35,6 +35,7 @@ import PlayerDetailModal from './PlayerDetailModal'
 import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import './MiniLeaguePage.css'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
+import DeadlineProgressBento from './DeadlineProgressBento'
 import { formatNumber, formatNumberWithTwoDecimals, formatNumberWithCommas, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
@@ -70,12 +71,12 @@ export default function HomePage() {
   const { historyData: teamValueHistoryData, loading: teamValueHistoryLoading } = useTeamValueHistory()
   const { leagueData: leagueTeamValueData, loading: leagueTeamValueLoading } = useLeagueTeamValueHistory()
   const { chipUsage, loading: chipLoading } = useChipUsage()
-  const { hasLiveGames } = useLiveGameweekStatus(gameweek)
+  const { hasLiveGames, liveFixtureCount } = useLiveGameweekStatus(gameweek)
   const { inPlay: managerInPlay } = useManagerLiveStatus(config?.managerId ?? null, gameweek)
   const hasManagerPlayerInPlay = hasLiveGames && (managerInPlay ?? 0) > 0
   const { playerData, pointsByGameweek: playerPointsByGameweek, loading: playerPerformanceLoading } = usePlayerOwnedPerformance(playerPerformanceChartFilter, 'total_points')
   const { data: currentGameweekPlayers, fixtures: currentGameweekFixtures, isLoading: currentGameweekPlayersLoading } = useCurrentGameweekPlayers()
-  const { fixtures: fplFixturesForMatchState } = useFPLFixturesForMatchState(gameweek ?? null, isGwPointsExpanded)
+  const { fixtures: fplFixturesForMatchState } = useFPLFixturesForMatchState(gameweek ?? null, isGwPointsExpanded || !isMobile)
   const { fixtures: fixturesFromMatches } = useFixturesWithTeams(gameweek ?? null)
   const { top10ByStat, isLoading: top10ByStatLoading } = useGameweekTop10ByStat()
   const { impactByPlayerId, loading: impactLoading } = usePlayerImpact()
@@ -100,39 +101,6 @@ export default function HomePage() {
     if (!Array.isArray(currentGameweekPlayers) || !currentGameweekPlayers.length) return false
     return currentGameweekPlayers.some((p) => p.bonus_status === 'provisional' && (p.bonus ?? 0) > 0)
   }, [currentGameweekPlayers])
-
-  const { data: nextGameweek } = useQuery({
-    queryKey: ['gameweek', 'next'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('gameweeks')
-        .select('id, name, deadline_time')
-        .eq('is_next', true)
-        .single()
-      if (error) return null
-      return data
-    },
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const nextDeadlineGwLabel = useMemo(() => {
-    if (!nextGameweek) return ''
-    const name = nextGameweek.name?.trim()
-    if (name) return name
-    if (nextGameweek.id != null) return `Gameweek ${nextGameweek.id}`
-    return ''
-  }, [nextGameweek?.name, nextGameweek?.id])
-
-  const nextDeadlineLocal = useMemo(() => {
-    const iso = nextGameweek?.deadline_time
-    if (!iso) return null
-    try {
-      const d = new Date(iso.replace('Z', '+00:00'))
-      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-    } catch {
-      return null
-    }
-  }, [nextGameweek?.deadline_time])
 
   // Game updating banner: FPL Updating (waiting on flip) or GW Setup (our batch running before first kickoff).
   // Hide when the deadline batch for the current gameweek has completed successfully.
@@ -219,17 +187,28 @@ export default function HomePage() {
     [displayCardOrder, cardVisibility]
   )
 
+  /* Hide deadline bento when >1 game is live */
+  const renderCardOrder = useMemo(() => {
+    if ((liveFixtureCount ?? 0) <= 1) return visibleCardOrder
+    return visibleCardOrder.filter((id) => id !== 'deadline-progress')
+  }, [visibleCardOrder, liveFixtureCount])
+
   /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom */
   const bentoAnimationDelays = useMemo(() => {
     const staggerMs = 90
     return Object.fromEntries(
-      visibleCardOrder.map((id, index) => [id, index * staggerMs])
+      renderCardOrder.map((id, index) => [id, index * staggerMs])
     )
-  }, [visibleCardOrder])
+  }, [renderCardOrder])
 
   const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueTop10HistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
 
   const cards = [
+    {
+      id: 'deadline-progress',
+      label: 'Next deadline',
+      size: '2x0.5'
+    },
     {
       id: 'overall-rank',
       label: 'Overall Rank',
@@ -258,6 +237,17 @@ export default function HomePage() {
     },
     {
       id: 'gw-points',
+      label: 'GW Points',
+      value: showGameUpdatingBanner
+        ? '—'
+        : gwPointsFromPlayers != null
+          ? formatNumberWithCommas(gwPointsFromPlayers)
+          : formatNumberWithCommas(managerData?.gameweekPoints),
+      subtext: `Gameweek ${gameweek}`,
+      size: '1x1'
+    },
+    {
+      id: 'gw-points-summary',
       label: 'GW Points',
       value: showGameUpdatingBanner
         ? '—'
@@ -346,8 +336,12 @@ export default function HomePage() {
       return 'bento-card-chart-large'
     }
     
-    // GW points card 2x4 when expanded, 1x1 when collapsed
-    if (id === 'gw-points' && isGwPointsExpanded) {
+    // GW points summary: always 1x1 (desktop only, rendered above)
+    if (id === 'gw-points-summary') {
+      return 'bento-card'
+    }
+    // GW points card 2x4 when expanded (or on desktop: table-only in its own bento)
+    if (id === 'gw-points' && (isGwPointsExpanded || !isMobile)) {
       return 'bento-card-chart-2x4'
     }
     
@@ -368,6 +362,11 @@ export default function HomePage() {
     // Price Changes: always 2x2, no expand
     if (id === 'price-changes') {
       return 'bento-card-2x2'
+    }
+
+    // Deadline progress: same 2-wide layout as settings (bento-card-large)
+    if (id === 'deadline-progress') {
+      return 'bento-card-large'
     }
 
     if (card.size === '2x3') return 'bento-card-chart-large'
@@ -451,20 +450,27 @@ export default function HomePage() {
           <span>Leagues and Managers Updating</span>
         </div>
       )}
-      {!showGameUpdatingBanner && nextDeadlineLocal && (
-        <p className="home-page-next-deadline">
-          Next deadline: {nextDeadlineGwLabel && `${nextDeadlineGwLabel} `}{nextDeadlineLocal}
-        </p>
-      )}
-      <div className="bento-grid">
-        {visibleCardOrder.map((cardId, index) => {
+      <div className={`bento-grid${renderCardOrder[0] === 'deadline-progress' ? ' bento-grid-first-row-deadline' : ''}`}>
+        {renderCardOrder.map((cardId, index) => {
           const card = cards.find(c => c.id === cardId)
           if (!card) return null
+          // GW points summary: desktop only (1x1 bento with label, value, subtext)
+          if (cardId === 'gw-points-summary' && isMobile) return null
 
           if (cardId === 'price-changes') {
             return (
               <PriceChangesBentoHome
                 key="price-changes"
+                className={getCardClassName(cardId)}
+                style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
+              />
+            )
+          }
+
+          if (cardId === 'deadline-progress') {
+            return (
+              <DeadlineProgressBento
+                key="deadline-progress"
                 className={getCardClassName(cardId)}
                 style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
@@ -485,9 +491,10 @@ export default function HomePage() {
           const isTotalPointsExpanded = cardId === 'total-points' && isPlayerPerformanceExpanded
           const showValueInTotalPoints = !isTotalPointsExpanded
 
-          // Transform gw-points card when expanded
+          // Transform gw-points card when expanded (on desktop we show both collapsed + expanded, no toggle)
+          const gwPointsDesktopDualView = cardId === 'gw-points' && !isMobile
           const isGwPointsExpandedCard = cardId === 'gw-points' && isGwPointsExpanded
-          const showValueInGwPoints = !isGwPointsExpandedCard
+          const showValueInGwPoints = !isGwPointsExpandedCard || gwPointsDesktopDualView
 
           // Determine if this card should show value or chart
           let showValue = card.value
@@ -545,6 +552,9 @@ export default function HomePage() {
             playerChartExcludeHaalandToUse = cardId === 'total-points' ? playerChartExcludeHaaland : undefined
             onPlayerChartExcludeHaalandChangeToUse = cardId === 'total-points' ? setPlayerChartExcludeHaaland : undefined
             playerChartHideFilterControlsToUse = cardId === 'total-points'
+          } else if (cardId === 'gw-points-summary') {
+            showValue = card.value
+            showChange = undefined
           } else if (cardId === 'gw-points') {
             showValue = card.value
             showChange = showValueInGwPoints ? card.change : undefined
@@ -606,6 +616,7 @@ export default function HomePage() {
               }
               isProvisionalOnly={refreshState === 'bonus_pending' || hasProvisionalBonusInData}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
+              gwPointsDesktopDualView={gwPointsDesktopDualView}
               animateEntrance={!loading}
               style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
@@ -663,7 +674,7 @@ export default function HomePage() {
               gameweekFixturesFromFPL={cardId === 'gw-points' ? gameweekFixturesFromFPLToUse : undefined}
               gameweekFixturesFromMatches={cardId === 'gw-points' ? gameweekFixturesFromMatchesToUse : undefined}
               top10ByStat={cardId === 'gw-points' ? top10ByStat : undefined}
-              showTop10Fill={cardId !== 'gw-points' || isGwPointsExpandedCard}
+              showTop10Fill={cardId !== 'gw-points' || isGwPointsExpandedCard || gwPointsDesktopDualView}
               impactByPlayerId={cardId === 'gw-points' ? impactByPlayerId : undefined}
               onPlayerRowClick={
                 cardId === 'gw-points'
@@ -723,7 +734,7 @@ export default function HomePage() {
         />,
         document.body
       )}
-      {selectedPlayerId != null && (
+      {selectedPlayerId != null && typeof document !== 'undefined' && createPortal(
         <PlayerDetailModal
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}
@@ -734,7 +745,8 @@ export default function HomePage() {
             setSelectedPlayerId(null)
             setSelectedPlayerName('')
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   )
