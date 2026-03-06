@@ -1,14 +1,14 @@
 /* BPS over time line chart – Bonus subpage (when Line graph selected) */
 .bps-over-time-chart {
   width: 100%;
-  min-height: 200px;
+  min-height: 320px;
 }
 
 .bps-over-time-chart--loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  min-height: 320px;
   padding: 16px;
 }
 
@@ -30,7 +30,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 180px;
+  min-height: 320px;
   padding: 24px 16px;
 }
 

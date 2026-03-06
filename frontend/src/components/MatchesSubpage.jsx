@@ -14,7 +14,7 @@ import { formatNumberWithCommas } from '../utils/formatNumbers'
 import BpsLeadersChart from './BpsLeadersChart'
 import BpsOverTimeChart from './BpsOverTimeChart'
 import { CardStatLabel } from './CardStatLabel'
-import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp, ChartBarDecreasing, ChartLine } from 'lucide-react'
+import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp, ChartBarDecreasing, ChartLine, Construction } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -541,7 +541,16 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
 
       {showBpsByDefault && !expanded && status !== 'scheduled' && (
         <div className="matchup-card-details matchup-card-details--bps-chart matchup-card-details--bonus-default">
-          {statsLoading ? (
+          {bonusChartMode === 'line' ? (
+            <div className="bps-chart-wrap bps-chart-wrap--line">
+              <BpsOverTimeChart
+                fixtureId={fpl_fixture_id}
+                gameweek={gameweek}
+                players={allBpsPlayersSorted}
+                enabled={true}
+              />
+            </div>
+          ) : statsLoading ? (
             <div className="matchup-detail-loading">
               <div className="skeleton-text" />
             </div>
@@ -588,7 +597,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                   fixtureId={fpl_fixture_id}
                   gameweek={gameweek}
                   players={allBpsPlayersSorted}
-                  enabled={expanded}
+                  enabled={true}
                 />
               </div>
             ) : statsLoading ? (
@@ -647,7 +656,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
         </button>
       )}
 
-      {showBonusChart && status !== 'scheduled' && (
+      {showBonusChart && status !== 'scheduled' && bonusChartMode !== 'line' && (
         <button
           type="button"
           className="expand-button"
@@ -793,11 +802,11 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 aria-selected={bonusChartMode === 'bar'}
                 className={`subpage-view-toggle-button ${bonusChartMode === 'bar' ? 'active' : ''}`}
                 onClick={() => setBonusChartMode('bar')}
-                aria-label="Bar chart"
-                title="Bar chart"
+                aria-label="BPS Leaders"
+                title="BPS Leaders"
               >
                 <ChartBarDecreasing size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
-                <span className="subpage-view-toggle-label">Bar</span>
+                <span className="subpage-view-toggle-label">BPS Leaders</span>
               </button>
               <button
                 type="button"
@@ -805,13 +814,19 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 aria-selected={bonusChartMode === 'line'}
                 className={`subpage-view-toggle-button ${bonusChartMode === 'line' ? 'active' : ''}`}
                 onClick={() => setBonusChartMode('line')}
-                aria-label="Line graph"
-                title="Line graph"
+                aria-label="BPS Progress"
+                title="BPS Progress"
               >
                 <ChartLine size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
-                <span className="subpage-view-toggle-label">Line</span>
+                <span className="subpage-view-toggle-label">BPS Progress</span>
               </button>
             </nav>
+            {bonusChartMode === 'line' && (
+              <div className="bps-progress-under-construction" role="status">
+                <Construction size={14} strokeWidth={2} className="bps-progress-under-construction-icon" aria-hidden />
+                <span>Under construction</span>
+              </div>
+            )}
           </div>
           )}
           {!toggleBonus && (

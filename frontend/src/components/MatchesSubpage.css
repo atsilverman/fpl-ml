@@ -45,6 +45,26 @@
   color: var(--bonus-1st-fg, #fff);
 }
 
+.bps-progress-under-construction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #7c5e00;
+  background: #fef9c3;
+  border: 1px solid #facc15;
+  border-radius: 6px;
+}
+
+.bps-progress-under-construction-icon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
 @media (max-width: 768px) {
   .bonus-chart-mode-wrap .subpage-view-toggle {
     max-width: none;
@@ -845,6 +865,10 @@ html[data-theme="dark"] .gw-top-points-pill {
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
+}
+
+.matches-subpage .bps-chart-wrap--line {
+  min-height: 360px;
 }
 
 .matchup-detail-loading {
