@@ -1977,7 +1977,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   outline-offset: 2px;
 }
 
-/* Manager detail modal: same layout and UI as GW Points expanded card */
+/* Manager detail modal: same layout, size and z-level as team detail modal */
 .manager-detail-modal-overlay {
   --bento-unit-height: 150px;
   --bento-gap: 16px;
@@ -1990,10 +1990,23 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 1100;
   padding: 20px;
   backdrop-filter: blur(2px);
   animation: managerDetailModalFadeIn var(--motion-duration) var(--motion-ease);
+}
+@media (max-width: 768px) {
+  .manager-detail-modal-overlay {
+    top: var(--dashboard-header-height, 0);
+    bottom: var(--dashboard-nav-height, 0);
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 12px;
+  }
+  .manager-detail-modal-overlay .manager-detail-modal-content {
+    max-height: 100%;
+  }
 }
 @keyframes managerDetailModalFadeIn {
   from { opacity: 0; }
@@ -2914,10 +2927,7 @@ html[data-theme="dark"] .player-detail-points-impact-pts.negative {
   justify-content: space-between;
   gap: 12px;
   margin-top: 8px;
-  padding: 6px 12px 6px 12px;
-  border-radius: 8px;
-  background: var(--bg-tertiary, rgba(0, 0, 0, 0.08));
-  border-top: 1px solid var(--border-color);
+  padding: 4px 0;
 }
 .player-detail-points-impact-total-label {
   font-size: 12px;

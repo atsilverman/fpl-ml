@@ -9,12 +9,14 @@ export function useBpsSnapshots(fixtureId, gameweek, enabled = true) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['bps-snapshots', fixtureId, gameweek],
     queryFn: async () => {
-      if (!fixtureId || !gameweek) return []
+      const fid = fixtureId != null ? Number(fixtureId) : null
+      const gw = gameweek != null ? Number(gameweek) : null
+      if (!fid || !gw) return []
       const { data: rows, error: err } = await supabase
         .from('bps_snapshots')
         .select('player_id, bps, bonus, provisional_bonus, recorded_at')
-        .eq('fixture_id', fixtureId)
-        .eq('gameweek', gameweek)
+        .eq('fixture_id', fid)
+        .eq('gameweek', gw)
         .order('recorded_at', { ascending: true })
       if (err) throw err
       return rows ?? []

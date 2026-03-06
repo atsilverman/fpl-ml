@@ -81,15 +81,37 @@
   background: var(--bg-secondary);
 }
 
+/* Header row: stronger container fill so it’s clearly distinct from data rows below (same as Statistics / Matches table) */
+.gameweek-points-table thead {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+.gameweek-points-table thead th {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .gameweek-points-table thead,
+html[data-theme="light"] .gameweek-points-table thead th {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .gameweek-points-table thead,
+html[data-theme="dark"] .gameweek-points-table thead th {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
+}
+
 /* Sticky player header (corner): top + left; z above header row and body player column. Outdent into scrollable padding. */
 .gameweek-points-table thead .gameweek-points-th-player {
   position: sticky;
   left: 0;
   z-index: 11;
   margin-left: -12px;
-  background: color-mix(in srgb, var(--bg-secondary) 85%, var(--bg-primary));
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
   padding-left: 16px;
   border-right: 1px solid var(--border-color);
+}
+html[data-theme="light"] .gameweek-points-table thead .gameweek-points-th-player {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .gameweek-points-table thead .gameweek-points-th-player {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
 .gameweek-points-th {
@@ -1452,8 +1474,14 @@ html[data-theme="dark"] .gameweek-points-player-points-badge {
 /* Manager popup: first-column treatment (schedule-style) for player column; no sticky outdent so no gap */
 .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
   margin-left: 0;
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
   border-right: 1px solid var(--border-color);
+}
+html[data-theme="light"] .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 .manager-detail-modal-chart-wrap .gameweek-points-table .gameweek-points-td-player-fixed {
   margin-left: 0;

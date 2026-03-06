@@ -17,7 +17,7 @@ function parseDeadline(iso) {
   }
 }
 
-export default function DeadlineProgressBento({ className = '', style = {} }) {
+export default function DeadlineProgressBento({ className = '', style = {}, animateEntrance = false }) {
   const { data: currentGw } = useQuery({
     queryKey: ['gameweek', 'current', 'deadline'],
     queryFn: async () => {
@@ -102,7 +102,7 @@ export default function DeadlineProgressBento({ className = '', style = {} }) {
 
   return (
     <div
-      className={`deadline-progress-bento bento-card bento-card-animate ${className}`.trim()}
+      className={`deadline-progress-bento bento-card ${animateEntrance ? 'bento-card-animate' : ''} ${className}`.trim()}
       style={style}
       aria-labelledby="deadline-progress-heading"
     >
@@ -117,7 +117,7 @@ export default function DeadlineProgressBento({ className = '', style = {} }) {
           <div className="bento-card-value loading" aria-busy="true" />
         ) : (
           <div
-            className="deadline-progress-grid"
+            className={`deadline-progress-grid${animateEntrance ? ' deadline-progress-grid--animate' : ''}`}
             role="img"
             aria-label={`${filledSquares} of ${totalSquares} periods elapsed until ${nextDeadlineLabel}`}
           >
@@ -125,6 +125,7 @@ export default function DeadlineProgressBento({ className = '', style = {} }) {
               <div
                 key={i}
                 className={`deadline-progress-cell ${cell.filled ? 'deadline-progress-cell--filled' : ''}`}
+                style={{ '--cell-delay': `${i * 18}ms` }}
               />
             ))}
           </div>

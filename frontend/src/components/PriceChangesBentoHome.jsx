@@ -75,7 +75,7 @@ function isOwned(playerName, ownedNamesSet) {
  * Home page 2x2 bento: Price change predictions (Rise/Fall) limited to players owned by the configured manager.
  * Same visualization as Research Price Changes; no expand button; title "Price Changes". Info (i) explains owned-only and links to full page.
  */
-export default function PriceChangesBentoHome({ className = '', style = {} }) {
+export default function PriceChangesBentoHome({ className = '', style = {}, animateEntrance = false }) {
   const { rises: predRises, falls: predFalls, capturedAt, loading: predLoading, error: predError } = usePriceChangePredictions()
   const { data: currentGameweekPlayers } = useCurrentGameweekPlayers()
   const { getTeamForPlayer } = usePlayerTeamMap()
@@ -142,7 +142,7 @@ export default function PriceChangesBentoHome({ className = '', style = {} }) {
 
   return (
     <div
-      className={`price-changes-bento price-changes-bento-home bento-card ${!loading ? 'bento-card-animate' : ''} ${className}`.trim()}
+      className={`price-changes-bento price-changes-bento-home bento-card ${animateEntrance ? 'bento-card-animate' : ''} ${className}`.trim()}
       style={style}
       aria-labelledby="price-changes-home-heading"
     >

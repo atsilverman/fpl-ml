@@ -1,11 +1,12 @@
 import { useState, useMemo, useCallback, useRef, useEffect, Fragment } from 'react'
 import { createPortal } from 'react-dom'
-import { Search, Filter, X, Download, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare, ArrowUpFromDot, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, X, Download, UserRound, UsersRound, Home, PlaneTakeoff, Swords, ShieldHalf, Hand, Scale, RotateCcwSquare, ArrowUpFromDot, ChevronLeft, ChevronRight, BarChart3, Calendar } from 'lucide-react'
 import { CardStatLabel } from './CardStatLabel'
 import html2canvas from 'html2canvas'
 import { useAllPlayersGameweekStats } from '../hooks/useAllPlayersGameweekStats'
 import { useGameweekData } from '../hooks/useGameweekData'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
+import { useScheduleData } from '../hooks/useScheduleData'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useCurrentGameweekPlayers } from '../hooks/useCurrentGameweekPlayers'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
@@ -190,7 +191,18 @@ export default function StatsSubpage() {
   const [selectedTeamName, setSelectedTeamName] = useState('')
   /** When true, show modal with transposed compare table (vertical stat-by-stat view) */
   const [showCompareDetailsModal, setShowCompareDetailsModal] = useState(false)
+  /** Compare modal content: 'statistics' | 'schedule' (upcoming fixtures) */
+  const [compareDetailsView, setCompareDetailsView] = useState('statistics')
   const compareDetailsModalRef = useRef(null)
+  const stickyCloneTeamRef = useRef(null)
+  const stickyClonePlayerRef = useRef(null)
+  const { scheduleMatrix } = useScheduleData()
+
+  /** Sticky clone is inert by default so it doesn’t capture clicks (popup opens from main table). In compare mode allow interaction so user can tap player/team names to add/remove. */
+  useEffect(() => {
+    if (stickyCloneTeamRef.current) stickyCloneTeamRef.current.removeAttribute('inert')
+    if (stickyClonePlayerRef.current) stickyClonePlayerRef.current.removeAttribute('inert')
+  }, [teamView])
   /** Current page (1-based) for player stats; only used when API pagination is active (player view). */
   const [statsPage, setStatsPage] = useState(1)
 
@@ -199,6 +211,10 @@ export default function StatsSubpage() {
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = prev }
+  }, [showCompareDetailsModal])
+
+  useEffect(() => {
+    if (!showCompareDetailsModal) setCompareDetailsView('statistics')
   }, [showCompareDetailsModal])
 
   useEffect(() => {
@@ -667,6 +683,44 @@ export default function StatsSubpage() {
     })
     return list
   }, [compareSelectedTeams, compareSort.column, compareSort.dir])
+
+  /** Next 8 gameweeks for compare schedule view; avg difficulty per entity; entity key with easiest schedule (lowest avg) */
+  const compareScheduleData = useMemo(() => {
+    if (!scheduleMatrix?.gameweeks?.length) return { next8Gameweeks: [], avgDifficultyByKey: {}, easiestEntityKey: null }
+    const next8 = scheduleMatrix.gameweeks.slice(0, 8)
+    const entities = teamView ? compareTableTeams : compareTablePlayers
+    if (entities.length === 0) return { next8Gameweeks: next8, avgDifficultyByKey: {}, easiestEntityKey: null }
+    const getEntityTeamId = (e) => (teamView ? e.team_id : e.team_id)
+    const getEntityKey = (e) => (teamView ? getTeamKey(e) : e.player_id)
+    const getOpponents = scheduleMatrix.getOpponents ?? (() => [])
+    const avgByKey = {}
+    entities.forEach((entity) => {
+      const teamId = getEntityTeamId(entity)
+      const key = getEntityKey(entity)
+      if (teamId == null) {
+        avgByKey[key] = null
+        return
+      }
+      let sum = 0
+      let count = 0
+      next8.forEach((gw) => {
+        const opps = getOpponents(teamId, gw.id) ?? []
+        opps.forEach((opp) => {
+          const d = opp.difficulty ?? opp.strength
+          const num = d != null ? Math.min(5, Math.max(1, Number(d))) : 5
+          sum += num
+          count += 1
+        })
+      })
+      avgByKey[key] = count > 0 ? sum / count : null
+    })
+    const keysWithAvg = Object.entries(avgByKey).filter(([, v]) => v != null)
+    const easiest =
+      keysWithAvg.length > 0
+        ? keysWithAvg.reduce((best, [k, v]) => (v < best.avg ? { key: k, avg: v } : best), { key: keysWithAvg[0][0], avg: keysWithAvg[0][1] })
+        : null
+    return { next8Gameweeks: next8, avgDifficultyByKey: avgByKey, easiestEntityKey: easiest?.key ?? null }
+  }, [scheduleMatrix, teamView, compareTableTeams, compareTablePlayers, getTeamKey])
 
   const toggleCompareSelection = useCallback((playerId) => {
     setCompareSelectedIds((prev) => {
@@ -1329,7 +1383,7 @@ export default function StatsSubpage() {
               aria-live="polite"
             >
               <div className="research-stats-table-inner research-stats-table-inner--sticky-clone">
-                <div className="research-stats-sticky-clone-column" aria-hidden="true">
+                <div ref={stickyCloneTeamRef} className="research-stats-sticky-clone-column">
                   <table className="research-stats-table league-standings-bento-table research-stats-sticky-clone-table">
                     <thead>
                       <tr>
@@ -1737,7 +1791,7 @@ export default function StatsSubpage() {
               aria-live="polite"
             >
               <div className="research-stats-table-inner research-stats-table-inner--sticky-clone">
-                <div className="research-stats-sticky-clone-column" aria-hidden="true">
+                <div ref={stickyClonePlayerRef} className="research-stats-sticky-clone-column">
                   <table className="research-stats-table league-standings-bento-table research-stats-sticky-clone-table">
                     <thead>
                       <tr>
@@ -2056,7 +2110,41 @@ export default function StatsSubpage() {
                 </button>
               </div>
             </div>
+            <nav
+              className="subpage-view-toggle research-stats-compare-details-view-toggle"
+              role="tablist"
+              aria-label="Compare view"
+              data-options="2"
+              style={{ '--slider-offset': compareDetailsView === 'schedule' ? 1 : 0 }}
+            >
+              <span className="subpage-view-toggle-slider" aria-hidden />
+              <button
+                type="button"
+                role="tab"
+                aria-selected={compareDetailsView === 'statistics'}
+                className={`subpage-view-toggle-button ${compareDetailsView === 'statistics' ? 'active' : ''}`}
+                onClick={() => setCompareDetailsView('statistics')}
+                aria-label="Statistics"
+                title="Statistics"
+              >
+                <BarChart3 size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                <span className="subpage-view-toggle-label">Statistics</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={compareDetailsView === 'schedule'}
+                className={`subpage-view-toggle-button ${compareDetailsView === 'schedule' ? 'active' : ''}`}
+                onClick={() => setCompareDetailsView('schedule')}
+                aria-label="Schedule"
+                title="Schedule"
+              >
+                <Calendar size={12} strokeWidth={2} className="subpage-view-toggle-icon" aria-hidden />
+                <span className="subpage-view-toggle-label">Schedule</span>
+              </button>
+            </nav>
             <div className="research-stats-compare-details-body">
+              {compareDetailsView === 'statistics' ? (
               <div className="research-stats-compare-details-table-wrap">
                 <table className="research-stats-compare-details-table">
                   <thead>
@@ -2149,6 +2237,98 @@ export default function StatsSubpage() {
                   </tbody>
                 </table>
               </div>
+              ) : (
+              <div className="research-stats-compare-details-schedule-wrap">
+                <table className="research-stats-compare-details-schedule-table">
+                  <thead>
+                    <tr>
+                      <th className="research-stats-compare-details-schedule-th-gw" scope="col" aria-label="Gameweek" />
+                      {teamView
+                        ? compareTableTeams.map((t) => (
+                            <th key={getTeamKey(t)} className="research-stats-compare-details-schedule-th-entity">
+                              <div className="research-stats-compare-details-entity">
+                                {t.team_short_name && (
+                                  <img src={`/badges/${t.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                )}
+                                <span>{t.team_name || t.team_short_name || '—'}</span>
+                              </div>
+                            </th>
+                          ))
+                        : compareTablePlayers.map((p) => (
+                            <th key={p.player_id} className="research-stats-compare-details-schedule-th-entity">
+                              <div className="research-stats-compare-details-entity">
+                                {p.team_short_name && (
+                                  <img src={`/badges/${p.team_short_name}.svg`} alt="" className="research-stats-badge" />
+                                )}
+                                <span>{p.web_name || '—'}</span>
+                              </div>
+                            </th>
+                          ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareScheduleData.next8Gameweeks.map((gw) => {
+                      const entities = teamView ? compareTableTeams : compareTablePlayers
+                      const getOpponents = scheduleMatrix?.getOpponents ?? (() => [])
+                      const minDiffPerEntity = entities.map((entity) => {
+                        const opps = getOpponents(entity.team_id, gw.id) ?? []
+                        if (opps.length === 0) return 6
+                        const diffs = opps.map((o) => {
+                          const d = o.difficulty ?? o.strength
+                          return d != null ? Math.min(5, Math.max(1, Number(d))) : 5
+                        })
+                        return Math.min(...diffs)
+                      })
+                      const rowMinDiff = Math.min(...minDiffPerEntity)
+                      const entitiesWithMinDiff = minDiffPerEntity.filter((d) => d === rowMinDiff).length
+                      const onlyOneEasier = entitiesWithMinDiff === 1
+                      return (
+                        <tr key={gw.id} className="research-stats-compare-details-schedule-tr">
+                          <td className="research-stats-compare-details-schedule-td-gw">{gw.id}</td>
+                          {entities.map((entity, entityIdx) => {
+                            const teamId = entity.team_id
+                            const entityKey = teamView ? getTeamKey(entity) : entity.player_id
+                            const opponents = getOpponents(teamId, gw.id) ?? []
+                            const entityMinDiff = minDiffPerEntity[entityIdx]
+                            const isEasierFixtureThisGw = onlyOneEasier && rowMinDiff <= 5 && entityMinDiff === rowMinDiff
+                            return (
+                              <td key={entityKey} className="research-stats-compare-details-schedule-td-opp">
+                                {opponents.length === 0 ? (
+                                  <span className="research-stats-compare-details-schedule-blank">—</span>
+                                ) : (
+                                  <div className="research-stats-compare-details-schedule-opponents">
+                                    {opponents.map((opp, idx) => {
+                                      const d = opp.difficulty ?? opp.strength
+                                      const strength = d != null ? Math.min(5, Math.max(1, Number(d))) : null
+                                      const pillIsEasier = isEasierFixtureThisGw && strength != null && strength === rowMinDiff
+                                      return (
+                                        <div key={`${opp.team_id}-${idx}`} className={`research-stats-compare-details-schedule-opp${pillIsEasier ? ' research-stats-compare-details-schedule-opp--easier-fixture' : ''}`}>
+                                          {opp.short_name && (
+                                            <img src={`/badges/${opp.short_name}.svg`} alt="" className="research-stats-badge" onError={(e) => { e.target.style.display = 'none' }} />
+                                          )}
+                                          <span className="research-stats-compare-details-schedule-opp-label">
+                                            {opp.isHome ? (opp.short_name || '?').toUpperCase() : (opp.short_name || '?').toLowerCase()}
+                                            {opp.isHome && (
+                                              <svg className="research-stats-compare-details-schedule-home-icon schedule-cell-home-indicator" width="10" height="10" viewBox="0 0 48 48" fill="currentColor" aria-label="Home" title="Home">
+                                                <path d="M39.5,43h-9c-1.381,0-2.5-1.119-2.5-2.5v-9c0-1.105-0.895-2-2-2h-4c-1.105,0-2,0.895-2,2v9c0,1.381-1.119,2.5-2.5,2.5h-9C7.119,43,6,41.881,6,40.5V21.413c0-2.299,1.054-4.471,2.859-5.893L23.071,4.321c0.545-0.428,1.313-0.428,1.857,0L39.142,15.52C40.947,16.942,42,19.113,42,21.411V40.5C42,41.881,40.881,43,39.5,43z" />
+                                              </svg>
+                                            )}
+                                          </span>
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              )}
             </div>
           </div>
         </div>

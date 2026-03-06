@@ -193,11 +193,12 @@ export default function HomePage() {
     return visibleCardOrder.filter((id) => id !== 'deadline-progress')
   }, [visibleCardOrder, liveFixtureCount])
 
-  /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom */
+  /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom; base delay so first card isn’t 0ms */
   const bentoAnimationDelays = useMemo(() => {
     const staggerMs = 90
+    const baseDelayMs = 40
     return Object.fromEntries(
-      renderCardOrder.map((id, index) => [id, index * staggerMs])
+      renderCardOrder.map((id, index) => [id, baseDelayMs + index * staggerMs])
     )
   }, [renderCardOrder])
 
@@ -207,7 +208,7 @@ export default function HomePage() {
     {
       id: 'deadline-progress',
       label: 'Next deadline',
-      size: '2x0.5'
+      size: '2x1'
     },
     {
       id: 'overall-rank',
@@ -462,6 +463,7 @@ export default function HomePage() {
               <PriceChangesBentoHome
                 key="price-changes"
                 className={getCardClassName(cardId)}
+                animateEntrance={!loading}
                 style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
             )
@@ -472,6 +474,7 @@ export default function HomePage() {
               <DeadlineProgressBento
                 key="deadline-progress"
                 className={getCardClassName(cardId)}
+                animateEntrance={!loading}
                 style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
             )

@@ -1,9 +1,9 @@
-/* Same grid as settings (bento-card-large): 2 columns, 1 row. Height 0.75. */
+/* Same grid as settings (bento-card-large): 2 columns, 1 row, full height. */
 .deadline-progress-bento.bento-card-large {
   grid-column: span 2;
   grid-row: span 1;
-  height: calc(var(--bento-unit-height) * 0.75);
-  min-height: calc(var(--bento-unit-height) * 0.75);
+  height: var(--bento-unit-height);
+  min-height: var(--bento-unit-height);
   padding: 10px 16px;
   gap: 6px;
 }
@@ -63,16 +63,58 @@
   flex-shrink: 0;
 }
 
+/* Staggered entrance when grid is animated (after bento card has trickled in) */
+.deadline-progress-grid--animate .deadline-progress-cell {
+  animation: deadline-cell-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: var(--cell-delay, 0ms);
+}
+
+.deadline-progress-grid--animate .deadline-progress-cell--filled {
+  animation-name: deadline-cell-in-filled;
+}
+
 .deadline-progress-cell--filled {
   background: var(--accent, #3b82f6);
   opacity: 1;
+}
+
+@keyframes deadline-cell-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+}
+
+@keyframes deadline-cell-in-filled {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+    background: var(--border-color);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    background: var(--accent, #3b82f6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deadline-progress-grid--animate .deadline-progress-cell,
+  .deadline-progress-grid--animate .deadline-progress-cell--filled {
+    animation-duration: 0.05s;
+    animation-delay: 0ms;
+  }
 }
 
 @media (max-width: 768px) {
   .deadline-progress-bento.bento-card-large {
     grid-column: span 2;
     grid-row: span 1;
-    height: calc(var(--bento-unit-height) * 0.75);
-    min-height: calc(var(--bento-unit-height) * 0.75);
+    height: var(--bento-unit-height);
+    min-height: var(--bento-unit-height);
   }
 }

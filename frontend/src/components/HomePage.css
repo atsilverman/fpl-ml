@@ -63,7 +63,7 @@
 
 /* When deadline bento is first, first row height matches it so gap to next row = standard bento gap */
 .bento-grid.bento-grid-first-row-deadline {
-  grid-template-rows: calc(var(--bento-unit-height) * 0.75);
+  grid-template-rows: var(--bento-unit-height);
   grid-auto-rows: minmax(var(--bento-unit-height), auto);
 }
 
@@ -519,13 +519,13 @@
   }
 }
 
-/* Home page desktop only: GW points expanded bento 3 wide × 4 rows; height = row1 (0.75) + rows 2–4 (1 each) + 3 gaps so it aligns with 4 bentos to the left */
+/* Home page desktop only: GW points expanded bento 3 wide × 4 rows; height = 4 rows + 3 gaps so it aligns with 4 bentos to the left */
 @media (min-width: 769px) {
   .home-page .bento-card-chart-2x4 {
     grid-column: span 3;
     grid-row: span 4;
-    height: calc(var(--bento-unit-height) * 0.75 + var(--bento-gap) * 3 + var(--bento-unit-height) * 3);
-    min-height: calc(var(--bento-unit-height) * 0.75 + var(--bento-gap) * 3 + var(--bento-unit-height) * 3);
+    height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
+    min-height: calc(var(--bento-unit-height) * 4 + var(--bento-gap) * 3);
     padding: 12px;
   }
   .home-page .bento-card-chart-2x4 .bento-card-chart {

@@ -258,7 +258,7 @@ export default function Dashboard() {
               <h1>FPL Mini League</h1>
             </Link>
             <div className="header-subtitle-row">
-              {subtitle && <p className="header-subtitle">{subtitle}</p>}
+              {subtitle && <p className="header-subtitle" title={subtitle}>{subtitle}</p>}
               {!config && !configLoading && (
                 <span className="header-configure-note">Configure league</span>
               )}

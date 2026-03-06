@@ -227,8 +227,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 /* Desktop: slider with Team/Player labels; mobile: hidden (use filter popup first row) */
@@ -274,18 +273,15 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   position: relative;
   display: flex;
   align-items: center;
-  flex: 0 0 auto;
-  width: 320px;
-  min-width: 320px;
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
 }
 
-/* Mobile: search fills available toolbar width so it fits on screen regardless of compare state */
-@media (max-width: 768px) {
+@media (min-width: 769px) {
   .research-stats-search-wrap {
-    flex: 1 1 0;
-    min-width: 0;
-    width: auto;
-    max-width: 100%;
+    min-width: 200px;
   }
 }
 
@@ -654,16 +650,21 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   cursor: pointer;
 }
 
-/* Compare details modal: transposed vertical comparison; scroll inside body only */
+/* Compare details modal: same dimension and z-level logic as team detail modal (TeamDetailModal) */
+/* align-items: flex-start so modal top stays fixed when switching Statistics/Schedule */
 .research-stats-compare-details-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.3);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   z-index: 1100;
-  padding: 16px;
+  padding: 20px;
+  padding-top: 24px;
   backdrop-filter: blur(2px);
   overflow: hidden;
 }
@@ -672,13 +673,12 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   border: 1px solid var(--border-color);
   border-radius: 12px;
   width: 100%;
-  max-width: min(92vw, 720px);
-  height: min(88vh, 680px);
-  max-height: min(88vh, 680px);
-  min-height: 320px;
+  max-width: min(90vw, 900px);
+  min-height: min(70vh, 500px);
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: none;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   margin: auto;
   flex-shrink: 0;
 }
@@ -695,11 +695,30 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
+  text-transform: capitalize;
 }
 .research-stats-compare-details-header-actions {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+}
+/* Statistics / Schedule toggle – match width of table/body content below (body has 16px padding each side) */
+.research-stats-compare-details-view-toggle {
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: calc(100% - 32px);
+  margin: 0 16px 12px;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+}
+.research-stats-compare-details-view-toggle .subpage-view-toggle-slider {
+  background: var(--accent-blue, #3b82f6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 0 6px rgba(59, 130, 246, 0.3);
+}
+@media (max-width: 768px) {
+  .research-stats-compare-details-view-toggle {
+    margin: 12px 16px 12px;
+  }
 }
 .research-stats-compare-details-download,
 .research-stats-compare-details-close {
@@ -728,17 +747,140 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
-@media (max-width: 640px) {
+/* Compare schedule view: next 8 gameweeks, opponents, easier-schedule highlight */
+.research-stats-compare-details-schedule-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  overscroll-behavior: none;
+}
+.research-stats-compare-details-schedule-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.research-stats-compare-details-schedule-table thead th {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .research-stats-compare-details-schedule-table thead th {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .research-stats-compare-details-schedule-table thead th {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
+}
+.research-stats-compare-details-schedule-th-gw,
+.research-stats-compare-details-schedule-td-gw {
+  padding: 12px 10px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  width: 48px;
+}
+.research-stats-compare-details-schedule-th-entity,
+.research-stats-compare-details-schedule-td-opp {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+  text-align: center;
+  min-width: 80px;
+}
+.research-stats-compare-details-schedule-tr {
+  min-height: 44px;
+}
+.research-stats-compare-details-schedule-tr th,
+.research-stats-compare-details-schedule-tr td {
+  min-height: 44px;
+  box-sizing: border-box;
+}
+.research-stats-compare-details-schedule-th-entity {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.research-stats-compare-details-schedule .research-stats-compare-details-entity {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.research-stats-compare-details-schedule-opponents {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+}
+.research-stats-compare-details-schedule-tr:last-child .research-stats-compare-details-schedule-td-gw,
+.research-stats-compare-details-schedule-tr:last-child .research-stats-compare-details-schedule-td-opp {
+  border-bottom: none;
+}
+.research-stats-compare-details-schedule-blank {
+  color: var(--text-tertiary, #9ca3af);
+}
+.research-stats-compare-details-schedule-opp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg-tertiary, #f3f4f6);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+}
+html[data-theme="dark"] .research-stats-compare-details-schedule-opp {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+/* Better fixture in this GW – same style as statistics leader pill; only one entity per row gets this (no tiebreaker) */
+.research-stats-compare-details-schedule-opp.research-stats-compare-details-schedule-opp--easier-fixture {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 22%, var(--bg-card));
+  border-color: var(--accent-blue, #3b82f6);
+  color: var(--accent-blue, #3b82f6);
+}
+html[data-theme="dark"] .research-stats-compare-details-schedule-opp.research-stats-compare-details-schedule-opp--easier-fixture {
+  background: color-mix(in srgb, var(--accent-yellow, #eab308) 22%, rgba(0, 0, 0, 0.4));
+  border-color: var(--accent-yellow, #eab308);
+  color: var(--accent-yellow, #eab308);
+}
+.research-stats-compare-details-schedule-opp-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.research-stats-compare-details-schedule-home-icon {
+  flex-shrink: 0;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+.research-stats-compare-details-schedule-opp .research-stats-badge {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+/* Mobile: full-height overlay; modal sizes to table content so no gap below */
+@media (max-width: 768px) {
   .research-stats-compare-details-overlay {
-    padding: 12px 8px 16px;
+    top: var(--dashboard-header-height, 0);
+    bottom: var(--dashboard-nav-height, 0);
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 12px;
+    align-items: flex-start;
   }
-  .research-stats-compare-details-modal {
-    width: 100%;
-    max-width: none;
-    height: min(65vh, 520px);
-    max-height: min(65vh, 520px);
-    min-height: 280px;
-    margin: 0 auto;
+  .research-stats-compare-details-overlay .research-stats-compare-details-modal {
+    max-height: 100%;
+    height: auto;
+    min-height: 0;
+  }
+  .research-stats-compare-details-overlay .research-stats-compare-details-body {
+    flex: 0 1 auto;
   }
 }
 .research-stats-compare-details-table-wrap {
@@ -754,6 +896,18 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   border-collapse: collapse;
   font-size: 13px;
 }
+
+/* Compare details modal: header row fill so it’s clearly distinct from data rows below (same as main/compare table) */
+.research-stats-compare-details-table thead th {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .research-stats-compare-details-table thead th {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .research-stats-compare-details-table thead th {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
+}
+
 .research-stats-compare-details-th-stat {
   text-align: left;
   padding: 8px 12px;
@@ -823,6 +977,7 @@ html[data-theme="dark"] .research-stats-compare-details-tr--section-header:first
   font-size: 12px;
   white-space: nowrap;
   vertical-align: middle;
+  text-align: center;
 }
 .research-stats-compare-details-td-value {
   padding: 6px 10px;
@@ -1353,6 +1508,28 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
   box-sizing: border-box;
 }
 
+/* Header row: stronger container fill so it’s clearly distinct from data rows below */
+.research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
+}
+
+/* Compare table: same header row fill so it’s clearly distinct from data rows below */
+.research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
+}
+
 /* Sticky player/team column: same as fixture subpage (matchup-detail-th-player / matchup-detail-td-player). Fixed on horizontal scroll; header cell also sticks on vertical scroll. */
 .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-team {
   position: sticky;
@@ -1518,7 +1695,13 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
   position: sticky;
   top: 0;
   z-index: 26;
-  background: var(--bg-secondary);
+  background: color-mix(in srgb, var(--border-color) 24%, var(--bg-secondary));
+}
+html[data-theme="light"] .research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
+  background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
+}
+html[data-theme="dark"] .research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
+  background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 .research-stats-page .research-stats-sticky-clone-table tbody tr {
   min-height: 46px;
