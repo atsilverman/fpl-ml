@@ -2124,6 +2124,7 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
 .captain-standings-bento-header-cell .captain-standings-bento-badge-c,
 .captain-standings-bento-header-cell .captain-standings-bento-badge-v {
   flex-shrink: 0;
+  margin-left: 6px;
 }
 
 .captain-standings-bento-badge-c {

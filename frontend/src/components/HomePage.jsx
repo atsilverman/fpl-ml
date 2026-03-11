@@ -204,6 +204,9 @@ export default function HomePage() {
 
   const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueTop10HistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
 
+  /* Start entrance animation as soon as gameweek + manager are ready; don't wait for all 12 data sources. Cards still receive loading for skeletons. */
+  const initialReady = !gwLoading && !managerLoading
+
   const cards = [
     {
       id: 'deadline-progress',
@@ -463,7 +466,7 @@ export default function HomePage() {
               <PriceChangesBentoHome
                 key="price-changes"
                 className={getCardClassName(cardId)}
-                animateEntrance={!loading}
+                animateEntrance={initialReady}
                 style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
             )
@@ -474,7 +477,7 @@ export default function HomePage() {
               <DeadlineProgressBento
                 key="deadline-progress"
                 className={getCardClassName(cardId)}
-                animateEntrance={!loading}
+                animateEntrance={initialReady}
                 style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               />
             )
@@ -620,7 +623,7 @@ export default function HomePage() {
               isProvisionalOnly={refreshState === 'bonus_pending' || hasProvisionalBonusInData}
               isExpanded={isOverallRankExpanded || isTeamValueExpandedCard || isTotalPointsExpanded || isGwPointsExpandedCard || (cardId === 'chips' && isChipsExpanded)}
               gwPointsDesktopDualView={gwPointsDesktopDualView}
-              animateEntrance={!loading}
+              animateEntrance={initialReady}
               style={{ '--animation-delay': `${bentoAnimationDelays[cardId] ?? 0}ms` }}
               onConfigureClick={card.isSettings ? handleConfigureClick : undefined}
               onDebugClick={card.isSettings ? openDebugModal : undefined}

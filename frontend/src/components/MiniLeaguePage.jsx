@@ -147,6 +147,22 @@ export default function MiniLeaguePage() {
   const showCView = leagueViewMode === 'captain'
   const showTransfersView = leagueViewMode === 'transfers'
   const showChipsView = leagueViewMode === 'chips'
+  const [selectedCaptainPlayerName, setSelectedCaptainPlayerName] = useState(null) // highlight this player name in both Captain and Vice columns
+
+  /* On Captains subpage: never open player details; clear any existing so modals don’t show */
+  useEffect(() => {
+    if (leagueViewMode === 'captain') {
+      setBreakdownPlayer(null)
+      setSelectedPlayerId(null)
+      setSelectedPlayerName('')
+    }
+  }, [leagueViewMode])
+
+  /* Clear captain/vice player selection when leaving Captains */
+  useEffect(() => {
+    if (leagueViewMode !== 'captain') setSelectedCaptainPlayerName(null)
+  }, [leagueViewMode])
+
   const [transfersSummaryExpanded, setTransfersSummaryExpanded] = useState(false)
   const [selectedTopTransfer, setSelectedTopTransfer] = useState(null)
   const searchContainerRef = useRef(null)
@@ -276,14 +292,14 @@ export default function MiniLeaguePage() {
   }, [selectedManagerId])
 
   useEffect(() => {
-    if (selectedManagerId != null) {
+    if (selectedManagerId != null && leagueViewMode !== 'captain') {
       const prev = document.body.style.overflow
       document.body.style.overflow = 'hidden'
       return () => {
         document.body.style.overflow = prev
       }
     }
-  }, [selectedManagerId])
+  }, [selectedManagerId, leagueViewMode])
 
   useEffect(() => {
     if (selectedManagerId == null) setShowManagerDetailLegend(false)
@@ -819,7 +835,7 @@ export default function MiniLeaguePage() {
                     <tr
                       key={s.manager_id}
                       className={`league-standings-bento-row league-standings-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''}`}
-                      style={{ animationDelay: `${index * 28}ms` }}
+                      style={{ animationDelay: `${index * 45}ms` }}
                       onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
@@ -1004,24 +1020,27 @@ export default function MiniLeaguePage() {
                 const chipLabel = activeChip ? (CHIP_LABELS[activeChip] ?? activeChip) : null
                 const chipColor = activeChip ? (CHIP_COLORS[activeChip] ?? 'var(--text-secondary)') : null
                 const ownsSelected = selectedPlayers.length > 0 && !ownershipLoading && managerIdsOwningAnySet.has(s.manager_id)
-                const isDemoted = selectedPlayers.length > 0 && !ownershipLoading && !ownsSelected
+                const isDemotedBySearch = selectedPlayers.length > 0 && !ownershipLoading && !ownsSelected
+                const isDemotedBySelection = !showCView && selectedManagerId != null && Number(s.manager_id) !== selectedManagerId
+                const isDemoted = isDemotedBySearch || isDemotedBySelection
                 const isSearchMode = searchQuery.trim().length >= 2
+                const isRowSelected = !showCView && selectedManagerId === Number(s.manager_id)
 
                 return (
                   <tr
                     key={s.manager_id}
-                    className={`league-standings-bento-row league-standings-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${selectedManagerId === Number(s.manager_id) ? 'league-standings-bento-row-selected' : ''} ${ownsSelected ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
-                    style={{ animationDelay: `${index * 28}ms` }}
-                    onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
+                    className={`league-standings-bento-row league-standings-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${isRowSelected ? 'league-standings-bento-row-selected' : ''} ${ownsSelected ? 'league-standings-bento-row--owns-selected' : ''} ${isDemoted ? 'league-standings-bento-row--demoted' : ''}`}
+                    style={{ animationDelay: `${index * 45}ms` }}
+                    onClick={() => !showCView && handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        handleManagerRowClick(s.manager_id, displayName, s.manager_name)
+                        if (!showCView) handleManagerRowClick(s.manager_id, displayName, s.manager_name)
                       }
                     }}
-                    role="button"
-                    tabIndex={0}
-                    title={`View GW points for ${displayName}`}
+                    role={showCView ? undefined : 'button'}
+                    tabIndex={showCView ? -1 : 0}
+                    title={showCView ? undefined : `View GW points for ${displayName}`}
                   >
                     {!showCView && (
                     <td className="league-standings-bento-rank">
@@ -1094,9 +1113,27 @@ export default function MiniLeaguePage() {
                       const viceTeam = cap?.vice_captain_team_short_name
                       const captainDnp = !!cap?.captain_dnp
                       const viceDnp = !!cap?.vice_captain_dnp
+                      const isCaptainHighlighted = selectedCaptainPlayerName != null && selectedCaptainPlayerName === captainName
+                      const isViceHighlighted = selectedCaptainPlayerName != null && selectedCaptainPlayerName === viceName
                       return (
                         <>
-                          <td className="captain-standings-bento-captain league-standings-c-view-td-captain" title={captainName}>
+                          <td
+                            className={`captain-standings-bento-captain league-standings-c-view-td-captain${isCaptainHighlighted ? ' captain-standings-bento-cell--player-selected' : ''}`}
+                            title={captainName}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCaptainPlayerName((prev) => (prev === captainName ? null : captainName))
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setSelectedCaptainPlayerName((prev) => (prev === captainName ? null : captainName))
+                              }
+                            }}
+                          >
                             <span className="captain-standings-bento-player-cell">
                               {captainTeam && (
                                 <img
@@ -1109,7 +1146,23 @@ export default function MiniLeaguePage() {
                               <span className={`captain-standings-bento-player-name${captainDnp ? ' captain-standings-bento-player-name--dnp' : ''}`}>{captainName}</span>
                             </span>
                           </td>
-                          <td className="captain-standings-bento-vice league-standings-c-view-td-vice" title={viceName}>
+                          <td
+                            className={`captain-standings-bento-vice league-standings-c-view-td-vice${isViceHighlighted ? ' captain-standings-bento-cell--player-selected' : ''}`}
+                            title={viceName}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedCaptainPlayerName((prev) => (prev === viceName ? null : viceName))
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                setSelectedCaptainPlayerName((prev) => (prev === viceName ? null : viceName))
+                              }
+                            }}
+                          >
                             <span className="captain-standings-bento-player-cell">
                               {viceTeam && (
                                 <img
@@ -1182,7 +1235,7 @@ export default function MiniLeaguePage() {
                       <tr
                         key={s.manager_id}
                         className={`league-transfers-row league-transfers-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''} ${didntMakeSelectedTransfer ? 'league-transfers-row--didnt-make-selected-transfer' : ''}`}
-                        style={{ animationDelay: `${index * 28}ms` }}
+                        style={{ animationDelay: `${index * 45}ms` }}
                         onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' || e.key === ' ') {
@@ -1257,7 +1310,7 @@ export default function MiniLeaguePage() {
         </div>
       </div>
 
-      {selectedManagerId != null && (
+      {selectedManagerId != null && leagueViewMode !== 'captain' && (
         <div
           className="manager-detail-modal-overlay"
           onClick={() => {
@@ -1404,7 +1457,7 @@ export default function MiniLeaguePage() {
                   isLiveUpdating={isSelectedManagerLiveUpdating}
                   ownedByYouPlayerIds={ownedByYouPlayerIds}
                   sortable={false}
-                  onPlayerRowClick={(player) => {
+                  onPlayerRowClick={leagueViewMode === 'captain' ? null : (player) => {
                     const id = player.effective_player_id ?? player.player_id
                     if (id != null) {
                       setBreakdownPlayer({
@@ -1482,7 +1535,7 @@ export default function MiniLeaguePage() {
         </div>
       )}
 
-      {breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
+      {leagueViewMode !== 'captain' && breakdownPlayer != null && typeof document !== 'undefined' && createPortal(
         <PlayerBreakdownPopup
           playerId={breakdownPlayer.playerId}
           playerName={breakdownPlayer.playerName}
@@ -1498,7 +1551,7 @@ export default function MiniLeaguePage() {
         />,
         document.body
       )}
-      {selectedPlayerId != null && typeof document !== 'undefined' && createPortal(
+      {leagueViewMode !== 'captain' && selectedPlayerId != null && typeof document !== 'undefined' && createPortal(
         <PlayerDetailModal
           playerId={selectedPlayerId}
           playerName={selectedPlayerName}

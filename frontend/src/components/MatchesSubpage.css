@@ -262,27 +262,11 @@ html[data-theme="dark"] .gw-top-points-item {
   line-height: 1.2;
 }
 
-.gw-top-points-position--1 {
-  color: #94a3b8;
-  background: color-mix(in srgb, #94a3b8 14%, transparent);
-}
-
-.gw-top-points-position--2 {
-  color: #60a5fa;
-  background: color-mix(in srgb, #60a5fa 14%, transparent);
-}
-
-.gw-top-points-position--3 {
-  color: #eab308;
-  background: color-mix(in srgb, #eab308 14%, transparent);
-}
-
-.gw-top-points-position--4 {
-  color: #f87171;
-  background: color-mix(in srgb, #f87171 14%, transparent);
-}
-
-/* Fallback when position unknown */
+/* Position badge: neutral style only (no colored GKP/DEF/MID/FWD) */
+.gw-top-points-position--1,
+.gw-top-points-position--2,
+.gw-top-points-position--3,
+.gw-top-points-position--4,
 .gw-top-points-position:not([class*="gw-top-points-position--"]) {
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
@@ -302,9 +286,41 @@ html[data-theme="dark"] .gw-top-points-item {
   border: 1px solid var(--border-color);
 }
 
+/* Top 3 medal colors: 1st gold, 2nd silver, 3rd bronze */
+.gw-top-points-pill--1 {
+  background: color-mix(in srgb, #c9a227 18%, var(--bg-secondary));
+  border-color: color-mix(in srgb, #c9a227 55%, var(--border-color));
+  color: #7d5a00;
+}
+.gw-top-points-pill--2 {
+  background: color-mix(in srgb, #94a3b8 20%, var(--bg-secondary));
+  border-color: color-mix(in srgb, #94a3b8 50%, var(--border-color));
+  color: #475569;
+}
+.gw-top-points-pill--3 {
+  background: color-mix(in srgb, #b87333 18%, var(--bg-secondary));
+  border-color: color-mix(in srgb, #b87333 50%, var(--border-color));
+  color: #783e0a;
+}
+
 html[data-theme="dark"] .gw-top-points-pill {
-  background: var(--transfers-count-bg, var(--bg-primary));
+  background: var(--bg-primary);
   color: rgba(255, 255, 255, 1);
+}
+html[data-theme="dark"] .gw-top-points-pill--1 {
+  background: color-mix(in srgb, #d4af37 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, #d4af37 50%, var(--border-color));
+  color: #fef3c7;
+}
+html[data-theme="dark"] .gw-top-points-pill--2 {
+  background: color-mix(in srgb, #c0c0c0 20%, var(--bg-primary));
+  border-color: color-mix(in srgb, #c0c0c0 45%, var(--border-color));
+  color: #e2e8f0;
+}
+html[data-theme="dark"] .gw-top-points-pill--3 {
+  background: color-mix(in srgb, #cd7f32 22%, var(--bg-primary));
+  border-color: color-mix(in srgb, #cd7f32 45%, var(--border-color));
+  color: #fde68a;
 }
 
 .gw-top-points-loading,
@@ -1108,21 +1124,20 @@ html[data-theme="dark"] .matchup-detail-table thead th {
   text-align: center;
 }
 
-/* All data column headers (PTS, MP, stats): same color, corners, font */
+/* All data column headers (PTS, MP, stats): same color, font; no radius so fill is edge-to-edge (avoids dark corners with border-collapse) */
 .matchup-detail-th-pts,
 .matchup-detail-th-mins,
 .matchup-detail-th-stat {
   background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-secondary));
-  border-radius: 4px;
   font-size: 9px;
   font-weight: 600;
   color: var(--text-secondary);
 }
-/* Sort button inherits th radius so th and button are flush */
+/* Sort button flush with th (no radius) */
 .matchup-detail-th-pts .matchup-detail-th-sort-btn,
 .matchup-detail-th-mins .matchup-detail-th-sort-btn,
 .matchup-detail-th-stat .matchup-detail-th-sort-btn {
-  border-radius: inherit;
+  border-radius: 0;
 }
 /* PTS value badge – pill behind number (same as GW points expanded & manager popup) */
 .matchup-detail-pts-badge {

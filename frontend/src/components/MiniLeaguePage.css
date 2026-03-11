@@ -22,11 +22,12 @@
     transform: translateY(0);
   }
 }
+/* Slower rollout for standings, captains, transfers, chips tables */
 .mini-league-page .league-standings-bento-table tbody tr.league-standings-row-animate {
-  animation: league-row-in var(--motion-duration) var(--motion-ease) both;
+  animation: league-row-in 0.45s var(--motion-ease) both;
 }
 .mini-league-page .league-transfers-table tbody tr.league-transfers-row-animate {
-  animation: league-row-in var(--motion-duration) var(--motion-ease) both;
+  animation: league-row-in 0.45s var(--motion-ease) both;
 }
 
 /* Sticky strip: search bar (Standings only) + subpage tabs; content below scrolls underneath. */
@@ -1505,25 +1506,35 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   white-space: nowrap;
 }
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank-value {
-  font-size: 6px;
-  font-weight: 300;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-change-badge {
   flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  gap: 1px;
+}
+.league-standings-page .league-standings-bento-table .league-standings-bento-rank .league-standings-bento-change-badge svg {
+  width: 8px;
+  height: 8px;
 }
 
 /* Rank change badge: subtle green/red fill */
 .league-standings-page .league-standings-bento-change-badge.positive {
   background: rgba(16, 185, 129, 0.18);
   color: var(--accent-green, #10b981);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 .league-standings-page .league-standings-bento-change-badge.negative {
   background: rgba(239, 68, 68, 0.18);
   color: var(--accent-red);
-  padding: 2px 5px;
-  border-radius: 4px;
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 /* Manager cell (td only): truncate long names; content stays inside column (no overrun).
@@ -1789,6 +1800,25 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 @media (hover: hover) {
   .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted:hover td {
     opacity: 0.75;
+  }
+}
+
+/* Captains subpage: clickable captain/vice cells; highlight selected player across all rows — same UI as transfers summary selected item */
+.league-standings-page .league-standings-bento-table td.captain-standings-bento-captain,
+.league-standings-page .league-standings-bento-table td.captain-standings-bento-vice {
+  cursor: pointer;
+}
+.league-standings-page .league-standings-bento-table td.captain-standings-bento-cell--player-selected {
+  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 18%, var(--bg-primary));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-blue, #3b82f6) 40%, transparent);
+}
+@media (hover: hover) {
+  .league-standings-page .league-standings-bento-table td.captain-standings-bento-captain:hover,
+  .league-standings-page .league-standings-bento-table td.captain-standings-bento-vice:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 12%, var(--bg-primary));
+  }
+  .league-standings-page .league-standings-bento-table td.captain-standings-bento-cell--player-selected:hover {
+    background: color-mix(in srgb, var(--accent-blue, #3b82f6) 22%, var(--bg-primary));
   }
 }
 

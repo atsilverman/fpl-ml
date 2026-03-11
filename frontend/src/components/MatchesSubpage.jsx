@@ -873,7 +873,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                     <div className="gw-top-points-empty">No data</div>
                   ) : (
                     <div className="gw-top-points-list">
-                      {currentPerformersList.map((row) => (
+                      {currentPerformersList.map((row, index) => (
                         <div key={row.player_id} className="gw-top-points-item">
                           <div className="gw-top-points-item-identity">
                             <span className="gw-top-points-badge-slot">
@@ -899,7 +899,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                               </span>
                             </div>
                           </div>
-                          <span className="gw-top-points-pill">{typeof row.value === 'string' ? row.value : formatNumberWithCommas(row.value)}</span>
+                          <span className={`gw-top-points-pill${index < 3 ? ` gw-top-points-pill--${index + 1}` : ''}`}>{typeof row.value === 'string' ? row.value : formatNumberWithCommas(row.value)}</span>
                         </div>
                       ))}
                     </div>
