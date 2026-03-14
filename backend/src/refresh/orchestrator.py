@@ -694,10 +694,12 @@ class RefreshOrchestrator:
         try:
             if live_data is None:
                 live_data = await self.fpl_client.get_event_live(self.current_gameweek)
-            # Players with minutes in live response (so we have fresh stats to write)
-            live_minutes_player_ids = {
+            # Include every player in the live response so we write stats and BPS snapshots for ALL
+            # fixtures (every kickoff), not only those where someone already has minutes or is in picks.
+            # Otherwise later kickoffs (e.g. 17:30) get no BPS-over-time data.
+            all_live_player_ids = {
                 elem["id"] for elem in (live_data or {}).get("elements", [])
-                if elem.get("stats", {}).get("minutes", 0) > 0
+                if elem.get("id") is not None
             }
             # Also include any player who already has stats for this gameweek so we don't drop DGW rows
             # (e.g. Arsenal DGW: live might not list them yet or we need to preserve two fixture rows)
@@ -721,7 +723,7 @@ class RefreshOrchestrator:
                         picked_player_ids = {p["player_id"] for p in (picks_result.data or [])}
                 except Exception:
                     pass
-            active_player_ids = live_minutes_player_ids | existing_stats_player_ids | picked_player_ids
+            active_player_ids = all_live_player_ids | existing_stats_player_ids | picked_player_ids
             
             if active_player_ids and live_data:
                 await self.player_refresher.refresh_player_gameweek_stats(
