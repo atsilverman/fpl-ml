@@ -4,8 +4,9 @@ import { supabase } from '../lib/supabase'
 /**
  * BPS snapshots for a fixture (chronological per refresh).
  * Used by Bonus subpage line graph: BPS over time, one line per player.
+ * When isLive, refetches more often so new snapshots appear quickly.
  */
-export function useBpsSnapshots(fixtureId, gameweek, enabled = true) {
+export function useBpsSnapshots(fixtureId, gameweek, enabled = true, isLive = false) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['bps-snapshots', fixtureId, gameweek],
     queryFn: async () => {
@@ -22,7 +23,8 @@ export function useBpsSnapshots(fixtureId, gameweek, enabled = true) {
       return rows ?? []
     },
     enabled: !!fixtureId && !!gameweek && enabled,
-    staleTime: 30000,
+    staleTime: isLive ? 10000 : 30000,
+    refetchInterval: isLive ? 15000 : false,
   })
   return { data: data ?? [], loading: isLoading, error }
 }

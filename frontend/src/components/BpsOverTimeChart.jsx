@@ -21,17 +21,36 @@ function formatRecordedAt(isoString) {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
+/** Elapsed minutes from kickoff for a given timestamp (capped 0–90). */
+function minuteFromKickoff(kickoffIso, recordedIso) {
+  if (!kickoffIso || !recordedIso) return 0
+  const k = new Date(kickoffIso.replace('Z', '+00:00')).getTime()
+  const r = new Date(recordedIso.replace('Z', '+00:00')).getTime()
+  if (Number.isNaN(k) || Number.isNaN(r)) return 0
+  const mins = (r - k) / 60000
+  return Math.max(0, Math.min(90, Math.round(mins)))
+}
+
 /**
  * D3.js BPS over time chart (one line per player), colorized by bonus.
- * Data from bps_snapshots; empty state when no snapshots yet.
+ * Data from bps_snapshots. X-axis is match minute (0'–current max), extending as data arrives.
  */
-export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], enabled = true }) {
-  const { data: snapshots, loading } = useBpsSnapshots(fixtureId, gameweek, enabled)
+export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], enabled = true, kickoffTime = null, fixtureStatus = null }) {
+  const { data: snapshots, loading } = useBpsSnapshots(fixtureId, gameweek, enabled, fixtureStatus === 'live')
   const svgRef = useRef(null)
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState(null)
+  const [liveTick, setLiveTick] = useState(0)
+  const isLive = fixtureStatus === 'live'
 
-  const { chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, bonusValueByKey, timeExtent, minBps, maxBps } = useMemo(() => {
+  // When live, re-render periodically so x-axis can extend to current match minute
+  useEffect(() => {
+    if (!isLive || !kickoffTime) return
+    const interval = setInterval(() => setLiveTick((n) => n + 1), 30000)
+    return () => clearInterval(interval)
+  }, [isLive, kickoffTime])
+
+  const { chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, bonusValueByKey, maxMinute, minBps, maxBps } = useMemo(() => {
     if (!snapshots?.length) {
       return {
         chartData: [],
@@ -42,12 +61,11 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         strokeWidthByKey: {},
         isBonusByKey: {},
         bonusValueByKey: {},
-        timeExtent: null,
+        maxMinute: 0,
         minBps: 0,
         maxBps: 0,
       }
     }
-    const times = [...new Set(snapshots.map((r) => r.recorded_at))].sort()
     const playerById = Object.fromEntries((players ?? []).map((p) => [p.player_id, p]))
     const bonusByPid = {}
     ;(players ?? []).forEach((p, idx) => {
@@ -56,7 +74,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       const confirmed = p?.bonus ?? 0
       bonusByPid[pid] = (confirmed >= 1 && confirmed <= 3) ? confirmed : (idx < 3 ? (3 - idx) : 0)
     })
-    const playerKeys = [...new Set(snapshots.map((r) => r.player_id))]
+    const playerKeys = [...new Set(snapshots.map((r) => Number(r.player_id)))]
     const playerNamesByKey = {}
     const strokeByKey = {}
     const strokeWidthByKey = {}
@@ -72,19 +90,30 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       strokeByKey[pid] = isBonus ? (BONUS_COLORS[bonus] ?? DEMOTED_LINE_COLOR) : DEMOTED_LINE_COLOR
       strokeWidthByKey[pid] = isBonus ? 2.5 : 1
     })
+
+    const times = [...new Set(snapshots.map((r) => r.recorded_at))].sort()
+    const firstRecordedAt = times[0] ? new Date(times[0]).getTime() : 0
     const chartData = times.map((t) => {
-      const point = { time: t, recorded_at: t }
-      snapshots.filter((r) => r.recorded_at === t).forEach((r) => { point[r.player_id] = r.bps })
+      const minute = kickoffTime
+        ? minuteFromKickoff(kickoffTime, t)
+        : firstRecordedAt ? Math.min(90, Math.round((new Date(t).getTime() - firstRecordedAt) / 60000)) : 0
+      const point = { time: t, recorded_at: t, minute }
+      snapshots.filter((r) => r.recorded_at === t).forEach((r) => { point[Number(r.player_id)] = r.bps })
       return point
     })
+    const lastDataMinute = chartData.length ? Math.max(...chartData.map((d) => d.minute)) : 0
+    const elapsedMinute = (kickoffTime && isLive) ? minuteFromKickoff(kickoffTime, new Date().toISOString()) : lastDataMinute
+    const maxMinute = Math.min(90, Math.max(lastDataMinute, elapsedMinute, 1))
+
     const seriesByPlayer = {}
     playerKeys.forEach((pid) => {
-      seriesByPlayer[pid] = chartData.map((d) => ({ time: d.time, bps: d[pid] ?? null }))
+      const points = chartData.map((d) => ({ minute: d.minute, time: d.time, bps: d[pid] ?? null }))
+      const hasAnyBps = points.some((p) => p.bps != null)
+      seriesByPlayer[pid] = hasAnyBps ? [{ minute: 0, time: null, bps: 0 }, ...points] : points
     })
     const allBps = snapshots.map((r) => r.bps).filter((n) => n != null)
     const minBps = allBps.length ? Math.min(...allBps) : 0
     const maxBps = allBps.length ? Math.max(...allBps) : 0
-    const timeExtent = times.length ? [new Date(times[0]), new Date(times[times.length - 1])] : null
     return {
       chartData,
       seriesByPlayer,
@@ -94,11 +123,11 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       strokeWidthByKey,
       isBonusByKey,
       bonusValueByKey,
-      timeExtent,
+      maxMinute,
       minBps,
       maxBps,
     }
-  }, [snapshots, players])
+  }, [snapshots, players, kickoffTime, isLive, liveTick])
 
   // Cleanup tooltip on unmount
   useEffect(() => {
@@ -134,9 +163,9 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     }
   }, [hasChartData])
 
-  // Draw chart with D3
+  // Draw chart with D3 (x-axis: match minute 0 to maxMinute, extending as data arrives)
   useEffect(() => {
-    if (!dimensions || !svgRef.current || !chartData.length || !timeExtent) return
+    if (!dimensions || !svgRef.current || !chartData.length || maxMinute <= 0) return
 
     const svg = d3.select(svgRef.current)
     const width = dimensions.width
@@ -145,8 +174,8 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
-    const xScale = d3.scaleTime()
-      .domain(timeExtent)
+    const xScale = d3.scaleLinear()
+      .domain([0, maxMinute])
       .range([padding.left, width - padding.right])
 
     const range = Math.max(maxBps - minBps, 1)
@@ -158,7 +187,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       .range([height - padding.bottom, padding.top])
 
     const line = d3.line()
-      .x((d) => xScale(new Date(d.time)))
+      .x((d) => xScale(d.minute))
       .y((d) => yScale(d.bps))
       .defined((d) => d.bps != null)
       .curve(d3.curveMonotoneX)
@@ -205,29 +234,20 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       .attr('stroke', 'var(--border-color)')
       .attr('stroke-width', 1)
 
-    // X axis labels (0', 45', 90')
-    const xTicks = chartData.length >= 3
-      ? [chartData[0].time, chartData[Math.floor(chartData.length / 2)].time, chartData[chartData.length - 1].time]
-      : chartData.length === 2
-        ? [chartData[0].time, chartData[1].time]
-        : chartData.length === 1
-          ? [chartData[0].time]
-          : []
-    const xLabel = (t) => {
-      if (t === chartData[0]?.time) return "0'"
-      if (t === chartData[chartData.length - 1]?.time) return "90'"
-      return "45'"
-    }
+    // X axis labels: 0', 15', 30', ... up to maxMinute (match minute, not full 90' upfront)
+    const xTicks = []
+    for (let m = 0; m < maxMinute; m += 15) xTicks.push(m)
+    xTicks.push(maxMinute)
     gMerge.selectAll('.bps-chart-x-label')
       .data(xTicks)
       .join('text')
       .attr('class', 'bps-chart-x-label')
-      .attr('x', (t) => xScale(new Date(t)))
+      .attr('x', (m) => xScale(m))
       .attr('y', height - padding.bottom + 14)
       .attr('text-anchor', 'middle')
       .attr('font-size', 10)
       .attr('fill', 'var(--text-secondary)')
-      .text(xLabel)
+      .text((m) => `${m}'`)
 
     // Y axis labels
     gMerge.selectAll('.bps-chart-y-label')
@@ -293,14 +313,14 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     dots.enter()
       .append('circle')
       .attr('class', 'bps-chart-dot')
-      .attr('cx', (d) => xScale(new Date(d.time)))
+      .attr('cx', (d) => xScale(d.minute))
       .attr('cy', (d) => yScale(d.bps))
       .attr('r', 2)
       .attr('fill', (d) => strokeByKey[d.pid])
       .attr('stroke', 'var(--bg-card)')
       .attr('stroke-width', 1)
       .merge(dots)
-      .attr('cx', (d) => xScale(new Date(d.time)))
+      .attr('cx', (d) => xScale(d.minute))
       .attr('cy', (d) => yScale(d.bps))
 
     dots.exit().remove()
@@ -332,8 +352,8 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     }
 
     const getClosestPoint = (x) => {
-      const t = xScale.invert(x)
-      const idx = d3.bisectCenter(chartData.map((d) => new Date(d.time).getTime()), t.getTime())
+      const minute = xScale.invert(x)
+      const idx = d3.bisectCenter(chartData.map((d) => d.minute), minute)
       const i = Math.max(0, Math.min(idx, chartData.length - 1))
       return chartData[i]
     }
@@ -354,7 +374,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         tooltip
           .style('display', 'block')
           .html(`
-            <div style="margin-bottom:4px;color:var(--text-secondary)">${formatRecordedAt(point.time)}</div>
+            <div style="margin-bottom:4px;color:var(--text-secondary)">${point.minute}' ${formatRecordedAt(point.time)}</div>
             ${bonusEntries.map((e) => `<div style="color:${e.color}">${e.name}: ${e.value ?? '—'}</div>`).join('')}
           `)
         const node = tooltip.node()
@@ -370,7 +390,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         }
       })
       .on('mouseleave', () => tooltip.transition().duration(200).style('opacity', 0))
-  }, [dimensions, chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, timeExtent, minBps, maxBps])
+  }, [dimensions, chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, maxMinute, minBps, maxBps])
 
   if (loading) {
     return (
@@ -384,7 +404,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     return (
       <div className="bps-over-time-chart bps-over-time-chart--empty">
         <p className="bps-over-time-chart__empty-message">
-          BPS over time will appear here as we update during live matches.
+          No BPS history for this fixture. It’s recorded during live matches when the backend is running.
         </p>
       </div>
     )

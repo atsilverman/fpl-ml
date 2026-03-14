@@ -467,8 +467,21 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
   const showH2HScore = isSecondHalf && status === 'scheduled' && expanded && lastH2H
   const h2hHome = showH2HScore && (lastH2H.home_team_id === home_team_id ? lastH2H.home_score : lastH2H.away_score)
   const h2hAway = showH2HScore && (lastH2H.home_team_id === home_team_id ? lastH2H.away_score : lastH2H.home_score)
-  const scoreHome = hasStarted ? (home_score ?? 0) : (showH2HScore ? (h2hHome ?? 0) : '—')
-  const scoreAway = hasStarted ? (away_score ?? 0) : (showH2HScore ? (h2hAway ?? 0) : '—')
+  /** Roll up goals from player stats so scoreline stays in sync when fixture API is behind (e.g. 2 goals in details but score still 0-1). */
+  const rolledUpHomeGoals = useMemo(() => {
+    if (!hasStarted || !homePlayers?.length) return null
+    return (homePlayers ?? []).reduce((s, p) => s + (Number(p.goals_scored) || 0), 0)
+  }, [hasStarted, homePlayers])
+  const rolledUpAwayGoals = useMemo(() => {
+    if (!hasStarted || !awayPlayers?.length) return null
+    return (awayPlayers ?? []).reduce((s, p) => s + (Number(p.goals_scored) || 0), 0)
+  }, [hasStarted, awayPlayers])
+  const scoreHome = hasStarted
+    ? Math.max(home_score ?? 0, rolledUpHomeGoals ?? 0)
+    : (showH2HScore ? (h2hHome ?? 0) : '—')
+  const scoreAway = hasStarted
+    ? Math.max(away_score ?? 0, rolledUpAwayGoals ?? 0)
+    : (showH2HScore ? (h2hAway ?? 0) : '—')
   const scoreIsH2H = showH2HScore && !hasStarted
   const stadiumName = fixture.stadium_name ?? null
   // When showing last H2H, order headline by last meeting: left = home in that fixture (with home icon), right = away
@@ -548,6 +561,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                 gameweek={gameweek}
                 players={allBpsPlayersSorted}
                 enabled={true}
+                kickoffTime={kickoff_time}
+                fixtureStatus={status}
               />
             </div>
           ) : statsLoading ? (
@@ -598,6 +613,8 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                   gameweek={gameweek}
                   players={allBpsPlayersSorted}
                   enabled={true}
+                  kickoffTime={kickoff_time}
+                  fixtureStatus={status}
                 />
               </div>
             ) : statsLoading ? (
