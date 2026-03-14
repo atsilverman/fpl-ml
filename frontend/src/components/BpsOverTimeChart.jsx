@@ -205,7 +205,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       .attr('stroke', 'var(--border-color)')
       .attr('stroke-width', 1)
 
-    // X axis labels (Kickoff, Halftime, Full time)
+    // X axis labels (0', 45', 90')
     const xTicks = chartData.length >= 3
       ? [chartData[0].time, chartData[Math.floor(chartData.length / 2)].time, chartData[chartData.length - 1].time]
       : chartData.length === 2
@@ -214,9 +214,9 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
           ? [chartData[0].time]
           : []
     const xLabel = (t) => {
-      if (t === chartData[0]?.time) return 'Kickoff'
-      if (t === chartData[chartData.length - 1]?.time) return 'Full time'
-      return 'Halftime'
+      if (t === chartData[0]?.time) return "0'"
+      if (t === chartData[chartData.length - 1]?.time) return "90'"
+      return "45'"
     }
     gMerge.selectAll('.bps-chart-x-label')
       .data(xTicks)
