@@ -14,6 +14,7 @@ import { useLiveGameweekStatus } from '../hooks/useLiveGameweekStatus'
 import { useManagerLiveStatus } from '../hooks/useManagerLiveStatus'
 import { useManagerData, useManagerDataForManager } from '../hooks/useManagerData'
 import { useTransferImpactsForManager, useLeagueTransferImpacts } from '../hooks/useTransferImpacts'
+import { useLeagueManagerTransferAllowance } from '../hooks/useLeagueManagerTransferAllowance'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
@@ -148,6 +149,13 @@ export default function MiniLeaguePage() {
   const showTransfersView = leagueViewMode === 'transfers'
   const showChipsView = leagueViewMode === 'chips'
   const [selectedCaptainPlayerName, setSelectedCaptainPlayerName] = useState(null) // highlight this player name in both Captain and Vice columns
+
+  const {
+    transfersMadeByManager,
+    transferCostByManager,
+    prevTransfersMadeByManager,
+    loading: transferAllowanceLoading,
+  } = useLeagueManagerTransferAllowance(leagueManagerIds, gameweek, showTransfersView)
 
   /* On Captains subpage: never open player details; clear any existing so modals don’t show */
   useEffect(() => {
@@ -1190,6 +1198,7 @@ export default function MiniLeaguePage() {
               <colgroup>
                 <col className="league-transfers-col-manager" />
                 <col className="league-transfers-col-transfers" />
+                <col className="league-transfers-col-remaining" />
               </colgroup>
               <thead>
                 <tr>
@@ -1205,22 +1214,43 @@ export default function MiniLeaguePage() {
                     </button>
                   </th>
                   <th className="league-transfers-th-transfers">Transfers</th>
+                  <th className="league-transfers-th-remaining">Remaining</th>
                 </tr>
               </thead>
               <tbody key="transfers">
                 {leagueTransfersLoading ? (
-                  <tr><td colSpan={2} className="league-transfers-loading">Loading transfers…</td></tr>
+                  <tr><td colSpan={3} className="league-transfers-loading">Loading transfers…</td></tr>
                 ) : (
                   displayRows.map((s, index) => {
                     const rank = s._rank
                     const change = s._rankChange != null ? s._rankChange : null
                     const displayName = s._displayName
                     const isCurrentUser = currentManagerId != null && Number(s.manager_id) === Number(currentManagerId)
-                    const transfers = transfersByManager[Number(s.manager_id)] ?? []
+                    const mid = Number(s.manager_id)
+                    const transfers = transfersByManager[mid] ?? []
                     const transferViewChipRaw = activeChipLoading ? null : (activeChipByManager[s.manager_id] ?? null)
                     const transferViewChip = typeof transferViewChipRaw === 'string' ? transferViewChipRaw.toLowerCase() : transferViewChipRaw
                     const transferViewChipLabel = transferViewChip ? (CHIP_LABELS[transferViewChip] ?? transferViewChip) : null
                     const transferViewChipColor = transferViewChip ? (CHIP_COLORS[transferViewChip] ?? 'var(--text-secondary)') : null
+
+                    const transfersMade = transfersMadeByManager[mid] ?? 0
+                    const transferCost = transferCostByManager[mid] ?? 0
+                    // If we don't have previous GW data, mimic `useManagerDataForManager` behavior:
+                    // `prevHistory?.transfers_made === 0` => false => carry only 1 FT.
+                    const prevTransfersMade = prevTransfersMadeByManager[mid]
+                    const chipFromActiveChip = transferViewChip === 'freehit' || transferViewChip === 'wildcard'
+                    const chipFromZeroCost = transfersMade > 2 && transferCost === 0
+                    const isChipFreeTransfers = chipFromActiveChip || chipFromZeroCost
+                    const freeTransfersAvailable = isChipFreeTransfers
+                      ? transfersMade
+                      : gameweek === 1
+                        ? 1
+                        : (prevTransfersMade === 0 ? 2 : 1)
+                    const remainingFreeTransfers = Math.max(0, freeTransfersAvailable - transfersMade)
+
+                    const showRemainingDash = transferViewChip === 'freehit' || transferViewChip === 'wildcard'
+                    const hasNoRemaining = !showRemainingDash && remainingFreeTransfers === 0
+
                     const hasSingleOrNoTransfers = transfers.length <= 1
                     const hasNoTransfers = transfers.length === 0
                     const didntMakeSelectedTransfer = selectedTopTransfer != null && (() => {
@@ -1234,7 +1264,7 @@ export default function MiniLeaguePage() {
                     return (
                       <tr
                         key={s.manager_id}
-                        className={`league-transfers-row league-transfers-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''} ${didntMakeSelectedTransfer ? 'league-transfers-row--didnt-make-selected-transfer' : ''}`}
+                        className={`league-transfers-row league-transfers-row-animate ${isCurrentUser ? 'league-standings-bento-row-you' : ''} ${hasSingleOrNoTransfers ? 'league-transfers-row--single-or-none' : ''} ${hasNoTransfers ? 'league-transfers-row--no-transfers' : ''} ${hasNoRemaining ? 'league-transfers-row--no-remaining' : ''} ${didntMakeSelectedTransfer ? 'league-transfers-row--didnt-make-selected-transfer' : ''}`}
                         style={{ animationDelay: `${index * 45}ms` }}
                         onClick={() => handleManagerRowClick(s.manager_id, displayName, s.manager_name)}
                         onKeyDown={(e) => {
@@ -1296,6 +1326,25 @@ export default function MiniLeaguePage() {
                             </div>
                           ) : (
                             <span className="league-transfers-empty">—</span>
+                          )}
+                        </td>
+                        <td className="league-transfers-cell-remaining">
+                          {activeChipLoading || transferAllowanceLoading ? (
+                            <span className="league-transfers-empty">—</span>
+                          ) : transferViewChip === 'freehit' || transferViewChip === 'wildcard' ? (
+                            transferViewChipLabel ? (
+                              <span
+                                className="league-standings-bento-chip-badge"
+                                style={{ backgroundColor: transferViewChipColor, color: '#fff' }}
+                                title={transferViewChip && gameweek != null ? `${transferViewChip} (GW ${gameweek})` : transferViewChip}
+                              >
+                                {transferViewChipLabel}
+                              </span>
+                            ) : (
+                              <span className="league-transfers-empty">—</span>
+                            )
+                          ) : (
+                            <span className="league-transfers-remaining-value">{formatNumberWithCommas(remainingFreeTransfers)}</span>
                           )}
                         </td>
                       </tr>

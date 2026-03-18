@@ -1,120 +1,29 @@
-/* Same grid as settings (bento-card-large): 2 columns, 1 row, full height. */
-.deadline-progress-bento.bento-card-large {
+/* Replaces the old "deadline progress" strip with a single line of text. */
+.next-gameweek-deadline-text-bento {
   grid-column: span 2;
   grid-row: span 1;
-  height: var(--bento-unit-height);
-  min-height: var(--bento-unit-height);
-  padding: 10px 16px;
-  gap: 6px;
+  height: calc(var(--bento-unit-height) * 0.25) !important;
+  min-height: calc(var(--bento-unit-height) * 0.25) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  overflow: visible;
+
+  /* Remove bento background/border to make it feel like plain text in the slot. */
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
-.deadline-progress-bento-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  flex-shrink: 0;
-  min-width: 0;
-}
-
-.deadline-progress-bento-header .bento-card-label {
+.next-gameweek-deadline-text {
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--text-secondary);
-  margin: 0;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-/* Full "Next deadline: GW 30 Mar 14…" – allow wrap, mixed case */
-.deadline-progress-bento-header .bento-card-label:not(:empty) {
-  text-transform: none;
+  line-height: 1.25;
   word-break: break-word;
-}
-
-.deadline-progress-bento-subtext {
-  font-size: 11px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.deadline-progress-bento-inner {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-}
-
-.deadline-progress-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  align-items: center;
-  width: 100%;
-}
-
-.deadline-progress-cell {
-  width: 12px;
-  height: 12px;
-  border-radius: 2.5px;
-  background: var(--border-color);
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-
-/* Staggered entrance when grid is animated (after bento card has trickled in) */
-.deadline-progress-grid--animate .deadline-progress-cell {
-  animation: deadline-cell-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
-  animation-delay: var(--cell-delay, 0ms);
-}
-
-.deadline-progress-grid--animate .deadline-progress-cell--filled {
-  animation-name: deadline-cell-in-filled;
-}
-
-.deadline-progress-cell--filled {
-  background: var(--accent, #3b82f6);
-  opacity: 1;
-}
-
-@keyframes deadline-cell-in {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  to {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-}
-
-@keyframes deadline-cell-in-filled {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-    background: var(--border-color);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-    background: var(--accent, #3b82f6);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .deadline-progress-grid--animate .deadline-progress-cell,
-  .deadline-progress-grid--animate .deadline-progress-cell--filled {
-    animation-duration: 0.05s;
-    animation-delay: 0ms;
-  }
-}
-
-@media (max-width: 768px) {
-  .deadline-progress-bento.bento-card-large {
-    grid-column: span 2;
-    grid-row: span 1;
-    height: var(--bento-unit-height);
-    min-height: var(--bento-unit-height);
-  }
+  text-transform: none;
+  text-align: center;
 }

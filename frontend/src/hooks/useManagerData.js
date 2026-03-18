@@ -9,7 +9,7 @@ export function useManagerData() {
   const { config } = useConfiguration()
   const { gameweek } = useGameweekData()
   const { state } = useRefreshState()
-  const isLive = state === 'live_matches' || state === 'bonus_pending'
+  const isLive = state === 'live_matches' || state === 'bonus_pending' || state === 'price_window'
   const MANAGER_ID = config?.managerId || import.meta.env.VITE_MANAGER_ID || null
   const LEAGUE_ID = config?.leagueId || import.meta.env.VITE_LEAGUE_ID || null
 

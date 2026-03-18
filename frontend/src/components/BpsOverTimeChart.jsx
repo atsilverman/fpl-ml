@@ -91,14 +91,23 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       strokeWidthByKey[pid] = isBonus ? 2.5 : 1
     })
 
-    const times = [...new Set(snapshots.map((r) => r.recorded_at))].sort()
-    const firstRecordedAt = times[0] ? new Date(times[0]).getTime() : 0
-    const chartData = times.map((t) => {
+    // Group by timestamp (ms) so DB format differences (e.g. "T" vs space, "Z" vs "+00:00") don't split the same refresh into multiple points
+    const byTimeMs = new Map()
+    snapshots.forEach((r) => {
+      const ms = new Date(r.recorded_at).getTime()
+      if (!byTimeMs.has(ms)) byTimeMs.set(ms, [])
+      byTimeMs.get(ms).push(r)
+    })
+    const sortedTimeMs = [...byTimeMs.keys()].sort((a, b) => a - b)
+    const firstRecordedAt = sortedTimeMs[0] ?? 0
+    const chartData = sortedTimeMs.map((ms) => {
+      const group = byTimeMs.get(ms)
+      const t = group[0]?.recorded_at ?? new Date(ms).toISOString()
       const minute = kickoffTime
         ? minuteFromKickoff(kickoffTime, t)
-        : firstRecordedAt ? Math.min(90, Math.round((new Date(t).getTime() - firstRecordedAt) / 60000)) : 0
+        : firstRecordedAt ? Math.min(90, Math.round((ms - firstRecordedAt) / 60000)) : 0
       const point = { time: t, recorded_at: t, minute }
-      snapshots.filter((r) => r.recorded_at === t).forEach((r) => { point[Number(r.player_id)] = r.bps })
+      group.forEach((r) => { point[Number(r.player_id)] = r.bps })
       return point
     })
     const lastDataMinute = chartData.length ? Math.max(...chartData.map((d) => d.minute)) : 0
@@ -404,7 +413,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     return (
       <div className="bps-over-time-chart bps-over-time-chart--empty">
         <p className="bps-over-time-chart__empty-message">
-          No BPS history for this fixture. It’s recorded during live matches when the backend is running.
+          No BPS history for this fixture ({snapshots.length} snapshots). It’s recorded during live matches when the backend is running.
         </p>
       </div>
     )

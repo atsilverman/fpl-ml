@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import CustomizeModal from '../components/CustomizeModal'
 
 const DEFAULT_ORDER = [
-  'deadline-progress',
   'gw-points-summary',
   'team-value',
   'overall-rank',
@@ -48,12 +47,6 @@ export function BentoOrderProvider({ children }) {
           if (priceChangesIdx !== -1 && transfersIdx !== -1 && priceChangesIdx > transfersIdx) {
             merged = merged.filter((id) => id !== 'price-changes')
             merged.splice(transfersIdx, 0, 'price-changes')
-          }
-          // Deadline progress at very top (above gw-points)
-          const dpIdx = merged.indexOf('deadline-progress')
-          if (dpIdx > 0) {
-            merged = merged.filter((id) => id !== 'deadline-progress')
-            merged.unshift('deadline-progress')
           }
           // gw-points-summary (desktop-only) before gw-points if missing
           if (!merged.includes('gw-points-summary')) {

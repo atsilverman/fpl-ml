@@ -161,24 +161,50 @@ export default function HomePage() {
     }
   }, [])
 
-  // Reorder cards for mobile: league-rank before chips
+  // Reorder cards: desktop swaps overall/team-value/total-points; mobile has its own swaps
   const displayCardOrder = useMemo(() => {
-    if (!isMobile) return cardOrder
-    
-    const chipsIndex = cardOrder.indexOf('chips')
-    const leagueRankIndex = cardOrder.indexOf('league-rank')
-    
-    if (chipsIndex === -1 || leagueRankIndex === -1) return cardOrder
-    
-    // If league-rank comes after chips, swap their positions
-    if (leagueRankIndex > chipsIndex) {
-      const reordered = [...cardOrder]
-      reordered[chipsIndex] = 'league-rank'
-      reordered[leagueRankIndex] = 'chips'
-      return reordered
+    const reordered = [...cardOrder]
+
+    if (isMobile) {
+      // Bring 'gw-points' above 'team-value'
+      const teamValueIndex = reordered.indexOf('team-value')
+      const gwPointsIndex = reordered.indexOf('gw-points')
+      if (teamValueIndex !== -1 && gwPointsIndex !== -1 && teamValueIndex !== gwPointsIndex) {
+        reordered[teamValueIndex] = 'gw-points'
+        reordered[gwPointsIndex] = 'team-value'
+      }
+
+      // Swap 'team-value' with 'league-rank'
+      const tvIdx = reordered.indexOf('team-value')
+      const lrIdx = reordered.indexOf('league-rank')
+      if (tvIdx !== -1 && lrIdx !== -1 && tvIdx !== lrIdx) {
+        reordered[tvIdx] = 'league-rank'
+        reordered[lrIdx] = 'team-value'
+      }
+
+      const chipsIndex = reordered.indexOf('chips')
+      const leagueRankIndex = reordered.indexOf('league-rank')
+      if (chipsIndex !== -1 && leagueRankIndex !== -1 && leagueRankIndex > chipsIndex) {
+        reordered[chipsIndex] = 'league-rank'
+        reordered[leagueRankIndex] = 'chips'
+      }
+    } else {
+      // Desktop: swap overall-rank with team-value, then team-value (new place) with total-points
+      const orIdx = reordered.indexOf('overall-rank')
+      const tvIdx = reordered.indexOf('team-value')
+      if (orIdx !== -1 && tvIdx !== -1 && orIdx !== tvIdx) {
+        reordered[orIdx] = 'team-value'
+        reordered[tvIdx] = 'overall-rank'
+      }
+      const tvIdx2 = reordered.indexOf('team-value')
+      const tpIdx = reordered.indexOf('total-points')
+      if (tvIdx2 !== -1 && tpIdx !== -1 && tvIdx2 !== tpIdx) {
+        reordered[tvIdx2] = 'total-points'
+        reordered[tpIdx] = 'team-value'
+      }
     }
-    
-    return cardOrder
+
+    return reordered
   }, [cardOrder, isMobile])
 
   // Only show cards that are turned on in Customize
@@ -187,11 +213,10 @@ export default function HomePage() {
     [displayCardOrder, cardVisibility]
   )
 
-  /* Hide deadline bento when >1 game is live */
+  /* Deadline bento is removed from the home screen entirely. */
   const renderCardOrder = useMemo(() => {
-    if ((liveFixtureCount ?? 0) <= 1) return visibleCardOrder
     return visibleCardOrder.filter((id) => id !== 'deadline-progress')
-  }, [visibleCardOrder, liveFixtureCount])
+  }, [visibleCardOrder])
 
   /* Sequential delay per card so bentos trickle in left-to-right, top-to-bottom; base delay so first card isn’t 0ms */
   const bentoAnimationDelays = useMemo(() => {

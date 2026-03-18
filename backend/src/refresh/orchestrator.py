@@ -1609,6 +1609,26 @@ class RefreshOrchestrator:
             
             if self.current_state == RefreshState.PRICE_WINDOW:
                 await self._refresh_prices()
+                # During the price window we update player prices frequently, but we
+                # don't run the full manager-history refresh for every tick.
+                # Recompute manager team value from the latest player `cost_tenths`
+                # so the UI tracks FPL as closely as possible.
+                try:
+                    manager_ids = self._get_tracked_manager_ids()
+                    if self.config.required_manager_ids:
+                        extra = [mid for mid in self.config.required_manager_ids if mid not in manager_ids]
+                        if extra:
+                            manager_ids = list(manager_ids) + extra
+                    if manager_ids and self.current_gameweek:
+                        await self.manager_refresher.refresh_manager_team_value_from_prices(
+                            manager_ids, self.current_gameweek
+                        )
+                except Exception as e:
+                    logger.warning(
+                        "Post-price-window team value recompute failed",
+                        extra={"error": str(e), "gameweek": self.current_gameweek},
+                        exc_info=True,
+                    )
             
             now_utc = datetime.now(timezone.utc)
             # After price window closes: run manager refresh once per day to capture post–price-change team value

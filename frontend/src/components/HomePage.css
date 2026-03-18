@@ -63,7 +63,8 @@
 
 /* When deadline bento is first, first row height matches it so gap to next row = standard bento gap */
 .bento-grid.bento-grid-first-row-deadline {
-  grid-template-rows: var(--bento-unit-height);
+  /* Deadline slot is now a compact text line; keep the first track short. */
+  grid-template-rows: calc(var(--bento-unit-height) * 0.25);
   grid-auto-rows: minmax(var(--bento-unit-height), auto);
 }
 

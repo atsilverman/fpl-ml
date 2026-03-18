@@ -1073,8 +1073,9 @@
 }
 
 /* Transfer view: manager + transfers only (no rank) */
-.league-transfers-table-cols .league-transfers-col-manager { width: 40%; }
-.league-transfers-table-cols .league-transfers-col-transfers { width: 60%; }
+.league-transfers-table-cols .league-transfers-col-manager { width: 35%; }
+.league-transfers-table-cols .league-transfers-col-transfers { width: 45%; }
+.league-transfers-table-cols .league-transfers-col-remaining { width: 20%; }
 
 /* First-column treatment (schedule-style): manager; slight indent for header and names */
 .league-transfers-table .league-transfers-th-manager {
@@ -1089,6 +1090,38 @@
 
 .league-transfers-table .league-transfers-th-transfers {
   min-width: 0;
+}
+
+/* Remaining column: center the numeric value / chip badge */
+.league-transfers-table .league-transfers-th-remaining {
+  text-align: center;
+}
+
+.league-transfers-cell-remaining {
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 600;
+  min-width: 0;
+}
+
+.league-transfers-remaining-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared chip badge used in transfer manager + remaining columns */
+.league-standings-bento-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  opacity: 0.95;
 }
 
 /* Each row has bottom border including last, so the table has a clear wrapped bottom. */
@@ -1150,6 +1183,14 @@
 /* No-transfers row for current user: same demotion on transfers cell only */
 .league-transfers-table .league-transfers-row--no-transfers.league-standings-bento-row-you .league-transfers-cell-transfers {
   background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
+}
+
+/* Visually demote only the remaining cell when manager has 0 remaining free transfers */
+.league-transfers-table .league-transfers-row--no-remaining .league-transfers-cell-remaining {
+  opacity: 0.5;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--text-secondary) 6%, var(--bg-primary));
+  font-weight: 400;
 }
 
 /* Visually demote managers who did not make the selected top transfer (when a player in OUT/IN is tapped) */
@@ -1249,14 +1290,19 @@
   white-space: nowrap;
 }
 
-/* Individual transfer deltas: text-only green/red, no badge fill (only net badge is filled) */
+/* Individual transfer deltas: +/- colored text (no filled pill background) */
 .league-transfers-table .bento-card-transfer-delta {
   font-size: 9px;
   margin-left: auto;
   padding: 0;
   min-width: 0;
-  background: transparent;
+  display: inline-flex; /* keep as flex item so margin-left:auto works */
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  box-sizing: border-box;
   border-radius: 0;
+  background: transparent;
 }
 
 .league-transfers-table .bento-card-transfer-delta.positive {
@@ -1265,7 +1311,7 @@
 }
 
 .league-transfers-table .bento-card-transfer-delta.negative {
-  color: var(--accent-red);
+  color: var(--accent-red, #ef4444);
   background: transparent;
 }
 
@@ -1276,6 +1322,11 @@
 
 html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.positive {
   color: var(--accent-green, #059669);
+  background: transparent;
+}
+
+html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.negative {
+  color: var(--accent-red, #dc2626);
   background: transparent;
 }
 

@@ -411,6 +411,138 @@ class ManagerDataRefresher:
                 "gameweek": gameweek,
                 "error": str(e)
             }, exc_info=True)
+
+    async def refresh_manager_team_value_from_prices(
+        self,
+        manager_ids: List[int],
+        gameweek: int,
+    ) -> bool:
+        """
+        Recompute manager `team_value_tenths` from the latest player prices.
+
+        Why: during `PRICE_WINDOW` we refresh `players.cost_tenths` but we don't
+        run the full manager history refresh, so `manager_gameweek_history.team_value_tenths`
+        can lag behind FPL by ~£0.1m.
+
+        Calculation:
+        - Squad value in FPL (tenths of £m) is the sum of each squad player's `now_cost`
+          (stored as `players.cost_tenths`).
+        - `entry.last_deadline_value` is `squad_value + bank`, where bank is the manager cash.
+          We keep `bank_tenths` from the existing DB row and only update `team_value_tenths`.
+        """
+        if not manager_ids:
+            return True
+
+        try:
+            now_iso = datetime.now(timezone.utc).isoformat()
+
+            # 1) Load all picks for all managers in one query.
+            picks_rows = (
+                self.db_client.client.table("manager_picks")
+                .select("manager_id, player_id")
+                .eq("gameweek", gameweek)
+                .in_("manager_id", manager_ids)
+                .execute()
+                .data
+                or []
+            )
+
+            if not picks_rows:
+                return True
+
+            # manager_id -> list of squad player ids
+            player_ids_by_manager: Dict[int, List[int]] = {}
+            all_player_ids: Set[int] = set()
+            for r in picks_rows:
+                mid = int(r["manager_id"])
+                pid = int(r["player_id"])
+                player_ids_by_manager.setdefault(mid, []).append(pid)
+                all_player_ids.add(pid)
+
+            # 2) Load current cost_tenths for all players referenced by picks.
+            players_rows = (
+                self.db_client.client.table("players")
+                .select("fpl_player_id, cost_tenths")
+                .in_("fpl_player_id", list(all_player_ids))
+                .execute()
+                .data
+                or []
+            )
+
+            cost_tenths_by_pid: Dict[int, Optional[int]] = {
+                int(r["fpl_player_id"]): (r.get("cost_tenths") if r.get("cost_tenths") is not None else None)
+                for r in players_rows
+            }
+
+            # 3) Load bank and existing team value so we can update safely.
+            history_rows = (
+                self.db_client.client.table("manager_gameweek_history")
+                .select("manager_id, bank_tenths, team_value_tenths")
+                .eq("gameweek", gameweek)
+                .in_("manager_id", manager_ids)
+                .execute()
+                .data
+                or []
+            )
+
+            history_by_mid: Dict[int, Dict[str, Any]] = {
+                int(r["manager_id"]): r
+                for r in history_rows
+            }
+
+            updated = 0
+            skipped_missing_cost = 0
+            skipped_missing_bank = 0
+
+            # 4) Upsert team_value_tenths only (leave points/ranks unchanged).
+            for mid in manager_ids:
+                squad_player_ids = player_ids_by_manager.get(mid)
+                if not squad_player_ids:
+                    continue
+
+                hist = history_by_mid.get(mid) or {}
+                bank_tenths = hist.get("bank_tenths")
+                existing_team_value_tenths = hist.get("team_value_tenths")
+
+                if bank_tenths is None:
+                    skipped_missing_bank += 1
+                    continue
+
+                # Ensure all squad player prices are present for this moment.
+                missing_costs = [pid for pid in squad_player_ids if cost_tenths_by_pid.get(pid) is None]
+                if missing_costs:
+                    skipped_missing_cost += 1
+                    continue
+
+                squad_value_tenths = sum(int(cost_tenths_by_pid[pid]) for pid in squad_player_ids)
+                new_team_value_tenths = squad_value_tenths + int(bank_tenths)
+
+                if existing_team_value_tenths != new_team_value_tenths:
+                    self.db_client.client.table("manager_gameweek_history").update({
+                        "team_value_tenths": new_team_value_tenths,
+                        "updated_at": now_iso,
+                    }).eq("manager_id", mid).eq("gameweek", gameweek).execute()
+                    updated += 1
+
+            logger.info(
+                "Updated manager team values from prices",
+                extra={
+                    "gameweek": gameweek,
+                    "requested_managers": len(manager_ids),
+                    "updated": updated,
+                    "skipped_missing_cost": skipped_missing_cost,
+                    "skipped_missing_bank": skipped_missing_bank,
+                },
+            )
+            return True
+
+        except Exception as e:
+            logger.warning(
+                "refresh_manager_team_value_from_prices failed",
+                extra={"gameweek": gameweek, "error": str(e)},
+                exc_info=True,
+            )
+            return False
     
     async def build_player_whitelist(
         self,

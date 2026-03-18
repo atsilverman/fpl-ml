@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react'
 import { useBentoOrder } from '../contexts/BentoOrderContext'
 import { useToast } from '../contexts/ToastContext'
+import { useIsMobile } from '../hooks/useIsMobile'
 import './ConfigurationModal.css'
 import './CustomizeModal.css'
 
 const BENTO_LABELS = {
-  'deadline-progress': 'Deadline',
   'gw-points-summary': 'GW Points (summary)',
   'overall-rank': 'Overall Rank',
   'gw-points': 'GW Points',
@@ -24,6 +24,7 @@ const BENTO_LABELS = {
 export default function CustomizeModal({ isOpen, onClose }) {
   const { cardOrder, setCardOrder, resetCardOrderToDefault, isCardVisible, setCardVisible, statsMinMinutesPercent, setStatsMinMinutesPercent } = useBentoOrder()
   const { toast } = useToast()
+  const isMobile = useIsMobile()
   const [draggedId, setDraggedId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
   const [layoutExpanded, setLayoutExpanded] = useState(false)
@@ -89,7 +90,7 @@ export default function CustomizeModal({ isOpen, onClose }) {
   if (!isOpen) return null
 
   const orderedRows = cardOrder
-    .filter((id) => BENTO_LABELS[id] != null && id !== 'settings')
+    .filter((id) => BENTO_LABELS[id] != null && id !== 'settings' && !(isMobile && id === 'gw-points-summary'))
     .map((id) => ({ id, label: BENTO_LABELS[id] }))
 
   return (
