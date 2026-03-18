@@ -36,6 +36,7 @@ import PlayerBreakdownPopup from './PlayerBreakdownPopup'
 import './MiniLeaguePage.css'
 import PriceChangesBentoHome from './PriceChangesBentoHome'
 import DeadlineProgressBento from './DeadlineProgressBento'
+import NextDeadlineStatement from './NextDeadlineStatement'
 import { formatNumber, formatNumberWithTwoDecimals, formatNumberWithCommas, formatPrice } from '../utils/formatNumbers'
 import './HomePage.css'
 
@@ -479,6 +480,7 @@ export default function HomePage() {
           <span>Leagues and Managers Updating</span>
         </div>
       )}
+      <NextDeadlineStatement refreshState={refreshState} />
       <div className={`bento-grid${renderCardOrder[0] === 'deadline-progress' ? ' bento-grid-first-row-deadline' : ''}`}>
         {renderCardOrder.map((cardId, index) => {
           const card = cards.find(c => c.id === cardId)

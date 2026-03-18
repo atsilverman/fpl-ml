@@ -1102,10 +1102,16 @@
   white-space: nowrap;
   font-weight: 600;
   min-width: 0;
+  vertical-align: middle;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .league-transfers-remaining-value {
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 /* Shared chip badge used in transfer manager + remaining columns */
@@ -1150,6 +1156,13 @@
   box-sizing: border-box;
   font-size: 10px;
   line-height: 1.2;
+}
+
+/* Remaining value cell: must stretch with taller rows so centering is based on row height. */
+.league-transfers-table .league-transfers-row td.league-transfers-cell-remaining {
+  height: auto !important;
+  min-height: 36px !important;
+  vertical-align: middle;
 }
 
 /* When 0 or 1 transfer, middle-align all cell content (rank, rank change, manager, in/out, points delta) */
