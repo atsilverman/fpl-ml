@@ -8,7 +8,7 @@
 html {
   --motion-duration: 0.25s;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
-  /* Configured manager: left stripe + “You” pill only (no row fill — green GW/total tiers stay visible) */
+  /* Configured manager: left stripe + “You” pill (overridden per theme below for brightness) */
   --league-standings-you-accent: color-mix(in srgb, #fcd34d 22%, var(--accent-yellow, #f59e0b));
   --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 68%, #000);
   --league-standings-you-badge-fg: #ffffff;
@@ -65,6 +65,9 @@ html[data-theme="dark"] {
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   --hover-card-border: rgba(255, 255, 255, 0.08);
+  /* Brighter stripe + “You” pill on dark backgrounds */
+  --league-standings-you-accent: color-mix(in srgb, #fde047 44%, var(--accent-yellow));
+  --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 82%, #0a0a0a);
 }
 
 /* Light mode */
@@ -115,6 +118,10 @@ html[data-theme="light"] {
   --bg-hover: var(--bg-secondary);
   --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
   --hover-card-border: rgba(0, 0, 0, 0.08);
+  /* Light: don’t mix stripe/badge with dark amber (#d97706) or slate — reads muddy; use high-chroma fills */
+  --league-standings-you-accent: #fbbf24;
+  --league-standings-you-badge-bg: #fde047;
+  --league-standings-you-badge-fg: #713f12;
 }
 
 /* dark-forest: minimal dark with subtle sage hint; bolder green only for key highlights */
