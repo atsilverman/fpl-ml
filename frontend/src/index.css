@@ -8,6 +8,8 @@
 html {
   --motion-duration: 0.25s;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Mini league + bento standings data rows */
+  --league-standings-row-height: 44px;
   /* Configured manager: left stripe + “You” pill (overridden per theme below for brightness) */
   --league-standings-you-accent: color-mix(in srgb, #fcd34d 22%, var(--accent-yellow, #f59e0b));
   --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 68%, #000);

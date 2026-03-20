@@ -921,11 +921,11 @@
 
 /* Match standings view row height: same tr/td height and padding as default table */
 .league-standings-page .league-standings-c-view-table tbody tr {
-  min-height: 36px;
+  min-height: var(--league-standings-row-height);
 }
 .league-standings-page .league-standings-c-view-table tbody td {
-  min-height: 36px;
-  height: 36px;
+  min-height: var(--league-standings-row-height);
+  height: var(--league-standings-row-height);
   padding: 6px 8px;
   box-sizing: border-box;
   vertical-align: middle;
@@ -1024,11 +1024,11 @@
   text-transform: uppercase;
 }
 .league-standings-page .league-standings-bento-table.league-standings-chips-table tbody tr {
-  height: 36px;
+  height: var(--league-standings-row-height);
 }
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-manager,
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
-  height: 36px;
+  height: var(--league-standings-row-height);
   padding-top: 6px;
   padding-bottom: 6px;
   box-sizing: border-box;
@@ -1036,7 +1036,7 @@
 .league-standings-page .league-standings-bento-table.league-standings-chips-table td.league-standings-chips-td-chip {
   text-align: center;
   vertical-align: middle;
-  min-height: 36px;
+  min-height: var(--league-standings-row-height);
 }
 .league-standings-chips-badge-unplayed {
   color: var(--text-tertiary, rgba(128, 128, 128, 0.5));
@@ -1167,17 +1167,16 @@
 /* Each row has bottom border including last, so the table has a clear wrapped bottom. */
 .league-transfers-table tbody tr {
   border-bottom: 1px solid var(--border-color);
-  min-height: 36px;
+  min-height: var(--league-standings-row-height);
 }
 
-/* Fixed 36px base row to match non-transfer view; transfers cell can grow for multi-line content */
-/* Fixed 36px base row; first column (manager) gets schedule-style bg in separate rule */
+/* Base row height matches standings; transfers cell can grow for multi-line content */
 .league-transfers-table .league-transfers-row td:not(.league-transfers-cell-manager) {
   padding: 6px 8px;
   vertical-align: top;
   background: var(--bg-primary);
-  min-height: 36px;
-  height: 36px;
+  min-height: var(--league-standings-row-height);
+  height: var(--league-standings-row-height);
   box-sizing: border-box;
   font-size: 10px;
   line-height: 1.2;
@@ -1185,8 +1184,8 @@
 .league-transfers-table .league-transfers-row td.league-transfers-cell-manager {
   padding: 6px 8px 6px 12px;
   vertical-align: top;
-  min-height: 36px;
-  height: 36px;
+  min-height: var(--league-standings-row-height);
+  height: var(--league-standings-row-height);
   box-sizing: border-box;
   font-size: 10px;
   line-height: 1.2;
@@ -1195,7 +1194,7 @@
 /* Remaining value cell: must stretch with taller rows so centering is based on row height. */
 .league-transfers-table .league-transfers-row td.league-transfers-cell-remaining {
   height: auto !important;
-  min-height: 36px !important;
+  min-height: var(--league-standings-row-height) !important;
   vertical-align: middle;
 }
 
@@ -1206,7 +1205,7 @@
 
 .league-transfers-table .league-transfers-cell-transfers {
   vertical-align: top;
-  min-height: 36px;
+  min-height: var(--league-standings-row-height);
   height: auto;
   box-sizing: border-box;
 }
@@ -1559,12 +1558,12 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
    Last row keeps border to wrap the bottom of the table (same as transfers view). */
 .league-standings-page .league-standings-bento-table tbody tr {
   border-bottom: 1px solid var(--border-color);
-  min-height: 36px; /* match height when rank change badge is present so all rows are consistent */
+  min-height: var(--league-standings-row-height);
 }
 
 .league-standings-page .league-standings-bento-table tbody td {
-  min-height: 36px;
-  height: 36px;
+  min-height: var(--league-standings-row-height);
+  height: var(--league-standings-row-height);
   box-sizing: border-box;
   font-size: 10px;
   line-height: 1.2;

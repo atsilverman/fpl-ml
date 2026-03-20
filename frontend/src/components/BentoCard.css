@@ -1843,11 +1843,11 @@ html[data-theme="dark"] .transfers-summary-column-count {
 }
 
 .league-standings-bento-table tbody tr {
-  min-height: 36px; /* match height when rank change badge is present so all rows are consistent */
+  min-height: var(--league-standings-row-height, 44px);
 }
 .league-standings-bento-table tbody td {
-  min-height: 36px;
-  height: 36px;
+  min-height: var(--league-standings-row-height, 44px);
+  height: var(--league-standings-row-height, 44px);
   box-sizing: border-box;
 }
 .league-standings-bento-table tbody tr:last-child td {

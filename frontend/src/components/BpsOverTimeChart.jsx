@@ -21,6 +21,17 @@ function formatRecordedAt(isoString) {
   return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
+/** Legend / tooltip: 1st (+3), 2nd (+2), 3rd (+1); tie-break by name. */
+function sortPlayerIdsByBonusDesc(ids, bonusValueByKey, playerNamesByKey) {
+  return [...ids].sort((a, b) => {
+    const diff = (bonusValueByKey[b] ?? 0) - (bonusValueByKey[a] ?? 0)
+    if (diff !== 0) return diff
+    return String(playerNamesByKey[a] ?? a).localeCompare(String(playerNamesByKey[b] ?? b), undefined, {
+      sensitivity: 'base',
+    })
+  })
+}
+
 /** Elapsed minutes from kickoff for a given timestamp (capped 0–90). */
 function minuteFromKickoff(kickoffIso, recordedIso) {
   if (!kickoffIso || !recordedIso) return 0
@@ -377,9 +388,16 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         const [x] = d3.pointer(event, svgRef.current)
         if (x < padding.left || x > width - padding.right) return
         const point = getClosestPoint(x)
-        const bonusEntries = playerKeys
-          .filter((pid) => isBonusByKey[pid] && point[pid] != null)
-          .map((pid) => ({ pid, name: playerNamesByKey[pid] ?? pid, value: point[pid], color: strokeByKey[pid] }))
+        const bonusEntries = sortPlayerIdsByBonusDesc(
+          playerKeys.filter((pid) => isBonusByKey[pid] && point[pid] != null),
+          bonusValueByKey,
+          playerNamesByKey
+        ).map((pid) => ({
+          pid,
+          name: playerNamesByKey[pid] ?? pid,
+          value: point[pid],
+          color: strokeByKey[pid],
+        }))
         if (!bonusEntries.length) {
           tooltip.style('opacity', 0)
           return
@@ -403,7 +421,20 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         }
       })
       .on('mouseleave', () => tooltip.transition().duration(200).style('opacity', 0))
-  }, [dimensions, chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, maxMinute, minBps, maxBps])
+  }, [
+    dimensions,
+    chartData,
+    seriesByPlayer,
+    playerKeys,
+    playerNamesByKey,
+    strokeByKey,
+    strokeWidthByKey,
+    isBonusByKey,
+    bonusValueByKey,
+    maxMinute,
+    minBps,
+    maxBps,
+  ])
 
   if (loading) {
     return (
@@ -432,7 +463,11 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
         className="bps-over-time-chart__svg"
       />
       <div className="bps-over-time-chart-legend" aria-hidden>
-        {playerKeys.filter((pid) => isBonusByKey[pid]).map((pid) => (
+        {sortPlayerIdsByBonusDesc(
+          playerKeys.filter((pid) => isBonusByKey[pid]),
+          bonusValueByKey,
+          playerNamesByKey
+        ).map((pid) => (
           <div key={pid} className="bps-over-time-chart-legend-item">
             <span
               className="bps-over-time-chart-legend-swatch"
