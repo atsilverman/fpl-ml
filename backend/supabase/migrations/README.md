@@ -59,7 +59,7 @@ Run these migrations in order for a fresh database setup:
 - refresh_manager_player_gameweek_points() added; included in refresh_all_materialized_views()
 
 ### Points consistency (GW / total including bonus)
-- **Single source of truth:** `v_manager_player_gameweek_points` defines "points including provisional or official bonus" (adds provisional_bonus when NOT confirmed; treats NULL bonus_status as provisional).
+- **Single source of truth:** `v_manager_player_gameweek_points` defines "points including provisional or official bonus" (adds provisional_bonus when NOT confirmed and max fixture minutes ≥ 60; treats NULL bonus_status as provisional). See **094_standings_provisional_bonus_after_60_min.sql**.
 - **Home bento** and **league standings** (mv_mini_league_standings) must both use this view (or the same logic). Do not add separate bonus logic elsewhere.
 - After changing this view or player_gameweek_stats, refresh `mv_mini_league_standings` so the league page shows latest points.
 

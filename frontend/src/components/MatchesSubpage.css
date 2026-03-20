@@ -8,6 +8,11 @@
   scroll-margin-top: 88px;
 }
 
+/* Bonus tab only: less air between BPS mode toggle and fixture list */
+.matches-subpage:has(.bonus-chart-mode-wrap) {
+  gap: 4px;
+}
+
 .matches-subpage-title {
   font-size: 1.125rem;
   font-weight: 700;
@@ -28,8 +33,8 @@
 
 /* Bonus subpage: Bar vs Line selector – uses subpage-view-toggle from Dashboard.css; active slider button on-theme (bonus accent) */
 .bonus-chart-mode-wrap {
-  padding: 6px 0 10px;
-  margin-bottom: 4px;
+  padding: 3px 0 5px;
+  margin-bottom: 2px;
 }
 
 .bonus-chart-mode-wrap .subpage-view-toggle {
@@ -382,6 +387,10 @@ html[data-theme="dark"] .gw-top-points-pill--3 {
   overflow-y: visible;
   box-sizing: border-box;
   overscroll-behavior: none;
+}
+
+.matches-subpage:has(.bonus-chart-mode-wrap) .matches-scroll-wrap {
+  margin-top: 0;
 }
 
 .matches-scroll-wrap::-webkit-scrollbar {

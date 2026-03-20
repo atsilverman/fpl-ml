@@ -14,6 +14,9 @@ from fpl_api.client import FPLAPIClient
 
 logger = logging.getLogger(__name__)
 
+# Match frontend provisionalBonusStandings / v_manager_player_gameweek_points migration.
+STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES = 60
+
 
 class PointsCalculator:
     """Calculates manager points with all FPL rules."""
@@ -47,11 +50,31 @@ class PointsCalculator:
         stats = stats_result.data if stats_result.data else []
         if not stats:
             return {"points": 0, "bonus": 0, "bonus_status": "confirmed"}
-        
+
+        fixture_ids = {s.get("fixture_id") for s in stats if s.get("fixture_id") not in (None, 0)}
+        max_mins_by_fid: Dict[int, int] = {}
+        if fixture_ids:
+            mx_result = (
+                self.db_client.client.table("player_gameweek_stats")
+                .select("fixture_id, minutes")
+                .eq("gameweek", gameweek)
+                .in_("fixture_id", list(fixture_ids))
+                .execute()
+            )
+            for r in mx_result.data or []:
+                fid = r.get("fixture_id")
+                if fid is None:
+                    continue
+                m = int(r.get("minutes") or 0)
+                fi = int(fid)
+                if m > max_mins_by_fid.get(fi, 0):
+                    max_mins_by_fid[fi] = m
+
         # DGW: sum total_points and bonus across all fixture rows
         points = 0
         bonus = 0
         any_provisional = False
+        thr = STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES
         for stats_data in stats:
             row_pts = stats_data.get("total_points", 0)
             row_bonus = stats_data.get("bonus", 0)
@@ -62,8 +85,12 @@ class PointsCalculator:
                 any_provisional = True
             if match_finished or match_finished_provisional:
                 if bonus_status == "provisional" and row_bonus == 0:
-                    provisional_bonus = stats_data.get("provisional_bonus", 0)
-                    row_pts = row_pts + provisional_bonus
+                    fid = stats_data.get("fixture_id")
+                    row_m = int(stats_data.get("minutes") or 0)
+                    mx = max_mins_by_fid.get(int(fid), row_m) if fid not in (None, 0) else row_m
+                    if mx >= thr:
+                        provisional_bonus = stats_data.get("provisional_bonus", 0)
+                        row_pts = row_pts + int(provisional_bonus or 0)
             points += row_pts
             bonus += row_bonus
         bonus_status = "provisional" if any_provisional else "confirmed"

@@ -24,3 +24,7 @@ Until FPL confirms bonus (~1h after full-time), we derive **provisional bonus** 
 2. **What we show:** Bonus badges (3+, 2+, 1+) are assigned **by BPS rank** in the chart (1st = 3, 2nd = 2, 3rd = 1). We do not display API/backend bonus values when they would contradict that order (e.g. a player with lower BPS showing 3+ while a player with higher BPS shows 2+).
 
 This keeps the bonus subpage logical and consistent with FPL rules.
+
+## Standings, home GW points, manager live totals, Feed
+
+`player_gameweek_stats.provisional_bonus` is still computed as soon as the fixture is **started** (for bonus/fixture UIs). For **league standings** (`v_manager_player_gameweek_points`), **home gameweek points**, **manager live refresh totals**, **points calculator**, and **Feed** `bonus_change` events, we only apply **provisional** bonus once **max(player minutes) in that fixture ≥ 60** (same threshold in SQL, Python, and `frontend/src/utils/provisionalBonusStandings.js`). Confirmed bonus (`bonus` / `bonus_status`) is unchanged.

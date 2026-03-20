@@ -263,7 +263,7 @@ export default function Dashboard() {
                 <span className="header-configure-note">Configure league</span>
               )}
               <button type="button" className="header-config-icon" aria-label="Configure league and manager" title="Configure league and manager" onClick={openConfigModal}>
-                <Pencil size={12} strokeWidth={1.5} />
+                <Pencil size={11} strokeWidth={1.5} />
               </button>
             </div>
           </div>

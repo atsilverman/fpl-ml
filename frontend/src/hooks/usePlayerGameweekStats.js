@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import {
+  fetchFixtureMaxMinutesByGameweek,
+  maxMinutesForFixture,
+  standingsProvisionalBonusToAdd
+} from '../utils/provisionalBonusStandings'
 
 /**
  * Fetches aggregated gameweek stats for one player in one gameweek.
@@ -15,13 +20,15 @@ export function usePlayerGameweekStats(playerId, gameweek) {
       const { data: rows, error: err } = await supabase
         .from('player_gameweek_stats')
         .select(
-          'total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, bonus_status, provisional_bonus, defensive_contribution, yellow_cards, red_cards, own_goals, penalties_missed, penalties_saved, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
+          'fixture_id, total_points, minutes, goals_scored, assists, clean_sheets, saves, bps, bonus, bonus_status, provisional_bonus, defensive_contribution, yellow_cards, red_cards, own_goals, penalties_missed, penalties_saved, expected_goals, expected_assists, expected_goal_involvements, expected_goals_conceded, goals_conceded'
         )
         .eq('player_id', playerId)
         .eq('gameweek', gameweek)
 
       if (err) throw err
       if (!rows?.length) return null
+
+      const fixtureMaxMinutesById = await fetchFixtureMaxMinutesByGameweek(supabase, gameweek)
 
       const agg = {
         points: 0,
@@ -55,11 +62,13 @@ export function usePlayerGameweekStats(playerId, gameweek) {
         const provBonus = Number(r.provisional_bonus) ?? 0
         const useOfficial = status === 'confirmed' || officialBonus > 0
         if (!useOfficial && status === 'provisional') anyProvisional = true
+        const maxM = maxMinutesForFixture(fixtureMaxMinutesById, r.fixture_id)
+        const provAdd = standingsProvisionalBonusToAdd(useOfficial, provBonus, maxM)
 
         agg.points += totalPoints
         agg.bonus += useOfficial ? officialBonus : 0
-        agg.provisional_bonus += useOfficial ? 0 : provBonus
-        agg.effective_points += useOfficial ? totalPoints : totalPoints + provBonus
+        agg.provisional_bonus += useOfficial ? 0 : provAdd
+        agg.effective_points += useOfficial ? totalPoints : totalPoints + provAdd
         agg.minutes += r.minutes ?? 0
         agg.goals_scored += r.goals_scored ?? 0
         agg.assists += r.assists ?? 0

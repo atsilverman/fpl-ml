@@ -1270,6 +1270,12 @@
   border-right: 1px solid var(--border-color);
 }
 
+/* Configured manager (you): transfer view — left stripe only on sticky manager column */
+.league-standings-page .league-transfers-table tr.league-standings-bento-row-you td.league-transfers-cell-manager {
+  border-left: 3px solid var(--league-standings-you-accent);
+  padding-left: 9px;
+}
+
 .league-transfers-table .league-transfers-cell-manager-inner {
   container-name: league-transfers-manager-cell;
   container-type: inline-size;
@@ -1564,6 +1570,18 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   line-height: 1.2;
 }
 
+/* Configured manager (you): left stripe only — row uses default column / tier backgrounds */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-you td.league-standings-bento-rank {
+  border-left: 3px solid var(--league-standings-you-accent);
+  padding-left: 7px;
+}
+/* Chips / captain views: first column is manager (no rank) — same left stripe */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-you td.league-standings-chips-td-manager,
+.league-standings-page .league-standings-bento-table.league-standings-c-view-table tbody tr.league-standings-bento-row-you td.league-standings-c-view-manager-cell {
+  border-left: 3px solid var(--league-standings-you-accent);
+  padding-left: 9px;
+}
+
 /* Column widths set via colgroup (12% rank, 24% manager, 16% each total/gw/left/live) */
 .league-standings-page .league-standings-bento-table .league-standings-bento-rank,
 .league-standings-page .league-standings-bento-table .league-standings-bento-team,
@@ -1710,7 +1728,7 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   letter-spacing: 0.02em;
 }
 
-/* Configured owner (you) indicator — same size and style as chip badge when activated; blue bg, white text */
+/* Configured owner (you) — same pill metrics as chip badges; amber family via tokens (distinct from CHIP_COLORS) */
 .league-standings-bento-you-badge {
   flex-shrink: 0;
   padding: 2px 6px;
@@ -1719,8 +1737,8 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   font-weight: 600;
   text-transform: none;
   letter-spacing: 0.02em;
-  color: #fff;
-  background: var(--accent-blue, #3b82f6);
+  color: var(--league-standings-you-badge-fg, #fff);
+  background: var(--league-standings-you-badge-bg, #b45309);
 }
 
 /* Header: column widths from colgroup (match transfer view header scale) */
@@ -1923,6 +1941,11 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   border-left: 3px solid var(--accent-blue, #3b82f6);
   box-shadow: 0 0 6px rgba(59, 130, 246, 0.25);
 }
+/* You + ownership filter: amber left stripe (row fill follows owns-selected blue like other rows) */
+.league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-you.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
+  border-left: 3px solid var(--league-standings-you-accent);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--league-standings-you-accent) 35%, transparent);
+}
 
 /* Ownership search: demote rows that don't own selected player(s) — show all, grey out non-owners */
 .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--demoted td {
@@ -2107,6 +2130,12 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 }
 .player-detail-ownership-row--no-owns td .league-standings-bento-team-name {
   font-weight: 400;
+}
+
+/* Modal league list: left stripe only for configured manager */
+.player-detail-ownership-table-wrapper .league-standings-bento-table tbody tr.league-standings-bento-row-you td.league-standings-bento-rank {
+  border-left: 3px solid var(--league-standings-you-accent);
+  padding-left: 5px;
 }
 
 .player-detail-league-ownership-show-all-btn {

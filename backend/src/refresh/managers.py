@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
-from utils.points_calculator import PointsCalculator
+from utils.points_calculator import PointsCalculator, STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES
 
 logger = logging.getLogger(__name__)
 
@@ -889,22 +889,34 @@ class ManagerDataRefresher:
         # 5. Provisional bonus from DB (API total_points excludes bonus until ~1h after full-time)
         # When bonus_status='provisional' and bonus=0, add provisional_bonus so manager total matches display.
         stats_result = self.db_client.client.table("player_gameweek_stats").select(
-            "player_id, bonus_status, bonus, provisional_bonus"
+            "player_id, fixture_id, minutes, bonus_status, bonus, provisional_bonus"
         ).eq("gameweek", gameweek).in_("player_id", player_ids).execute()
         stats_rows = stats_result.data or []
+        max_mins_by_fid: Dict[int, int] = {}
+        for r in stats_rows:
+            fid = r.get("fixture_id")
+            if fid in (None, 0):
+                continue
+            m = int(r.get("minutes") or 0)
+            fi = int(fid)
+            if m > max_mins_by_fid.get(fi, 0):
+                max_mins_by_fid[fi] = m
+        thr = STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES
         provisional_extra: Dict[int, int] = {}
         for pid in player_ids:
             rows = [r for r in stats_rows if r.get("player_id") == pid]
             if not rows:
                 continue
-            any_provisional = any(
-                (r.get("bonus_status") or "").lower() == "provisional" and (r.get("bonus") or 0) == 0
-                for r in rows
-            )
-            if any_provisional:
-                provisional_extra[pid] = sum(int(r.get("provisional_bonus") or 0) for r in rows)
-            else:
-                provisional_extra[pid] = 0
+            s = 0
+            for r in rows:
+                if (r.get("bonus_status") or "").lower() != "provisional" or (r.get("bonus") or 0) != 0:
+                    continue
+                fid = r.get("fixture_id")
+                row_m = int(r.get("minutes") or 0)
+                mx = max_mins_by_fid.get(int(fid), row_m) if fid not in (None, 0) else row_m
+                if mx >= thr:
+                    s += int(r.get("provisional_bonus") or 0)
+            provisional_extra[pid] = s
 
         # Group picks by manager
         picks_by_manager: Dict[int, List[Dict]] = {}

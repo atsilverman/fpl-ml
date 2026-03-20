@@ -181,8 +181,8 @@
 }
 
 .header-subtitle {
-  height: 14px;
-  font-size: 10px;
+  height: 13px;
+  font-size: 9px;
   font-weight: 500;
   margin: 0;
   color: var(--text-secondary);
@@ -198,13 +198,13 @@
 .header-subtitle-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
   max-width: 100%;
 }
 
 .header-configure-note {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   margin: 0;
   color: var(--text-secondary);
@@ -216,8 +216,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   padding: 0;
   border: none;
   border-radius: 4px;

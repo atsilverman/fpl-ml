@@ -1854,12 +1854,13 @@ html[data-theme="dark"] .transfers-summary-column-count {
   border-bottom: none;
 }
 
-/* Manager ownership: full row subtle blue fill, bold name and values */
+/* Configured manager (you): bold row text + rank stripe only (no row fill) */
 .league-standings-bento-row-you {
   font-weight: 600;
 }
-.league-standings-bento-row-you td {
-  background: color-mix(in srgb, var(--accent-blue, #3b82f6) 6%, var(--bg-primary));
+.league-standings-bento-row-you td.league-standings-bento-rank {
+  border-left: 3px solid var(--league-standings-you-accent, var(--accent-yellow, #f59e0b));
+  padding-left: 7px;
 }
 .league-standings-bento-row-you .league-standings-bento-change-badge {
   font-weight: 500;
@@ -1938,8 +1939,8 @@ html[data-theme="dark"] .transfers-summary-column-count {
   border-radius: 4px;
   font-size: 10px;
   font-weight: 600;
-  color: #fff;
-  background: var(--accent-blue, #3b82f6);
+  color: var(--league-standings-you-badge-fg, #fff);
+  background: var(--league-standings-you-badge-bg, #b45309);
 }
 
 /* Vertical line separating manager/team name from stats (Total, GW) – same as other data tables */

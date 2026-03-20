@@ -8,6 +8,10 @@
 html {
   --motion-duration: 0.25s;
   --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Configured manager: left stripe + “You” pill only (no row fill — green GW/total tiers stay visible) */
+  --league-standings-you-accent: color-mix(in srgb, #fcd34d 22%, var(--accent-yellow, #f59e0b));
+  --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 68%, #000);
+  --league-standings-you-badge-fg: #ffffff;
 }
 
 /* Dark mode (default) */

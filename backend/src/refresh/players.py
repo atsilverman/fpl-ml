@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from database.supabase_client import SupabaseClient
 from fpl_api.client import FPLAPIClient
+from utils.points_calculator import STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,60 @@ class PlayerDataRefresher:
     ):
         self.fpl_client = fpl_client
         self.db_client = db_client
-    
+        # Per (gameweek, fixture_id): max player minutes seen last live pass — for feed bonus gating
+        self._feed_prev_fixture_max_minutes: Dict[Tuple[int, int], int] = {}
+
+    @staticmethod
+    def _fixture_max_minutes_from_entries(entries: List[Dict]) -> int:
+        if not entries:
+            return 0
+        return max(int(e.get("minutes") or 0) for e in entries)
+
+    def _feed_timeline_bonus_pair(
+        self,
+        gameweek: int,
+        fixture_id: Optional[int],
+        effective_old: int,
+        effective_new: int,
+        api_bonus_new: int,
+        api_bonus_old: int,
+        match_any_finished_new: bool,
+        match_any_finished_old: bool,
+        curr_max_mins: int,
+    ) -> Tuple[int, int]:
+        """
+        Bonus shown on Feed timeline: suppress provisional BPS-driven changes until max minutes
+        in the fixture >= threshold (same idea as home GW / standings). On first eligible tick,
+        old side is 0 unless DB values unchanged (avoids spurious catch-up after restarts).
+        """
+        thr = STANDINGS_PROVISIONAL_BONUS_MIN_FIXTURE_MINUTES
+        key = (gameweek, int(fixture_id or 0))
+        prev_max = self._feed_prev_fixture_max_minutes.get(key, 0)
+
+        def new_display(eff: int, api: int, mf: bool) -> int:
+            if mf or api > 0:
+                return int(eff)
+            if curr_max_mins < thr:
+                return 0
+            return int(eff)
+
+        new_b = new_display(effective_new, api_bonus_new, match_any_finished_new)
+
+        def old_display() -> int:
+            if match_any_finished_old or api_bonus_old > 0:
+                return int(effective_old)
+            if curr_max_mins < thr:
+                return 0
+            if prev_max < thr:
+                if int(effective_old) == int(effective_new):
+                    return new_b
+                return 0
+            return int(effective_old)
+
+        old_b = old_display()
+        self._feed_prev_fixture_max_minutes[key] = curr_max_mins
+        return old_b, new_b
+
     def _calculate_provisional_bonus(
         self,
         player_id: int,
@@ -984,10 +1038,29 @@ class PlayerDataRefresher:
                             if match_finished
                             else existing_stat.get("provisional_bonus", existing_stat.get("bonus", 0))
                         )
-                        existing_stat_for_feed = {**existing_stat, "bonus": effective_old_bonus}
+                        plist = fixture_players.get(fixture_id, []) if fixture_id else []
+                        curr_max_fm = self._fixture_max_minutes_from_entries(plist)
+                        if curr_max_fm == 0 and fixture_id:
+                            curr_max_fm = int(stats.get("minutes", 0) or 0)
+                        mf_new = bool(match_finished) or bool(match_finished_provisional)
+                        mf_old = bool(existing_stat.get("match_finished")) or bool(
+                            existing_stat.get("match_finished_provisional")
+                        )
+                        old_b, new_b = self._feed_timeline_bonus_pair(
+                            gameweek,
+                            fixture_id if fixture_id else None,
+                            int(effective_old_bonus),
+                            int(effective_new_bonus),
+                            int(bonus or 0),
+                            int(existing_stat.get("bonus") or 0),
+                            mf_new,
+                            mf_old,
+                            curr_max_fm,
+                        )
+                        existing_stat_for_feed = {**existing_stat, "bonus": old_b}
                         base_total = stats.get("total_points", 0)
-                        effective_total = base_total + (effective_new_bonus - bonus)
-                        stats_for_feed = {**stats, "bonus": effective_new_bonus, "total_points": effective_total}
+                        effective_total = int(base_total) + (new_b - int(bonus or 0))
+                        stats_for_feed = {**stats, "bonus": new_b, "total_points": effective_total}
                         events_for_player, reversals_for_player = self._feed_events_from_deltas(
                             existing_stat_for_feed,
                             stats_for_feed,

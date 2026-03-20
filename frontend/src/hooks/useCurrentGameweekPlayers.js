@@ -4,6 +4,11 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useRefreshState } from './useRefreshState'
 import { supabase } from '../lib/supabase'
 import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
+import {
+  fetchFixtureMaxMinutesByGameweek,
+  maxMinutesForFixture,
+  standingsProvisionalBonusToAdd
+} from '../utils/provisionalBonusStandings'
 
 const getStats = (playerId, statsByPlayer) => {
   const key = playerId != null ? Number(playerId) : playerId
@@ -227,6 +232,8 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           return tA - tB
         })
       })
+
+      const fixtureMaxMinutesById = await fetchFixtureMaxMinutesByGameweek(supabase, gameweek)
 
       // Fetch player info and team info
       const playerInfoResult = await supabase
@@ -471,8 +478,10 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
           const isBonusConfirmed = bonusStatus === 'confirmed'
-          const bonusToAdd = provisionalBonus || officialBonus
-          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + bonusToAdd
+          const fidRow = stats.fixture_id != null && stats.fixture_id !== 0 ? Number(stats.fixture_id) : null
+          const maxM = maxMinutesForFixture(fixtureMaxMinutesById, fidRow)
+          const provAdd = standingsProvisionalBonusToAdd(isBonusConfirmed, provisionalBonus, maxM)
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provAdd
           return sum + effectivePoints
         }, 0)
 
@@ -608,17 +617,17 @@ async function fetchCurrentGameweekPlayersForManager(MANAGER_ID, gameweek) {
           const opponentTeamId = stats.opponent_team_id || (effectiveFixture && teamId
             ? (effectiveFixture.home_team_id === teamId ? effectiveFixture.away_team_id : effectiveFixture.home_team_id)
             : null)
+          const effectiveFid = effectiveFixture?.fpl_fixture_id ?? (fid && fid !== 0 ? fid : null)
           const bonusStatus = stats.bonus_status ?? 'provisional'
           const provisionalBonus = Number(stats.provisional_bonus) || 0
           const officialBonus = Number(stats.bonus) ?? 0
           const isBonusConfirmed = bonusStatus === 'confirmed'
-          // When status is provisional, use only our BPS-based provisional_bonus (ignore bonus column until FPL confirms).
-          const bonusToAdd = isBonusConfirmed ? officialBonus : provisionalBonus
+          const maxM = maxMinutesForFixture(fixtureMaxMinutesById, effectiveFid)
+          const provAdd = standingsProvisionalBonusToAdd(isBonusConfirmed, provisionalBonus, maxM)
           const fixtureFinished = effectiveFixture != null && (effectiveFixture.finished === true || effectiveFixture.finished === 'true')
           const matchFinished = fixtureFinished || stats.match_finished === true || (allFixturesFinished && (stats.minutes ?? 0) > 0)
-          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + bonusToAdd
-          const effectiveBonus = (isBonusConfirmed || matchFinished) ? officialBonus : bonusToAdd
-          const effectiveFid = effectiveFixture?.fpl_fixture_id ?? (fid && fid !== 0 ? fid : null)
+          const effectivePoints = isBonusConfirmed ? (stats.total_points || 0) : (stats.total_points || 0) + provAdd
+          const effectiveBonus = isBonusConfirmed ? officialBonus : provAdd
           rows.push({
             position: pick.position,
             player_id: pick.player_id,
