@@ -11,6 +11,40 @@
   color: var(--text-primary);
 }
 
+/* Empty standings: compact banner (same visual language as home-page-deadline-banner) */
+.mini-league-page--standings-empty {
+  padding-top: 8px;
+}
+
+.mini-league-page-info-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+  padding: 8px 12px;
+  background: rgb(255 220 100 / 0.35);
+  border: 1px solid rgb(220 180 60 / 0.6);
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.mini-league-page-info-banner-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+
+.mini-league-page-info-banner-text {
+  flex: 1;
+  min-width: 0;
+  max-width: 42rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 /* Staggered row entrance: standings and captains table rows */
 @keyframes league-row-in {
   from {
@@ -1237,17 +1271,52 @@
 }
 
 .league-transfers-table .league-transfers-cell-manager-inner {
+  container-name: league-transfers-manager-cell;
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+  width: 100%;
+  min-width: 0;
 }
 
 .league-transfers-table .league-transfers-cell-manager-name-line {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  width: 100%;
+}
+
+.league-transfers-table .league-transfers-cell-manager-name-line > .league-standings-bento-team-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* You + chip badges: stay on one row with each other; whole group moves below name when column is tight */
+.league-transfers-table .league-transfers-cell-manager-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+/* Narrow manager column (~35% on mobile): stack name then badges so "You" never crowds the name */
+@container league-transfers-manager-cell (max-width: 260px) {
+  .league-transfers-table .league-transfers-cell-manager-name-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .league-transfers-table .league-transfers-cell-manager-name-line > .league-standings-bento-team-name {
+    max-width: 100%;
+    width: 100%;
+  }
 }
 
 .league-transfers-table .league-transfers-cell-manager-inner .league-standings-bento-team-name {

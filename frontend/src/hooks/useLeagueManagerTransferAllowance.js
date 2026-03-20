@@ -1,14 +1,13 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
+import { freeTransfersAtStartOfGameweek } from '../utils/freeTransfers'
 
 /**
- * Bulk transfer allowance inputs for all league managers:
- * - current GW: transfers_made + transfer_cost
- * - previous GW: transfers_made
- *
- * Remaining FT is derived client-side using the same logic as `useManagerDataForManager`
- * (FT carry depends on whether a free-transfers chip was used).
+ * Bulk transfer allowance for all league managers:
+ * - Fetches manager_gameweek_history up to current GW (transfers_made, transfer_cost, active_chip)
+ * - free transfers at start of current GW = season simulation with max bank 5 (FPL 2024/25+)
+ * - Remaining FT for the table = freeAtStart - freeTransfersUsedThisGameweek (see MiniLeaguePage)
  */
 export function useLeagueManagerTransferAllowance(leagueManagerIds, gameweek, enabled = true) {
   const ids = useMemo(() => {
@@ -16,47 +15,49 @@ export function useLeagueManagerTransferAllowance(leagueManagerIds, gameweek, en
     return arr.map((id) => Number(id)).filter((id) => Number.isFinite(id))
   }, [leagueManagerIds])
 
-  const prevGameweek = gameweek != null ? gameweek - 1 : null
-
   const { data, isLoading } = useQuery({
     queryKey: ['league-transfer-allowance', ids, gameweek],
     queryFn: async () => {
-      if (!enabled) return { transfersMadeByManager: {}, transferCostByManager: {}, prevTransfersMadeByManager: {} }
-      if (!gameweek || ids.length === 0) return { transfersMadeByManager: {}, transferCostByManager: {}, prevTransfersMadeByManager: {} }
+      if (!enabled)
+        return { transfersMadeByManager: {}, transferCostByManager: {}, freeAtStartByManager: {} }
+      if (!gameweek || ids.length === 0)
+        return { transfersMadeByManager: {}, transferCostByManager: {}, freeAtStartByManager: {} }
 
-      const [currRes, prevRes] = await Promise.all([
-        supabase
-          .from('mv_manager_gameweek_summary')
-          .select('manager_id, transfers_made, transfer_cost')
-          .eq('gameweek', gameweek)
-          .in('manager_id', ids),
-        supabase
-          .from('mv_manager_gameweek_summary')
-          .select('manager_id, transfers_made')
-          .eq('gameweek', prevGameweek)
-          .in('manager_id', ids),
-      ])
+      const res = await supabase
+        .from('manager_gameweek_history')
+        .select('manager_id, gameweek, transfers_made, transfer_cost, active_chip')
+        .in('manager_id', ids)
+        .lte('gameweek', gameweek)
 
-      if (currRes.error) throw currRes.error
-      if (prevRes.error) throw prevRes.error
+      if (res.error) throw res.error
 
       const transfersMadeByManager = {}
       const transferCostByManager = {}
-      ;(currRes.data || []).forEach((row) => {
-        const mid = row.manager_id != null ? Number(row.manager_id) : null
-        if (mid == null) return
-        transfersMadeByManager[mid] = row.transfers_made ?? 0
-        transferCostByManager[mid] = row.transfer_cost ?? 0
-      })
+      const rowsByManager = new Map()
 
-      const prevTransfersMadeByManager = {}
-      ;(prevRes.data || []).forEach((row) => {
+      for (const row of res.data || []) {
         const mid = row.manager_id != null ? Number(row.manager_id) : null
-        if (mid == null) return
-        prevTransfersMadeByManager[mid] = row.transfers_made ?? 0
-      })
+        if (mid == null) continue
+        const gw = row.gameweek != null ? Number(row.gameweek) : null
+        if (!Number.isFinite(gw)) continue
 
-      return { transfersMadeByManager, transferCostByManager, prevTransfersMadeByManager }
+        if (!rowsByManager.has(mid)) rowsByManager.set(mid, [])
+        rowsByManager.get(mid).push(row)
+
+        if (gw === gameweek) {
+          transfersMadeByManager[mid] = row.transfers_made ?? 0
+          transferCostByManager[mid] = row.transfer_cost ?? 0
+        }
+      }
+
+      const freeAtStartByManager = {}
+      for (const mid of ids) {
+        const rows = rowsByManager.get(mid) || []
+        const priorRows = rows.filter((r) => Number(r.gameweek) < gameweek)
+        freeAtStartByManager[mid] = freeTransfersAtStartOfGameweek(gameweek, priorRows)
+      }
+
+      return { transfersMadeByManager, transferCostByManager, freeAtStartByManager }
     },
     enabled: enabled && ids.length > 0 && gameweek != null,
     staleTime: 30000,
@@ -65,8 +66,7 @@ export function useLeagueManagerTransferAllowance(leagueManagerIds, gameweek, en
   return {
     transfersMadeByManager: data?.transfersMadeByManager ?? {},
     transferCostByManager: data?.transferCostByManager ?? {},
-    prevTransfersMadeByManager: data?.prevTransfersMadeByManager ?? {},
+    freeAtStartByManager: data?.freeAtStartByManager ?? {},
     loading: isLoading,
   }
 }
-

@@ -27,6 +27,7 @@ import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
 import { useSubpageSwipe } from '../hooks/useSubpageSwipe'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { formatNumberWithCommas } from '../utils/formatNumbers'
+import { remainingFreeTransfersAfterMoves } from '../utils/freeTransfers'
 import './MiniLeaguePage.css'
 import './BentoCard.css'
 import './GameweekPointsView.css'
@@ -153,7 +154,7 @@ export default function MiniLeaguePage() {
   const {
     transfersMadeByManager,
     transferCostByManager,
-    prevTransfersMadeByManager,
+    freeAtStartByManager,
     loading: transferAllowanceLoading,
   } = useLeagueManagerTransferAllowance(leagueManagerIds, gameweek, showTransfersView)
 
@@ -492,16 +493,12 @@ export default function MiniLeaguePage() {
 
   if (!standingsLoading && standings.length === 0) {
     return (
-      <div className="mini-league-page">
-        <div className="empty-state">
-          <p>No standings data available for this league.</p>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            This usually means either:
-          </p>
-          <ul style={{ fontSize: '14px', color: 'var(--text-secondary)', marginTop: '6px', paddingLeft: '20px', textAlign: 'left' }}>
-            <li><strong>League not loaded</strong> — Add this league in Settings/Onboarding or run the backend <code style={{ fontSize: '12px' }}>load_leagues</code> script so the league and its managers are in the database.</li>
-            <li><strong>No data for the current gameweek yet</strong> — Standings for a new gameweek appear after the post-deadline refresh runs (picks, history, then materialized views). Check the Debug panel: if the latest &quot;Deadline batch&quot; for the current GW failed or never ran, fix that and re-run the batch or wait for the next cycle.</li>
-          </ul>
+      <div className="mini-league-page mini-league-page--standings-empty">
+        <div className="mini-league-page-info-banner" aria-live="polite">
+          <Info className="mini-league-page-info-banner-icon" size={18} aria-hidden />
+          <span className="mini-league-page-info-banner-text">
+            No standings for this league yet. If you just added it, finish setup in Settings; otherwise check back after the gameweek refresh.
+          </span>
         </div>
       </div>
     )
@@ -1235,24 +1232,23 @@ export default function MiniLeaguePage() {
 
                     const transfersMade = transfersMadeByManager[mid] ?? 0
                     const transferCost = transferCostByManager[mid] ?? 0
-                    // If we don't have previous GW data, mimic `useManagerDataForManager` behavior:
-                    // `prevHistory?.transfers_made === 0` => false => carry only 1 FT.
-                    const prevTransfersMade = prevTransfersMadeByManager[mid]
+                    const freeAtStart = freeAtStartByManager[mid] ?? 1
                     const chipFromActiveChip = transferViewChip === 'freehit' || transferViewChip === 'wildcard'
                     const chipFromZeroCost = transfersMade > 2 && transferCost === 0
                     const isChipFreeTransfers = chipFromActiveChip || chipFromZeroCost
-                    const freeTransfersAvailable = isChipFreeTransfers
-                      ? transfersMade
-                      : gameweek === 1
-                        ? 1
-                        : (prevTransfersMade === 0 ? 2 : 1)
-                    const remainingFreeTransfers = Math.max(0, freeTransfersAvailable - transfersMade)
+                    const remainingFreeTransfers = isChipFreeTransfers
+                      ? 0
+                      : remainingFreeTransfersAfterMoves(freeAtStart, transfersMade, transferCost)
 
                     const showRemainingDash = transferViewChip === 'freehit' || transferViewChip === 'wildcard'
                     const hasNoRemaining = !showRemainingDash && remainingFreeTransfers === 0
 
                     const hasSingleOrNoTransfers = transfers.length <= 1
                     const hasNoTransfers = transfers.length === 0
+                    const showTransferViewChipBadge = Boolean(
+                      transferViewChipLabel && (transferViewChip === 'freehit' || transferViewChip === 'wildcard')
+                    )
+                    const showManagerTrailingBadges = isCurrentUser || showTransferViewChipBadge
                     const didntMakeSelectedTransfer = selectedTopTransfer != null && (() => {
                       const selName = (selectedTopTransfer.playerName ?? '').trim().toLowerCase()
                       const hasMatch = transfers.some((t) => {
@@ -1281,14 +1277,20 @@ export default function MiniLeaguePage() {
                           <div className="league-transfers-cell-manager-inner">
                             <span className="league-transfers-cell-manager-name-line">
                               <span className="league-standings-bento-team-name">{abbreviateName(displayName, MANAGER_TEAM_NAME_MAX_LENGTH_TRANSFERS_VIEW)}</span>
-                              {isCurrentUser && <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>}
-                              {transferViewChipLabel && (transferViewChip === 'freehit' || transferViewChip === 'wildcard') && (
-                                <span
-                                  className="league-standings-bento-chip-badge"
-                                  style={{ backgroundColor: transferViewChipColor }}
-                                  title={transferViewChip && gameweek != null ? `${transferViewChip} (GW ${gameweek})` : transferViewChip}
-                                >
-                                  {transferViewChipLabel}
+                              {showManagerTrailingBadges && (
+                                <span className="league-transfers-cell-manager-badges">
+                                  {isCurrentUser && (
+                                    <span className="league-standings-bento-you-badge" title="Configured owner (you)">You</span>
+                                  )}
+                                  {showTransferViewChipBadge && (
+                                    <span
+                                      className="league-standings-bento-chip-badge"
+                                      style={{ backgroundColor: transferViewChipColor }}
+                                      title={transferViewChip && gameweek != null ? `${transferViewChip} (GW ${gameweek})` : transferViewChip}
+                                    >
+                                      {transferViewChipLabel}
+                                    </span>
+                                  )}
                                 </span>
                               )}
                             </span>

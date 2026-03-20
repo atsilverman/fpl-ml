@@ -4,6 +4,7 @@ import { useConfiguration } from '../contexts/ConfigurationContext'
 import { useGameweekData } from './useGameweekData'
 import { useRefreshState } from './useRefreshState'
 import { logRefreshFetchDuration } from '../utils/logRefreshFetchDuration'
+import { freeTransfersAtStartOfGameweek } from '../utils/freeTransfers'
 
 export function useManagerData() {
   const { config } = useConfiguration()
@@ -20,23 +21,15 @@ export function useManagerData() {
       if (!MANAGER_ID || !gameweek) return null
       const start = performance.now()
 
-      // OPTIMIZATION: Run queries in parallel instead of sequentially
       const queries = [
         supabase
           .from('manager_gameweek_history')
           .select('*')
           .eq('manager_id', MANAGER_ID)
-          .eq('gameweek', gameweek)
-          .single(),
-        supabase
-          .from('manager_gameweek_history')
-          .select('overall_rank, total_points, transfers_made')
-          .eq('manager_id', MANAGER_ID)
-          .eq('gameweek', gameweek - 1)
-          .single(),
+          .lte('gameweek', gameweek)
+          .order('gameweek', { ascending: true }),
       ]
 
-      // If we have a league ID, also fetch league-specific rank from materialized view
       if (LEAGUE_ID) {
         queries.push(
           supabase
@@ -51,10 +44,13 @@ export function useManagerData() {
 
       const results = await Promise.all(queries)
 
-      const history = results[0].data
-      const historyError = results[0].error
-      const prevHistory = results[1].data
-      const leagueStanding = LEAGUE_ID ? results[2]?.data : null
+      const histBundle = results[0]
+      const historyError = histBundle.error
+      const allRows = histBundle.data || []
+      const history = allRows.find((r) => Number(r.gameweek) === gameweek) ?? null
+      const prevHistory = allRows.find((r) => Number(r.gameweek) === gameweek - 1) ?? null
+      const priorRows = allRows.filter((r) => Number(r.gameweek) < gameweek)
+      const leagueStanding = LEAGUE_ID ? results[1]?.data : null
 
       if (historyError && historyError.code !== 'PGRST116') {
         throw historyError
@@ -71,17 +67,14 @@ export function useManagerData() {
         leagueRankChange = (prevHistory.mini_league_rank || 0) - (history.mini_league_rank || 0)
       }
 
-      // Free transfers at start of GW: GW1 → 1; else 2 if prev GW used 0, else 1.
-      // When Wildcard or Free Hit was played, all transfers that GW are free → show "X of X".
-      // Fallback: if active_chip is missing but they made 3+ transfers with 0 cost, they used a chip.
+      // Free transfers at start of GW: simulate season with max bank 5 (FPL 2024/25+).
+      // Wildcard / Free Hit: show "X of X". Fallback: 3+ transfers, 0 cost → chip.
       const chipFromActiveChip = history?.active_chip === 'wildcard' || history?.active_chip === 'freehit'
       const chipFromZeroCost = (history?.transfers_made ?? 0) > 2 && (history?.transfer_cost ?? 0) === 0
       const isChipFreeTransfers = chipFromActiveChip || chipFromZeroCost
       const freeTransfersAvailable = isChipFreeTransfers
         ? (history?.transfers_made ?? 0)
-        : gameweek === 1
-          ? 1
-          : (prevHistory?.transfers_made === 0 ? 2 : 1)
+        : freeTransfersAtStartOfGameweek(gameweek, priorRows)
 
       // Rank change: use backend value (rank before GW kickoff − current rank); don't recompute from prev GW row (that can change after deadline)
       const overallRankChange = history?.overall_rank_change ?? 0
@@ -131,19 +124,13 @@ export function useManagerDataForManager(managerId) {
     queryFn: async () => {
       if (!managerId || !gameweek) return null
 
-      const [currRes, prevRes, managerRes] = await Promise.all([
+      const [histRes, managerRes] = await Promise.all([
         supabase
           .from('manager_gameweek_history')
-          .select('transfers_made, transfer_cost, active_chip, gameweek_points, total_points')
+          .select('gameweek, transfers_made, transfer_cost, active_chip, gameweek_points, total_points')
           .eq('manager_id', managerId)
-          .eq('gameweek', gameweek)
-          .single(),
-        supabase
-          .from('manager_gameweek_history')
-          .select('transfers_made')
-          .eq('manager_id', managerId)
-          .eq('gameweek', gameweek - 1)
-          .single(),
+          .lte('gameweek', gameweek)
+          .order('gameweek', { ascending: true }),
         supabase
           .from('managers')
           .select('manager_name, manager_team_name')
@@ -151,9 +138,10 @@ export function useManagerDataForManager(managerId) {
           .single(),
       ])
 
-      const history = currRes.data
-      const historyError = currRes.error
-      const prevHistory = prevRes.data
+      const historyError = histRes.error
+      const rows = histRes.data || []
+      const history = rows.find((r) => Number(r.gameweek) === gameweek) ?? null
+      const priorRows = rows.filter((r) => Number(r.gameweek) < gameweek)
       const managerRow = managerRes?.data
 
       if (historyError && historyError.code !== 'PGRST116') throw historyError
@@ -163,9 +151,7 @@ export function useManagerDataForManager(managerId) {
       const isChipFreeTransfers = chipFromActiveChip || chipFromZeroCost
       const freeTransfersAvailable = isChipFreeTransfers
         ? (history?.transfers_made ?? 0)
-        : gameweek === 1
-          ? 1
-          : (prevHistory?.transfers_made === 0 ? 2 : 1)
+        : freeTransfersAtStartOfGameweek(gameweek, priorRows)
 
       return {
         transfersMade: history?.transfers_made ?? 0,

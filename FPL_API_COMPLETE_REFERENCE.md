@@ -1848,17 +1848,15 @@ function calculateRawGameweekPoints(
 
 **Official FPL Free Transfer Rules:**
 1. **Free Transfers**: Managers receive **1 free transfer per gameweek**
-2. **Accumulation**: Free transfers can accumulate up to a **maximum of 2 free transfers**
+2. **Accumulation**: Free transfers can accumulate up to a **maximum of 5 free transfers** (raised from 2 in 2024/25)
 3. **Transfer Costs (Hits)**: Each transfer beyond free transfers costs **-4 points**
-4. **Chips**: Wildcard and Free Hit chips allow unlimited free transfers (no hits)
+4. **Chips**: Wildcard and Free Hit chips allow unlimited free transfers (no hits); the following gameweek typically resets the bank to 1
 
-**Transfer Cost Calculation:**
+**Transfer Cost Calculation** (illustrative; actual `free_transfers_available` at GW start comes from FPL / our season simulation):
 - 0 transfers = 0 cost (0 free transfers used)
 - 1 transfer = 0 cost (1 free transfer used)
-- 2 transfers = 0 cost (2 free transfers used, if available)
-- 3 transfers = -4 cost (2 free + 1 hit)
-- 4 transfers = -8 cost (2 free + 2 hits)
-- 5 transfers = -12 cost (2 free + 3 hits)
+- Up to 5 free transfers can be available at once after banking
+- 3 transfers = -4 cost when only 2 free were available (2 free + 1 hit)
 - etc.
 
 **Formula:**
