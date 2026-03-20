@@ -513,6 +513,41 @@ class PlayerDataRefresher:
         }
         return players_missing | players_provisional_in_finished
 
+    def _player_ids_in_started_unfinished_fixtures(
+        self,
+        player_ids: Set[int],
+        players_map: Dict[int, Any],
+        fixtures_by_id: Dict[int, Dict],
+    ) -> Set[int]:
+        """
+        Players whose team is in a fixture that has started but is not fully finished.
+        Includes second half, HT, and finished_provisional (FT, bonus TBC) so element-summary
+        refresh + bps_snapshots keep updating when /live is unavailable.
+        """
+        if not player_ids or not fixtures_by_id:
+            return set()
+        open_fixture_ids = {
+            fid
+            for fid, f in fixtures_by_id.items()
+            if f.get("started") and not f.get("finished")
+        }
+        if not open_fixture_ids:
+            return set()
+        out: Set[int] = set()
+        for pid in player_ids:
+            elem = players_map.get(pid) or {}
+            team_id = elem.get("team", 0) if isinstance(elem, dict) else 0
+            if not team_id:
+                continue
+            for fid in open_fixture_ids:
+                fx = fixtures_by_id.get(fid)
+                if not fx:
+                    continue
+                if fx.get("team_h") == team_id or fx.get("team_a") == team_id:
+                    out.add(pid)
+                    break
+        return out
+
     async def refresh_player_gameweek_stats(
         self,
         gameweek: int,
@@ -1100,10 +1135,14 @@ class PlayerDataRefresher:
             else:
                 logger.warning("Live data unavailable, using element-summary", extra={"gameweek": gameweek})
             
-            # Delta: only fetch element-summary for players who need refresh (missing stats or provisional in finished fixture)
+            # Delta: fetch element-summary for players who need refresh, plus anyone in a
+            # started-but-unfinished fixture so bps_snapshots keep appending for the BPS line graph.
             if use_delta:
                 ids_to_fetch = self._player_ids_needing_refresh(
                     gameweek, active_player_ids, fixtures_by_id
+                )
+                ids_to_fetch |= self._player_ids_in_started_unfinished_fixtures(
+                    active_player_ids, players_map, fixtures_by_id
                 )
                 if not ids_to_fetch:
                     logger.info(
