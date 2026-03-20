@@ -1,4 +1,38 @@
 /* BPS over time line chart – Bonus subpage (when Line graph selected) */
+.bps-over-time-chart-root {
+  width: 100%;
+}
+
+/* Same amber “info” language as home-page-deadline-banner / mini-league info */
+.bps-over-time-chart-construction-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  padding: 7px 10px;
+  background: rgb(255 220 100 / 0.35);
+  border: 1px solid rgb(220 180 60 / 0.6);
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.bps-over-time-chart-construction-banner-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--text-secondary);
+}
+
+.bps-over-time-chart-construction-banner-text {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+}
+
 .bps-over-time-chart {
   width: 100%;
   min-height: 320px;

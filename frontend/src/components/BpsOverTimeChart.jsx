@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as d3 from 'd3'
+import { Construction } from 'lucide-react'
 import { useBpsSnapshots } from '../hooks/useBpsSnapshots'
 import './BpsOverTimeChart.css'
+
+function BpsProgressConstructionBanner() {
+  return (
+    <div className="bps-over-time-chart-construction-banner" role="status" aria-live="polite">
+      <Construction className="bps-over-time-chart-construction-banner-icon" size={15} strokeWidth={2} aria-hidden />
+      <span className="bps-over-time-chart-construction-banner-text">
+        Under construction — BPS progress and match-minute timing are still being refined.
+      </span>
+    </div>
+  )
+}
 
 /** Stroke color by bonus – only top 3 (3/2/1) get color; rest muted. */
 const BONUS_COLORS = {
@@ -494,47 +506,56 @@ export default function BpsOverTimeChart({
 
   if (loading) {
     return (
-      <div className="bps-over-time-chart bps-over-time-chart--loading">
-        <div className="bps-over-time-chart__skeleton" />
+      <div className="bps-over-time-chart-root">
+        <BpsProgressConstructionBanner />
+        <div className="bps-over-time-chart bps-over-time-chart--loading">
+          <div className="bps-over-time-chart__skeleton" />
+        </div>
       </div>
     )
   }
 
   if (!chartData.length || !playerKeys.length) {
     return (
-      <div className="bps-over-time-chart bps-over-time-chart--empty">
-        <p className="bps-over-time-chart__empty-message">
-          No BPS history for this fixture ({snapshots.length} snapshots). It’s recorded during live matches when the backend is running.
-        </p>
+      <div className="bps-over-time-chart-root">
+        <BpsProgressConstructionBanner />
+        <div className="bps-over-time-chart bps-over-time-chart--empty">
+          <p className="bps-over-time-chart__empty-message">
+            No BPS history for this fixture ({snapshots.length} snapshots). It’s recorded during live matches when the backend is running.
+          </p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="bps-over-time-chart" ref={containerRef} style={{ height: CHART_HEIGHT }}>
-      <svg
-        ref={svgRef}
-        width={dimensions?.width ?? '100%'}
-        height={CHART_HEIGHT}
-        className="bps-over-time-chart__svg"
-      />
-      <div className="bps-over-time-chart-legend" aria-hidden>
-        {sortPlayerIdsByBonusDesc(
-          playerKeys.filter((pid) => isBonusByKey[pid]),
-          bonusValueByKey,
-          playerNamesByKey
-        ).map((pid) => (
-          <div key={pid} className="bps-over-time-chart-legend-item">
-            <span
-              className="bps-over-time-chart-legend-swatch"
-              style={{ background: strokeByKey[pid], height: 3 }}
-            />
-            <span className="bps-over-time-chart-legend-label">
-              {playerNamesByKey[pid] ?? pid}
-              {bonusValueByKey[pid] != null ? ` +${bonusValueByKey[pid]}` : ''}
-            </span>
-          </div>
-        ))}
+    <div className="bps-over-time-chart-root">
+      <BpsProgressConstructionBanner />
+      <div className="bps-over-time-chart" ref={containerRef} style={{ height: CHART_HEIGHT }}>
+        <svg
+          ref={svgRef}
+          width={dimensions?.width ?? '100%'}
+          height={CHART_HEIGHT}
+          className="bps-over-time-chart__svg"
+        />
+        <div className="bps-over-time-chart-legend" aria-hidden>
+          {sortPlayerIdsByBonusDesc(
+            playerKeys.filter((pid) => isBonusByKey[pid]),
+            bonusValueByKey,
+            playerNamesByKey
+          ).map((pid) => (
+            <div key={pid} className="bps-over-time-chart-legend-item">
+              <span
+                className="bps-over-time-chart-legend-swatch"
+                style={{ background: strokeByKey[pid], height: 3 }}
+              />
+              <span className="bps-over-time-chart-legend-label">
+                {playerNamesByKey[pid] ?? pid}
+                {bonusValueByKey[pid] != null ? ` +${bonusValueByKey[pid]}` : ''}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
