@@ -4,9 +4,10 @@ import { supabase } from '../lib/supabase'
 /**
  * BPS snapshots for a fixture (chronological per refresh).
  * Used by Bonus subpage line graph: BPS over time, one line per player.
- * When isLive, refetches more often so new snapshots appear quickly.
+ * When pollFrequently is true (match live or finished-provisional / bonus TBC), refetch often so
+ * new backend snapshots appear — aligns with useFixturePlayerStats (live_matches + bonus_pending).
  */
-export function useBpsSnapshots(fixtureId, gameweek, enabled = true, isLive = false) {
+export function useBpsSnapshots(fixtureId, gameweek, enabled = true, pollFrequently = false) {
   const { data, isLoading, error } = useQuery({
     queryKey: ['bps-snapshots', fixtureId, gameweek],
     queryFn: async () => {
@@ -23,8 +24,9 @@ export function useBpsSnapshots(fixtureId, gameweek, enabled = true, isLive = fa
       return rows ?? []
     },
     enabled: !!fixtureId && !!gameweek && enabled,
-    staleTime: isLive ? 10000 : 30000,
-    refetchInterval: isLive ? 15000 : false,
+    staleTime: pollFrequently ? 10000 : 30000,
+    refetchInterval: pollFrequently ? 15000 : false,
+    refetchIntervalInBackground: pollFrequently,
   })
   return { data: data ?? [], loading: isLoading, error }
 }

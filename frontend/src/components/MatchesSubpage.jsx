@@ -14,7 +14,7 @@ import { formatNumberWithCommas } from '../utils/formatNumbers'
 import BpsLeadersChart from './BpsLeadersChart'
 import BpsOverTimeChart from './BpsOverTimeChart'
 import { CardStatLabel } from './CardStatLabel'
-import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp, ChartBarDecreasing, ChartLine, Construction } from 'lucide-react'
+import { MoveDiagonal, Minimize2, ChevronDown, ChevronUp, ChartBarDecreasing, ChartLine } from 'lucide-react'
 import { useLastH2H, pairKey } from '../hooks/useLastH2H'
 import { useLastH2HPlayerStats } from '../hooks/useLastH2HPlayerStats'
 import { useAxisLockedScroll } from '../hooks/useAxisLockedScroll'
@@ -69,6 +69,63 @@ function formatKickoffLocal(isoString) {
   } catch {
     return null
   }
+}
+
+/** Local calendar date key for grouping (YYYY-MM-DD). */
+function localDateKey(isoString) {
+  if (!isoString) return 'unknown'
+  const d = new Date(isoString)
+  if (Number.isNaN(d.getTime())) return 'unknown'
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Label for date divider row, e.g. "Fri, Mar 21". */
+function formatDateDividerLabel(dateKey) {
+  if (dateKey === 'unknown') return 'TBD'
+  const [ys, ms, ds] = dateKey.split('-')
+  const y = Number(ys)
+  const mo = Number(ms)
+  const day = Number(ds)
+  if (!y || !mo || !day) return 'TBD'
+  const dt = new Date(y, mo - 1, day)
+  return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+/**
+ * Rows for the matchup grid: optional Live section, then date dividers + fixtures per local day.
+ */
+function buildMatchupGridRows(fixtures, dataChecked) {
+  if (!fixtures?.length) return []
+  const live = []
+  const nonLive = []
+  for (const f of fixtures) {
+    if (getFixtureStatus(f, dataChecked) === 'live') live.push(f)
+    else nonLive.push(f)
+  }
+  const rows = []
+  if (live.length) {
+    rows.push({ type: 'section-live', key: 'section-live' })
+    for (const f of live) rows.push({ type: 'fixture', key: `f-${f.fpl_fixture_id}`, fixture: f })
+  }
+  const byDate = new Map()
+  for (const f of nonLive) {
+    const dk = localDateKey(f.kickoff_time)
+    if (!byDate.has(dk)) byDate.set(dk, [])
+    byDate.get(dk).push(f)
+  }
+  const dateKeys = [...byDate.keys()].filter((k) => k !== 'unknown').sort()
+  const unknownBucket = byDate.get('unknown')
+  if (unknownBucket?.length) dateKeys.push('unknown')
+  for (const dk of dateKeys) {
+    const list = byDate.get(dk) ?? []
+    if (!list.length) continue
+    rows.push({ type: 'date-divider', key: `d-${dk}`, dateKey: dk, label: formatDateDividerLabel(dk) })
+    for (const f of list) rows.push({ type: 'fixture', key: `f-${f.fpl_fixture_id}`, fixture: f })
+  }
+  return rows
 }
 
 /** Stat columns that get top-10-in-GW green fill (same set as GameweekPointsView). Bonus (B) excluded – green pill is only for raw stats; BPS = top 10 BPS across all players in the gameweek. */
@@ -751,9 +808,24 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
     return sortedFixtures
   }, [sortedFixtures, showH2H, dataChecked])
 
-  const firstScheduledIndex = useMemo(() => {
-    return sortedFixtures.findIndex(f => getFixtureStatus(f, dataChecked) === 'scheduled')
-  }, [sortedFixtures, dataChecked])
+  const matchupGridRows = useMemo(
+    () => buildMatchupGridRows(displayedFixtures, dataChecked ?? false),
+    [displayedFixtures, dataChecked]
+  )
+
+  const matchupGridRowsWithAnim = useMemo(() => {
+    let fixtureIdx = 0
+    return matchupGridRows.map((r) =>
+      r.type === 'fixture' ? { ...r, fixtureAnimIndex: fixtureIdx++ } : r
+    )
+  }, [matchupGridRows])
+
+  /** Scroll target when opening H2H: first scheduled card (matches-only list uses same first scheduled). */
+  const scrollTargetFixtureId = useMemo(() => {
+    if (showH2H) return displayedFixtures[0]?.fpl_fixture_id ?? null
+    const f = sortedFixtures.find((x) => getFixtureStatus(x, dataChecked) === 'scheduled')
+    return f?.fpl_fixture_id ?? null
+  }, [showH2H, displayedFixtures, sortedFixtures, dataChecked])
 
   useEffect(() => {
     setExpandedId(null)
@@ -779,7 +851,7 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
     const ro = new ResizeObserver(readColumns)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [displayedFixtures.length, animationKey])
+  }, [matchupGridRows.length, animationKey])
 
   if (gwLoading || !gameweek) {
     return (
@@ -838,12 +910,6 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 <span className="subpage-view-toggle-label">BPS Progress</span>
               </button>
             </nav>
-            {bonusChartMode === 'line' && (
-              <div className="bps-progress-under-construction" role="status">
-                <Construction size={14} strokeWidth={2} className="bps-progress-under-construction-icon" aria-hidden />
-                <span>Under construction</span>
-              </div>
-            )}
           </div>
           )}
           {!toggleBonus && (
@@ -928,14 +994,29 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
           )}
           <div ref={matchesScrollRef} className="matches-scroll-wrap">
             <div key={animationKey} ref={matchupGridRef} className="matchup-grid">
-          {displayedFixtures.map((f, index) => {
-            const rowDelayMs = index * 75
-            return (
+          {matchupGridRowsWithAnim.map((row) => {
+              if (row.type === 'section-live') {
+                return (
+                  <div key={row.key} className="matchup-grid-divider matchup-grid-divider--live" role="presentation">
+                    <span className="matchup-grid-divider-label">Live</span>
+                  </div>
+                )
+              }
+              if (row.type === 'date-divider') {
+                return (
+                  <div key={row.key} className="matchup-grid-divider matchup-grid-divider--date" role="presentation">
+                    <span className="matchup-grid-divider-label">{row.label}</span>
+                  </div>
+                )
+              }
+              const f = row.fixture
+              const rowDelayMs = row.fixtureAnimIndex * 75
+              return (
             <div
               key={f.fpl_fixture_id}
               className={`matchup-grid-item matchup-grid-item-animate${expandedId === f.fpl_fixture_id ? ' matchup-grid-item--expanded' : ''}`}
               style={{ '--matchup-row-delay': `${rowDelayMs}ms` }}
-              ref={(showH2H ? index === 0 : index === firstScheduledIndex) ? firstScheduledRef : null}
+              ref={scrollTargetFixtureId != null && f.fpl_fixture_id === scrollTargetFixtureId ? firstScheduledRef : null}
             >
               <MatchBento
                 fixture={f}
@@ -958,8 +1039,8 @@ export default function MatchesSubpage({ simulateStatuses = false, toggleBonus =
                 preloadedFixtureStats={playerStatsByFixture?.[Number(f.fpl_fixture_id)] ?? playerStatsByFixture?.[f.fpl_fixture_id]}
               />
             </div>
-            )
-          })}
+              )
+            })}
             </div>
           </div>
         </>

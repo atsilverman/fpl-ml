@@ -36,19 +36,23 @@ function minuteFromKickoff(kickoffIso, recordedIso) {
  * Data from bps_snapshots. X-axis is match minute (0'–current max), extending as data arrives.
  */
 export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], enabled = true, kickoffTime = null, fixtureStatus = null }) {
-  const { data: snapshots, loading } = useBpsSnapshots(fixtureId, gameweek, enabled, fixtureStatus === 'live')
+  // Poll snapshots while BPS can still change (in play or provisional / bonus not confirmed).
+  const pollSnapshots =
+    fixtureStatus === 'live' || fixtureStatus === 'provisional'
+  const { data: snapshots, loading } = useBpsSnapshots(fixtureId, gameweek, enabled, pollSnapshots)
   const svgRef = useRef(null)
   const containerRef = useRef(null)
   const [dimensions, setDimensions] = useState(null)
   const [liveTick, setLiveTick] = useState(0)
-  const isLive = fixtureStatus === 'live'
+  // X-axis wall-clock extension only while the match is in progress (not after provisional).
+  const isLiveForAxis = fixtureStatus === 'live'
 
   // When live, re-render periodically so x-axis can extend to current match minute
   useEffect(() => {
-    if (!isLive || !kickoffTime) return
+    if (!isLiveForAxis || !kickoffTime) return
     const interval = setInterval(() => setLiveTick((n) => n + 1), 30000)
     return () => clearInterval(interval)
-  }, [isLive, kickoffTime])
+  }, [isLiveForAxis, kickoffTime])
 
   const { chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, bonusValueByKey, maxMinute, minBps, maxBps } = useMemo(() => {
     if (!snapshots?.length) {
@@ -111,7 +115,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       return point
     })
     const lastDataMinute = chartData.length ? Math.max(...chartData.map((d) => d.minute)) : 0
-    const elapsedMinute = (kickoffTime && isLive) ? minuteFromKickoff(kickoffTime, new Date().toISOString()) : lastDataMinute
+    const elapsedMinute = (kickoffTime && isLiveForAxis) ? minuteFromKickoff(kickoffTime, new Date().toISOString()) : lastDataMinute
     const maxMinute = Math.min(90, Math.max(lastDataMinute, elapsedMinute, 1))
 
     const seriesByPlayer = {}
@@ -136,7 +140,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       minBps,
       maxBps,
     }
-  }, [snapshots, players, kickoffTime, isLive, liveTick])
+  }, [snapshots, players, kickoffTime, isLiveForAxis, liveTick])
 
   // Cleanup tooltip on unmount
   useEffect(() => {

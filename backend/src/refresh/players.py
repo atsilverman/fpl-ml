@@ -1245,6 +1245,32 @@ class PlayerDataRefresher:
                                 plist,
                             )
                         self.db_client.upsert_player_gameweek_stats(to_update)
+                        # Line graph: one full-fixture snapshot after rank-based provisional_bonus changes
+                        # (partial batch_stats snapshots would omit unchanged players).
+                        try:
+                            fids_touch = list(
+                                {int(r["fixture_id"]) for r in to_update if r.get("fixture_id")}
+                            )
+                            if fids_touch:
+                                occurred_pb = datetime.now(timezone.utc).isoformat()
+                                full_rows = (
+                                    self.db_client.client.table("player_gameweek_stats")
+                                    .select(
+                                        "gameweek, fixture_id, player_id, bps, bonus, provisional_bonus"
+                                    )
+                                    .eq("gameweek", gameweek)
+                                    .in_("fixture_id", fids_touch)
+                                    .execute()
+                                    .data
+                                    or []
+                                )
+                                if full_rows:
+                                    self.db_client.insert_bps_snapshots(full_rows, occurred_pb)
+                        except Exception as e:
+                            logger.warning(
+                                "BPS snapshots after provisional_bonus failed (element-summary)",
+                                extra={"gameweek": gameweek, "error": str(e)},
+                            )
                 except Exception as e:
                     logger.warning(
                         "Provisional bonus update failed (element-summary path)",

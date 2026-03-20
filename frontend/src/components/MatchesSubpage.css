@@ -45,24 +45,11 @@
   color: var(--bonus-1st-fg, #fff);
 }
 
-.bps-progress-under-construction {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 10px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.06);
-  border: 1.5px solid #f59e0b;
-  border-radius: 6px;
-}
-
-.bps-progress-under-construction-icon {
-  flex-shrink: 0;
-  color: #f59e0b;
+/* Light themes: bonus-1st-fg is dark for chart labels; on the slider pill use white for label + icons (currentColor). */
+html:is([data-theme='light'], [data-theme='light-dawn'], [data-theme='light-ocean'])
+  .bonus-chart-mode-wrap
+  .subpage-view-toggle-button.active {
+  color: #fff;
 }
 
 @media (max-width: 768px) {
@@ -430,6 +417,50 @@ html[data-theme="dark"] .gw-top-points-pill--3 {
     transform: translateY(0) translateZ(0);
   }
 }
+/* Full-bleed row: section label + hairline (Live / weekday date) */
+.matchup-grid-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  margin-bottom: 2px;
+  min-height: 22px;
+}
+
+.matchup-grid-divider:first-child {
+  margin-top: 0;
+}
+
+.matchup-grid-divider::before,
+.matchup-grid-divider::after {
+  content: '';
+  flex: 1;
+  min-width: 0;
+  height: 1px;
+  background: var(--border-color);
+  opacity: 0.55;
+}
+
+.matchup-grid-divider-label {
+  flex-shrink: 0;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text-secondary) 88%, transparent);
+}
+
+.matchup-grid-divider--live .matchup-grid-divider-label {
+  color: color-mix(in srgb, #16a34a 75%, var(--text-primary, #e2e8f0) 25%);
+}
+
+.matchup-grid-divider--live::before,
+.matchup-grid-divider--live::after {
+  opacity: 0.45;
+  background: color-mix(in srgb, #16a34a 28%, var(--border-color));
+}
+
 .matchup-grid .matchup-grid-item {
   min-width: 0; /* allow cards to shrink and fill grid cell */
 }
