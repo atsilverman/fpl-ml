@@ -1938,12 +1938,10 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
 }
 .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
   border-left: 3px solid var(--accent-blue, #3b82f6);
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.25);
 }
 /* You + ownership filter: amber left stripe (row fill follows owns-selected blue like other rows) */
 .league-standings-page .league-standings-bento-table tbody tr.league-standings-bento-row-you.league-standings-bento-row--owns-selected td.league-standings-bento-rank {
   border-left: 3px solid var(--league-standings-you-accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--league-standings-you-accent) 35%, transparent);
 }
 
 /* Ownership search: demote rows that don't own selected player(s) — show all, grey out non-owners */

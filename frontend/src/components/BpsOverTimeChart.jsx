@@ -42,11 +42,28 @@ function minuteFromKickoff(kickoffIso, recordedIso) {
   return Math.max(0, Math.min(90, Math.round(mins)))
 }
 
+/** FPL fixture `minutes` (official match clock, pauses at HT); null if unknown. */
+function normalizeFixtureMatchMinute(raw) {
+  if (raw == null || raw === '') return null
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n < 0) return null
+  return Math.min(90, Math.round(n))
+}
+
 /**
  * D3.js BPS over time chart (one line per player), colorized by bonus.
  * Data from bps_snapshots. X-axis is match minute (0'–current max), extending as data arrives.
  */
-export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], enabled = true, kickoffTime = null, fixtureStatus = null }) {
+export default function BpsOverTimeChart({
+  fixtureId,
+  gameweek,
+  players = [],
+  enabled = true,
+  kickoffTime = null,
+  fixtureStatus = null,
+  /** Official match minute from fixtures row / API (not wall clock). */
+  fixtureMatchMinute = null,
+}) {
   // Poll snapshots while BPS can still change (in play or provisional / bonus not confirmed).
   const pollSnapshots =
     fixtureStatus === 'live' || fixtureStatus === 'provisional'
@@ -57,13 +74,15 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
   const [liveTick, setLiveTick] = useState(0)
   // X-axis wall-clock extension only while the match is in progress (not after provisional).
   const isLiveForAxis = fixtureStatus === 'live'
+  const fixtureClockMinute = normalizeFixtureMatchMinute(fixtureMatchMinute)
+  const useWallClockForAxis = isLiveForAxis && kickoffTime && fixtureClockMinute == null
 
-  // When live, re-render periodically so x-axis can extend to current match minute
+  // When live and FPL minute is missing, re-render so wall-clock fallback can move the axis
   useEffect(() => {
-    if (!isLiveForAxis || !kickoffTime) return
+    if (!useWallClockForAxis) return
     const interval = setInterval(() => setLiveTick((n) => n + 1), 30000)
     return () => clearInterval(interval)
-  }, [isLiveForAxis, kickoffTime])
+  }, [useWallClockForAxis])
 
   const { chartData, seriesByPlayer, playerKeys, playerNamesByKey, strokeByKey, strokeWidthByKey, isBonusByKey, bonusValueByKey, maxMinute, minBps, maxBps } = useMemo(() => {
     if (!snapshots?.length) {
@@ -115,18 +134,43 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
     })
     const sortedTimeMs = [...byTimeMs.keys()].sort((a, b) => a - b)
     const firstRecordedAt = sortedTimeMs[0] ?? 0
+    // Live + FPL clock: cap each point's x at official minute and keep time order monotonic so HT
+    // wall-clock drift doesn't place points past the real match minute; dots/lines won't sit at 90' falsely.
+    let prevChartMinute = 0
     const chartData = sortedTimeMs.map((ms) => {
       const group = byTimeMs.get(ms)
       const t = group[0]?.recorded_at ?? new Date(ms).toISOString()
-      const minute = kickoffTime
+      let wallM = kickoffTime
         ? minuteFromKickoff(kickoffTime, t)
         : firstRecordedAt ? Math.min(90, Math.round((ms - firstRecordedAt) / 60000)) : 0
+      let minute = wallM
+      if (isLiveForAxis && fixtureClockMinute != null) {
+        minute = Math.min(wallM, fixtureClockMinute)
+      }
+      minute = Math.max(prevChartMinute, Math.min(90, minute))
+      prevChartMinute = minute
       const point = { time: t, recorded_at: t, minute }
       group.forEach((r) => { point[Number(r.player_id)] = r.bps })
       return point
     })
     const lastDataMinute = chartData.length ? Math.max(...chartData.map((d) => d.minute)) : 0
-    const elapsedMinute = (kickoffTime && isLiveForAxis) ? minuteFromKickoff(kickoffTime, new Date().toISOString()) : lastDataMinute
+    let elapsedMinute =
+      kickoffTime && isLiveForAxis
+        ? (fixtureClockMinute != null
+            ? fixtureClockMinute
+            : minuteFromKickoff(kickoffTime, new Date().toISOString()))
+        : lastDataMinute
+    // Near-full-time clock with only first-half snapshot coverage → bad row or wall HT; don't span 0–90'.
+    if (
+      kickoffTime &&
+      isLiveForAxis &&
+      elapsedMinute != null &&
+      elapsedMinute >= 87 &&
+      lastDataMinute <= 50 &&
+      elapsedMinute - lastDataMinute >= 35
+    ) {
+      elapsedMinute = Math.min(elapsedMinute, lastDataMinute + 15)
+    }
     const maxMinute = Math.min(90, Math.max(lastDataMinute, elapsedMinute, 1))
 
     const seriesByPlayer = {}
@@ -134,6 +178,18 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       const points = chartData.map((d) => ({ minute: d.minute, time: d.time, bps: d[pid] ?? null }))
       const hasAnyBps = points.some((p) => p.bps != null)
       seriesByPlayer[pid] = hasAnyBps ? [{ minute: 0, time: null, bps: 0 }, ...points] : points
+    })
+    // When official clock / axis runs past the last snapshot time, draw a flat segment to current MP
+    // so lines reach the right edge instead of bunching at the last recorded_at-derived minute.
+    playerKeys.forEach((pid) => {
+      const series = seriesByPlayer[pid]
+      if (!series?.length) return
+      const withBps = series.filter((p) => p.bps != null)
+      if (!withBps.length) return
+      const last = withBps[withBps.length - 1]
+      if (maxMinute > last.minute) {
+        seriesByPlayer[pid] = [...series, { minute: maxMinute, time: null, bps: last.bps }]
+      }
     })
     const allBps = snapshots.map((r) => r.bps).filter((n) => n != null)
     const minBps = allBps.length ? Math.min(...allBps) : 0
@@ -151,7 +207,7 @@ export default function BpsOverTimeChart({ fixtureId, gameweek, players = [], en
       minBps,
       maxBps,
     }
-  }, [snapshots, players, kickoffTime, isLiveForAxis, liveTick])
+  }, [snapshots, players, kickoffTime, isLiveForAxis, fixtureClockMinute, liveTick])
 
   // Cleanup tooltip on unmount
   useEffect(() => {

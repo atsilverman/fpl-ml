@@ -450,7 +450,7 @@ function truncateTeamNameMobile(name, isMobile) {
 }
 
 function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, showBonusChart = false, gameweekMaxBps = null, lastH2HMap = {}, isSecondHalf = false, showH2H = false, lastH2HPlayerStatsByFixture = {}, lastH2HPlayerStatsLoading = false, dataChecked = false, bonusAnimationKey = 0, bonusChartMode = 'bar', onPlayerClick, preloadedFixtureStats = null, isMobile = false }) {
-  const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id } = fixture
+  const { homeTeam, awayTeam, home_score, away_score, kickoff_time, fpl_fixture_id, home_team_id, away_team_id, minutes: fixture_minutes } = fixture
   const gameweek = fixture.gameweek
   const lastH2H = lastH2HMap[pairKey(home_team_id, away_team_id)] ?? null
   const { homePlayers, awayPlayers, loading: statsLoading } = useFixturePlayerStats(
@@ -620,6 +620,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                 enabled={true}
                 kickoffTime={kickoff_time}
                 fixtureStatus={status}
+                fixtureMatchMinute={fixture_minutes}
               />
             </div>
           ) : statsLoading ? (
@@ -672,6 +673,7 @@ function MatchBento({ fixture, expanded, onToggle, top10ByStat, ownedPlayerIds, 
                   enabled={true}
                   kickoffTime={kickoff_time}
                   fixtureStatus={status}
+                  fixtureMatchMinute={fixture_minutes}
                 />
               </div>
             ) : statsLoading ? (
