@@ -1,5 +1,5 @@
 import './BentoCard.css'
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import { useTheme } from '../contexts/ThemeContext'
 import { createPortal } from 'react-dom'
 import { formatNumberWithCommas } from '../utils/formatNumbers'
@@ -8,7 +8,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
-import { Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X, Sun, Moon, Laptop, Waves } from 'lucide-react'
+import { Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, CircleChevronUp, CircleChevronDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X, Sun, Moon, Laptop, Waves, Search, CircleCheck } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -143,6 +143,11 @@ export default function BentoCard({
   showTop10Lines = false,
   top10LinesData = null,
   onShowTop10Change = null,
+  overallRankLabelTrend = null,
+  leagueCompareManagerIds = [],
+  onLeagueCompareManagerIdsChange = null,
+  leagueManagersForCompare = null,
+  leagueManagersForCompareLoading = false,
   currentManagerId = null,
   chipUsage = null,
   isTransfers = false,
@@ -216,6 +221,19 @@ export default function BentoCard({
   const totalPointsFilterPopupRef = useRef(null)
   const [showOverallRankFilterPopup, setShowOverallRankFilterPopup] = useState(false)
   const overallRankFilterPopupRef = useRef(null)
+  const [showLeagueCompareSearchPopup, setShowLeagueCompareSearchPopup] = useState(false)
+  const [leagueCompareSearchQuery, setLeagueCompareSearchQuery] = useState('')
+  const leagueCompareSearchPopupRef = useRef(null)
+
+  const leagueCompareRowsFiltered = useMemo(() => {
+    const rows = Array.isArray(leagueManagersForCompare) ? leagueManagersForCompare : []
+    const q = leagueCompareSearchQuery.trim().toLowerCase()
+    if (!q) return rows
+    return rows.filter((s) => {
+      const name = `${s.manager_team_name || ''} ${s.manager_name || ''}`.toLowerCase()
+      return name.includes(q) || String(s.manager_id).includes(q)
+    })
+  }, [leagueManagersForCompare, leagueCompareSearchQuery])
   const [showTeamValueFilterPopup, setShowTeamValueFilterPopup] = useState(false)
   const teamValueFilterPopupRef = useRef(null)
 
@@ -320,6 +338,24 @@ export default function BentoCard({
   }, [showOverallRankFilterPopup, id])
 
   useEffect(() => {
+    if (!showLeagueCompareSearchPopup || id !== 'overall-rank') return
+    const handleClickOutside = (e) => {
+      if (leagueCompareSearchPopupRef.current && leagueCompareSearchPopupRef.current.contains(e.target)) return
+      if (e.target.closest('.bento-card-league-compare-search-btn')) return
+      setShowLeagueCompareSearchPopup(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showLeagueCompareSearchPopup, id])
+
+  useEffect(() => {
+    if (id === 'overall-rank' && !isExpanded) {
+      setShowLeagueCompareSearchPopup(false)
+      setLeagueCompareSearchQuery('')
+    }
+  }, [id, isExpanded])
+
+  useEffect(() => {
     if (!showTeamValueFilterPopup || id !== 'team-value') return
     const handleClickOutside = (e) => {
       if (teamValueFilterPopupRef.current && teamValueFilterPopupRef.current.contains(e.target)) return
@@ -335,11 +371,17 @@ export default function BentoCard({
     id === 'overall-rank'
       ? isStale
         ? 'bento-card-rank-border-stale'
-        : change != null && change !== 0
-          ? change > 0
+        : isExpanded
+          ? overallRankLabelTrend === 'up'
             ? 'bento-card-overall-rank-border-positive'
-            : 'bento-card-overall-rank-border-negative'
-          : null
+            : overallRankLabelTrend === 'down'
+              ? 'bento-card-overall-rank-border-negative'
+              : null
+          : change != null && change !== 0
+            ? change > 0
+              ? 'bento-card-overall-rank-border-positive'
+              : 'bento-card-overall-rank-border-negative'
+            : null
       : null
   const leagueRankBorderClass =
     id === 'league-rank' && change != null && change !== 0
@@ -520,13 +562,13 @@ export default function BentoCard({
             <div className="stats-filter-overlay-header">
               <span className="stats-filter-overlay-title">Filters</span>
               <div className="stats-filter-overlay-header-actions">
-                {(chartFilter !== 'last12' || showTop10Lines) && (
+                {(chartFilter !== 'last12' || (leagueCompareManagerIds?.length ?? 0) > 0) && (
                   <button
                     type="button"
                     className="stats-filter-overlay-reset"
                     onClick={() => {
                       onChartFilterChange && onChartFilterChange('last12')
-                      if (showTop10Lines && onShowTop10Change) onShowTop10Change()
+                      onLeagueCompareManagerIdsChange && onLeagueCompareManagerIdsChange([])
                     }}
                     aria-label="Reset all filters to default"
                   >
@@ -569,26 +611,117 @@ export default function BentoCard({
                     </button>
                   </div>
                 </div>
-                {onShowTop10Change != null && (
-                  <div className="bento-total-points-filter-section">
-                    <div className="bento-total-points-filter-section-title">Chart</div>
-                    <div className="bento-total-points-filter-buttons">
-                      <button
-                        type="button"
-                        className={`bento-total-points-filter-btn ${showTop10Lines ? 'bento-total-points-filter-btn--active' : ''}`}
-                        onClick={() => onShowTop10Change()}
-                        aria-pressed={showTop10Lines}
-                        title={showTop10Lines ? 'Hide mini league leader line' : 'Show mini league leader line'}
-                      >
-                        Compare
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <div className="stats-filter-overlay-footer">
               <button type="button" className="stats-filter-overlay-done" onClick={() => setShowOverallRankFilterPopup(false)} aria-label="Done">
+                Done
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {id === 'overall-rank' && showLeagueCompareSearchPopup && typeof document !== 'undefined' && createPortal(
+        <div className="stats-filter-overlay" role="dialog" aria-modal="true" aria-label="Compare league managers">
+          <div
+            className="stats-filter-overlay-backdrop"
+            onClick={() => {
+              setShowLeagueCompareSearchPopup(false)
+              setLeagueCompareSearchQuery('')
+            }}
+            aria-hidden
+          />
+          <div className="stats-filter-overlay-panel bento-league-compare-panel" ref={leagueCompareSearchPopupRef}>
+            <div className="stats-filter-overlay-header">
+              <span className="stats-filter-overlay-title">Compare on chart</span>
+              <div className="stats-filter-overlay-header-actions">
+                <button
+                  type="button"
+                  className="stats-filter-overlay-close"
+                  onClick={() => {
+                    setShowLeagueCompareSearchPopup(false)
+                    setLeagueCompareSearchQuery('')
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={20} strokeWidth={2} />
+                </button>
+              </div>
+            </div>
+            <div className="stats-filter-overlay-body">
+              <input
+                type="search"
+                className="bento-league-compare-search-input"
+                placeholder="Search managers…"
+                value={leagueCompareSearchQuery}
+                onChange={(e) => setLeagueCompareSearchQuery(e.target.value)}
+                aria-label="Search managers"
+                autoComplete="off"
+              />
+              <div className="bento-league-compare-list" role="list">
+                {leagueManagersForCompareLoading ? (
+                  <div className="bento-league-compare-list-empty">Loading league…</div>
+                ) : leagueCompareRowsFiltered.length === 0 ? (
+                  <div className="bento-league-compare-list-empty">No managers match</div>
+                ) : (
+                  leagueCompareRowsFiltered.map((s, index) => {
+                    const mid = Number(s.manager_id)
+                    const rank = s.calculated_rank != null ? s.calculated_rank : (s.mini_league_rank != null ? s.mini_league_rank : index + 1)
+                    const teamName = s.manager_team_name?.trim() || null
+                    const mgrName = s.manager_name?.trim() || null
+                    const primaryName = teamName || mgrName || `Manager ${mid}`
+                    const showSubtitle = !!(teamName && mgrName && mgrName !== teamName)
+                    const checked = (leagueCompareManagerIds ?? []).some((x) => Number(x) === mid)
+                    return (
+                      <button
+                        key={s.manager_id}
+                        type="button"
+                        role="listitem"
+                        className={`bento-league-compare-option${checked ? ' selected' : ''}`}
+                        aria-pressed={checked}
+                        title={primaryName}
+                        onClick={() => {
+                          if (!onLeagueCompareManagerIdsChange) return
+                          if (checked) {
+                            onLeagueCompareManagerIdsChange((prev) => prev.filter((x) => Number(x) !== mid))
+                          } else {
+                            onLeagueCompareManagerIdsChange((prev) =>
+                              prev.some((x) => Number(x) === mid) ? prev : [...prev, mid]
+                            )
+                          }
+                        }}
+                      >
+                        <div className="bento-league-compare-option-main">
+                          <span className="bento-league-compare-option-rank" aria-hidden>
+                            {rank}
+                          </span>
+                          <div className="bento-league-compare-option-content">
+                            <span className="bento-league-compare-option-name">{primaryName}</span>
+                            {showSubtitle ? (
+                              <span className="bento-league-compare-option-subtitle">{mgrName}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                        {checked ? (
+                          <CircleCheck className="bento-league-compare-option-check" size={18} strokeWidth={2.5} aria-hidden />
+                        ) : null}
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+            <div className="stats-filter-overlay-footer">
+              <button
+                type="button"
+                className="stats-filter-overlay-done"
+                onClick={() => {
+                  setShowLeagueCompareSearchPopup(false)
+                  setLeagueCompareSearchQuery('')
+                }}
+                aria-label="Done"
+              >
                 Done
               </button>
             </div>
@@ -831,7 +964,21 @@ export default function BentoCard({
           <div className="bento-card-expand-icons">
             <button
               type="button"
-              className={`bento-card-overall-rank-filter-btn ${chartFilter !== 'all' || showTop10Lines ? 'bento-card-overall-rank-filter-btn--active' : ''}`}
+              className={`bento-card-league-compare-search-btn${(leagueCompareManagerIds?.length ?? 0) > 0 ? ' bento-card-league-compare-search-btn--active' : ''}`}
+              aria-label="Compare managers on chart"
+              aria-expanded={showLeagueCompareSearchPopup}
+              aria-haspopup="dialog"
+              title="Add league managers to the chart"
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowLeagueCompareSearchPopup((v) => !v)
+              }}
+            >
+              <Search className="bento-card-expand-icon-svg" size={11} strokeWidth={1.5} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className={`bento-card-overall-rank-filter-btn ${chartFilter !== 'all' || (leagueCompareManagerIds?.length ?? 0) > 0 ? 'bento-card-overall-rank-filter-btn--active' : ''}`}
               aria-label="Filter chart"
               aria-expanded={showOverallRankFilterPopup}
               aria-haspopup="dialog"
@@ -898,6 +1045,32 @@ export default function BentoCard({
           )}
           <span className={id === 'gw-points' && isExpanded && !gwPointsDesktopDualView ? 'bento-card-label-text' : undefined}>
             {label}
+            {id === 'overall-rank' && isExpanded && overallRankLabelTrend === 'up' && (
+              <span
+                className="bento-card-overall-rank-trend-wrap"
+                title="Overall rank improved over the selected chart range"
+              >
+                <CircleChevronUp
+                  className="bento-card-overall-rank-trend bento-card-overall-rank-trend--up"
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </span>
+            )}
+            {id === 'overall-rank' && isExpanded && overallRankLabelTrend === 'down' && (
+              <span
+                className="bento-card-overall-rank-trend-wrap"
+                title="Overall rank dropped over the selected chart range"
+              >
+                <CircleChevronDown
+                  className="bento-card-overall-rank-trend bento-card-overall-rank-trend--down"
+                  size={14}
+                  strokeWidth={2}
+                  aria-hidden
+                />
+              </span>
+            )}
             {id === 'gw-points' && isExpanded && !gwPointsDesktopDualView && subtext && (
               <span className="bento-card-label-suffix">| {subtext}</span>
             )}

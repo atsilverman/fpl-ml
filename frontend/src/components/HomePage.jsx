@@ -21,7 +21,7 @@ import { useTransferImpacts } from '../hooks/useTransferImpacts'
 import { useLeagueTopTransfers } from '../hooks/useLeagueTopTransfers'
 import { useLeagueChipUsage } from '../hooks/useLeagueChipUsage'
 import { useMiniLeagueStandings } from '../hooks/useMiniLeagueStandings'
-import { useLeagueTop10History } from '../hooks/useLeagueTop10History'
+import { useLeagueManagersRankHistory } from '../hooks/useLeagueManagersRankHistory'
 import { useLeagueCaptainPicks } from '../hooks/useLeagueCaptainPicks'
 import { useLeagueManagerLiveStatus } from '../hooks/useLeagueManagerLiveStatus'
 import { useRefreshState } from '../hooks/useRefreshState'
@@ -59,7 +59,7 @@ export default function HomePage() {
   const [isGwPointsExpanded, setIsGwPointsExpanded] = useState(false)
   const [isTransfersExpanded, setIsTransfersExpanded] = useState(false)
   const [isChipsExpanded, setIsChipsExpanded] = useState(false)
-  const [showTop10Lines, setShowTop10Lines] = useState(false)
+  const [leagueCompareManagerIds, setLeagueCompareManagerIds] = useState([])
   const [selectedPlayerId, setSelectedPlayerId] = useState(null)
   const [selectedPlayerName, setSelectedPlayerName] = useState('')
   const [breakdownPlayer, setBreakdownPlayer] = useState(null)
@@ -90,10 +90,48 @@ export default function HomePage() {
   const { standings: leagueStandings, loading: leagueStandingsLoading } = useMiniLeagueStandings(gameweek)
   const leagueManagerCount = leagueStandings?.length ?? 0
   const leagueManagerIds = useMemo(() => (leagueStandings ?? []).map((s) => s.manager_id), [leagueStandings])
-  const { top10History, loading: leagueTop10HistoryLoading } = useLeagueTop10History(gameweek ?? undefined)
+  const { historyByManagerId: leagueCompareHistoryByManager, loading: leagueCompareHistoryLoading } =
+    useLeagueManagersRankHistory(leagueCompareManagerIds)
   const { leagueCaptainData, loading: leagueCaptainLoading } = useLeagueCaptainPicks(gameweek)
   const { liveStatusByManager } = useLeagueManagerLiveStatus(LEAGUE_ID, gameweek)
   const hasAnyLeagueManagerPlayerInPlay = hasLiveGames && Object.values(liveStatusByManager ?? {}).some((s) => (s?.in_play ?? 0) > 0)
+
+  const leagueCompareLinesData = useMemo(() => {
+    if (!leagueCompareManagerIds.length) return null
+    return leagueCompareManagerIds
+      .map((mid) => {
+        const n = Number(mid)
+        const row = leagueStandings?.find((s) => Number(s.manager_id) === n)
+        const displayName =
+          row?.manager_team_name?.trim()
+            ? row.manager_team_name.trim()
+            : (row?.manager_name || `Manager ${n}`)
+        const raw = leagueCompareHistoryByManager[n]
+        const data = Array.isArray(raw) ? raw : []
+        return {
+          managerId: n,
+          managerName: displayName,
+          leagueRank: row?.calculated_rank ?? row?.mini_league_rank ?? 0,
+          data,
+        }
+      })
+      .filter((s) => s.data.length > 0)
+  }, [leagueCompareManagerIds, leagueStandings, leagueCompareHistoryByManager])
+
+  const overallRankLabelTrend = useMemo(() => {
+    if (!historyData?.length) return null
+    const slice = [...historyData].sort((a, b) => a.gameweek - b.gameweek)
+    let windowed = slice
+    if (chartFilter === 'last12' && slice.length > 12) windowed = slice.slice(-12)
+    else if (chartFilter === 'last6' && slice.length > 6) windowed = slice.slice(-6)
+    if (windowed.length < 2) return null
+    const start = windowed[0].overallRank
+    const end = windowed[windowed.length - 1].overallRank
+    if (start == null || end == null) return null
+    if (Number(end) < Number(start)) return 'up'
+    if (Number(end) > Number(start)) return 'down'
+    return null
+  }, [historyData, chartFilter])
   const { state: refreshState, stateLabel: refreshStateLabel } = useRefreshState()
   const { latest: deadlineBatchLatest } = useDeadlineBatchRuns()
 
@@ -228,7 +266,7 @@ export default function HomePage() {
     )
   }, [renderCardOrder])
 
-  const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueTop10HistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
+  const loading = gwLoading || managerLoading || historyLoading || chipLoading || playerPerformanceLoading || teamValueHistoryLoading || leagueTeamValueLoading || leagueCompareHistoryLoading || currentGameweekPlayersLoading || top10ByStatLoading || impactLoading || transferImpactsLoading
 
   /* Start entrance animation as soon as gameweek + manager are ready; don't wait for all 12 data sources. Cards still receive loading for skeletons. */
   const initialReady = !gwLoading && !managerLoading
@@ -556,15 +594,16 @@ export default function HomePage() {
 
           if (cardId === 'overall-rank') {
             showValue = showValueInOverallRank ? card.value : undefined
-            showChange = showValueInOverallRank ? card.change : undefined
+            // Keep change when expanded so green/red border matches collapsed card (value row is hidden when expanded)
+            showChange = card.change
             showChart = showChartInOverallRank
             chartDataToUse = showChartInOverallRank ? historyData : null
             chartFilterToUse = chartFilter
             showChartComparisonToUse = showChartComparison
             onChartFilterChangeToUse = showChartInOverallRank ? handleChartFilterChange : null
-            showTop10LinesToUse = showChartInOverallRank ? showTop10Lines : false
-            top10LinesDataToUse = showChartInOverallRank ? top10History : null
-            onShowTop10ChangeToUse = showChartInOverallRank ? () => setShowTop10Lines((prev) => !prev) : null
+            showTop10LinesToUse = showChartInOverallRank && leagueCompareManagerIds.length > 0
+            top10LinesDataToUse = showChartInOverallRank ? (leagueCompareLinesData ?? []) : null
+            onShowTop10ChangeToUse = null
           } else if (cardId === 'team-value') {
             showValue = showValueInTeamValue ? card.value : undefined
             showChange = showValueInTeamValue ? card.change : undefined
@@ -681,6 +720,11 @@ export default function HomePage() {
               showTop10Lines={showTop10LinesToUse}
               top10LinesData={top10LinesDataToUse}
               onShowTop10Change={onShowTop10ChangeToUse}
+              overallRankLabelTrend={cardId === 'overall-rank' ? overallRankLabelTrend : null}
+              leagueCompareManagerIds={cardId === 'overall-rank' ? leagueCompareManagerIds : undefined}
+              onLeagueCompareManagerIdsChange={cardId === 'overall-rank' ? setLeagueCompareManagerIds : undefined}
+              leagueManagersForCompare={cardId === 'overall-rank' ? leagueStandings : undefined}
+              leagueManagersForCompareLoading={cardId === 'overall-rank' ? leagueStandingsLoading : undefined}
               chipUsage={card.isChips ? chipUsage : null}
               isTransfers={card.isTransfers ?? false}
               transfersSummary={card.isTransfers ? {

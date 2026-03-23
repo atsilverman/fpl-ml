@@ -6,10 +6,17 @@ import { formatNumber } from '../utils/formatNumbers'
 import { useToast } from '../contexts/ToastContext'
 import './PerformanceChart.css'
 
-/** Same subtle color for top-10 lines (except league leader) */
-const TOP10_MUTED_COLOR = 'rgba(148, 163, 184, 0.45)' // slate, subtle
-/** League leader line – same visual weight as configured manager, different color */
-const TOP10_LEADER_COLOR = 'rgba(245, 158, 11, 0.9)'  // amber
+/** League compare overlay lines (expanded chart) – subtle grey */
+const TOP10_OVERLAY_LINE = 'rgba(148, 163, 184, 0.35)'
+const TOP10_OVERLAY_STROKE = 'rgba(148, 163, 184, 0.55)'
+const TOP10_OVERLAY_POINT_R = 3
+
+function abbrevTop10ManagerLabel(name, maxLen = 14) {
+  if (!name || typeof name !== 'string') return ''
+  const t = name.trim()
+  if (t.length <= maxLen) return t
+  return `${t.slice(0, maxLen - 1)}…`
+}
 
 /**
  * D3.js Performance Chart Component
@@ -226,13 +233,12 @@ export default function PerformanceChart({
     return comparisonData.filter(d => d.gameweek >= minGW && d.gameweek <= maxGW)
   }, [showComparison, comparisonData, filteredData])
 
-  // Filter to league leader only, same GW range as main chart
+  // League compare managers: same GW range as main chart (all selected series)
   const filteredTop10LinesData = useMemo(() => {
     if (!showTop10Lines || !top10LinesData?.length || filteredData.length === 0) return []
     const minGW = Math.min(...filteredData.map(d => d.gameweek))
     const maxGW = Math.max(...filteredData.map(d => d.gameweek))
     return top10LinesData
-      .filter(s => s.leagueRank === 1)
       .map(({ managerId, managerName, data: seriesData, leagueRank }) => ({
         managerId,
         managerName,
@@ -263,20 +269,43 @@ export default function PerformanceChart({
     // When redrawing due to resize (e.g. bento just expanded), skip transitions to avoid double-load flicker
     const transitionMs = (n) => (dimensionsChanged ? 0 : n)
 
-    // Proportional padding – tighter so graph + chip legend fit in bento without scroll
+    // Proportional padding – keep margins minimal so the line uses more of the bento (legend sits below SVG)
+    const overlayLabelHeadroom =
+      filteredTop10LinesData.length > 0 ? Math.min(16, 4 + filteredTop10LinesData.length * 2) : 0
     const padding = {
-      top: Math.round(height * 0.06),
-      right: Math.round(width * 0.05),
-      bottom: Math.round(height * 0.16),
-      left: Math.round(width * 0.1)
+      top: Math.round(height * 0.022) + overlayLabelHeadroom,
+      right: Math.round(width * 0.028),
+      bottom: Math.round(height * 0.082),
+      left: Math.round(width * 0.062)
     }
+
+    const isDesktop = !isMobile
+    const axisLabelFont = isDesktop ? 13 : 9
+    const xAxisLabelDy = isDesktop ? 15 : 10
+    const yLabelInset = isDesktop ? 14 : 6
+    const mainLineStrokeW = isDesktop ? 3.15 : 2
+    const mainPointRadius = isDesktop ? 5.5 : 4
+    const mainChipPointRadius = isDesktop ? 6.5 : 5
+    const mainPointStrokeW = (hasChip) => (hasChip ? (isDesktop ? 2.5 : 2) : (isDesktop ? 2 : 1.5))
+    const compareLineStrokeW = isDesktop ? 3 : 2
+    const comparePointRadius = isDesktop ? 5 : 4
+    const comparePointStrokeW = isDesktop ? 2 : 1.5
+    const overlayLineStrokeW = isDesktop ? 1.65 : 1.15
+    const overlayPointRadius = isDesktop ? 3.75 : TOP10_OVERLAY_POINT_R
+    const overlayChipPointRadius = isDesktop ? 5 : 4
+    const overlayPointStrokeW = (hasChip) => (hasChip ? (isDesktop ? 2.25 : 2) : (isDesktop ? 1.5 : 1.25))
+    const compareNameLabelFont = isDesktop ? 11 : 8
+    const compareNameLabelStrokeW = isDesktop ? 3 : 2.5
+    const staleBadgeRadius = isDesktop ? 7.5 : 6
+    const staleBadgeFont = isDesktop ? 11 : 9
+    const staleOffset = isDesktop ? 24 : 20
     
     const chartWidth = width - padding.left - padding.right
     const chartHeight = height - padding.top - padding.bottom
 
     // Shared style for all horizontal lines (x-axis + y grid lines)
     const horizontalLineStroke = 'rgba(148, 163, 184, 0.28)'
-    const horizontalLineWidth = 0.5
+    const horizontalLineWidth = isDesktop ? 0.65 : 0.5
     const horizontalLineDasharray = '2,4'
 
     // Calculate scales
@@ -292,6 +321,17 @@ export default function PerformanceChart({
     const maxRank = Math.max(...allRanks)
     const minGW = Math.min(...filteredData.map(d => d.gameweek))
     const maxGW = Math.max(...filteredData.map(d => d.gameweek))
+
+    // Worse overall rank = higher number. Match card semantics (negative change = red).
+    const sortedByGw = [...filteredData].sort((a, b) => a.gameweek - b.gameweek)
+    const rangeStartRank = sortedByGw[0]?.overallRank
+    const rangeEndRank = sortedByGw[sortedByGw.length - 1]?.overallRank
+    const isNegativeRankRange =
+      sortedByGw.length >= 2 &&
+      rangeStartRank != null &&
+      rangeEndRank != null &&
+      Number(rangeEndRank) > Number(rangeStartRank)
+    const chartLineColor = isNegativeRankRange ? 'var(--accent-red)' : lineColor
 
     // Calculate season midpoint (GW19/20 boundary for FPL)
     // WC1 must be used by GW19, WC2 available from GW20
@@ -377,19 +417,22 @@ export default function PerformanceChart({
     const yLabels = g.selectAll('.y-label')
       .data(yTicks, d => d) // Key function
 
+    const yLabelX = padding.left - yLabelInset
     const yLabelsEnter = yLabels.enter()
       .append('text')
       .attr('class', 'y-label')
-      .attr('x', padding.left - (isMobile ? 6 : 12))
+      .attr('x', yLabelX)
       .attr('y', d => yScale(d) + 4)
       .attr('text-anchor', 'end')
-      .attr('font-size', isMobile ? '9' : '11')
+      .attr('font-size', axisLabelFont)
       .attr('fill', 'var(--text-secondary)')
       .attr('font-weight', '500')
       .attr('opacity', 0)
       .text(d => formatWholeNumber(d))
 
     yLabelsEnter.merge(yLabels)
+      .attr('x', yLabelX)
+      .attr('font-size', axisLabelFont)
       .transition()
       .duration(transitionMs(320))
       .ease(d3.easeCubicOut)
@@ -430,15 +473,17 @@ export default function PerformanceChart({
       .append('text')
       .attr('class', 'x-label')
       .attr('x', d => xScale(d))
-      .attr('y', height - padding.bottom + (isMobile ? 10 : 12))
+      .attr('y', height - padding.bottom + xAxisLabelDy)
       .attr('text-anchor', 'middle')
-      .attr('font-size', isMobile ? '9' : '11')
+      .attr('font-size', axisLabelFont)
       .attr('fill', 'var(--text-secondary)')
       .attr('font-weight', '500')
       .attr('opacity', 0)
       .text(d => d)
 
     xLabelsEnter.merge(xLabels)
+      .attr('font-size', axisLabelFont)
+      .attr('y', height - padding.bottom + xAxisLabelDy)
       .transition()
       .duration(transitionMs(320))
       .ease(d3.easeCubicOut)
@@ -550,21 +595,15 @@ export default function PerformanceChart({
         .attr('x2', '0%')
         .attr('y2', '100%')
 
-      gradient.append('stop')
-        .attr('offset', '0%')
-        .attr('stop-color', lineColor)
-        .attr('stop-opacity', 0.28)
-
-      gradient.append('stop')
-        .attr('offset', '35%')
-        .attr('stop-color', lineColor)
-        .attr('stop-opacity', 0.06)
-
-      gradient.append('stop')
-        .attr('offset', '100%')
-        .attr('stop-color', lineColor)
-        .attr('stop-opacity', 0.02)
+      const areaStopOffsets = ['0%', '35%', '100%']
+      const areaStopOpacities = [0.28, 0.06, 0.02]
+      areaStopOffsets.forEach((offset, i) => {
+        gradient.append('stop')
+          .attr('offset', offset)
+          .attr('stop-opacity', areaStopOpacities[i])
+      })
     }
+    gradient.selectAll('stop').attr('stop-color', chartLineColor)
 
     // Main line with smooth transition
     // We need to get previous data FIRST, before area, so all elements can share it
@@ -690,12 +729,13 @@ export default function PerformanceChart({
         .attr('class', 'comparison-line')
         .attr('fill', 'none')
         .attr('stroke', 'var(--accent-yellow)')
-        .attr('stroke-width', isMobile ? 2 : 2.5)
+        .attr('stroke-width', compareLineStrokeW)
         .attr('stroke-dasharray', '4,4')
         .attr('opacity', 0)
         .attr('d', line)
       
       comparisonLineEnter.merge(comparisonLine)
+        .attr('stroke-width', compareLineStrokeW)
         .transition()
         .duration(transitionMs(320))
         .ease(d3.easeCubicOut)
@@ -720,16 +760,17 @@ export default function PerformanceChart({
         .attr('r', 0)
         .attr('fill', 'var(--bg-card)')
         .attr('stroke', 'var(--accent-yellow)')
-        .attr('stroke-width', 1.5)
+        .attr('stroke-width', comparePointStrokeW)
         .attr('opacity', 0)
       
       comparisonPointsEnter.merge(comparisonPoints)
+        .attr('stroke-width', comparePointStrokeW)
         .transition()
         .duration(transitionMs(320))
         .ease(d3.easeCubicOut)
         .attr('cx', d => xScale(d.gameweek))
         .attr('cy', d => yScale(d.overallRank))
-        .attr('r', 4)
+        .attr('r', comparePointRadius)
         .attr('opacity', 1)
       
       comparisonPoints.exit()
@@ -747,32 +788,32 @@ export default function PerformanceChart({
         .remove()
     }
 
-    // League leader line: same styling as configured manager (thick line + points), different color
+    // League compare lines: subtle grey; chip markers keep chip colors
     if (filteredTop10LinesData.length > 0) {
+      const overlayStrokeWidth = overlayLineStrokeW
+
       const top10Paths = g.selectAll('.top10-line')
         .data(filteredTop10LinesData, (d, i) => d.managerId ?? i)
-
-      const strokeColor = (d) => (d.leagueRank === 1 ? TOP10_LEADER_COLOR : TOP10_MUTED_COLOR)
-      const leaderStrokeWidth = isMobile ? 2 : 2.5
 
       top10Paths.enter()
         .append('path')
         .attr('class', 'top10-line')
         .attr('fill', 'none')
-        .attr('stroke-width', leaderStrokeWidth)
+        .attr('stroke', TOP10_OVERLAY_LINE)
+        .attr('stroke-width', overlayStrokeWidth)
         .attr('stroke-linecap', 'round')
         .attr('stroke-linejoin', 'round')
         .attr('opacity', 0)
         .attr('d', d => line(d.data))
-        .attr('stroke', strokeColor)
         .merge(top10Paths)
+        .attr('stroke-width', overlayStrokeWidth)
         .transition()
         .duration(transitionMs(240))
         .ease(d3.easeCubicOut)
         .attr('d', d => line(d.data))
-        .attr('opacity', 1)
-        .attr('stroke', strokeColor)
-        .attr('stroke-width', leaderStrokeWidth)
+        .attr('opacity', 0.92)
+        .attr('stroke', TOP10_OVERLAY_LINE)
+        .attr('stroke-width', overlayStrokeWidth)
 
       top10Paths.exit()
         .transition()
@@ -780,7 +821,6 @@ export default function PerformanceChart({
         .attr('opacity', 0)
         .remove()
 
-      // League leader data points (same style as main line: circle with stroke; chips like main)
       const leaderPointsFlat = filteredTop10LinesData.flatMap(s => s.data.map(d => ({ ...d, _managerId: s.managerId })))
       const top10Points = g.selectAll('.top10-point')
         .data(leaderPointsFlat, d => `${d._managerId}-${d.gameweek}`)
@@ -797,9 +837,9 @@ export default function PerformanceChart({
         })
         .attr('stroke', d => {
           if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
-          return TOP10_LEADER_COLOR
+          return TOP10_OVERLAY_STROKE
         })
-        .attr('stroke-width', d => d.chip ? 2 : 1.5)
+        .attr('stroke-width', d => overlayPointStrokeW(!!d.chip))
         .attr('opacity', 0)
         .merge(top10Points)
         .attr('class', d => d.chip ? 'top10-point top10-chip-point' : 'top10-point')
@@ -808,17 +848,17 @@ export default function PerformanceChart({
         .ease(d3.easeCubicOut)
         .attr('cx', d => xScale(d.gameweek))
         .attr('cy', d => yScale(d.overallRank))
-        .attr('r', d => (d.chip ? 5 : 4))
-        .attr('opacity', 1)
+        .attr('r', d => (d.chip ? overlayChipPointRadius : overlayPointRadius))
+        .attr('opacity', d => (d.chip ? 1 : 0.88))
         .attr('fill', d => {
           if (d.chip && chipInfo[d.chip]) return chipInfo[d.chip].color
           return 'var(--bg-card)'
         })
         .attr('stroke', d => {
           if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
-          return TOP10_LEADER_COLOR
+          return TOP10_OVERLAY_STROKE
         })
-        .attr('stroke-width', d => d.chip ? 2 : 1.5)
+        .attr('stroke-width', d => overlayPointStrokeW(!!d.chip))
 
       top10Points.exit()
         .transition()
@@ -826,8 +866,102 @@ export default function PerformanceChart({
         .attr('r', 0)
         .attr('opacity', 0)
         .remove()
+
+      // End-point label positions: short radial offset from actual dot; fan when dots cluster
+      const labelRadiusBase = isDesktop ? 14 : 10
+      const clusterDist = 24
+      const angleStep = 0.4
+      const endPts = filteredTop10LinesData.map((d) => {
+        const last = d.data[d.data.length - 1]
+        return {
+          d,
+          px: xScale(last.gameweek),
+          py: yScale(last.overallRank),
+        }
+      })
+      const m = endPts.length
+      const parent = Array.from({ length: m }, (_, i) => i)
+      const findRoot = (a) => {
+        if (parent[a] !== a) parent[a] = findRoot(parent[a])
+        return parent[a]
+      }
+      const unionRoots = (a, b) => {
+        const ra = findRoot(a)
+        const rb = findRoot(b)
+        if (ra !== rb) parent[ra] = rb
+      }
+      for (let i = 0; i < m; i++) {
+        for (let j = i + 1; j < m; j++) {
+          if (Math.hypot(endPts[i].px - endPts[j].px, endPts[i].py - endPts[j].py) < clusterDist) {
+            unionRoots(i, j)
+          }
+        }
+      }
+      const groupByRoot = new Map()
+      for (let i = 0; i < m; i++) {
+        const r = findRoot(i)
+        if (!groupByRoot.has(r)) groupByRoot.set(r, [])
+        groupByRoot.get(r).push(i)
+      }
+      /** @type {Map<number | string, { lx: number, ly: number }>} */
+      const compareLabelPos = new Map()
+      for (const indices of groupByRoot.values()) {
+        const k = indices.length
+        const rPix = labelRadiusBase + Math.max(0, k - 2) * 3
+        indices.forEach((idx, j) => {
+          const { px, py, d } = endPts[idx]
+          const angle = -Math.PI / 2 + (j - (k - 1) / 2) * angleStep
+          let lx = px + Math.cos(angle) * rPix
+          let ly = py + Math.sin(angle) * rPix
+          const hMargin = 2
+          lx = Math.max(padding.left + hMargin, Math.min(lx, width - padding.right - hMargin))
+          ly = Math.max(padding.top + 4, Math.min(ly, height - padding.bottom - 4))
+          compareLabelPos.set(d.managerId, { lx, ly })
+        })
+      }
+
+      // Small manager name anchored to computed point near last datapoint
+      const top10EndLabels = g.selectAll('.top10-line-end-label')
+        .data(filteredTop10LinesData, d => d.managerId)
+
+      const top10EndLabelsEnter = top10EndLabels.enter()
+        .append('text')
+        .attr('class', 'top10-line-end-label')
+        .attr('font-size', compareNameLabelFont)
+        .attr('font-weight', '500')
+        .attr('fill', 'var(--text-secondary)')
+        .attr('opacity', 0)
+        .attr('pointer-events', 'none')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .style('paint-order', 'stroke fill')
+        .attr('stroke', 'var(--bg-card)')
+        .attr('stroke-width', compareNameLabelStrokeW)
+        .attr('stroke-linejoin', 'round')
+        .text(d => abbrevTop10ManagerLabel(d.managerName))
+
+      top10EndLabelsEnter.merge(top10EndLabels)
+        .attr('font-size', compareNameLabelFont)
+        .attr('stroke-width', compareNameLabelStrokeW)
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'middle')
+        .attr('dx', null)
+        .attr('dy', null)
+        .transition()
+        .duration(transitionMs(240))
+        .ease(d3.easeCubicOut)
+        .attr('x', d => compareLabelPos.get(d.managerId)?.lx ?? xScale(d.data[d.data.length - 1].gameweek))
+        .attr('y', d => compareLabelPos.get(d.managerId)?.ly ?? yScale(d.data[d.data.length - 1].overallRank))
+        .text(d => abbrevTop10ManagerLabel(d.managerName))
+        .attr('opacity', 0.92)
+
+      top10EndLabels.exit()
+        .transition()
+        .duration(transitionMs(180))
+        .attr('opacity', 0)
+        .remove()
     } else {
-      g.selectAll('.top10-line, .top10-point')
+      g.selectAll('.top10-line, .top10-point, .top10-line-end-label')
         .transition()
         .duration(transitionMs(200))
         .attr('opacity', 0)
@@ -838,8 +972,8 @@ export default function PerformanceChart({
       .append('path')
       .attr('class', 'main-line')
       .attr('fill', 'none')
-      .attr('stroke', lineColor)
-      .attr('stroke-width', isMobile ? 2 : 2.5)
+      .attr('stroke', chartLineColor)
+      .attr('stroke-width', mainLineStrokeW)
       .attr('stroke-linecap', 'round')
       .attr('stroke-linejoin', 'round')
       .attr('d', line(previousData)) // Start from previous position
@@ -854,6 +988,8 @@ export default function PerformanceChart({
     
     // Use the same shared transition for synchronization
     mainLineEnter.merge(mainLine)
+      .attr('stroke', chartLineColor)
+      .attr('stroke-width', mainLineStrokeW)
       .transition(syncTransition)
       .attrTween('d', pathTween)
       .attr('opacity', 1)
@@ -888,9 +1024,9 @@ export default function PerformanceChart({
       })
       .attr('stroke', d => {
         if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
-        return lineColor
+        return chartLineColor
       })
-      .attr('stroke-width', d => d.chip ? 2 : 1.5)
+      .attr('stroke-width', d => mainPointStrokeW(!!d.chip))
       .attr('opacity', 0)
 
     const currentPositions = new Map()
@@ -908,6 +1044,10 @@ export default function PerformanceChart({
     }
 
     pointsEnter.merge(points)
+      .attr('stroke', d => {
+        if (d.chip && chipInfo[d.chip]) return 'rgba(0, 0, 0, 0.3)'
+        return chartLineColor
+      })
       .transition(syncTransition)
       .attrTween('cx', function(d) {
         const currentPos = currentPositions.get(d.gameweek)
@@ -923,7 +1063,8 @@ export default function PerformanceChart({
           ? currentPos.cy + (targetY - currentPos.cy) * t
           : yScale((getInterpolatedDataMap(t).get(d.gameweek) || d).overallRank)
       })
-      .attr('r', d => (d.chip ? 5 : 4))
+      .attr('r', d => (d.chip ? mainChipPointRadius : mainPointRadius))
+      .attr('stroke-width', d => mainPointStrokeW(!!d.chip))
       .attr('opacity', 1)
 
     points.exit()
@@ -937,7 +1078,7 @@ export default function PerformanceChart({
     g.selectAll('.main-line, .data-point').raise()
 
     // Stale indicator: small "!" above the current (last) GW dot when data may be out of date during live games
-    const staleIndicatorOffset = 20
+    const staleIndicatorOffset = staleOffset
     const staleIndicatorData = isStale && filteredData.length > 0 ? [filteredData[filteredData.length - 1]] : []
     const staleIndicator = g.selectAll('.stale-indicator-group').data(staleIndicatorData, d => d.gameweek)
 
@@ -950,7 +1091,7 @@ export default function PerformanceChart({
         const g = d3.select(this)
         g.append('circle')
           .attr('class', 'stale-indicator-dot')
-          .attr('r', 6)
+          .attr('r', staleBadgeRadius)
           .attr('fill', '#E7AD10')
           .attr('stroke', 'rgba(0,0,0,0.2)')
           .attr('stroke-width', 1)
@@ -959,15 +1100,18 @@ export default function PerformanceChart({
           .attr('text-anchor', 'middle')
           .attr('dominant-baseline', 'central')
           .attr('fill', '#fff')
-          .attr('font-size', 9)
+          .attr('font-size', staleBadgeFont)
           .attr('font-weight', '700')
           .text('!')
       })
 
     const staleIndicatorGroups = g.selectAll('.stale-indicator-group')
     staleIndicatorGroups.select('circle')
-      .attr('r', 6)
+      .attr('r', staleBadgeRadius)
       .attr('fill', '#E7AD10')
+
+    staleIndicatorGroups.select('text')
+      .attr('font-size', staleBadgeFont)
 
     staleIndicatorGroups
       .transition()
@@ -991,11 +1135,12 @@ export default function PerformanceChart({
         .style('background', 'var(--bg-card)')
         .style('border', '1px solid var(--border-color)')
         .style('border-radius', '6px')
-        .style('padding', '8px 12px')
-        .style('font-size', '12px')
         .style('pointer-events', 'none')
         .style('z-index', 1000)
     }
+    tooltip
+      .style('font-size', isDesktop ? '13px' : '12px')
+      .style('padding', isDesktop ? '10px 14px' : '8px 12px')
 
     // Bind tooltip to all points
     pointsEnter.merge(points)
@@ -1106,12 +1251,6 @@ export default function PerformanceChart({
             <span className="performance-chart-chip-legend-label">{name}</span>
           </div>
         ))}
-        {showTop10Lines && (
-          <div className="performance-chart-chip-legend-item performance-chart-chip-legend-item--line">
-            <span className="performance-chart-chip-legend-line" style={{ backgroundColor: TOP10_LEADER_COLOR }} aria-hidden />
-            <span className="performance-chart-chip-legend-label">League leader</span>
-          </div>
-        )}
       </div>
       {/* Filter: button opens popup (same pattern as DefconSubpage / FeedSubpage). Hidden when used in overall-rank bento (range buttons in card header). */}
       {!hideFilterUI && (onFilterChange || onShowTop10Change) && (
