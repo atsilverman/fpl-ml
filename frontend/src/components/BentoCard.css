@@ -103,8 +103,8 @@
 }
 
 /* Used chips: colors from chips page (WC/FH/BB/TC) applied via inline style in BentoCard.jsx */
-html[data-theme="dark"] .chip-item.chip-used:not(.chip-used--colored) .chip-label,
-html[data-theme="dark"] .chip-item.chip-used:not(.chip-used--colored) .chip-gameweek {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .chip-item.chip-used:not(.chip-used--colored) .chip-label,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .chip-item.chip-used:not(.chip-used--colored) .chip-gameweek {
   color: rgba(255, 255, 255, 0.95);
 }
 
@@ -1356,17 +1356,17 @@ html[data-theme="dark"] .chip-item.chip-used:not(.chip-used--colored) .chip-game
   background: var(--bg-tertiary, #e5e7eb);
 }
 
-html[data-theme="dark"] .bento-card-transfer-delta.positive {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .bento-card-transfer-delta.positive {
   color: #fff;
   background: var(--accent-green, #059669);
 }
 
-html[data-theme="dark"] .bento-card-transfer-delta.negative {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .bento-card-transfer-delta.negative {
   color: #fff;
   background: var(--accent-red, #dc2626);
 }
 
-html[data-theme="dark"] .bento-card-transfer-delta.neutral {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
   background: var(--bg-tertiary, #374151);
 }
@@ -1588,7 +1588,7 @@ html[data-theme="dark"] .bento-card-transfer-delta.neutral {
   margin-left: auto;
 }
 
-html[data-theme="dark"] .transfers-summary-column-count {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .transfers-summary-column-count {
   background: var(--transfers-count-bg, var(--bg-primary));
 }
 
@@ -2053,7 +2053,7 @@ html[data-theme="dark"] .transfers-summary-column-count {
   border-radius: 3px;
 }
 
-html[data-theme="dark"] .bento-card-captain-vice-badge {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .bento-card-captain-vice-badge {
   color: #d1d5db;
   background: #4b5563;
 }
@@ -2159,7 +2159,7 @@ html[data-theme="dark"] .bento-card-captain-vice-badge {
   border-radius: 2px;
 }
 
-html[data-theme="dark"] .captain-standings-bento-badge-v {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .captain-standings-bento-badge-v {
   color: #d1d5db;
   background: #4b5563;
 }

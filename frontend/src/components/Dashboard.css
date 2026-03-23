@@ -346,6 +346,9 @@
     background: transparent;
     color: white;
   }
+  html[data-theme="dark-graphite"] .page-selector-bottom .tracking-mode-button.active:hover {
+    color: #09090b;
+  }
 }
 
 .tracking-mode-toggle {
@@ -385,6 +388,14 @@
 .tracking-mode-button.active {
   background: transparent;
   color: white;
+}
+
+/* Graphite: pill is light grey — dark icon/label on active (same idea as .subpage-view-toggle) */
+html[data-theme="dark-graphite"] .tracking-mode-slider {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html[data-theme="dark-graphite"] .tracking-mode-button.active {
+  color: #09090b;
 }
 
 /* Desktop: show label only (icons hidden until mobile) */
@@ -709,6 +720,14 @@
 .subpage-view-toggle-button.active {
   color: #fff;
   background: transparent;
+}
+
+/* Graphite: accent pill is light grey — dark label/icon for contrast (default dark keeps white on blue) */
+html[data-theme="dark-graphite"] .subpage-view-toggle-slider {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+html[data-theme="dark-graphite"] .subpage-view-toggle-button.active {
+  color: #09090b;
 }
 
 .subpage-view-toggle-icon {

@@ -72,6 +72,53 @@ html[data-theme="dark"] {
   --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 82%, #0a0a0a);
 }
 
+/* dark-graphite: same structure as default dark; neutral zinc greys, minimal blue */
+html[data-theme="dark-graphite"] {
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-card: #27272a;
+  --bg-input: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --accent-blue: #d4d4d8;
+  --accent-green: #34d399;
+  --accent-red: #f87171;
+  --accent-yellow: #fbbf24;
+  --accent-orange: #fb923c;
+  --border-color: #3f3f46;
+  --progress-bg: #3f3f46;
+  --progress-fill: #d4d4d8;
+  --progress-complete: #34d399;
+  --scrollbar-thumb-hover: #52525b;
+  --shadow-accent-blue: rgba(255, 255, 255, 0.07);
+  --shadow-accent-blue-subtle: rgba(255, 255, 255, 0.04);
+  --gw-bench-fill: rgba(255, 255, 255, 0.04);
+  --gw-autosub-out-bg: rgba(248, 113, 113, 0.14);
+  --gw-autosub-in-bg: rgba(52, 211, 153, 0.14);
+  --gw-bench-fill-solid: #0c0c0e;
+  --gw-autosub-out-bg-solid: color-mix(in srgb, #f87171 14%, var(--bg-primary) 86%);
+  --gw-autosub-in-bg-solid: color-mix(in srgb, #34d399 14%, var(--bg-primary) 86%);
+  --collapse-icon-color: #a1a1aa;
+  --collapse-badge-bg: rgba(255, 255, 255, 0.06);
+  --collapse-badge-border: rgba(255, 255, 255, 0.1);
+  --bonus-1st: #e4e4e7;
+  --bonus-1st-fg: #09090b;
+  --bonus-2nd: #a1a1aa;
+  --bonus-2nd-fg: #09090b;
+  --bonus-3rd: color-mix(in srgb, #d4d4d8 38%, var(--bg-secondary));
+  --bonus-3rd-fg: #fafafa;
+  --bps-value-on-bar-dark: #09090b;
+  --bps-value-on-bar-light: #fff;
+  --chart-expected-line: #fbbf24;
+  --chart-bar-fill: var(--accent-blue);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  --bg-hover: var(--bg-secondary);
+  --hover-card-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  --hover-card-border: rgba(255, 255, 255, 0.08);
+  --league-standings-you-accent: color-mix(in srgb, #fde047 40%, var(--accent-yellow));
+  --league-standings-you-badge-bg: color-mix(in srgb, var(--league-standings-you-accent) 78%, #0a0a0a);
+}
+
 /* Light mode */
 html[data-theme="light"] {
   --bg-primary: #f8fafc;
@@ -309,7 +356,8 @@ html[data-theme="light-ocean"] {
 /* Desktop only: slightly stronger hover feedback (mobile keeps no hover via @media (hover: hover)) */
 @media (hover: hover) and (min-width: 769px) {
   html:not([data-theme]),
-  html[data-theme="dark"] {
+  html[data-theme="dark"],
+  html[data-theme="dark-graphite"] {
     --bg-hover: color-mix(in srgb, var(--border-color) 20%, var(--bg-secondary));
     --hover-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.14), 0 0 0 1px rgba(255, 255, 255, 0.06);
     --hover-card-border: rgba(255, 255, 255, 0.12);

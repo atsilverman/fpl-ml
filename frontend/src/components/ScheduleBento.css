@@ -268,7 +268,7 @@
   color: #525252; /* dark grey in light mode */
 }
 
-html[data-theme="dark"] .schedule-bento-home-icon {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-bento-home-icon {
   color: rgba(255, 255, 255, 0.85); /* light grey/white in dark mode */
 }
 

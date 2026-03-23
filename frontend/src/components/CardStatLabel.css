@@ -16,10 +16,10 @@
   color: #dc2626;
 }
 
-html[data-theme="dark"] .card-stat-label--yc {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .card-stat-label--yc {
   color: #facc15;
 }
 
-html[data-theme="dark"] .card-stat-label--rc {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .card-stat-label--rc {
   color: #ef4444;
 }

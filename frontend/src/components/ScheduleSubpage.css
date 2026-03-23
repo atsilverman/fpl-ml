@@ -1289,7 +1289,7 @@
   z-index: 0;
 }
 
-html[data-theme="dark"] .schedule-customizer-ghost-dot {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-customizer-ghost-dot {
   background: rgba(255, 255, 255, 0.4);
   border-color: var(--bg-secondary);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
@@ -1333,8 +1333,8 @@ html[data-theme="dark"] .schedule-customizer-ghost-dot {
   border: 2px solid var(--border-color);
 }
 
-html[data-theme="dark"] .schedule-customizer-slider::-webkit-slider-thumb,
-html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-customizer-slider::-webkit-slider-thumb,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-customizer-slider::-moz-range-thumb {
   background: linear-gradient(180deg, #f1f5f9 0%, #cbd5e1 100%);
   border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6), 0 0 0 2px rgba(0, 0, 0, 0.3);
@@ -1368,33 +1368,33 @@ html[data-theme="dark"] .schedule-customizer-slider::-moz-range-thumb {
 }
 
 /* Light theme: stronger definition so thumb reads on light track */
-html:not([data-theme="dark"]) .schedule-customizer-slider--1::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .schedule-customizer-slider--1::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--1::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--1::-moz-range-thumb {
   border-width: 2px;
   border-color: #059669;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
-html:not([data-theme="dark"]) .schedule-customizer-slider--2::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .schedule-customizer-slider--2::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--2::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--2::-moz-range-thumb {
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent-green, #10b981) 75%, #0f766e);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
-html:not([data-theme="dark"]) .schedule-customizer-slider--3::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .schedule-customizer-slider--3::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--3::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--3::-moz-range-thumb {
   border-width: 2px;
   border-color: #64748b;
   background: #94a3b8;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
-html:not([data-theme="dark"]) .schedule-customizer-slider--4::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .schedule-customizer-slider--4::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--4::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--4::-moz-range-thumb {
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, #b91c1c);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
-html:not([data-theme="dark"]) .schedule-customizer-slider--5::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .schedule-customizer-slider--5::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--5::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .schedule-customizer-slider--5::-moz-range-thumb {
   border-width: 2px;
   border-color: #dc2626;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -1507,7 +1507,7 @@ html:not([data-theme="dark"]) .schedule-customizer-slider--5::-moz-range-thumb {
 
 /* Dark theme: stronger tint and shadow so card is visible */
 /* Dark: no tint, use theme surface for consistency */
-html[data-theme="dark"] .schedule-scroll-wrap {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-scroll-wrap {
   background: var(--bg-secondary);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
@@ -2009,7 +2009,7 @@ html[data-theme="dark"] .schedule-scroll-wrap {
   opacity: 0.9;
 }
 
-html[data-theme="dark"] .schedule-cell-home-indicator {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-cell-home-indicator {
   color: rgba(255, 255, 255, 0.85); /* light grey/white in dark mode */
 }
 
@@ -2019,7 +2019,7 @@ html[data-theme="dark"] .schedule-cell-home-indicator {
   opacity: 1;
 }
 
-html[data-theme="dark"] .schedule-cell-difficulty-pill .schedule-cell-home-indicator {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .schedule-cell-difficulty-pill .schedule-cell-home-indicator {
   color: rgba(255, 255, 255, 0.9);
 }
 

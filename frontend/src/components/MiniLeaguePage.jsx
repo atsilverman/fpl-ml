@@ -1346,7 +1346,11 @@ export default function MiniLeaguePage() {
                               <span className="league-transfers-empty">—</span>
                             )
                           ) : (
-                            <span className="league-transfers-remaining-value">{formatNumberWithCommas(remainingFreeTransfers)}</span>
+                            <span
+                              className={`league-transfers-remaining-value${remainingFreeTransfers > 0 ? ' league-transfers-remaining-value--pill' : ''}`}
+                            >
+                              {formatNumberWithCommas(remainingFreeTransfers)}
+                            </span>
                           )}
                         </td>
                       </tr>

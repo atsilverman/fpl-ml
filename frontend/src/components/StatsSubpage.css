@@ -108,14 +108,14 @@
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top6-fill {
   background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--team-top-strength, 0.5) * 38%), transparent);
 }
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top6-fill {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top6-fill {
   background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--team-top-strength, 0.5) * 30%), var(--bg-secondary));
 }
 
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--bottom6-fill {
   background: color-mix(in srgb, var(--accent-red, #ef4444) calc(var(--team-bottom-strength, 0.5) * 38%), transparent);
 }
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--bottom6-fill {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--bottom6-fill {
   background: color-mix(in srgb, var(--accent-red, #ef4444) calc(var(--team-bottom-strength, 0.5) * 30%), var(--bg-secondary));
 }
 
@@ -123,7 +123,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top10-fill {
   background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--stats-top10-strength, 0.5) * 38%), transparent);
 }
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top10-fill {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total.research-stats-cell--top10-fill {
   background: color-mix(in srgb, var(--accent-green, #10b981) calc(var(--stats-top10-strength, 0.5) * 30%), var(--bg-secondary));
 }
 
@@ -767,7 +767,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 html[data-theme="light"] .research-stats-compare-details-schedule-table thead th {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .research-stats-compare-details-schedule-table thead th {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-schedule-table thead th {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 .research-stats-compare-details-schedule-th-gw,
@@ -832,7 +832,7 @@ html[data-theme="dark"] .research-stats-compare-details-schedule-table thead th 
   font-size: 12px;
   font-weight: 500;
 }
-html[data-theme="dark"] .research-stats-compare-details-schedule-opp {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-schedule-opp {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
   color: var(--text-primary);
@@ -843,7 +843,7 @@ html[data-theme="dark"] .research-stats-compare-details-schedule-opp {
   border-color: var(--accent-blue, #3b82f6);
   color: var(--accent-blue, #3b82f6);
 }
-html[data-theme="dark"] .research-stats-compare-details-schedule-opp.research-stats-compare-details-schedule-opp--easier-fixture {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-schedule-opp.research-stats-compare-details-schedule-opp--easier-fixture {
   background: color-mix(in srgb, var(--accent-yellow, #eab308) 22%, rgba(0, 0, 0, 0.4));
   border-color: var(--accent-yellow, #eab308);
   color: var(--accent-yellow, #eab308);
@@ -904,7 +904,7 @@ html[data-theme="dark"] .research-stats-compare-details-schedule-opp.research-st
 html[data-theme="light"] .research-stats-compare-details-table thead th {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .research-stats-compare-details-table thead th {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-table thead th {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
@@ -963,12 +963,12 @@ html[data-theme="dark"] .research-stats-compare-details-table thead th {
   border-top: none;
   padding-top: 8px;
 }
-html[data-theme="dark"] .research-stats-compare-details-td-section-header {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-td-section-header {
   border-top-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.85);
 }
-html[data-theme="dark"] .research-stats-compare-details-tr--section-header:first-child .research-stats-compare-details-td-section-header {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-tr--section-header:first-child .research-stats-compare-details-td-section-header {
   border-top: none;
 }
 .research-stats-compare-details-td-stat {
@@ -1000,7 +1000,7 @@ html[data-theme="dark"] .research-stats-compare-details-tr--section-header:first
   border-color: var(--accent-blue, #3b82f6);
   color: var(--accent-blue, #3b82f6);
 }
-html[data-theme="dark"] .research-stats-compare-details-pill--leader {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-compare-details-pill--leader {
   background: color-mix(in srgb, var(--accent-yellow, #eab308) 12%, var(--bg-card));
   border-color: var(--accent-yellow, #eab308);
   color: var(--accent-yellow, #eab308);
@@ -1515,7 +1515,7 @@ html[data-theme="light"] .stats-filter-overlay .stats-filter-view-toggle .subpag
 html[data-theme="light"] .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table:not(.research-stats-compare-table) thead th {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
@@ -1526,7 +1526,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 html[data-theme="light"] .research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table.research-stats-compare-table thead th {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
@@ -1629,8 +1629,8 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 }
 
 /* Dark: no tint, use theme surface for consistency */
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
-html[data-theme="dark"] .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table th.league-standings-bento-total,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-table.league-standings-bento-table td.league-standings-bento-total {
   background: var(--bg-secondary);
 }
 
@@ -1700,7 +1700,7 @@ html[data-theme="dark"] .research-stats-page .research-stats-table.league-standi
 html[data-theme="light"] .research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .research-stats-page .research-stats-sticky-clone-table thead th.league-standings-bento-team {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 .research-stats-page .research-stats-sticky-clone-table tbody tr {

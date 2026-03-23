@@ -53,7 +53,7 @@
   min-width: 44px;
 }
 
-html[data-theme="dark"] .debug-modal-state-button {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .debug-modal-state-button {
   background: var(--bg-tertiary);
 }
 
@@ -89,8 +89,8 @@ html[data-theme="dark"] .debug-modal-state-button {
   background: rgba(100, 116, 139, 0.12);
 }
 
-html[data-theme="dark"] .debug-modal-state-button--idle,
-html[data-theme="dark"] .debug-modal-state-button--outside_gameweek {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .debug-modal-state-button--idle,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .debug-modal-state-button--outside_gameweek {
   border-color: #64748b;
   background: rgba(100, 116, 139, 0.2);
 }
@@ -242,7 +242,7 @@ html[data-theme="dark"] .debug-modal-state-button--outside_gameweek {
   cursor: not-allowed;
 }
 
-html[data-theme="dark"] .debug-modal-verify-button {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .debug-modal-verify-button {
   background: var(--bg-tertiary);
 }
 

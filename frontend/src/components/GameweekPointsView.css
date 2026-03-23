@@ -92,8 +92,8 @@ html[data-theme="light"] .gameweek-points-table thead,
 html[data-theme="light"] .gameweek-points-table thead th {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .gameweek-points-table thead,
-html[data-theme="dark"] .gameweek-points-table thead th {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-table thead,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-table thead th {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
@@ -110,7 +110,7 @@ html[data-theme="dark"] .gameweek-points-table thead th {
 html[data-theme="light"] .gameweek-points-table thead .gameweek-points-th-player {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .gameweek-points-table thead .gameweek-points-th-player {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-table thead .gameweek-points-th-player {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 
@@ -428,7 +428,7 @@ html[data-theme="dark"] .gameweek-points-table thead .gameweek-points-th-player 
   background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
   border-radius: 6px;
 }
-html[data-theme="dark"] .gameweek-points-view .gameweek-points-td-pts--top10 .gameweek-points-player-points-badge {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-view .gameweek-points-td-pts--top10 .gameweek-points-player-points-badge {
   background: color-mix(in srgb, var(--accent-green, #10b981) 28%, var(--bg-primary));
 }
 .gameweek-points-td-stat--top10 .gameweek-points-player-points-badge,
@@ -709,7 +709,7 @@ html[data-theme="dark"] .gameweek-points-view .gameweek-points-td-pts--top10 .ga
   align-items: center;
   justify-content: center;
 }
-html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-assistant-badge-inline {
   color: #d1d5db;
   background: #4b5563;
 }
@@ -933,7 +933,7 @@ html[data-theme="dark"] .gameweek-points-assistant-badge-inline {
 html[data-theme="light"] .gameweek-points-pts-upcoming {
   color: #808080;
 }
-html[data-theme="dark"] .gameweek-points-pts-upcoming {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-pts-upcoming {
   color: #888888;
 }
 
@@ -945,7 +945,7 @@ html[data-theme="dark"] .gameweek-points-pts-upcoming {
 html[data-theme="light"] .gameweek-points-player-points-badge--zero {
   color: color-mix(in srgb, #505050 38%, var(--bg-primary));
 }
-html[data-theme="dark"] .gameweek-points-player-points-badge--zero {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-player-points-badge--zero {
   color: color-mix(in srgb, #a0a0a0 40%, var(--bg-primary));
 }
 
@@ -957,7 +957,7 @@ html[data-theme="dark"] .gameweek-points-player-points-badge--zero {
 html[data-theme="light"] .gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
   color: #505050;
 }
-html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-cell-muted .gameweek-points-player-points-badge:not(.gameweek-points-player-points-badge--zero) {
   color: #a0a0a0;
 }
 
@@ -1048,7 +1048,7 @@ html[data-theme="dark"] .gameweek-points-cell-muted .gameweek-points-player-poin
 .gameweek-points-cell--impact-pill .gameweek-points-player-points-badge {
   box-sizing: border-box;
 }
-html[data-theme="dark"] .gameweek-points-player-points-badge {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .gameweek-points-player-points-badge {
   background: var(--pts-badge-subtle-bg, rgba(255, 255, 255, 0.06));
 }
 
@@ -1480,7 +1480,7 @@ html[data-theme="dark"] .gameweek-points-player-points-badge {
 html[data-theme="light"] .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
   background: color-mix(in srgb, var(--border-color) 32%, var(--bg-secondary));
 }
-html[data-theme="dark"] .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .manager-detail-modal-chart-wrap .gameweek-points-table thead .gameweek-points-th-player {
   background: color-mix(in srgb, white 7%, var(--bg-secondary));
 }
 .manager-detail-modal-chart-wrap .gameweek-points-table .gameweek-points-td-player-fixed {

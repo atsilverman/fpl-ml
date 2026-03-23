@@ -1144,8 +1144,27 @@
 }
 
 .league-transfers-remaining-value {
+  font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+/* Remaining FTs left: soft pill when count > 0 (0 stays plain text) */
+.league-transfers-remaining-value--pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  line-height: 1.1;
+  background: color-mix(in srgb, var(--accent-green, #10b981) 14%, var(--bg-card, var(--bg-secondary)));
+  border: 1px solid color-mix(in srgb, var(--accent-green, #10b981) 32%, var(--border-color));
+  color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 /* Shared chip badge used in transfer manager + remaining columns */
@@ -1357,7 +1376,7 @@
 .league-transfers-table .bento-card-transfer-item {
   font-size: 10px;
   line-height: 1.2;
-  padding: 1px 0;
+  padding: 4px 0;
   min-width: 0;
   gap: 4px;
 }
@@ -1407,18 +1426,18 @@
   background: transparent;
 }
 
-html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.positive {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-table .bento-card-transfer-delta.positive {
   color: var(--accent-green, #059669);
   background: transparent;
 }
 
-html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.negative {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-table .bento-card-transfer-delta.negative {
   color: var(--accent-red, #dc2626);
   background: transparent;
 }
 
 
-html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.neutral {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-table .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
   background: transparent;
 }
@@ -1469,16 +1488,16 @@ html[data-theme="dark"] .league-transfers-table .bento-card-transfer-delta.neutr
   border-color: var(--text-tertiary, rgba(128, 128, 128, 0.5));
 }
 
-html[data-theme="dark"] .league-transfers-net-badge--positive {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-net-badge--positive {
   background: var(--accent-green, #059669);
   border-color: #065f46;
 }
 
-html[data-theme="dark"] .league-transfers-net-badge--negative {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-net-badge--negative {
   border-color: #991b1b;
 }
 
-html[data-theme="dark"] .league-transfers-net-badge--neutral {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .league-transfers-net-badge--neutral {
   background: var(--bg-tertiary, #374151);
   border-color: #4b5563;
 }
@@ -2468,17 +2487,17 @@ html[data-theme="dark"] .league-transfers-net-badge--neutral {
   background: var(--bg-tertiary, #e5e7eb);
 }
 
-html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.positive {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .manager-detail-transfers-list .bento-card-transfer-delta.positive {
   color: #fff;
   background: var(--accent-green, #059669);
 }
 
-html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.negative {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .manager-detail-transfers-list .bento-card-transfer-delta.negative {
   color: #fff;
   background: var(--accent-red, #dc2626);
 }
 
-html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delta.neutral {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .manager-detail-transfers-list .bento-card-transfer-delta.neutral {
   color: var(--text-secondary);
   background: var(--bg-tertiary, #374151);
 }
@@ -3062,7 +3081,7 @@ html[data-theme="dark"] .manager-detail-transfers-list .bento-card-transfer-delt
 .player-detail-points-impact-icon--rc {
   color: var(--accent-red);
 }
-html[data-theme="dark"] .player-detail-points-impact-icon--yc {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .player-detail-points-impact-icon--yc {
   color: #facc15;
 }
 .player-detail-points-impact-pts {
@@ -3085,11 +3104,11 @@ html[data-theme="dark"] .player-detail-points-impact-icon--yc {
   color: #b91c1c;
   background: rgba(239, 68, 68, 0.15);
 }
-html[data-theme="dark"] .player-detail-points-impact-pts.positive {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .player-detail-points-impact-pts.positive {
   color: #4ade80;
   background: rgba(34, 197, 94, 0.2);
 }
-html[data-theme="dark"] .player-detail-points-impact-pts.negative {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .player-detail-points-impact-pts.negative {
   color: #f87171;
   background: rgba(239, 68, 68, 0.2);
 }

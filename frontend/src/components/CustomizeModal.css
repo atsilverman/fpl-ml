@@ -165,11 +165,11 @@
   left: calc(100% - 16px);
 }
 
-html[data-theme="dark"] .customize-row-slider-off .customize-row-slider-track {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .customize-row-slider-off .customize-row-slider-track {
   background: var(--bg-secondary);
 }
 
-html[data-theme="dark"] .customize-row-slider-thumb {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .customize-row-slider-thumb {
   background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
@@ -382,7 +382,7 @@ html[data-theme="dark"] .customize-row-slider-thumb {
   z-index: 1;
 }
 
-html[data-theme="dark"] .customize-difficulty-ghost-dot {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .customize-difficulty-ghost-dot {
   background: rgba(255, 255, 255, 0.25);
 }
 
@@ -421,8 +421,8 @@ html[data-theme="dark"] .customize-difficulty-ghost-dot {
   border: 1px solid var(--border-color);
 }
 
-html[data-theme="dark"] .customize-difficulty-slider::-webkit-slider-thumb,
-html[data-theme="dark"] .customize-difficulty-slider::-moz-range-thumb {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .customize-difficulty-slider::-webkit-slider-thumb,
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .customize-difficulty-slider::-moz-range-thumb {
   background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
@@ -455,33 +455,33 @@ html[data-theme="dark"] .customize-difficulty-slider::-moz-range-thumb {
 }
 
 /* Light theme: stronger definition so thumb reads on light track */
-html:not([data-theme="dark"]) .customize-difficulty-slider--1::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .customize-difficulty-slider--1::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--1::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--1::-moz-range-thumb {
   border-width: 2px;
   border-color: #059669;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
-html:not([data-theme="dark"]) .customize-difficulty-slider--2::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .customize-difficulty-slider--2::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--2::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--2::-moz-range-thumb {
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent-green, #10b981) 75%, #0f766e);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
-html:not([data-theme="dark"]) .customize-difficulty-slider--3::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .customize-difficulty-slider--3::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--3::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--3::-moz-range-thumb {
   border-width: 2px;
   border-color: #64748b;
   background: #94a3b8;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
-html:not([data-theme="dark"]) .customize-difficulty-slider--4::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .customize-difficulty-slider--4::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--4::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--4::-moz-range-thumb {
   border-width: 2px;
   border-color: color-mix(in srgb, var(--accent-red, #ef4444) 75%, #b91c1c);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
 }
-html:not([data-theme="dark"]) .customize-difficulty-slider--5::-webkit-slider-thumb,
-html:not([data-theme="dark"]) .customize-difficulty-slider--5::-moz-range-thumb {
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--5::-webkit-slider-thumb,
+html:is([data-theme="light"], [data-theme="light-dawn"], [data-theme="light-ocean"]) .customize-difficulty-slider--5::-moz-range-thumb {
   border-width: 2px;
   border-color: #dc2626;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.06);

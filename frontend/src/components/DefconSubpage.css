@@ -661,7 +661,7 @@
   color: var(--text-secondary);
 }
 
-html[data-theme="dark"] .defcon-position-badge {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .defcon-position-badge {
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
 }
 

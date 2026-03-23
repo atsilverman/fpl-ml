@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 
 const ThemeContext = createContext()
 
-const CYCLE_MODES = ['light', 'dark', 'system', 'ocean']
+const CYCLE_MODES = ['light', 'dark', 'graphite', 'system', 'ocean']
 
 function getSystemThemePreference() {
   if (typeof window === 'undefined') return 'dark'
@@ -18,6 +18,7 @@ function getSystemThemePreference() {
 function getActualDataTheme(mode) {
   if (mode === 'system') return getSystemThemePreference()
   if (mode === 'ocean') return 'light-ocean'
+  if (mode === 'graphite') return 'dark-graphite'
   return mode
 }
 

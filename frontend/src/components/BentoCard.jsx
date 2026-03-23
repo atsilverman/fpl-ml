@@ -8,7 +8,7 @@ import TeamValueChart from './TeamValueChart'
 import PlayerPerformanceChart from './PlayerPerformanceChart'
 import GameweekPointsView from './GameweekPointsView'
 import AnimatedValue from './AnimatedValue'
-import { Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, CircleChevronUp, CircleChevronDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X, Sun, Moon, Laptop, Waves, Search, CircleCheck } from 'lucide-react'
+import { Settings, Bug, MoveDiagonal, Minimize2, Info, CircleArrowUp, CircleArrowDown, CircleChevronUp, CircleChevronDown, ChevronUp, ChevronDown, ChevronsUp, ChevronsDown, ArrowDownRight, ArrowUpRight, TriangleAlert, Users, Filter, X, Sun, Moon, Laptop, Waves, Search, CircleCheck, Contrast } from 'lucide-react'
 
 const FIRST_HALF_CHIP_COLUMNS = [
   { key: 'wc1', label: 'WC' },
@@ -85,6 +85,7 @@ function SettingsBentoContent({ onConfigureClick, onDebugClick }) {
   const getThemeCycleIcon = () => {
     if (themeMode === 'light') return Sun
     if (themeMode === 'dark') return Moon
+    if (themeMode === 'graphite') return Contrast
     if (themeMode === 'ocean') return Waves
     return Laptop
   }

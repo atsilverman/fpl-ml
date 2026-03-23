@@ -258,7 +258,7 @@
   margin-top: 1px;
 }
 
-html[data-theme="dark"] .feed-event-card__position-badge {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .feed-event-card__position-badge {
   background: var(--bg-tertiary, rgba(255, 255, 255, 0.08));
 }
 
@@ -357,7 +357,7 @@ html[data-theme="dark"] .feed-event-card__position-badge {
   font-weight: 600;
 }
 
-html[data-theme="dark"] .feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative):not(.feed-event-card__impact-value--zero) {
+html:is([data-theme="dark"], [data-theme="dark-graphite"]) .feed-event-card__impact-value:not(.feed-event-card__impact-value--positive):not(.feed-event-card__impact-value--negative):not(.feed-event-card__impact-value--zero) {
   background: color-mix(in srgb, var(--border-color) 35%, var(--bg-card));
 }
 
